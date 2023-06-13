@@ -563,8 +563,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/result")
     @Operation(summary = "Get a voltage init result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init result"),
-            @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
-            @ApiResponse(responseCode = "404", description = "The voltage init has not been found")})
+        @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The voltage init has not been found")})
     public ResponseEntity<String> getVoltageInitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String result = voltageInitService.getVoltageInitResult(nodeUuid);
@@ -575,8 +575,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/status")
     @Operation(summary = "Get the voltage init status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init status"),
-            @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
-            @ApiResponse(responseCode = "404", description = "The voltage init status has not been found")})
+        @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The voltage init status has not been found")})
     public ResponseEntity<String> getVoltageInitStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String result = voltageInitService.getVoltageInitStatus(nodeUuid);
@@ -633,13 +633,11 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has started")})
     public ResponseEntity<UUID> runSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                          @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames,
-                                                          @RequestBody(required = false) String parameters) {
+                                                          @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames) {
         List<String> nonNullcontingencyListNames = contingencyListNames != null ? contingencyListNames : Collections.emptyList();
-        String nonNullParameters = Objects.toString(parameters, "");
         studyService.assertIsNodeNotReadOnly(nodeUuid);
 
-        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nonNullParameters, nodeUuid));
+        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result")
@@ -1222,8 +1220,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/models")
     @Operation(summary = "Get models of dynamic simulation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All models of dynamic simulation"),
-            @ApiResponse(responseCode = "204", description = "No dynamic simulation models"),
-            @ApiResponse(responseCode = "404", description = "The dynamic simulation models has not been found")})
+        @ApiResponse(responseCode = "204", description = "No dynamic simulation models"),
+        @ApiResponse(responseCode = "404", description = "The dynamic simulation models has not been found")})
     public ResponseEntity<List<ModelInfos>> getDynamicSimulationModels(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid, nodeUuid);
@@ -1308,6 +1306,25 @@ public class StudyController {
         DynamicSimulationStatus result = studyService.getDynamicSimulationStatus(nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/security-analysis/parameters")
+    @Operation(summary = "Get security analysis parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters")})
+    public ResponseEntity<SecurityAnalysisParametersValues> getSecurityAnalysisParametersValues(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/security-analysis/parameters")
+    @Operation(summary = "set security analysis parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters are set")})
+    public ResponseEntity<Void> setSecurityAnalysisParametersValues(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) SecurityAnalysisParametersValues securityAnalysisParametersValues,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId);
+        return ResponseEntity.ok().build();
     }
 
     enum UpdateModificationAction {
