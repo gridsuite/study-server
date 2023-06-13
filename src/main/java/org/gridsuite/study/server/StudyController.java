@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.dto.voltageinit.VoltageInitParametersInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -346,7 +347,7 @@ public class StudyController {
     public ResponseEntity<String> getNetworkElementsIds(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Substations id") @RequestParam(name = "substationsIds", required = false) List<String> substationsIds,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode,
             @Parameter(description = "equipment type") @RequestParam(name = "equipmentType") String equipmentType) {
 
@@ -737,6 +738,25 @@ public class StudyController {
         String result = voltageInitService.getVoltageInitStatus(nodeUuid);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
+    @Operation(summary = "Set voltage init parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set")})
+    public ResponseEntity<Void> setVoltageInitParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) VoltageInitParametersInfos voltageInitParameters,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setVoltageInitParameters(studyUuid, voltageInitParameters, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
+    @Operation(summary = "Get voltage init parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters")})
+    public ResponseEntity<VoltageInitParametersInfos> getVoltageInitParameters(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getVoltageInitParameters(studyUuid));
     }
 
     @GetMapping(value = "/export-network-formats")
