@@ -36,16 +36,4 @@
     <changeSet author="homereti (generated)" id="1686740657446-10">
         <addForeignKeyConstraint baseColumnNames="voltage_init_parameters_id" baseTableName="voltage_init_parameters_entity_variable_two_wt" constraintName="voltageInitParametersEntity_variableTwoWt_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="voltage_init_parameters" validate="true"/>
     </changeSet>
-    <changeSet author="homereti (generated)" id="1686740657446-1">
-        <addNotNullConstraint columnDataType="varchar(255)" columnName="case_name" tableName="study" validate="true"/>
-    </changeSet>
-    <changeSet author="homereti (generated)" id="1686740657446-2">
-        <dropDefaultValue columnDataType="varchar(255)" columnName="connected_component_mode" tableName="load_flow_parameters"/>
-    </changeSet>
-    <changeSet author="homereti (generated)" id="1686740657446-3">
-        <dropNotNullConstraint columnDataType="float8" columnName="distributed_active_power" tableName="load_flow_result_entity_component_results"/>
-    </changeSet>
-    <changeSet author="homereti (generated)" id="1686740657446-4">
-        <dropDefaultValue columnDataType="float8" columnName="distributed_active_power" tableName="load_flow_result_entity_component_results"/>
-    </changeSet>
 </databaseChangeLog>
