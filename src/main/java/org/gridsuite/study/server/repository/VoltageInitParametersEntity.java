@@ -42,8 +42,8 @@ public class VoltageInitParametersEntity {
 
     @ElementCollection
     @CollectionTable(
-            name = "voltageInitParametersEntityVariableTwoWindingsTransformers",
-            joinColumns = @JoinColumn(name = "voltageInitParametersId", foreignKey = @ForeignKey(name = "voltageInitParametersEntity_variableTwoWindingsTransformers_fk"))
+            name = "voltageInitParametersEntityVariableTwoWt",
+            joinColumns = @JoinColumn(name = "voltageInitParametersId", foreignKey = @ForeignKey(name = "voltageInitParametersEntity_variableTwoWt_fk"))
     )
     private List<FilterEquipmentsEmbeddable> variableTwoWindingsTransformers;
 
