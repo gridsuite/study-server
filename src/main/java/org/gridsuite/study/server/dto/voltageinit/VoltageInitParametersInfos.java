@@ -22,4 +22,10 @@ import java.util.List;
 @NoArgsConstructor
 public class VoltageInitParametersInfos {
     List<VoltageInitVoltageLimitsParameterInfos> voltageLimits;
+
+    List<FilterEquipments> constantQGenerators;
+
+    List<FilterEquipments> variableTwoWindingsTransformers;
+
+    List<FilterEquipments> variableShuntCompensators;
 }

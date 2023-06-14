@@ -32,6 +32,27 @@ public class VoltageInitParametersEntity {
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "voltage_init_parameters_id")
     private List<VoltageInitParametersVoltageLimitsEntity> voltageLimits;
+
+    @ElementCollection
+    @CollectionTable(
+            name = "voltageInitParametersEntityConstantQGenerators",
+            joinColumns = @JoinColumn(name = "voltageInitParametersId", foreignKey = @ForeignKey(name = "voltageInitParametersEntity_constantQGenerators_fk"))
+    )
+    private List<FilterEquipmentsEmbeddable> constantQGenerators;
+
+    @ElementCollection
+    @CollectionTable(
+            name = "voltageInitParametersEntityVariableTwoWindingsTransformers",
+            joinColumns = @JoinColumn(name = "voltageInitParametersId", foreignKey = @ForeignKey(name = "voltageInitParametersEntity_variableTwoWindingsTransformers_fk"))
+    )
+    private List<FilterEquipmentsEmbeddable> variableTwoWindingsTransformers;
+
+    @ElementCollection
+    @CollectionTable(
+            name = "voltageInitParametersEntityVariableShuntCompensators",
+            joinColumns = @JoinColumn(name = "voltageInitParametersId", foreignKey = @ForeignKey(name = "voltageInitParametersEntity_variableShuntCompensators_fk"))
+    )
+    private List<FilterEquipmentsEmbeddable> variableShuntCompensators;
 }
 
 
