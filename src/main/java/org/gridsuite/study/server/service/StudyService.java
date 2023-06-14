@@ -1662,8 +1662,17 @@ public class StudyService {
     }
 
     private List<String> toEquipmentIdsList(List<FilterEquipmentsEmbeddable> filters, UUID networkUuid, String variantId) {
+        if (filters == null || filters.isEmpty()) {
+            return List.of();
+        }
         List<FilterEquipments> equipments = filterService.exportFilters(filters.stream().map(filter -> filter.getFilterId()).collect(Collectors.toList()), networkUuid, variantId);
-        return equipments.stream().map(filter -> filter.getFilterId().toString()).collect(Collectors.toList());
+        Set<String> ids = new HashSet<>();
+        equipments.forEach(filterEquipment ->
+                filterEquipment.getIdentifiableAttributes().forEach(identifiableAttribute ->
+                        ids.add(identifiableAttribute.getId())
+                )
+        );
+        return ids.stream().collect(Collectors.toList());
     }
 
     private OpenReacParameters buidOpenReacParameters(Optional<StudyEntity> studyEntity, UUID networkUuid, String variantId) {
@@ -1683,7 +1692,6 @@ public class StudyService {
                             )
                     );
                 });
-
                 constantQGenerators.addAll(toEquipmentIdsList(voltageInitParameters.getConstantQGenerators(), networkUuid, variantId));
                 variableTwoWindingsTransformers.addAll(toEquipmentIdsList(voltageInitParameters.getVariableTwoWindingsTransformers(), networkUuid, variantId));
                 variableShuntCompensators.addAll(toEquipmentIdsList(voltageInitParameters.getVariableShuntCompensators(), networkUuid, variantId));
