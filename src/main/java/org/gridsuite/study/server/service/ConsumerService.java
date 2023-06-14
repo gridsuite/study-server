@@ -9,7 +9,11 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.commons.parameters.Parameter;
+import com.powsybl.iidm.network.Importer;
+import com.powsybl.iidm.network.Importers;
 import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
@@ -58,6 +62,8 @@ public class ConsumerService {
     NotificationService notificationService;
     StudyService studyService;
     CaseService caseService;
+
+    NetworkStoreService networkStoreService;
     NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
@@ -65,12 +71,14 @@ public class ConsumerService {
                            NotificationService notificationService,
                            StudyService studyService,
                            CaseService caseService,
-                           NetworkModificationTreeService networkModificationTreeService) {
+                           NetworkModificationTreeService networkModificationTreeService,
+                           NetworkStoreService networkStoreService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
         this.caseService = caseService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.networkStoreService = networkStoreService;
     }
 
     @Bean
@@ -311,6 +319,10 @@ public class ConsumerService {
                 importParametersInfos = new ImportParametersInfos(importParameters.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().toString())));
             }
             NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
+
+            //Importer importer = Importer.find(caseFormat);
+
+            //List<Parameter> defaultParameters = importer.getParameters();
 
             if (receiverString != null) {
                 CaseImportReceiver receiver;
