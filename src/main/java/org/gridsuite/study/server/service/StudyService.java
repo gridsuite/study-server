@@ -1402,7 +1402,7 @@ public class StudyService {
         startTime.set(System.nanoTime());
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
         deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
-        boolean invalidateChildrenBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeId));
+        boolean invalidateChildrenBuild = !deleteChildren && !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeId));
         List<NodeEntity> childrenNodes = networkModificationTreeService.getChildrenByParentUuid(nodeId);
         networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
 
