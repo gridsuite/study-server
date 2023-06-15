@@ -1279,13 +1279,13 @@ public class StudyService {
     }
 
     @Transactional
-    public void duplicateStudySubtree(UUID studyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
-        checkStudyContainsNode(studyUuid, parentNodeToCopyUuid);
-        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+    public void duplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
+        checkStudyContainsNode(sourceStudyUuid, parentNodeToCopyUuid);
+        checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
 
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudySubtree(parentNodeToCopyUuid, referenceNodeUuid, new HashSet<>());
-        notificationService.emitSubtreeInserted(studyUuid, duplicatedNodeUuid, referenceNodeUuid);
-        notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
+        notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
 
     @Transactional
@@ -1403,7 +1403,7 @@ public class StudyService {
         startTime.set(System.nanoTime());
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
         deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
-        boolean invalidateChildrenBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeId));
+        boolean invalidateChildrenBuild = !deleteChildren && !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeId));
         List<NodeEntity> childrenNodes = networkModificationTreeService.getChildrenByParentUuid(nodeId);
         networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
 
