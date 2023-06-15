@@ -1678,9 +1678,9 @@ public class StudyService {
     private OpenReacParameters buidOpenReacParameters(Optional<StudyEntity> studyEntity, UUID networkUuid, String variantId) {
         OpenReacParameters parameters = new OpenReacParameters();
         Map<String, VoltageLimitOverride> specificVoltageLimits = new HashMap<>();
-        List<String> constantQGenerators = new ArrayList<String>();
-        List<String> variableTwoWindingsTransformers = new ArrayList<String>();
-        List<String> variableShuntCompensators = new ArrayList<String>();
+        List<String> constantQGenerators = new ArrayList<>();
+        List<String> variableTwoWindingsTransformers = new ArrayList<>();
+        List<String> variableShuntCompensators = new ArrayList<>();
         studyEntity.ifPresent(study -> {
             VoltageInitParametersEntity voltageInitParameters = study.getVoltageInitParameters();
             if (voltageInitParameters != null && voltageInitParameters.getVoltageLimits() != null) {
