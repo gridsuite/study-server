@@ -363,8 +363,7 @@ public class VoltageInitTest {
                 MessageBuilder.withPayload("")
                     .setHeader(HEADER_RECEIVER, resultUuidJson)
                     .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
-                .build()
-                , voltageInitFailedDestination);
+                .build(), voltageInitFailedDestination);
             return resultUuid;
         }).when(studyService).runVoltageInit(any(), any(), any());
         studyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), "");
