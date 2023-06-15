@@ -348,7 +348,7 @@ public class VoltageInitTest {
 
         assertTrue(TestUtils.getRequestsDone(5, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
 
-         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run", studyNameUserIdUuid, modificationNode4Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run", studyNameUserIdUuid, modificationNode4Uuid)
                 .header("userId", "userId"))
                 .andExpect(status().is5xxServerError()).andReturn();
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/filters/export.*")));
