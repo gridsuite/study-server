@@ -175,7 +175,8 @@ public class VoltageInitTest {
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build(), voltageInitFailedDestination);
+                            .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
+                        .build(), voltageInitFailedDestination);
                     return new MockResponse().setResponseCode(200)
                             .setBody(voltageInitErrorResultUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -358,13 +359,18 @@ public class VoltageInitTest {
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
-            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), voltageInitFailedDestination);
+            input.send(
+                MessageBuilder.withPayload("")
+                    .setHeader(HEADER_RECEIVER, resultUuidJson)
+                    .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
+                .build()
+                , voltageInitFailedDestination);
             return resultUuid;
         }).when(studyService).runVoltageInit(any(), any(), any());
         studyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), "");
 
-        // Test reset uuid result in the database
-        assertTrue(networkModificationTreeService.getVoltageInitResultUuid(modificationNode.getId()).isEmpty());
+        // Test result in not reseted anymore in the database
+        assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, networkModificationTreeService.getVoltageInitResultUuid(modificationNode.getId()).get().toString());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
