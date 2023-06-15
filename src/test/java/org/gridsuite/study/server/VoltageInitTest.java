@@ -21,6 +21,8 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.voltageinit.FilterEquipments;
+import org.gridsuite.study.server.dto.voltageinit.VoltageInitParametersInfos;
+import org.gridsuite.study.server.dto.voltageinit.VoltageInitVoltageLimitsParameterInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -37,6 +39,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,9 +91,8 @@ public class VoltageInitTest {
 
     private static final String VOLTAGE_INIT_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
 
-    private static final String VOLTAGE_INIT_PARAMETERS_JSON = "{\"voltageLimits\":[{\"priority\":0,\"lowVoltageLimit\":15.0,\"highVoltageLimit\":123.0,\"filters\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da329\",\"filterName\":\"identifiable\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}]}";
-    private static final String VOLTAGE_INIT_PARAMETERS_JSON2 = "{\"voltageLimits\":[{\"priority\":0,\"lowVoltageLimit\":15.0,\"highVoltageLimit\":126.0,\"filters\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da329\",\"filterName\":\"identifiable\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}]}";
-
+    private static final VoltageInitParametersInfos VOLTAGE_INIT_PARAMETERS = createVoltageInitParameters();
+    private static final VoltageInitParametersInfos VOLTAGE_INIT_PARAMETERS2 = createVoltageInitParametersWithVariableAndConstanEquipments();
     private static final String FILTER_EQUIPMENT_JSON = "[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da329\",\"identifiableAttributes\":[{\"id\":\"VL1\",\"type\":\"VOLTAGE_LEVEL\"}],\"notFoundEquipments\":[]}]";
     private static final String FILTER_UUID = "cf399ef3-7f14-4884-8c82-1c90300da329";
 
@@ -214,6 +217,21 @@ public class VoltageInitTest {
         server.setDispatcher(dispatcher);
     }
 
+    public static VoltageInitParametersInfos createVoltageInitParameters() {
+        FilterEquipments equipments = new FilterEquipments(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da329"), "identifiable", null, null);
+        VoltageInitVoltageLimitsParameterInfos voltageLimits = new VoltageInitVoltageLimitsParameterInfos(0, 15.0, 123.0, List.of(equipments));
+        return new VoltageInitParametersInfos(List.of(voltageLimits), List.of(), List.of(), List.of());
+    }
+
+    public static VoltageInitParametersInfos createVoltageInitParametersWithVariableAndConstanEquipments() {
+        FilterEquipments equipments = new FilterEquipments(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da329"), "identifiable", null, null);
+        VoltageInitVoltageLimitsParameterInfos voltageLimits = new VoltageInitVoltageLimitsParameterInfos(0, 15.0, 126.0, List.of(equipments));
+        FilterEquipments generatorFilter = new FilterEquipments(UUID.fromString("cae7c0dc-9598-4f97-ae03-062207f36d2f"), "constantGenerators", null, null);
+        FilterEquipments transfoFilter = new FilterEquipments(UUID.fromString("b5b4b3f4-27a7-4b27-be96-7a5fd1621849"), "variableTransfos", null, null);
+        FilterEquipments shuntFilter = new FilterEquipments(UUID.fromString("d1bd319e-94cb-4522-84dd-e644763c947d"), "variableShunts", null, null);
+        return new VoltageInitParametersInfos(List.of(voltageLimits), List.of(generatorFilter), List.of(transfoFilter), List.of(shuntFilter));
+    }
+
     @Test
     public void testVoltageInitParameters() throws Exception {
         //insert a study
@@ -221,33 +239,24 @@ public class VoltageInitTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         //get initial voltage init parameters
-        mockMvc.perform(get("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk(),
-                content().string(VOLTAGE_INIT_PARAMETERS_JSON));
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)).andExpectAll(
+                status().isOk()).andReturn();
 
-        //setting voltage init parameters
-        String voltageInitParameterBodyJson = "{\n" +
-                "  \"voltageLimits\" : [ {\n" +
-                "    \"priority\" : 0,\n" +
-                "    \"lowVoltageLimit\" : 15.0,\n" +
-                "    \"highVoltageLimit\" : 126.0,\n" +
-                "    \"filters\" : [ {\n" +
-                "      \"filterId\" : \"cf399ef3-7f14-4884-8c82-1c90300da329\",\n" +
-                "      \"filterName\" : \"identifiable\"\n" +
-                "    } ]\n" +
-                "  } ]\n" +
-                "}";
+        JSONAssert.assertEquals(objectMapper.writeValueAsString(VOLTAGE_INIT_PARAMETERS), mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+
+        VoltageInitParametersInfos parameters = createVoltageInitParametersWithVariableAndConstanEquipments();
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(voltageInitParameterBodyJson)).andExpect(
+                        .content(objectMapper.writeValueAsString(parameters))).andExpect(
                 status().isOk());
 
         //checking update is registered
-        mockMvc.perform(get("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk(),
-                content().string(VOLTAGE_INIT_PARAMETERS_JSON2));
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)).andExpectAll(
+                status().isOk()).andReturn();
+
+        JSONAssert.assertEquals(objectMapper.writeValueAsString(VOLTAGE_INIT_PARAMETERS2), mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
     }
 
     @Test
