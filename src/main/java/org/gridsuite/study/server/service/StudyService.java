@@ -1278,13 +1278,13 @@ public class StudyService {
     }
 
     @Transactional
-    public void duplicateStudySubtree(UUID studyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
-        checkStudyContainsNode(studyUuid, parentNodeToCopyUuid);
-        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+    public void duplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
+        checkStudyContainsNode(sourceStudyUuid, parentNodeToCopyUuid);
+        checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
 
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudySubtree(parentNodeToCopyUuid, referenceNodeUuid, new HashSet<>());
-        notificationService.emitSubtreeInserted(studyUuid, duplicatedNodeUuid, referenceNodeUuid);
-        notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
+        notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
 
     @Transactional

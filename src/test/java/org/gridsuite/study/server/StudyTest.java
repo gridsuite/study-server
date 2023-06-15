@@ -1822,8 +1822,8 @@ public class StudyTest {
         UUID stubDuplicateUuid = wireMockUtils.stubDuplicateModificationGroup();
 
         mockMvc.perform(post(STUDIES_URL +
-                                "/{study1Uuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}",
-                        study1Uuid, node1.getId(), node4.getId())
+                                "/{study1Uuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}&sourceStudyUuid={sourceStudyUuid}",
+                        study1Uuid, node1.getId(), node4.getId(), study1Uuid)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
 
@@ -1880,15 +1880,15 @@ public class StudyTest {
 
         //try copy non existing node and expect not found
         mockMvc.perform(post(STUDIES_URL +
-                                "/{targetStudyUuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}",
-                        study1Uuid, UUID.randomUUID(), node1.getId())
+                                "/{targetStudyUuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}&sourceStudyUuid={sourceStudyUuid}",
+                        study1Uuid, UUID.randomUUID(), node1.getId(), study1Uuid)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
 
         //try to copy to a non existing position and expect not found
         mockMvc.perform(post(STUDIES_URL +
-                                "/{targetStudyUuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}",
-                        study1Uuid, node1.getId(), UUID.randomUUID())
+                                "/{targetStudyUuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}&sourceStudyUuid={sourceStudyUuid}",
+                        study1Uuid, node1.getId(), UUID.randomUUID(), study1Uuid)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
     }
