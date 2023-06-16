@@ -1675,7 +1675,7 @@ public class StudyService {
         return ids.stream().collect(Collectors.toList());
     }
 
-    private OpenReacParameters buidOpenReacParameters(Optional<StudyEntity> studyEntity, UUID networkUuid, String variantId) {
+    private OpenReacParameters buildOpenReacParameters(Optional<StudyEntity> studyEntity, UUID networkUuid, String variantId) {
         OpenReacParameters parameters = new OpenReacParameters();
         Map<String, VoltageLimitOverride> specificVoltageLimits = new HashMap<>();
         List<String> constantQGenerators = new ArrayList<>();
@@ -1713,7 +1713,7 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
 
-        OpenReacParameters parameters = buidOpenReacParameters(studyEntity, networkUuid, variantId);
+        OpenReacParameters parameters = buildOpenReacParameters(studyEntity, networkUuid, variantId);
 
         UUID result = voltageInitService.runVoltageInit(networkUuid, variantId, parameters, nodeUuid, userId);
 
