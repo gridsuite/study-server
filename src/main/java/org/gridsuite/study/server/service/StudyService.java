@@ -41,6 +41,8 @@ import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.modification.HvdcDeletionInfos;
+import org.gridsuite.study.server.dto.modification.SelectedShuntCompensatorData;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.voltageinit.VoltageInitParametersInfos;
@@ -1295,6 +1297,36 @@ public class StudyService {
     public List<IdentifiableInfos> getVoltageLevelBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         return getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuidToSearchIn, voltageLevelId, "busbar-sections");
+    }
+
+    private static List<SelectedShuntCompensatorData> toShuntCompensatorData(Stream<ShuntCompensator> shuntCompensators) {
+        return shuntCompensators
+                .map(s -> SelectedShuntCompensatorData.builder()
+                        .id(s.getId())
+                        .selected(true) // TODO how to get connectable eqpt ?
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    public HvdcDeletionInfos getHvdcLineDeletionInfos(UUID studyUuid, UUID nodeUuid, String hvdcId, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn);
+        Network network = networkStoreService.getNetwork(networkUuid, PreloadingStrategy.NONE, variantId);
+        HvdcLine hvdc = network.getHvdcLine(hvdcId);
+
+        HvdcDeletionInfos.HvdcDeletionInfosBuilder builder = HvdcDeletionInfos.builder().id(hvdcId);
+        // it could be OK to not find the equipment: can be used in a modification with un-existing equipment
+        if (hvdc != null) {
+            builder.hvdcType(hvdc.getConverterStation1().getHvdcType());
+            if (hvdc.getConverterStation1().getHvdcType() == HvdcConverterStation.HvdcType.LCC) {
+                VoltageLevel vl1 = hvdc.getConverterStation1().getTerminal().getVoltageLevel();
+                VoltageLevel vl2 = hvdc.getConverterStation2().getTerminal().getVoltageLevel();
+                builder.mcsOnSide1(toShuntCompensatorData(vl1.getShuntCompensatorStream()));
+                builder.mcsOnSide2(toShuntCompensatorData(vl2.getShuntCompensatorStream()));
+            }
+        }
+        return builder.build();
     }
 
     public LoadFlowStatus getLoadFlowStatus(UUID nodeUuid) {
