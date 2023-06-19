@@ -116,18 +116,6 @@ public class WireMockUtils {
         ).getId();
     }
 
-    public UUID stubNetworkEquipmentInfosGetNotFound(String networkUuid, String infoTypePath, String equipmentId) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + infoTypePath + DELIMITER + equipmentId))
-                .willReturn(WireMock.notFound())
-        ).getId();
-    }
-
-    public UUID stubNetworkEquipmentInfosGetWithError(String networkUuid, String infoTypePath, String equipmentId) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + infoTypePath + DELIMITER + equipmentId))
-                .willReturn(WireMock.serverError().withBody("Internal Server Error"))
-        ).getId();
-    }
-
     public void verifyNetworkEquipmentInfosGet(UUID stubUuid, String networkUuid, String infoTypePath, String equipmentId) {
         verifyGetRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + infoTypePath + DELIMITER + equipmentId, Map.of());
     }
