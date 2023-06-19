@@ -29,6 +29,6 @@ public class NodeBuildStatus {
 
     @JsonIgnore
     public boolean isBuilt() {
-        return buildStatusGlobal.isBuilt() && buildStatusLocal.isBuilt();
+        return buildStatusGlobal.isBuilt() || buildStatusLocal.isBuilt();
     }
 }

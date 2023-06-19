@@ -36,6 +36,10 @@ public enum BuildStatus {
         }
     }
 
+    public boolean isMoreSevere(BuildStatus other) {
+        return this.severityLevel > other.severityLevel;
+    }
+
     public BuildStatus max(BuildStatus other) {
         return severityLevel >= other.severityLevel ? this : other;
     }

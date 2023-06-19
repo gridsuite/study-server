@@ -10,9 +10,7 @@ import com.powsybl.iidm.network.IdentifiableType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -32,9 +30,13 @@ public class NetworkModificationResult {
         WITH_ERRORS
     }
 
-    @Schema(description = "Application status")
+    @Schema(description = "Operation application status")
     @Builder.Default
     ApplicationStatus applicationStatus = ApplicationStatus.ALL_OK;
+
+    @Schema(description = "Map of modification groups and their corresponding application status")
+    @Builder.Default
+    Map<UUID, ApplicationStatus> modificationsGroupApplicationStatus = new HashMap<>();
 
     @Schema(description = "Network modification impacts")
     @Builder.Default

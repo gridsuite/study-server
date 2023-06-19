@@ -30,7 +30,9 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -238,8 +240,8 @@ public class ConsumerService {
                             NodeReceiver.class);
 
                     LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
-
-                    updateBuildStatus(receiverObj.getNodeUuid(), networkModificationResult.getApplicationStatus());
+                    Map<UUID, NetworkModificationResult.ApplicationStatus> modificationsGroupApplicationStatus = networkModificationResult.getModificationsGroupApplicationStatus();
+                    updateBuildStatus(receiverObj.getNodeUuid(), modificationsGroupApplicationStatus);
 
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
@@ -451,8 +453,8 @@ public class ConsumerService {
         networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
 
-    private void updateBuildStatus(UUID nodeUuid, NetworkModificationResult.ApplicationStatus applicationStatus) {
-        networkModificationTreeService.updateBuildStatus(nodeUuid, applicationStatus);
+    private void updateBuildStatus(UUID nodeUuid, Map<UUID, NetworkModificationResult.ApplicationStatus> modificationsGroupApplicationStatus) {
+        networkModificationTreeService.updateBuildStatus(nodeUuid, modificationsGroupApplicationStatus);
     }
 
     void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
