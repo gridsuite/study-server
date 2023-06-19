@@ -237,18 +237,6 @@ public class SingleLineDiagramTest {
                     case "/v1/lines?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID + "&lineId=LINEID1&lineId=LINEID2":
                     case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID:
                     case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID + "&substationId=BBE1AA&substationId=BBE2AA":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/2-windings-transformers":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/3-windings-transformers":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/generators":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/batteries":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/dangling-lines":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/hvdc-lines":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lcc-converter-stations":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/vsc-converter-stations":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/loads":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/loads-modification":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/static-var-compensators":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/all":
                         return new MockResponse().setBody(" ").setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -433,38 +421,37 @@ public class SingleLineDiagramTest {
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", "MAP", List.of(), "[]");
 
         //get the 2 windings transformers map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "TWO_WINDINGS_TRANSFORMER", "MAP", List.of(), "[]");
 
         //get the 3 windings transformers map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "3-windings-transformers", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "THREE_WINDINGS_TRANSFORMER", "MAP", List.of(), "[]");
 
         //get the generators map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "generators", List.of(), "[]");
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "generators", List.of("BBE1AA"), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "GENERATOR", "MAP", List.of(), "[]");
 
         //get the batteries map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "batteries", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "BATTERY", "MAP", List.of(), "[]");
 
         //get the dangling lines map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "dangling-lines", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "DANGLING_LINE", "MAP", List.of(), "[]");
 
         //get the hvdc lines map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", "MAP", List.of(), "[]");
 
         //get the lcc converter stations map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "lcc-converter-stations", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LCC_CONVERTER_STATION", "MAP", List.of(), "[]");
 
         //get the vsc converter stations map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "vsc-converter-stations", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VSC_CONVERTER_STATION", "MAP", List.of(), "[]");
 
         //get the loads map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LOAD", "MAP", List.of(), "[]");
 
         //get the shunt compensators map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "shunt-compensators", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "SHUNT_COMPENSATOR", "MAP", List.of(), "[]");
 
         //get the static var compensators map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "static-var-compensators", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "STATIC_VAR_COMPENSATOR", "MAP", List.of(), "[]");
 
         //get the voltage levels map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "MAP", List.of(), "[]");
@@ -549,7 +536,7 @@ public class SingleLineDiagramTest {
             .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
             .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
