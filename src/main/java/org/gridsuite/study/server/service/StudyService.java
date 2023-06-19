@@ -1216,11 +1216,15 @@ public class StudyService {
         return getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuidToSearchIn, voltageLevelId, "busbar-sections");
     }
 
-    private static List<SelectedShuntCompensatorData> toShuntCompensatorData(Stream<ShuntCompensator> shuntCompensators) {
+    private static String getBusId(Terminal terminal) {
+        return terminal.isConnected() ? terminal.getBusView().getBus().getId() : terminal.getBusView().getConnectableBus().getId();
+    }
+
+    private static List<SelectedShuntCompensatorData> toShuntCompensatorData(String lccBusId, Stream<ShuntCompensator> shuntCompensators) {
         return shuntCompensators
                 .map(s -> SelectedShuntCompensatorData.builder()
                         .id(s.getId())
-                        .selected(true) // TODO how to get connectable eqpt ?
+                        .selected(Objects.equals(lccBusId, getBusId(s.getTerminal())))
                         .build())
                 .collect(Collectors.toList());
     }
@@ -1237,10 +1241,10 @@ public class StudyService {
         if (hvdc != null) {
             builder.hvdcType(hvdc.getConverterStation1().getHvdcType());
             if (hvdc.getConverterStation1().getHvdcType() == HvdcConverterStation.HvdcType.LCC) {
-                VoltageLevel vl1 = hvdc.getConverterStation1().getTerminal().getVoltageLevel();
-                VoltageLevel vl2 = hvdc.getConverterStation2().getTerminal().getVoltageLevel();
-                builder.mcsOnSide1(toShuntCompensatorData(vl1.getShuntCompensatorStream()));
-                builder.mcsOnSide2(toShuntCompensatorData(vl2.getShuntCompensatorStream()));
+                Terminal terminalLcc1 = hvdc.getConverterStation1().getTerminal();
+                builder.mcsOnSide1(toShuntCompensatorData(getBusId(terminalLcc1), terminalLcc1.getVoltageLevel().getShuntCompensatorStream()));
+                Terminal terminalLcc2 = hvdc.getConverterStation2().getTerminal();
+                builder.mcsOnSide2(toShuntCompensatorData(getBusId(terminalLcc2), terminalLcc2.getVoltageLevel().getShuntCompensatorStream()));
             }
         }
         return builder.build();
