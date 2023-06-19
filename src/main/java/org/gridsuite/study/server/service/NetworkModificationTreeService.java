@@ -850,10 +850,9 @@ public class NetworkModificationTreeService {
                     .map(applicationStatus -> BuildStatus.fromApplicationStatus(applicationStatus))
                     .collect(Collectors.toList());
 
-
             NodeEntity previousBuiltNode = doGetLastParentNodeBuilt(nodeEntity);
             BuildStatus globalBuildStatus = BuildStatus.NOT_BUILT;
-            if(previousBuiltNode.getType() != NodeType.ROOT && !nodeEntity.getParentNode().getType().equals(NodeType.ROOT)) {
+            if (previousBuiltNode.getType() != NodeType.ROOT && !nodeEntity.getParentNode().getType().equals(NodeType.ROOT)) {
                 BuildStatus previousGlobalStatus = nodeRepositoryProxy.getBuildStatusGlobal(previousBuiltNode.getIdNode());
                 BuildStatus previousLocalStatus = nodeRepositoryProxy.getBuildStatusLocal(previousBuiltNode.getIdNode());
                 globalBuildStatus = previousLocalStatus.isMoreSevere(previousGlobalStatus) ? previousLocalStatus : previousGlobalStatus;
