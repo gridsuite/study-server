@@ -1013,8 +1013,8 @@ public class NetworkModificationTreeTest {
 
     @Test
     public void testUpdateBuildStatus() {
-        Pair<UUID, UUID> result = createTreeForBuildStatus();
-        UUID leafNodeId = result.getSecond();
+        Pair<UUID, NetworkModificationNode> result = createTreeForBuildStatus();
+        UUID leafNodeId = result.getSecond().getId();
         UUID studyUuid = result.getFirst();
 
         networkModificationTreeService.updateBuildStatus(leafNodeId, BuildStatus.BUILT_WITH_WARNING);
@@ -1049,8 +1049,8 @@ public class NetworkModificationTreeTest {
 
     @Test
     public void testUpdateApplicationStatus() {
-        Pair<UUID, UUID> result = createTreeForBuildStatus();
-        UUID leafNodeId = result.getSecond();
+        Pair<UUID, NetworkModificationNode> result = createTreeForBuildStatus();
+        UUID leafNodeId = result.getSecond().getId();
         UUID studyUuid = result.getFirst();
 
         // take the closest built parent severity
@@ -1074,12 +1074,38 @@ public class NetworkModificationTreeTest {
         assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatusLocal(leafNodeId));
     }
 
+    @Test
+    public void testUpdateModificationsGroupApplicationStatus() {
+        Pair<UUID, NetworkModificationNode> result = createTreeForBuildStatus();
+        UUID leafNodeId = result.getSecond().getId();
+        UUID studyUuid = result.getFirst();
+
+        Map<UUID, NetworkModificationResult.ApplicationStatus> modificationsGroupApplicationStatus = new HashMap<>();
+        modificationsGroupApplicationStatus.put(result.getSecond().getModificationGroupUuid(), NetworkModificationResult.ApplicationStatus.ALL_OK);
+        //add an ancestry modification group status
+        modificationsGroupApplicationStatus.put(UUID.randomUUID(), NetworkModificationResult.ApplicationStatus.WITH_WARNINGS);
+
+        //local build should be OK and global one with warnings because of ancestry status
+        networkModificationTreeService.updateBuildStatus(leafNodeId, modificationsGroupApplicationStatus);
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatusLocal(leafNodeId));
+        assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getBuildStatusGlobal(leafNodeId));
+        checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
+
+        //global status should still be with warning since it was inherited and local one is now with errors since its more severe than all ok
+        modificationsGroupApplicationStatus.clear();
+        modificationsGroupApplicationStatus.put(result.getSecond().getModificationGroupUuid(), NetworkModificationResult.ApplicationStatus.WITH_ERRORS);
+        networkModificationTreeService.updateBuildStatus(leafNodeId, modificationsGroupApplicationStatus);
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatusLocal(leafNodeId));
+        assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getBuildStatusGlobal(leafNodeId));
+        checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
+    }
+
     /**
      * Create a network modification tree to test the build status.
      * @return a pair with the ID of the study and the ID of the leaf node of the tree
      */
     @SneakyThrows
-    private Pair<UUID, UUID> createTreeForBuildStatus() {
+    private Pair<UUID, NetworkModificationNode> createTreeForBuildStatus() {
         String userId = "userId";
         RootNode root = createRoot();
         final NetworkModificationNode node1 = buildNetworkModification("built_with_error", "not built node", UUID.randomUUID(), VARIANT_ID, LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT_WITH_ERROR);
@@ -1090,7 +1116,7 @@ public class NetworkModificationTreeTest {
         createNode(root.getStudyId(), node1, node2, userId);
         createNode(root.getStudyId(), node2, node3, userId);
         createNode(root.getStudyId(), node3, node4, userId);
-        return Pair.of(root.getStudyId(), node4.getId());
+        return Pair.of(root.getStudyId(), node4);
     }
 
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
