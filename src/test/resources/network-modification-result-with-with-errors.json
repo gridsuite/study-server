@@ -1,5 +1,6 @@
 {
   "applicationStatus": "WITH_ERRORS",
+  "modificationsGroupApplicationStatus":{},
   "networkImpacts": [
     {
       "impactType": "CREATION",
