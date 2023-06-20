@@ -27,6 +27,24 @@ import javax.persistence.*;
 @Table(name = "study")
 public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements BasicStudyEntity {
 
+    public StudyEntity(UUID id, UUID networkUuid, String networkId, String caseFormat, UUID caseUuid, String caseName, String loadFlowProvider, String securityAnalysisProvider, String sensitivityAnalysisProvider, String dynamicSimulationProvider, LoadFlowParametersEntity loadFlowParameters, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, VoltageInitParametersEntity voltageInitParameters, ImportParametersEntity importParameters) {
+        this.id = id;
+        this.networkUuid = networkUuid;
+        this.networkId = networkId;
+        this.caseFormat = caseFormat;
+        this.caseUuid = caseUuid;
+        this.caseName = caseName;
+        this.loadFlowProvider = loadFlowProvider;
+        this.securityAnalysisProvider = securityAnalysisProvider;
+        this.sensitivityAnalysisProvider = sensitivityAnalysisProvider;
+        this.dynamicSimulationProvider = dynamicSimulationProvider;
+        this.loadFlowParameters = loadFlowParameters;
+        this.shortCircuitParameters = shortCircuitParameters;
+        this.dynamicSimulationParameters = dynamicSimulationParameters;
+        this.voltageInitParameters = voltageInitParameters;
+        this.importParameters = importParameters;
+    }
+
     @Id
     @Column(name = "id")
     private UUID id;
@@ -89,6 +107,14 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
                     name = "voltageInitParameters_id_fk"
             ))
     private VoltageInitParametersEntity voltageInitParameters;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "securityAnalysisParametersEntity_id",
+            referencedColumnName = "id",
+            foreignKey = @ForeignKey(
+                    name = "securityAnalysisParameters_id_fk"
+            ))
+    private SecurityAnalysisParametersEntity securityAnalysisParameters;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "importParametersEntity_id",
