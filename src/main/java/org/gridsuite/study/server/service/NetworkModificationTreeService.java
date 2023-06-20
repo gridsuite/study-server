@@ -839,12 +839,10 @@ public class NetworkModificationTreeService {
         if (localApplicationStatus != null && modificationsGroupApplicationStatus.entrySet().size() == 1) {
             updateBuildStatus(nodeUuid, localApplicationStatus);
         } else {
-            BuildStatus localBuildStatus = null;
-            if (localApplicationStatus != null) {
-                localBuildStatus = BuildStatus.fromApplicationStatus(localApplicationStatus);
-            }
+            //if there is no corresponding modification group for the local node it means it has no modifications thus its status is ok
+            BuildStatus localBuildStatus = localApplicationStatus != null ? BuildStatus.fromApplicationStatus(localApplicationStatus) : BuildStatus.BUILT;
 
-            List<BuildStatus> ancestryBuildStatus = modificationsGroupApplicationStatus.entrySet().stream()
+            List<BuildStatus> previousBuildStatus = modificationsGroupApplicationStatus.entrySet().stream()
                     .filter(e -> !e.getKey().equals(localNodeModificationGroupUuid))
                     .map(Map.Entry::getValue)
                     .map(applicationStatus -> BuildStatus.fromApplicationStatus(applicationStatus))
@@ -858,7 +856,7 @@ public class NetworkModificationTreeService {
                 globalBuildStatus = previousLocalStatus.isMoreSevere(previousGlobalStatus) ? previousLocalStatus : previousGlobalStatus;
             }
 
-            for (BuildStatus buildStatus : ancestryBuildStatus) {
+            for (BuildStatus buildStatus : previousBuildStatus) {
                 globalBuildStatus = globalBuildStatus.max(buildStatus);
             }
 

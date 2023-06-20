@@ -240,7 +240,7 @@ public class ConsumerService {
 
                     LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
                     Map<UUID, NetworkModificationResult.ApplicationStatus> modificationsGroupApplicationStatus = networkModificationResult.getModificationsGroupApplicationStatus();
-                    if (modificationsGroupApplicationStatus.entrySet().size() > 0) {
+                    if (!modificationsGroupApplicationStatus.entrySet().isEmpty()) {
                         updateBuildStatus(receiverObj.getNodeUuid(), modificationsGroupApplicationStatus);
                     } else {
                         updateBuildStatus(receiverObj.getNodeUuid(), networkModificationResult.getApplicationStatus());
