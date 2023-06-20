@@ -240,7 +240,11 @@ public class ConsumerService {
 
                     LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
                     Map<UUID, NetworkModificationResult.ApplicationStatus> modificationsGroupApplicationStatus = networkModificationResult.getModificationsGroupApplicationStatus();
-                    updateBuildStatus(receiverObj.getNodeUuid(), modificationsGroupApplicationStatus);
+                    if(modificationsGroupApplicationStatus.entrySet().size() > 0) {
+                        updateBuildStatus(receiverObj.getNodeUuid(), modificationsGroupApplicationStatus);
+                    } else {
+                        updateBuildStatus(receiverObj.getNodeUuid(), networkModificationResult.getApplicationStatus());
+                    }
 
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
@@ -450,6 +454,10 @@ public class ConsumerService {
 
     private void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
         networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
+    }
+
+    private void updateBuildStatus(UUID nodeUuid, NetworkModificationResult.ApplicationStatus applicationStatus) {
+        networkModificationTreeService.updateBuildStatus(nodeUuid, applicationStatus);
     }
 
     private void updateBuildStatus(UUID nodeUuid, Map<UUID, NetworkModificationResult.ApplicationStatus> modificationsGroupApplicationStatus) {

@@ -862,7 +862,7 @@ public class NetworkModificationTreeService {
                 globalBuildStatus = globalBuildStatus.max(buildStatus);
             }
 
-            updateBuildStatus(nodeUuid, localBuildStatus != null ? localBuildStatus : BuildStatus.BUILT, globalBuildStatus);
+            updateBuildStatus(nodeUuid, localBuildStatus, globalBuildStatus);
         }
     }
 
