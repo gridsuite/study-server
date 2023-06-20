@@ -1022,7 +1022,8 @@ public class NetworkModificationTreeTest {
         checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
 
         networkModificationTreeService.updateBuildStatus(leafNodeId, BuildStatus.BUILT_WITH_ERROR);
-        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatusGlobal(leafNodeId));
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatusLocal(leafNodeId));
+        assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getBuildStatusGlobal(leafNodeId));
         checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
 
         // keep the previous status (BUILT_WITH_ERROR) because it has higher severity
@@ -1063,14 +1064,14 @@ public class NetworkModificationTreeTest {
         checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
 
         networkModificationTreeService.updateBuildStatus(leafNodeId, NetworkModificationResult.ApplicationStatus.WITH_ERRORS);
-        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatusGlobal(leafNodeId));
+        assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getBuildStatusGlobal(leafNodeId));
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatusLocal(leafNodeId));
         checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
 
         // keep the previous status (BUILT_WITH_ERROR) because it has higher severity
         networkModificationTreeService.updateBuildStatus(leafNodeId, NetworkModificationResult.ApplicationStatus.ALL_OK);
-        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatusGlobal(leafNodeId));
-        // local build status has been updated
-        checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
+        assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getBuildStatusGlobal(leafNodeId));
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatusLocal(leafNodeId));
     }
 
     /**
