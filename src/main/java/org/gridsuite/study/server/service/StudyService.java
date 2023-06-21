@@ -42,6 +42,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.dto.voltageinit.FilterEquipments;
 import org.gridsuite.study.server.dto.voltageinit.VoltageInitParametersInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -1278,13 +1279,13 @@ public class StudyService {
     }
 
     @Transactional
-    public void duplicateStudySubtree(UUID studyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
-        checkStudyContainsNode(studyUuid, parentNodeToCopyUuid);
-        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+    public void duplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
+        checkStudyContainsNode(sourceStudyUuid, parentNodeToCopyUuid);
+        checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
 
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudySubtree(parentNodeToCopyUuid, referenceNodeUuid, new HashSet<>());
-        notificationService.emitSubtreeInserted(studyUuid, duplicatedNodeUuid, referenceNodeUuid);
-        notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
+        notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
 
     @Transactional
@@ -1402,7 +1403,7 @@ public class StudyService {
         startTime.set(System.nanoTime());
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
         deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
-        boolean invalidateChildrenBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeId));
+        boolean invalidateChildrenBuild = !deleteChildren && !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeId));
         List<NodeEntity> childrenNodes = networkModificationTreeService.getChildrenByParentUuid(nodeId);
         networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
 
@@ -1660,6 +1661,50 @@ public class StudyService {
         return result;
     }
 
+    private List<String> toEquipmentIdsList(List<FilterEquipmentsEmbeddable> filters, UUID networkUuid, String variantId) {
+        if (filters == null || filters.isEmpty()) {
+            return List.of();
+        }
+        List<FilterEquipments> equipments = filterService.exportFilters(filters.stream().map(filter -> filter.getFilterId()).collect(Collectors.toList()), networkUuid, variantId);
+        Set<String> ids = new HashSet<>();
+        equipments.forEach(filterEquipment ->
+                filterEquipment.getIdentifiableAttributes().forEach(identifiableAttribute ->
+                        ids.add(identifiableAttribute.getId())
+                )
+        );
+        return ids.stream().collect(Collectors.toList());
+    }
+
+    private OpenReacParameters buildOpenReacParameters(Optional<StudyEntity> studyEntity, UUID networkUuid, String variantId) {
+        OpenReacParameters parameters = new OpenReacParameters();
+        Map<String, VoltageLimitOverride> specificVoltageLimits = new HashMap<>();
+        List<String> constantQGenerators = new ArrayList<>();
+        List<String> variableTwoWindingsTransformers = new ArrayList<>();
+        List<String> variableShuntCompensators = new ArrayList<>();
+        studyEntity.ifPresent(study -> {
+            VoltageInitParametersEntity voltageInitParameters = study.getVoltageInitParameters();
+            if (voltageInitParameters != null && voltageInitParameters.getVoltageLimits() != null) {
+                voltageInitParameters.getVoltageLimits().forEach(voltageLimit -> {
+                    var filterEquipments = filterService.exportFilters(voltageLimit.getFilters().stream().map(filter -> filter.getFilterId()).collect(Collectors.toList()), networkUuid, variantId);
+                    filterEquipments.forEach(filterEquipment ->
+                            filterEquipment.getIdentifiableAttributes().forEach(idenfiableAttribute ->
+                                    specificVoltageLimits.put(idenfiableAttribute.getId(), new VoltageLimitOverride(voltageLimit.getLowVoltageLimit(), voltageLimit.getHighVoltageLimit()))
+                            )
+                    );
+                });
+                constantQGenerators.addAll(toEquipmentIdsList(voltageInitParameters.getConstantQGenerators(), networkUuid, variantId));
+                variableTwoWindingsTransformers.addAll(toEquipmentIdsList(voltageInitParameters.getVariableTwoWindingsTransformers(), networkUuid, variantId));
+                variableShuntCompensators.addAll(toEquipmentIdsList(voltageInitParameters.getVariableShuntCompensators(), networkUuid, variantId));
+            }
+        });
+        parameters.addSpecificVoltageLimits(specificVoltageLimits)
+                .addConstantQGenerators(constantQGenerators)
+                .addVariableTwoWindingsTransformers(variableTwoWindingsTransformers)
+                .addVariableShuntCompensators(variableShuntCompensators);
+
+        return parameters;
+    }
+
     public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, String userId) {
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getVoltageInitResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(voltageInitService::deleteVoltageInitResult);
@@ -1668,22 +1713,7 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
 
-        //we build voltage init parameter
-        OpenReacParameters parameters = new OpenReacParameters();
-        Map<String, VoltageLimitOverride> specificVoltageLimits = new HashMap<>();
-        studyEntity.ifPresent(study -> {
-            if (study.getVoltageInitParameters() != null && study.getVoltageInitParameters().getVoltageLimits() != null) {
-                study.getVoltageInitParameters().getVoltageLimits().forEach(voltageLimit -> {
-                    var filterEquipments = filterService.exportFilters(voltageLimit.getFilters().stream().map(filter -> filter.getFilterId()).collect(Collectors.toList()), networkUuid, variantId);
-                    filterEquipments.forEach(filterEquipment ->
-                        filterEquipment.getIdentifiableAttributes().forEach(idenfiableAttribute ->
-                            specificVoltageLimits.put(idenfiableAttribute.getId(), new VoltageLimitOverride(voltageLimit.getLowVoltageLimit(), voltageLimit.getHighVoltageLimit()))
-                        )
-                    );
-                });
-            }
-        });
-        parameters.addSpecificVoltageLimits(specificVoltageLimits);
+        OpenReacParameters parameters = buildOpenReacParameters(studyEntity, networkUuid, variantId);
 
         UUID result = voltageInitService.runVoltageInit(networkUuid, variantId, parameters, nodeUuid, userId);
 

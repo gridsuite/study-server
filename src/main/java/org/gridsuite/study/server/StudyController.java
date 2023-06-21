@@ -223,11 +223,12 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "The subtree was successfully created"),
         @ApiResponse(responseCode = "403", description = "The subtree can't be copied above the root node nor around itself"),
         @ApiResponse(responseCode = "404", description = "The source study or subtree doesn't exist")})
-    public ResponseEntity<Void> duplicateSubtree(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> duplicateSubtree(@Parameter(description = "The study where we want to copy the node") @PathVariable("studyUuid") UUID targetStudyUuid,
+                                                 @Parameter(description = "The copied node original study") @RequestParam(value = "sourceStudyUuid") UUID sourceStudyUuid,
                                                        @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCopyParentNodeUuid") UUID subtreeToCopyParentNodeUuid,
                                                        @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.duplicateStudySubtree(studyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId);
+        studyService.duplicateStudySubtree(sourceStudyUuid, targetStudyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
