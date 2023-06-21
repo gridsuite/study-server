@@ -40,8 +40,8 @@ import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
-import org.gridsuite.study.server.dto.modification.HvdcDeletionInfos;
-import org.gridsuite.study.server.dto.modification.SelectedShuntCompensatorData;
+import org.gridsuite.study.server.dto.HvdcDeletionInfos;
+import org.gridsuite.study.server.dto.HvdcDeletionSelectedShuntCompensatorData;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.voltageinit.FilterEquipments;
@@ -1220,9 +1220,9 @@ public class StudyService {
         return terminal.isConnected() ? terminal.getBusView().getBus().getId() : terminal.getBusView().getConnectableBus().getId();
     }
 
-    private static List<SelectedShuntCompensatorData> toShuntCompensatorData(String lccBusId, Stream<ShuntCompensator> shuntCompensators) {
+    private static List<HvdcDeletionSelectedShuntCompensatorData> toShuntCompensatorData(String lccBusId, Stream<ShuntCompensator> shuntCompensators) {
         return shuntCompensators
-                .map(s -> SelectedShuntCompensatorData.builder()
+                .map(s -> HvdcDeletionSelectedShuntCompensatorData.builder()
                         .id(s.getId())
                         .selected(Objects.equals(lccBusId, getBusId(s.getTerminal())))
                         .build())
