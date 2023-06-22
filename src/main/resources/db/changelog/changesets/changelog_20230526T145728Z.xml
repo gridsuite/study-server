@@ -1,0 +1,23 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="ajellalali (generated)" id="1685113059268-5">
+        <createTable tableName="security_analysis_parameters">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="security_analysis_parametersPK"/>
+            </column>
+            <column name="flow_proportional_threshold" type="FLOAT8"/>
+            <column name="high_voltage_absolute_threshold" type="FLOAT8"/>
+            <column name="high_voltage_proportional_threshold" type="FLOAT8"/>
+            <column name="low_voltage_absolute_threshold" type="FLOAT8"/>
+            <column name="low_voltage_proportional_threshold" type="FLOAT8"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="ajellalali (generated)" id="1685113059268-6">
+        <addColumn tableName="study">
+            <column name="security_analysis_parameters_entity_id" type="uuid"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="ajellalali (generated)" id="1685113059268-7">
+        <addForeignKeyConstraint baseColumnNames="security_analysis_parameters_entity_id" baseTableName="study" constraintName="securityAnalysisParameters_id_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="security_analysis_parameters" validate="true"/>
+    </changeSet>
+</databaseChangeLog>
