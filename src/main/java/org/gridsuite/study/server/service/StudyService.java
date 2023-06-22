@@ -14,7 +14,6 @@ import com.powsybl.iidm.network.*;
 import com.powsybl.openreac.parameters.input.OpenReacParameters;
 import com.powsybl.openreac.parameters.input.VoltageLimitOverride;
 import com.powsybl.security.LimitViolation;
-import com.powsybl.security.LimitViolationType;
 import com.powsybl.security.Security;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
