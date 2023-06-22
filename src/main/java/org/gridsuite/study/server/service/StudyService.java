@@ -1010,10 +1010,11 @@ public class StudyService {
                 .limit(violation.getLimit())
                 .limitName(violation.getLimitName())
                 .value(violation.getValue())
-                .side(violation.getSide() != null ? violation.getSide().name() : "").build();
+                .side(violation.getSide() != null ? violation.getSide().name() : "")
+                .limitType(violation.getLimitType().toString()).build();
     }
 
-    public List<LimitViolationInfos> getCurrentLimitViolations(UUID studyUuid, UUID nodeUuid, float limitReduction) {
+    public List<LimitViolationInfos> getLimitViolations(UUID studyUuid, UUID nodeUuid, float limitReduction) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
@@ -1029,7 +1030,6 @@ public class StudyService {
         violations = Security.checkLimits(network, limitReduction);
         //}
         return violations.stream()
-            .filter(v -> v.getLimitType() == LimitViolationType.CURRENT)
             .map(StudyService::toLimitViolationInfos).collect(Collectors.toList());
     }
 

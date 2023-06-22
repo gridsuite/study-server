@@ -28,4 +28,8 @@ public class LimitViolationInfos {
     private Double value;
 
     private String side;
+
+    private String limitType;
+
+
 }
