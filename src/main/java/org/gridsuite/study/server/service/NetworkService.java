@@ -64,7 +64,7 @@ public class NetworkService {
     public Network getNetwork(UUID networkUuid, PreloadingStrategy strategy, String variantId) {
         try {
             Network network = networkStoreService.getNetwork(networkUuid, strategy);
-            if (variantId != null && !variantId.isEmpty()) {
+            if (variantId != null) {
                 network.getVariantManager().setWorkingVariant(variantId);
             }
             return network;

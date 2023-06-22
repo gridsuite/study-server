@@ -322,14 +322,14 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/{hvdcId}/shunt-compensators")
     @Operation(summary = "For a given hvdc line, get its related Shunt compensators in case of LCC converter station")
-    @ApiResponse(responseCode = "200", description = "HVDC lines description")
-    public ResponseEntity<String> getHvdcLineShuntCompensatorsInfos(
+    @ApiResponse(responseCode = "200", description = "Hvdc line type and its shunt compensators on each side")
+    public ResponseEntity<String> getHvdcLineWithShuntCompensators(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("hvdcId") String hvdcId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
-        String elementInfos = studyService.getHvdcLineShuntCompensatorsInfos(studyUuid, nodeUuid, inUpstreamBuiltParentNode, hvdcId);
-        return StringUtils.isEmpty(elementInfos) ? ResponseEntity.noContent().build() : ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(elementInfos);
+        String hvdcInfos = studyService.getHvdcLineWithShuntCompensators(studyUuid, nodeUuid, inUpstreamBuiltParentNode, hvdcId);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(hvdcInfos);
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines")

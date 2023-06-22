@@ -133,25 +133,14 @@ public class NetworkMapService {
         return equipmentMapData;
     }
 
-    public String getHvdcLineShuntCompensatorsInfos(UUID networkUuid, String variantId, String hvdcId) {
+    public String getHvdcLineWithShuntCompensators(UUID networkUuid, String variantId, String hvdcId) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(
                 DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/hvdc-lines/{hvdcId}/shunt-compensators");
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         String path = builder.buildAndExpand(networkUuid, hvdcId).toUriString();
-
-        String hvdcMapData;
-        try {
-            hvdcMapData = restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(EQUIPMENT_NOT_FOUND);
-            } else {
-                throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
-            }
-        }
-        return hvdcMapData;
+        return restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
     }
 
     public List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID networkUuid, String variantId,

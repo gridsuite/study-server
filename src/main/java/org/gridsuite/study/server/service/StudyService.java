@@ -658,11 +658,11 @@ public class StudyService {
                 substationsIds, equipmentPath);
     }
 
-    public String getHvdcLineShuntCompensatorsInfos(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode, String hvdcId) {
+    public String getHvdcLineWithShuntCompensators(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode, String hvdcId) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn);
-        return networkMapService.getHvdcLineShuntCompensatorsInfos(networkUuid, variantId, hvdcId);
+        return networkMapService.getHvdcLineWithShuntCompensators(networkUuid, variantId, hvdcId);
     }
 
     public String getBranchOrThreeWindingsTransformer(UUID studyUuid, UUID nodeUuid, String equipmentId) {
