@@ -417,7 +417,7 @@ public class LoadflowTest {
     }
 
     @Test
-    public void testCurrentLimitViolations() throws Exception {
+    public void testLimitViolations() throws Exception {
         // create a study and a node
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_ERROR_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -427,7 +427,7 @@ public class LoadflowTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         // retrieve overloaded lines data on node 1
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/current-limit-violations?limitReduction=1.0",
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations?limitReduction=1.0",
                 studyNameUserIdUuid,
                 modificationNode1Uuid)).andExpectAll(
                         status().isOk(),
