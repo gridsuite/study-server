@@ -44,7 +44,7 @@
     </developers>
 
     <properties>
-        <gridsuite-dependencies.version>23</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>25</gridsuite-dependencies.version>
         <commons-lang3.version>3.9</commons-lang3.version>
         <log4j2-mock-version>0.0.2</log4j2-mock-version>
         <equalsverifier-version>3.7.1</equalsverifier-version>
@@ -235,6 +235,11 @@
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-config-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-iidm-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

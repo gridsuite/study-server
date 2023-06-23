@@ -762,8 +762,8 @@ public class StudyService {
         LoadFlowParameters commonParameters = getLoadFlowParameters(study);
         List<LoadFlowSpecificParameterInfos> specificParameters = getAllSpecificLoadFlowParameters(study);
         Map<String, Map<String, Object>> specificParametersPerProvider = specificParameters.stream()
-            .collect(Collectors.groupingBy(LoadFlowSpecificParameterInfos::getProvider,
-                Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)));
+                .collect(Collectors.groupingBy(LoadFlowSpecificParameterInfos::getProvider,
+                        Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)));
         return LoadFlowParametersValues.builder()
                 .commonParameters(commonParameters)
                 .specificParametersPerProvider(specificParametersPerProvider)
@@ -810,14 +810,14 @@ public class StudyService {
                 parameters.getSpecificParametersPerProvider().forEach((provider, paramsMap) -> {
                     if (paramsMap != null) {
                         paramsMap.forEach((paramName, paramValue) -> {
-                                if (paramValue != null) {
-                                    allSpecificValues.add(LoadFlowSpecificParameterInfos.builder()
-                                            .provider(provider)
-                                            .value(Objects.toString(paramValue))
-                                            .name(paramName)
-                                            .build());
+                                    if (paramValue != null) {
+                                        allSpecificValues.add(LoadFlowSpecificParameterInfos.builder()
+                                                .provider(provider)
+                                                .value(Objects.toString(paramValue))
+                                                .name(paramName)
+                                                .build());
+                                    }
                                 }
-                            }
                         );
                     }
                 });
@@ -964,7 +964,7 @@ public class StudyService {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
-                StandardCharsets.UTF_8);
+                    StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -981,7 +981,7 @@ public class StudyService {
         SecurityAnalysisParametersInfos params = SecurityAnalysisParametersInfos.builder()
                 .parameters(securityAnalysisParameters)
                 .loadFlowSpecificParameters(specificParameters == null ?
-                    Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)))
+                        Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)))
                 .build();
 
         UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, nodeUuid, variantId, provider, contingencyListNames, params, receiver);
@@ -1029,7 +1029,7 @@ public class StudyService {
         violations = Security.checkLimits(network, limitReduction);
         //}
         return violations.stream()
-            .map(StudyService::toLimitViolationInfos).collect(Collectors.toList());
+                .map(StudyService::toLimitViolationInfos).collect(Collectors.toList());
     }
 
     public byte[] getSubstationSvg(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
@@ -1635,7 +1635,7 @@ public class StudyService {
                 sensitivityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
                 sensitivityAnalysisInputData.setParameters(sensitivityAnalysisParameters);
                 sensitivityAnalysisInputData.setLoadFlowSpecificParameters(specificParameters == null ?
-                    Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)));
+                        Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)));
             }
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);

@@ -6,8 +6,10 @@
  */
 package org.gridsuite.study.server.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
@@ -15,6 +17,8 @@ import lombok.Getter;
 
 @Builder
 @Getter
+@AllArgsConstructor
+@NoArgsConstructor
 public class LimitViolationInfos {
 
     private String subjectId;
@@ -30,6 +34,5 @@ public class LimitViolationInfos {
     private String side;
 
     private String limitType;
-
 
 }
