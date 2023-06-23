@@ -447,7 +447,9 @@ public class LoadflowTest {
     public void testCurrentLimitViolationsDcMode() {
         List<LimitViolationInfos> violations = getLimitViolations(true);
         // in DC mode, we use power values => one overload is detected
-        assertEquals(0, violations.size());
+        assertEquals(1, violations.size());
+        assertEquals("NHV1_NHV2_1", violations.get(0).getSubjectId());
+        assertEquals("permanent", violations.get(0).getLimitName());
     }
 
     @Test
