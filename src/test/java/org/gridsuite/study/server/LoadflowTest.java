@@ -31,9 +31,7 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.gridsuite.study.server.dto.LoadFlowInfos;
-import org.gridsuite.study.server.dto.LoadFlowParametersValues;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -49,7 +47,6 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import com.powsybl.security.LimitViolation;
 import com.powsybl.security.LimitViolations;
-import org.gridsuite.study.server.dto.LimitViolationInfos;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.junit.After;
@@ -202,7 +199,7 @@ public class LoadflowTest {
 
     @Test
     public void testLoadFlowError() throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_LOADFLOW_ERROR_UUID_STRING), CASE_LOADFLOW_ERROR_UUID);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_LOADFLOW_ERROR_UUID_STRING), CASE_LOADFLOW_ERROR_UUID, false);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -235,7 +232,7 @@ public class LoadflowTest {
         MvcResult mvcResult;
         String resultAsString;
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_ERROR_UUID);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_ERROR_UUID, false);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -416,10 +413,10 @@ public class LoadflowTest {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, null);
     }
 
-    @Test
-    public void testCurrentLimitViolations() throws Exception {
+    @SneakyThrows
+    public List<LimitViolationInfos> getCurrentLimitViolations(boolean dcMode) {
         // create a study and a node
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_ERROR_UUID);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_ERROR_UUID, dcMode);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -433,9 +430,24 @@ public class LoadflowTest {
                         status().isOk(),
                         content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
-        String resultAsString = mvcResult.getResponse().getContentAsString();
+        String result = mvcResult.getResponse().getContentAsString();
+        return mapper.readValue(result, new TypeReference<List<LimitViolationInfos>>() { });
+    }
+
+    @Test
+    public void testCurrentLimitViolations() {
+        List<LimitViolationInfos> violations = getCurrentLimitViolations(false);
         // the mocked network lines/terminals have no computed 'i' => no overload can be detected
-        assertEquals("[]", resultAsString);
+        assertEquals(0, violations.size());
+    }
+
+    @Test
+    public void testCurrentLimitViolationsDcMode() {
+        List<LimitViolationInfos> violations = getCurrentLimitViolations(true);
+        // in DC mode, we use power values => one overload is detected
+        assertEquals(1, violations.size());
+        assertEquals("NHV1_NHV2_1", violations.get(0).getSubjectId());
+        assertEquals("permanent", violations.get(0).getLimitName());
     }
 
     @Test
@@ -457,7 +469,7 @@ public class LoadflowTest {
                 violationInfos.getSide().equalsIgnoreCase("ONE"));
     }
 
-    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
+    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, boolean dcMode) {
         LoadFlowParametersEntity defaultLoadflowParametersEntity = LoadFlowParametersEntity.builder()
                 .voltageInitMode(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES)
                 .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
@@ -467,6 +479,7 @@ public class LoadflowTest {
                 .dcUseTransformerRatio(true)
                 .hvdcAcEmulation(true)
                 .dcPowerFactor(1.0)
+                .dc(dcMode)
                 .useReactiveLimits(true)
                 .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
