@@ -469,7 +469,7 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public String getUniqueNodeName(UUID studyUuid) {
-        int counter = 2;
+        int counter = 1;
         List<String> studyNodeNames = networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid)
                 .stream()
                 .map(AbstractNodeInfoEntity::getName)
