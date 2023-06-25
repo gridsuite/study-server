@@ -35,5 +35,4 @@ public class LimitViolationInfos {
     private String side;
 
     private LimitViolationType limitType;
-
 }
