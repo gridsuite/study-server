@@ -468,7 +468,7 @@ public class LoadflowTest {
                 violationInfos.getLimitName().equalsIgnoreCase("limit") &&
                 violationInfos.getValue() == 2000.0 &&
                 violationInfos.getSide().equalsIgnoreCase("ONE") &&
-                violationInfos.getLimitType() == LimitViolationType.CURRENT );
+                violationInfos.getLimitType() == LimitViolationType.CURRENT);
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, boolean dcMode) {
