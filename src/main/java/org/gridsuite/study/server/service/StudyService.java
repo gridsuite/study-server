@@ -1010,7 +1010,7 @@ public class StudyService {
                 .limitName(violation.getLimitName())
                 .value(violation.getValue())
                 .side(violation.getSide() != null ? violation.getSide().name() : "")
-                .limitType(violation.getLimitType().toString()).build();
+                .limitType(violation.getLimitType()).build();
     }
 
     public List<LimitViolationInfos> getLimitViolations(UUID studyUuid, UUID nodeUuid, float limitReduction) {

@@ -73,7 +73,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -425,7 +424,7 @@ public class LoadflowTest {
                 UUID.randomUUID(), VariantManagerConstants.INITIAL_VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        // retrieve overloaded lines data on node 1
+        // retrieve current and voltage violations
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations?limitReduction=1.0",
                 studyNameUserIdUuid,
                 modificationNode1Uuid)).andExpectAll(
@@ -444,7 +443,7 @@ public class LoadflowTest {
     }
 
     @Test
-    public void testCurrentLimitViolationsDcMode() {
+    public void testLimitViolationsDcMode() {
         List<LimitViolationInfos> violations = getLimitViolations(true);
         // in DC mode, we use power values => one overload is detected
         assertEquals(1, violations.size());
@@ -468,7 +467,8 @@ public class LoadflowTest {
                 violationInfos.getLimit() == 1500.0 &&
                 violationInfos.getLimitName().equalsIgnoreCase("limit") &&
                 violationInfos.getValue() == 2000.0 &&
-                violationInfos.getSide().equalsIgnoreCase("ONE"));
+                violationInfos.getSide().equalsIgnoreCase("ONE") &&
+                violationInfos.getLimitType() == LimitViolationType.CURRENT );
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, boolean dcMode) {
