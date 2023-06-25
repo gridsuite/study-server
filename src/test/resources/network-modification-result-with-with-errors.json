@@ -1,6 +1,6 @@
 {
   "applicationStatus": "WITH_ERRORS",
-  "modificationsGroupApplicationStatus":{},
+  "lastGroupApplicationStatus":"WITH_ERRORS",
   "networkImpacts": [
     {
       "impactType": "CREATION",

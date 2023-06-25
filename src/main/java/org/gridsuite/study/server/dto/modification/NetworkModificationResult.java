@@ -30,13 +30,13 @@ public class NetworkModificationResult {
         WITH_ERRORS
     }
 
-    @Schema(description = "Operation application status")
+    @Schema(description = "Global application status")
     @Builder.Default
     ApplicationStatus applicationStatus = ApplicationStatus.ALL_OK;
 
-    @Schema(description = "Map of modification groups and their corresponding application status")
+    @Schema(description = "Application status of the building node")
     @Builder.Default
-    Map<UUID, ApplicationStatus> modificationsGroupApplicationStatus = new HashMap<>();
+    ApplicationStatus lastGroupApplicationStatus = ApplicationStatus.ALL_OK;
 
     @Schema(description = "Network modification impacts")
     @Builder.Default

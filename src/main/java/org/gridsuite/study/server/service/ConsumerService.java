@@ -31,7 +31,6 @@ import org.springframework.stereotype.Service;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -239,12 +238,7 @@ public class ConsumerService {
                             NodeReceiver.class);
 
                     LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
-                    Map<UUID, NetworkModificationResult.ApplicationStatus> modificationsGroupApplicationStatus = networkModificationResult.getModificationsGroupApplicationStatus();
-                    if (!modificationsGroupApplicationStatus.entrySet().isEmpty()) {
-                        updateBuildStatus(receiverObj.getNodeUuid(), modificationsGroupApplicationStatus);
-                    } else {
-                        updateBuildStatus(receiverObj.getNodeUuid(), networkModificationResult.getApplicationStatus());
-                    }
+                    updateBuildStatus(receiverObj.getNodeUuid(), networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus());
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
                 } catch (Exception e) {
@@ -455,12 +449,8 @@ public class ConsumerService {
         networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
 
-    private void updateBuildStatus(UUID nodeUuid, NetworkModificationResult.ApplicationStatus applicationStatus) {
-        networkModificationTreeService.updateBuildStatus(nodeUuid, applicationStatus);
-    }
-
-    private void updateBuildStatus(UUID nodeUuid, Map<UUID, NetworkModificationResult.ApplicationStatus> modificationsGroupApplicationStatus) {
-        networkModificationTreeService.updateBuildStatus(nodeUuid, modificationsGroupApplicationStatus);
+    private void updateBuildStatus(UUID nodeUuid, NetworkModificationResult.ApplicationStatus localApplicationStatus, NetworkModificationResult.ApplicationStatus globalApplicationStatus) {
+        networkModificationTreeService.updateBuildStatus(nodeUuid, localApplicationStatus, globalApplicationStatus);
     }
 
     void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {

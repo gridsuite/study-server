@@ -1,6 +1,6 @@
 {
   "applicationStatus": "ALL_OK",
-  "modificationsGroupApplicationStatus":{},
+  "lastGroupApplicationStatus":"ALL_OK",
   "networkImpacts": [
     {
       "impactType": "CREATION",

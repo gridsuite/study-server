@@ -794,12 +794,18 @@ public class NetworkModificationTreeService {
         List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
-
         AbstractNodeRepositoryProxy<?, ?, ?> nodeRepositoryProxy = repositories.get(nodeEntity.getType());
+        BuildStatus computedGlobalStatus = buildStatusGlobal;
+        NodeEntity previousBuiltNode = doGetLastParentNodeBuilt(nodeEntity);
+        if (previousBuiltNode.getType() != NodeType.ROOT && !nodeEntity.getParentNode().getType().equals(NodeType.ROOT)) {
+            BuildStatus previousGlobalStatus = nodeRepositoryProxy.getBuildStatusGlobal(previousBuiltNode.getIdNode());
+            computedGlobalStatus = previousGlobalStatus.max(buildStatusGlobal);
+        }
+
         BuildStatus currentNodeStatusGlobal = nodeRepositoryProxy.getBuildStatusGlobal(nodeEntity.getIdNode());
         BuildStatus currentNodeStatusLocal = nodeRepositoryProxy.getBuildStatusLocal(nodeEntity.getIdNode());
-        if (!buildStatusGlobal.equals(currentNodeStatusGlobal) || !buildStatusLocal.equals(currentNodeStatusLocal)) {
-            nodeRepositoryProxy.updateBuildStatus(nodeUuid, buildStatusGlobal, buildStatusLocal, changedNodes);
+        if (!computedGlobalStatus.equals(currentNodeStatusGlobal) || !buildStatusLocal.equals(currentNodeStatusLocal)) {
+            nodeRepositoryProxy.updateBuildStatus(nodeUuid, computedGlobalStatus, buildStatusLocal, changedNodes);
             notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes);
         }
     }
@@ -815,8 +821,7 @@ public class NetworkModificationTreeService {
         NodeEntity previousBuiltNode = doGetLastParentNodeBuilt(nodeEntity);
         if (buildStatusLocal.isBuilt() && previousBuiltNode.getType() != NodeType.ROOT && !nodeEntity.getParentNode().getType().equals(NodeType.ROOT)) {
             BuildStatus previousGlobalStatus = nodeRepositoryProxy.getBuildStatusGlobal(previousBuiltNode.getIdNode());
-            BuildStatus previousLocalStatus = nodeRepositoryProxy.getBuildStatusLocal(previousBuiltNode.getIdNode());
-            buildStatusGlobal = previousLocalStatus.isMoreSevere(previousGlobalStatus) ? previousLocalStatus : previousGlobalStatus;
+            buildStatusGlobal = previousGlobalStatus.max(buildStatusLocal);
         } else {
             buildStatusGlobal = buildStatusLocal;
         }
@@ -830,50 +835,10 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void updateBuildStatus(UUID nodeUuid, Map<UUID, NetworkModificationResult.ApplicationStatus> modificationsGroupApplicationStatus) {
-        NodeEntity nodeEntity = getNodeEntity(nodeUuid);
-        AbstractNodeRepositoryProxy<?, ?, ?> nodeRepositoryProxy = repositories.get(nodeEntity.getType());
-        UUID localNodeModificationGroupUuid = nodeRepositoryProxy.getModificationGroupUuid(nodeUuid);
-        NetworkModificationResult.ApplicationStatus localApplicationStatus = modificationsGroupApplicationStatus.get(localNodeModificationGroupUuid);
-
-        if (localApplicationStatus != null && modificationsGroupApplicationStatus.entrySet().size() == 1) {
-            updateBuildStatus(nodeUuid, localApplicationStatus);
-        } else {
-            //if there is no corresponding modification group for the local node it means it has no modifications thus its status is ok
-            BuildStatus localBuildStatus = localApplicationStatus != null ? BuildStatus.fromApplicationStatus(localApplicationStatus) : BuildStatus.BUILT;
-
-            List<BuildStatus> previousBuildStatus = modificationsGroupApplicationStatus.entrySet().stream()
-                    .filter(e -> !e.getKey().equals(localNodeModificationGroupUuid))
-                    .map(Map.Entry::getValue)
-                    .map(applicationStatus -> BuildStatus.fromApplicationStatus(applicationStatus))
-                    .collect(Collectors.toList());
-
-            NodeEntity previousBuiltNode = doGetLastParentNodeBuilt(nodeEntity);
-            BuildStatus globalBuildStatus = BuildStatus.NOT_BUILT;
-            if (previousBuiltNode.getType() != NodeType.ROOT && !nodeEntity.getParentNode().getType().equals(NodeType.ROOT)) {
-                BuildStatus previousGlobalStatus = nodeRepositoryProxy.getBuildStatusGlobal(previousBuiltNode.getIdNode());
-                BuildStatus previousLocalStatus = nodeRepositoryProxy.getBuildStatusLocal(previousBuiltNode.getIdNode());
-                globalBuildStatus = previousLocalStatus.isMoreSevere(previousGlobalStatus) ? previousLocalStatus : previousGlobalStatus;
-            }
-
-            for (BuildStatus buildStatus : previousBuildStatus) {
-                globalBuildStatus = globalBuildStatus.max(buildStatus);
-            }
-
-            updateBuildStatus(nodeUuid, localBuildStatus, globalBuildStatus);
-        }
-    }
-
-    @Transactional
-    public void updateBuildStatus(UUID nodeUuid, NetworkModificationResult.ApplicationStatus applicationStatus) {
-        BuildStatus localBuildStatus = BuildStatus.fromApplicationStatus(applicationStatus);
-        NodeEntity nodeEntity = getNodeEntity(nodeUuid);
-        AbstractNodeRepositoryProxy<?, ?, ?> nodeRepositoryProxy = repositories.get(nodeEntity.getType());
-        BuildStatus currentLocalBuildStatus = nodeRepositoryProxy.getBuildStatusLocal(nodeUuid);
-
-        if (localBuildStatus.isMoreSevere(currentLocalBuildStatus)) {
-            updateBuildStatus(nodeUuid, localBuildStatus);
-        }
+    public void updateBuildStatus(UUID nodeUuid, NetworkModificationResult.ApplicationStatus localApplicationStatus, NetworkModificationResult.ApplicationStatus globalApplicationStatus) {
+        BuildStatus localBuildStatus = BuildStatus.fromApplicationStatus(localApplicationStatus);
+        BuildStatus globalBuildStatus = BuildStatus.fromApplicationStatus(globalApplicationStatus);
+        updateBuildStatus(nodeUuid, localBuildStatus, globalBuildStatus);
     }
 
     @Transactional(readOnly = true)
