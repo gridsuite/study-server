@@ -797,7 +797,7 @@ public class NetworkModificationTreeService {
         AbstractNodeRepositoryProxy<?, ?, ?> nodeRepositoryProxy = repositories.get(nodeEntity.getType());
         BuildStatus computedGlobalStatus = buildStatusGlobal;
         NodeEntity previousBuiltNode = doGetLastParentNodeBuilt(nodeEntity);
-        if (previousBuiltNode.getType() != NodeType.ROOT && !nodeEntity.getParentNode().getType().equals(NodeType.ROOT)) {
+        if (previousBuiltNode.getType() != NodeType.ROOT) {
             BuildStatus previousGlobalStatus = nodeRepositoryProxy.getBuildStatusGlobal(previousBuiltNode.getIdNode());
             computedGlobalStatus = previousGlobalStatus.max(buildStatusGlobal);
         }
@@ -819,7 +819,7 @@ public class NetworkModificationTreeService {
 
         BuildStatus buildStatusGlobal;
         NodeEntity previousBuiltNode = doGetLastParentNodeBuilt(nodeEntity);
-        if (buildStatusLocal.isBuilt() && previousBuiltNode.getType() != NodeType.ROOT && !nodeEntity.getParentNode().getType().equals(NodeType.ROOT)) {
+        if (buildStatusLocal.isBuilt()) {
             BuildStatus previousGlobalStatus = nodeRepositoryProxy.getBuildStatusGlobal(previousBuiltNode.getIdNode());
             buildStatusGlobal = previousGlobalStatus.max(buildStatusLocal);
         } else {
