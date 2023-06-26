@@ -140,7 +140,13 @@ public class NetworkMapService {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         String path = builder.buildAndExpand(networkUuid, hvdcId).toUriString();
-        return restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
+        String equipmentMapData;
+        try {
+            equipmentMapData = restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
+        }
+        return equipmentMapData;
     }
 
     public List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID networkUuid, String variantId,
