@@ -34,7 +34,7 @@ public class NetworkModificationResult {
     @Builder.Default
     ApplicationStatus applicationStatus = ApplicationStatus.ALL_OK;
 
-    @Schema(description = "Application status of the building node")
+    @Schema(description = "Last group application status")
     @Builder.Default
     ApplicationStatus lastGroupApplicationStatus = ApplicationStatus.ALL_OK;
 
