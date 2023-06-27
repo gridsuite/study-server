@@ -85,12 +85,12 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
      */
     @Column(name = "buildStatusGlobal", nullable = false)
     @Enumerated(EnumType.STRING)
-    private BuildStatus buildStatusGlobal;
+    private BuildStatus globalBuildStatus;
 
     /**
      * The local build status represents the state of this node own modifications on the network
      */
     @Column(name = "buildStatusLocal", nullable = false)
     @Enumerated(EnumType.STRING)
-    private BuildStatus buildStatusLocal;
+    private BuildStatus localBuildStatus;
 }

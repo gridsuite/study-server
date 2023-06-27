@@ -407,9 +407,9 @@ public class NetworkModificationTest {
         // build modificationNode2 and stop build
         testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId(), 1);
 
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatusGlobal(modificationNode3.getId()));
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatusGlobal(modificationNode4.getId()));
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatusGlobal(modificationNode5.getId()));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getGlobalBuildStatus(modificationNode3.getId()));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(modificationNode4.getId()));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getGlobalBuildStatus(modificationNode5.getId()));
 
         modificationNode3.setNodeBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode3 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
@@ -419,8 +419,8 @@ public class NetworkModificationTest {
         // build modificationNode3 and stop build
         testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId(), 1);
 
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatusGlobal(modificationNode4.getId()));
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatusGlobal(modificationNode5.getId()));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(modificationNode4.getId()));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getGlobalBuildStatus(modificationNode5.getId()));
     }
 
     @Test
@@ -468,7 +468,7 @@ public class NetworkModificationTest {
         checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatusGlobal(modificationNodeUuid));
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getGlobalBuildStatus(modificationNodeUuid));
         wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING);
 
         // Build second node is OK
@@ -486,12 +486,12 @@ public class NetworkModificationTest {
         checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNode2Uuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatusGlobal(modificationNode2Uuid));
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getGlobalBuildStatus(modificationNode2Uuid));
         wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING);
 
         //Build modification node 2, local status should be BUILT and computed one should be BUILT_WITH_ERRORS
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatusLocal(modificationNode2Uuid));
-        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatusGlobal(modificationNode2Uuid));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getLocalBuildStatus(modificationNode2Uuid));
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getGlobalBuildStatus(modificationNode2Uuid));
     }
 
     @Test
@@ -591,10 +591,10 @@ public class NetworkModificationTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
 
         // modificationNode2 is still built
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatusGlobal(modificationNode1Uuid));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getGlobalBuildStatus(modificationNode1Uuid));
 
         // modificationNode2 is now invalid
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatusGlobal(modificationNode2Uuid));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(modificationNode2Uuid));
     }
 
     @Test
@@ -2284,7 +2284,7 @@ public class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatusGlobal(modificationNode3Uuid));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(modificationNode3Uuid));
         wireMockUtils.verifyNetworkModificationPost(stubUuid, jsonCreateLoadInfos, NETWORK_UUID_STRING);
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
@@ -2316,7 +2316,7 @@ public class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatusGlobal(modificationNodeUuid));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(modificationNodeUuid));
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING, VARIANT_ID);
 
         // Mark the node status as built
@@ -2341,7 +2341,7 @@ public class NetworkModificationTest {
         checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatusGlobal(modificationNodeUuid));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getGlobalBuildStatus(modificationNodeUuid));
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING, VARIANT_ID);
 
         // Built with warnings
@@ -2358,7 +2358,7 @@ public class NetworkModificationTest {
         checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getBuildStatusGlobal(modificationNodeUuid));
+        assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getGlobalBuildStatus(modificationNodeUuid));
         wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING);
 
         // Built with errors
@@ -2375,7 +2375,7 @@ public class NetworkModificationTest {
         checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatusGlobal(modificationNodeUuid));
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getGlobalBuildStatus(modificationNodeUuid));
         wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING);
     }
 
@@ -2405,7 +2405,7 @@ public class NetworkModificationTest {
                 .withQueryParam(QUERY_PARAM_RECEIVER, WireMock.matching(".*"))
         );
 
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatusGlobal(nodeUuid));  // node is built
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getGlobalBuildStatus(nodeUuid));  // node is built
 
         networkModificationTreeService.updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
 
@@ -2423,7 +2423,7 @@ public class NetworkModificationTest {
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_CANCELLED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatusGlobal(nodeUuid)); // node is not
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(nodeUuid)); // node is not
                                                                                                       // built
 
         wireMockServer.verify(1, WireMock.putRequestedFor(WireMock.urlPathEqualTo("/v1/build/stop"))
@@ -2458,7 +2458,7 @@ public class NetworkModificationTest {
         assertTrue(TestUtils.getRequestsDone(1, server).iterator().next().contains("reports"));
         wireMockUtils.verifyPostRequest(buildFailedStubId, "/v1/networks/" + NETWORK_UUID_2_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
 
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatusGlobal(nodeUuid));  // node is not built
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(nodeUuid));  // node is not built
     }
 
     // builds on network 3 will throw an error on networkmodificationservice call
@@ -2480,7 +2480,7 @@ public class NetworkModificationTest {
         assertTrue(TestUtils.getRequestsDone(1, server).iterator().next().contains("reports"));
         wireMockUtils.verifyPostRequest(buildErrorStubId, "/v1/networks/" + NETWORK_UUID_3_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
 
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatusGlobal(nodeUuid));  // node is not built
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(nodeUuid));  // node is not built
     }
 
     private void checkEquipmentCreatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {

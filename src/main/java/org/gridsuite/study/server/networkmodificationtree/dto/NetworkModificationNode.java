@@ -66,7 +66,7 @@ public class NetworkModificationNode extends AbstractNode {
     }
 
     @JsonIgnore
-    public void setNodeBuildStatus(BuildStatus buildStatusGlobal, BuildStatus buildStatusLocal) {
-        this.nodeBuildStatus = new NodeBuildStatus(buildStatusGlobal, buildStatusLocal);
+    public void setNodeBuildStatus(BuildStatus globalBuildStatus, BuildStatus localBuildStatus) {
+        this.nodeBuildStatus = new NodeBuildStatus(globalBuildStatus, localBuildStatus);
     }
 }

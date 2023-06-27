@@ -58,11 +58,11 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.NOT_DONE).build();
     }
 
-    public BuildStatus getBuildStatusGlobal(AbstractNode node) {
+    public BuildStatus getGlobalBuildStatus(AbstractNode node) {
         return BuildStatus.NOT_BUILT;
     }
 
-    public BuildStatus getBuildStatusLocal(AbstractNode node) {
+    public BuildStatus getLocalBuildStatus(AbstractNode node) {
         return BuildStatus.NOT_BUILT;
     }
 
@@ -113,7 +113,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationUuid) {
     }
 
-    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatusGlobal, BuildStatus buildStatusLocal, List<UUID> changedNodes) {
+    public void updateBuildStatus(AbstractNode node, BuildStatus globalBuildStatus, BuildStatus localBuildStatus, List<UUID> changedNodes) {
     }
 
     public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
@@ -159,7 +159,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
         //since the build status is contained in a POJO for clarity reasons in the dto as oposed to two distincts fields in the entity we have to manually handle the mapping
         if (persistedNode instanceof NetworkModificationNode && ((NetworkModificationNode) node).getNodeBuildStatus() != null) {
-            ((NetworkModificationNode) persistedNode).setNodeBuildStatus(((NetworkModificationNode) node).getNodeBuildStatus().getBuildStatusGlobal(), ((NetworkModificationNode) node).getNodeBuildStatus().getBuildStatusLocal());
+            ((NetworkModificationNode) persistedNode).setNodeBuildStatus(((NetworkModificationNode) node).getNodeBuildStatus().getGlobalBuildStatus(), ((NetworkModificationNode) node).getNodeBuildStatus().getLocalBuildStatus());
         }
 
         var entity = toEntity(persistedNode);
@@ -243,16 +243,16 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getVoltageInitResultUuid(getNode(nodeUuid));
     }
 
-    public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatusGlobal, BuildStatus buildStatusLocal, List<UUID> changedNodes) {
-        updateBuildStatus(getNode(nodeUuid), buildStatusGlobal, buildStatusLocal, changedNodes);
+    public void updateBuildStatus(UUID nodeUuid, BuildStatus globalBuildStatus, BuildStatus localBuildStatus, List<UUID> changedNodes) {
+        updateBuildStatus(getNode(nodeUuid), globalBuildStatus, localBuildStatus, changedNodes);
     }
 
-    public BuildStatus getBuildStatusGlobal(UUID nodeUuid) {
-        return getBuildStatusGlobal(getNode(nodeUuid));
+    public BuildStatus getGlobalBuildStatus(UUID nodeUuid) {
+        return getGlobalBuildStatus(getNode(nodeUuid));
     }
 
-    public BuildStatus getBuildStatusLocal(UUID nodeUuid) {
-        return getBuildStatusLocal(getNode(nodeUuid));
+    public BuildStatus getLocalBuildStatus(UUID nodeUuid) {
+        return getLocalBuildStatus(getNode(nodeUuid));
     }
 
     public void invalidateBuildStatus(UUID nodeUuid, List<UUID> changedNodes) {

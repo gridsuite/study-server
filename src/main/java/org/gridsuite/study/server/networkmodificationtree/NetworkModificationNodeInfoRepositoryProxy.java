@@ -63,8 +63,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
             modificationNode.getDynamicSimulationResultUuid(),
-            modificationNode.getNodeBuildStatus().getBuildStatusGlobal(),
-            modificationNode.getNodeBuildStatus().getBuildStatusLocal());
+            modificationNode.getNodeBuildStatus().getGlobalBuildStatus(),
+            modificationNode.getNodeBuildStatus().getLocalBuildStatus());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
@@ -82,8 +82,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
             node.getDynamicSimulationResultUuid(),
-            new NodeBuildStatus(node.getBuildStatusGlobal(),
-                    node.getBuildStatusLocal())));
+            new NodeBuildStatus(node.getGlobalBuildStatus(),
+                    node.getLocalBuildStatus())));
     }
 
     @Override
@@ -223,20 +223,20 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatusGlobal, BuildStatus buildStatusLocal, List<UUID> changedNodes) {
+    public void updateBuildStatus(AbstractNode node, BuildStatus globalBuildStatus, BuildStatus localBuildStatus, List<UUID> changedNodes) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setNodeBuildStatus(buildStatusGlobal, buildStatusLocal);
+        modificationNode.setNodeBuildStatus(globalBuildStatus, localBuildStatus);
         updateNode(modificationNode, changedNodes);
     }
 
     @Override
-    public BuildStatus getBuildStatusGlobal(AbstractNode node) {
-        return ((NetworkModificationNode) node).getNodeBuildStatus().getBuildStatusGlobal();
+    public BuildStatus getGlobalBuildStatus(AbstractNode node) {
+        return ((NetworkModificationNode) node).getNodeBuildStatus().getGlobalBuildStatus();
     }
 
     @Override
-    public BuildStatus getBuildStatusLocal(AbstractNode node) {
-        return ((NetworkModificationNode) node).getNodeBuildStatus().getBuildStatusLocal();
+    public BuildStatus getLocalBuildStatus(AbstractNode node) {
+        return ((NetworkModificationNode) node).getNodeBuildStatus().getLocalBuildStatus();
     }
 
     @Override
