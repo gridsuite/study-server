@@ -1298,11 +1298,11 @@ public class StudyService {
         }
         networkModificationTreeService.moveStudySubtree(parentNodeToMoveUuid, referenceNodeUuid);
 
-        if (networkModificationTreeService.getBuildStatusGlobal(parentNodeToMoveUuid) == BuildStatus.BUILT) {
+        if (networkModificationTreeService.getBuildStatusGlobal(parentNodeToMoveUuid).isBuilt()) {
             updateStatuses(studyUuid, parentNodeToMoveUuid, false, true);
         }
         allChildren.stream()
-                .filter(childUuid -> networkModificationTreeService.getBuildStatusGlobal(childUuid) == BuildStatus.BUILT)
+                .filter(childUuid -> networkModificationTreeService.getBuildStatusGlobal(childUuid).isBuilt())
                 .forEach(childUuid -> updateStatuses(studyUuid, childUuid, false, true));
 
         notificationService.emitSubtreeMoved(studyUuid, parentNodeToMoveUuid, referenceNodeUuid);
