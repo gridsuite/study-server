@@ -83,6 +83,7 @@ public class NetworkMapTest {
     private static final String LOAD_ID_1 = "LOAD_ID_1";
     private static final String LINE_ID_1 = "LINE_ID_1";
     private static final String HVDC_LINE_ID_1 = "HVDC_LINE_ID_1";
+    private static final String HVDC_LINE_ID_ERR = "HVDC_LINE_ID_ERR";
     private static final String GENERATOR_ID_1 = "GENERATOR_ID_1";
     private static final String SHUNT_COMPENSATOR_ID_1 = "SHUNT_COMPENSATOR_ID_1";
     private static final String TWO_WINDINGS_TRANSFORMER_ID_1 = "2WT_ID_1";
@@ -167,6 +168,9 @@ public class NetworkMapTest {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/hvdc-lines/" + HVDC_LINE_ID_1 + "/shunt-compensators":
                         return new MockResponse().setResponseCode(200).setBody(HVDC_WITH_SHUNT_COMPENSATORS_JSON)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/hvdc-lines/" + HVDC_LINE_ID_ERR + "/shunt-compensators":
+                        return new MockResponse().setResponseCode(500)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     default:
                         LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -431,6 +435,14 @@ public class NetworkMapTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/{hvdcId}/shunt-compensators",
+                        studyNameUserIdUuid, rootNodeUuid, HVDC_LINE_ID_ERR))
+                .andExpect(status().is5xxServerError())
+                .andReturn();
+        var requests = TestUtils.getRequestsDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches(
+                "/v1/networks/" + NETWORK_UUID_STRING + "/hvdc-lines/" + HVDC_LINE_ID_ERR + "/shunt-compensators")));
+
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/{hvdcId}/shunt-compensators",
                         studyNameUserIdUuid, rootNodeUuid, HVDC_LINE_ID_1))
                 .andExpect(status().isOk())
@@ -438,7 +450,7 @@ public class NetworkMapTest {
         resultAsString = mvcResult.getResponse().getContentAsString();
         assertEquals(HVDC_WITH_SHUNT_COMPENSATORS_JSON, resultAsString);
 
-        var requests = TestUtils.getRequestsDone(1, server);
+        requests = TestUtils.getRequestsDone(1, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches(
                 "/v1/networks/" + NETWORK_UUID_STRING + "/hvdc-lines/" + HVDC_LINE_ID_1 + "/shunt-compensators")));
     }
