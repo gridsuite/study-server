@@ -578,7 +578,6 @@ public class StudyService {
         Objects.requireNonNull(securityAnalysisParametersEntity);
         Objects.requireNonNull(newImportParametersEntity);
 
-
         UUID reportUuid = UUID.randomUUID();
         StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(),
                 clonedCaseUuid, sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), sourceStudy.getSecurityAnalysisProvider(),

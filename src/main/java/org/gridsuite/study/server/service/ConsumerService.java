@@ -11,7 +11,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.parameters.Parameter;
 import com.powsybl.iidm.network.Importer;
-import com.powsybl.iidm.network.Importers;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
@@ -53,6 +52,7 @@ public class ConsumerService {
     static final String RESULT_UUID = "resultUuid";
     static final String NETWORK_UUID = "networkUuid";
     static final String NETWORK_ID = "networkId";
+    static final String HEADER_CASE_UUID = "caseUuid";
     static final String HEADER_CASE_FORMAT = "caseFormat";
     static final String HEADER_CASE_NAME = "caseName";
     static final String HEADER_ERROR_MESSAGE = "errorMessage";
@@ -62,9 +62,9 @@ public class ConsumerService {
     NotificationService notificationService;
     StudyService studyService;
     CaseService caseService;
-
     NetworkStoreService networkStoreService;
     NetworkModificationTreeService networkModificationTreeService;
+    NetworkConversionService networkConversionService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -72,13 +72,15 @@ public class ConsumerService {
                            StudyService studyService,
                            CaseService caseService,
                            NetworkModificationTreeService networkModificationTreeService,
-                           NetworkStoreService networkStoreService) {
+                           NetworkStoreService networkStoreService,
+                           NetworkConversionService networkConversionService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
         this.caseService = caseService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
+        this.networkConversionService = networkConversionService;
     }
 
     @Bean
@@ -314,15 +316,8 @@ public class ConsumerService {
             String caseFormat = message.getHeaders().get(HEADER_CASE_FORMAT, String.class);
             String caseName = message.getHeaders().get(HEADER_CASE_NAME, String.class);
             Map<String, Object> importParameters = message.getHeaders().get(HEADER_IMPORT_PARAMETERS, Map.class);
-            ImportParametersInfos importParametersInfos = null;
-            if (importParameters != null) {
-                importParametersInfos = new ImportParametersInfos(importParameters.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().toString())));
-            }
+
             NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
-
-            //Importer importer = Importer.find(caseFormat);
-
-            //List<Parameter> defaultParameters = importer.getParameters();
 
             if (receiverString != null) {
                 CaseImportReceiver receiver;
@@ -339,6 +334,15 @@ public class ConsumerService {
                 String userId = receiver.getUserId();
                 Long startTime = receiver.getStartTime();
                 UUID importReportUuid = receiver.getReportUuid();
+
+                Map<String, String> defaultValues = networkConversionService.getImportParametersDefaultValues(caseUuid);
+                Map<String, String> modifiedValues;
+                    modifiedValues = importParameters != null ?
+                            importParameters.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().toString()))
+                            : new HashMap<>();
+
+                defaultValues.keySet().stream().forEach(key -> modifiedValues.putIfAbsent(key, defaultValues.get(key)));
+                ImportParametersInfos importParametersInfos = new ImportParametersInfos(modifiedValues);
 
                 try {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();

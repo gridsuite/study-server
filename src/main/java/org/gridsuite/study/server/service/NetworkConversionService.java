@@ -15,6 +15,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
+import org.gridsuite.study.server.dto.ImportParametersInfos;
+import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -26,7 +28,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -93,18 +97,37 @@ public class NetworkConversionService {
             uriComponentsBuilder.queryParam("variantId", variantId);
         }
         String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
-            .toUriString();
+                .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(paramatersJson, headers);
 
         ResponseEntity<byte[]> responseEntity = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST,
-            httpEntity, byte[].class);
+                httpEntity, byte[].class);
 
         byte[] bytes = responseEntity.getBody();
         String filename = responseEntity.getHeaders().getContentDisposition().getFilename();
         return new ExportNetworkInfos(filename, bytes);
+    }
+
+    public Map<String, String> getImportParametersDefaultValues(UUID caseUuid) {
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
+                + "/cases/{caseUuid}/import-parameters-default-values");
+        String path = uriComponentsBuilder.buildAndExpand(caseUuid)
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(headers);
+
+        ParameterizedTypeReference<Map<String, String>> typeRef = new ParameterizedTypeReference<>() {
+        };
+
+        ResponseEntity<Map<String, String>> responseEntity = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET,
+            httpEntity, typeRef);
+
+        return responseEntity.getBody();
     }
 
     public void reindexStudyNetworkEquipments(UUID networkUuid) {
