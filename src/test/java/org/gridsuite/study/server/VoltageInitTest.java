@@ -345,7 +345,7 @@ public class VoltageInitTest {
 
     @Test
     @SneakyThrows
-    public void testResetUuidResultWhenVoltageInitFailed() {
+    public void testNotResetedUuidResultWhenVoltageInitFailed() {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
@@ -368,7 +368,7 @@ public class VoltageInitTest {
         }).when(studyService).runVoltageInit(any(), any(), any());
         studyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), "");
 
-        // Test result in not reseted anymore in the database
+        // Test doesn't reset uuid result in the database
         assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, networkModificationTreeService.getVoltageInitResultUuid(modificationNode.getId()).get().toString());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
