@@ -6,10 +6,7 @@
  */
 package org.gridsuite.study.server.dto.voltageinit;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.List;
 
@@ -17,9 +14,16 @@ import java.util.List;
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
  */
 @Getter
+@Setter
 @AllArgsConstructor
 @Builder
 @NoArgsConstructor
 public class VoltageInitParametersInfos {
     List<VoltageInitVoltageLimitsParameterInfos> voltageLimits;
+
+    List<FilterEquipments> constantQGenerators;
+
+    List<FilterEquipments> variableTwoWindingsTransformers;
+
+    List<FilterEquipments> variableShuntCompensators;
 }
