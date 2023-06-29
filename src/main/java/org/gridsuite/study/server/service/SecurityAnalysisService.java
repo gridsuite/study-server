@@ -55,6 +55,12 @@ public class SecurityAnalysisService {
 
     private final NetworkModificationTreeService networkModificationTreeService;
 
+    private static final double DEFAULT_FLOW_PROPORTIONAL_THRESHOLD = 0.1; // meaning 10.0 %
+    private static final double DEFAULT_LOW_VOLTAGE_PROPORTIONAL_THRESHOLD = 0.01; // meaning 1.0 %
+    private static final double DEFAULT_HIGH_VOLTAGE_PROPORTIONAL_THRESHOLD = 0.01; // meaning 1.0 %
+    private static final double DEFAULT_LOW_VOLTAGE_ABSOLUTE_THRESHOLD = 1.0; // 1.0 kV
+    private static final double DEFAULT_HIGH_VOLTAGE_ABSOLUTE_THRESHOLD = 1.0; // 1.0 kV
+
     @Autowired
     public SecurityAnalysisService(@Value("${gridsuite.services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
             NetworkModificationTreeService networkModificationTreeService,
@@ -207,13 +213,12 @@ public class SecurityAnalysisService {
     }
 
     public static SecurityAnalysisParametersValues getDefaultSecurityAnalysisParametersValues() {
-        SecurityAnalysisParameters securityAnalysisParameters = SecurityAnalysisParameters.load();
         return SecurityAnalysisParametersValues.builder()
-                .lowVoltageAbsoluteThreshold(1)
-                .lowVoltageProportionalThreshold(0.01)
-                .highVoltageAbsoluteThreshold(1)
-                .highVoltageProportionalThreshold(0.01)
-                .flowProportionalThreshold(securityAnalysisParameters.getIncreasedViolationsParameters().getFlowProportionalThreshold())
+                .lowVoltageAbsoluteThreshold(DEFAULT_LOW_VOLTAGE_ABSOLUTE_THRESHOLD)
+                .lowVoltageProportionalThreshold(DEFAULT_LOW_VOLTAGE_PROPORTIONAL_THRESHOLD)
+                .highVoltageAbsoluteThreshold(DEFAULT_HIGH_VOLTAGE_ABSOLUTE_THRESHOLD)
+                .highVoltageProportionalThreshold(DEFAULT_HIGH_VOLTAGE_PROPORTIONAL_THRESHOLD)
+                .flowProportionalThreshold(DEFAULT_FLOW_PROPORTIONAL_THRESHOLD)
                 .build();
     }
 
