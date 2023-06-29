@@ -209,10 +209,10 @@ public class SecurityAnalysisService {
     public static SecurityAnalysisParametersValues getDefaultSecurityAnalysisParametersValues() {
         SecurityAnalysisParameters securityAnalysisParameters = SecurityAnalysisParameters.load();
         return SecurityAnalysisParametersValues.builder()
-                .lowVoltageAbsoluteThreshold(securityAnalysisParameters.getIncreasedViolationsParameters().getLowVoltageAbsoluteThreshold())
-                .lowVoltageProportionalThreshold(securityAnalysisParameters.getIncreasedViolationsParameters().getLowVoltageProportionalThreshold())
-                .highVoltageAbsoluteThreshold(securityAnalysisParameters.getIncreasedViolationsParameters().getHighVoltageAbsoluteThreshold())
-                .highVoltageProportionalThreshold(securityAnalysisParameters.getIncreasedViolationsParameters().getHighVoltageProportionalThreshold())
+                .lowVoltageAbsoluteThreshold(1)
+                .lowVoltageProportionalThreshold(0.01)
+                .highVoltageAbsoluteThreshold(1)
+                .highVoltageProportionalThreshold(0.01)
                 .flowProportionalThreshold(securityAnalysisParameters.getIncreasedViolationsParameters().getFlowProportionalThreshold())
                 .build();
     }
