@@ -15,8 +15,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
-import org.gridsuite.study.server.dto.ImportParametersInfos;
-import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -28,9 +26,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -113,7 +109,7 @@ public class NetworkConversionService {
 
     public Map<String, String> getImportParametersDefaultValues(UUID caseUuid) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
-                + "/cases/{caseUuid}/import-parameters-default-values");
+                + "/cases/{caseUuid}/default-import-parameters");
         String path = uriComponentsBuilder.buildAndExpand(caseUuid)
             .toUriString();
 

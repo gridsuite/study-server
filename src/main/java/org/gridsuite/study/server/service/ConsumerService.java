@@ -9,8 +9,6 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.commons.parameters.Parameter;
-import com.powsybl.iidm.network.Importer;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
@@ -337,9 +335,9 @@ public class ConsumerService {
 
                 Map<String, String> defaultValues = networkConversionService.getImportParametersDefaultValues(caseUuid);
                 Map<String, String> modifiedValues;
-                    modifiedValues = importParameters != null ?
-                            importParameters.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().toString()))
-                            : new HashMap<>();
+                modifiedValues = importParameters != null ?
+                        importParameters.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().toString()))
+                        : new HashMap<>();
 
                 defaultValues.keySet().stream().forEach(key -> modifiedValues.putIfAbsent(key, defaultValues.get(key)));
                 ImportParametersInfos importParametersInfos = new ImportParametersInfos(modifiedValues);
