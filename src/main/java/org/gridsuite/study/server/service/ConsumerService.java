@@ -622,6 +622,7 @@ public class ConsumerService {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
             String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
@@ -629,8 +630,7 @@ public class ConsumerService {
 
                     LOGGER.info("Voltage init failed for node '{}'", receiverObj.getNodeUuid());
 
-                    // delete Voltage init  analysis result in database
-                    updateVoltageInitResultUuid(receiverObj.getNodeUuid(), null);
+                    updateVoltageInitResultUuid(receiverObj.getNodeUuid(), resultUuid);
 
                     // send notification for failed computation
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());

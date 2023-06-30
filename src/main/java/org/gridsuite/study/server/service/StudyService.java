@@ -14,7 +14,6 @@ import com.powsybl.iidm.network.*;
 import com.powsybl.openreac.parameters.input.OpenReacParameters;
 import com.powsybl.openreac.parameters.input.VoltageLimitOverride;
 import com.powsybl.security.LimitViolation;
-import com.powsybl.security.LimitViolationType;
 import com.powsybl.security.Security;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
@@ -1021,27 +1020,26 @@ public class StudyService {
                 .limit(violation.getLimit())
                 .limitName(violation.getLimitName())
                 .value(violation.getValue())
-                .side(violation.getSide() != null ? violation.getSide().name() : "").build();
+                .side(violation.getSide() != null ? violation.getSide().name() : "")
+                .limitType(violation.getLimitType()).build();
     }
 
-    public List<LimitViolationInfos> getCurrentLimitViolations(UUID studyUuid, UUID nodeUuid, float limitReduction) {
+    public List<LimitViolationInfos> getLimitViolations(UUID studyUuid, UUID nodeUuid, float limitReduction) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         Network network = networkStoreService.getNetwork(networkUuid, PreloadingStrategy.COLLECTION, networkModificationTreeService.getVariantId(nodeUuid));
         List<LimitViolation> violations;
-        // TODO when checkLimitsDc() is available in com.powsybl.security.Security, uncommented lines below
-        //StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        //LoadFlowParameters lfCommonParams = getLoadFlowParameters(studyEntity);
-        //if (lfCommonParams.isDc()) {
-        //    violations = Security.checkLimitsDc(network, limitReduction, lfCommonParams.getDcPowerFactor());
-        //} else {
-        violations = Security.checkLimits(network, limitReduction);
-        //}
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        LoadFlowParameters lfCommonParams = getLoadFlowParameters(studyEntity);
+        if (lfCommonParams.isDc()) {
+            violations = Security.checkLimitsDc(network, limitReduction, lfCommonParams.getDcPowerFactor());
+        } else {
+            violations = Security.checkLimits(network, limitReduction);
+        }
         return violations.stream()
-            .filter(v -> v.getLimitType() == LimitViolationType.CURRENT)
-            .map(StudyService::toLimitViolationInfos).collect(Collectors.toList());
+                .map(StudyService::toLimitViolationInfos).collect(Collectors.toList());
     }
 
     public byte[] getSubstationSvg(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
