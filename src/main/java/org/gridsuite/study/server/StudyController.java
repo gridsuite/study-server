@@ -677,13 +677,13 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getContingencyCount(studyUuid, nonNullContingencyListNames, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/current-limit-violations")
-    @Operation(summary = "Get current limit violations.")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The current limit violations")})
-    public ResponseEntity<List<LimitViolationInfos>> getCurrentLimitViolations(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations")
+    @Operation(summary = "Get limit violations.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The limit violations")})
+    public ResponseEntity<List<LimitViolationInfos>> getLimitViolations(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @Parameter(description = "The limit reduction") @RequestParam("limitReduction") float limitReduction) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getCurrentLimitViolations(studyUuid, nodeUuid, limitReduction));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, limitReduction));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")

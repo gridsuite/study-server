@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.dto;
 
+import com.powsybl.security.LimitViolationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -32,4 +33,6 @@ public class LimitViolationInfos {
     private Double value;
 
     private String side;
+
+    private LimitViolationType limitType;
 }
