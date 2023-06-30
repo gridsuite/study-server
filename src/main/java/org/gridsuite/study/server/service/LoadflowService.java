@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.LoadFlowSpecificParameterInfos;
@@ -38,6 +39,7 @@ import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_ERROR;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -97,8 +99,8 @@ public class LoadflowService {
             result = resp.getBody();
             updateLoadFlowResultAndStatus(nodeUuid, result, computeLoadFlowStatus(result), false);
         } catch (Exception e) {
-            updateLoadFlowStatus(nodeUuid, LoadFlowStatus.NOT_DONE);
-            throw e;
+            updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.DIVERGED, false);
+            throw new StudyException(LOADFLOW_ERROR, e.getMessage());
         } finally {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW);
         }
