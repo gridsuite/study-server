@@ -832,10 +832,20 @@ public class StudyService {
                 .orElse(null);
     }
 
+    private void deleteSecurityAnalysisResult(UUID studyUuid) {
+        List<UUID> securityAnalyseResultUuids = networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid);
+        if (!securityAnalyseResultUuids.isEmpty()) {
+            securityAnalysisService.deleteSaResults(securityAnalyseResultUuids);
+        }
+        networkModificationTreeService.getAllNodes(studyUuid).forEach(node -> networkModificationTreeService.updateSecurityAnalysisResultUuid(node.getIdNode(), null));
+    }
+
     @Transactional
     public void setSecurityAnalysisParametersValues(UUID studyUuid, SecurityAnalysisParametersValues parameters, String userId) {
         updateSecurityAnalysisParameters(studyUuid, SecurityAnalysisService.toEntity(parameters != null ? parameters : SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues()));
+        deleteSecurityAnalysisResult(studyUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
     }
 
     @Transactional
@@ -895,7 +905,7 @@ public class StudyService {
     public void updateSecurityAnalysisProvider(UUID studyUuid, String provider, String userId) {
         updateProvider(studyUuid, userId, studyEntity -> {
             studyEntity.setSecurityAnalysisProvider(provider != null ? provider : defaultSecurityAnalysisProvider);
-            invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
+            deleteSecurityAnalysisResult(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         });
     }

@@ -45,6 +45,7 @@ import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_R
 public class SecurityAnalysisService {
 
     static final String RESULT_UUID = "resultUuid";
+    static final String RESULTS_UUIDS = "resultsUuids";
 
     @Autowired
     private RestTemplate restTemplate;
@@ -173,6 +174,15 @@ public class SecurityAnalysisService {
             .toUriString();
 
         restTemplate.delete(securityAnalysisServerBaseUri + path);
+    }
+
+    public void deleteSaResults(List<UUID> uuids) {
+        if (!uuids.isEmpty()) {
+            String path = UriComponentsBuilder
+                    .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results")
+                    .queryParam(RESULTS_UUIDS, uuids).build().toUriString();
+            restTemplate.delete(securityAnalysisServerBaseUri + path, Void.class);
+        }
     }
 
     public void invalidateSaStatus(List<UUID> uuids) {

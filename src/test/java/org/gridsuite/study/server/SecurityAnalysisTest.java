@@ -475,8 +475,20 @@ public class SecurityAnalysisTest {
 
     @Test
     public void testSecurityAnalysisParameters() throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        // run security analysis
+        MockHttpServletRequestBuilder requestBuilder = post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
+                studyNameUserIdUuid, modificationNode1Uuid, CONTINGENCY_LIST_NAME);
+
+        mockMvc.perform(requestBuilder).andExpect(status().isOk())
+                .andReturn();
+
         //get security analysis parameters
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
@@ -503,6 +515,18 @@ public class SecurityAnalysisTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
                 content().string(SECURITY_ANALYSIS_UPDATED_PARAMETERS_JSON));
+
+        //check removing security analysis
+        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/result", modificationNode1Uuid)).andExpectAll(
+                status().isNotFound());
+
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
+
+
+
     }
 
     private void cleanDB() {
