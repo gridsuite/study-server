@@ -25,6 +25,7 @@ import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
+import com.powsybl.security.LimitViolationType;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
@@ -411,7 +412,7 @@ public class LoadflowTest {
     }
 
     @SneakyThrows
-    public List<LimitViolationInfos> getCurrentLimitViolations(boolean dcMode) {
+    public List<LimitViolationInfos> getLimitViolations(boolean dcMode) {
         // create a study and a node
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_ERROR_UUID, dcMode);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -420,8 +421,8 @@ public class LoadflowTest {
                 UUID.randomUUID(), VariantManagerConstants.INITIAL_VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        // retrieve overloaded lines data on node 1
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/current-limit-violations?limitReduction=1.0",
+        // retrieve current and voltage violations
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations?limitReduction=1.0",
                 studyNameUserIdUuid,
                 modificationNode1Uuid)).andExpectAll(
                         status().isOk(),
@@ -432,15 +433,15 @@ public class LoadflowTest {
     }
 
     @Test
-    public void testCurrentLimitViolations() {
-        List<LimitViolationInfos> violations = getCurrentLimitViolations(false);
+    public void testLimitViolations() {
+        List<LimitViolationInfos> violations = getLimitViolations(false);
         // the mocked network lines/terminals have no computed 'i' => no overload can be detected
         assertEquals(0, violations.size());
     }
 
     @Test
-    public void testCurrentLimitViolationsDcMode() {
-        List<LimitViolationInfos> violations = getCurrentLimitViolations(true);
+    public void testLimitViolationsDcMode() {
+        List<LimitViolationInfos> violations = getLimitViolations(true);
         // in DC mode, we use power values => one overload is detected
         assertEquals(1, violations.size());
         assertEquals("NHV1_NHV2_1", violations.get(0).getSubjectId());
@@ -463,7 +464,8 @@ public class LoadflowTest {
                 violationInfos.getLimit() == 1500.0 &&
                 violationInfos.getLimitName().equalsIgnoreCase("limit") &&
                 violationInfos.getValue() == 2000.0 &&
-                violationInfos.getSide().equalsIgnoreCase("ONE"));
+                violationInfos.getSide().equalsIgnoreCase("ONE") &&
+                violationInfos.getLimitType() == LimitViolationType.CURRENT);
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, boolean dcMode) {
