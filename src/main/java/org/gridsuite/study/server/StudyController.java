@@ -223,11 +223,12 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "The subtree was successfully created"),
         @ApiResponse(responseCode = "403", description = "The subtree can't be copied above the root node nor around itself"),
         @ApiResponse(responseCode = "404", description = "The source study or subtree doesn't exist")})
-    public ResponseEntity<Void> duplicateSubtree(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> duplicateSubtree(@Parameter(description = "The study where we want to copy the node") @PathVariable("studyUuid") UUID targetStudyUuid,
+                                                 @Parameter(description = "The copied node original study") @RequestParam(value = "sourceStudyUuid") UUID sourceStudyUuid,
                                                        @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCopyParentNodeUuid") UUID subtreeToCopyParentNodeUuid,
                                                        @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.duplicateStudySubtree(studyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId);
+        studyService.duplicateStudySubtree(sourceStudyUuid, targetStudyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -664,13 +665,13 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getContingencyCount(studyUuid, nonNullContingencyListNames, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/current-limit-violations")
-    @Operation(summary = "Get current limit violations.")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The current limit violations")})
-    public ResponseEntity<List<LimitViolationInfos>> getCurrentLimitViolations(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations")
+    @Operation(summary = "Get limit violations.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The limit violations")})
+    public ResponseEntity<List<LimitViolationInfos>> getLimitViolations(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @Parameter(description = "The limit reduction") @RequestParam("limitReduction") float limitReduction) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getCurrentLimitViolations(studyUuid, nodeUuid, limitReduction));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, limitReduction));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")

@@ -51,8 +51,7 @@ public class FilterService {
     }
 
     public List<FilterEquipments> exportFilters(List<UUID> filtersUuids, UUID networkUuid, String variantId) {
-        var ids = !filtersUuids.isEmpty() ?
-                "&ids=" + filtersUuids.stream().map(UUID::toString).collect(Collectors.joining(",")) : "";
+        var ids = "&ids=" + filtersUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
         var variant = variantId != null ? "&variantId=" + variantId : "";
         String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/export?networkUuid=" + networkUuid + variant + ids)
                 .buildAndExpand()
