@@ -2129,7 +2129,7 @@ public class StudyTest {
     }
 
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
-        Message<byte[]> message = output.receive(TIMEOUT, elementUpdateDestination);
+        Message<byte[]> message = output.receive(2000, elementUpdateDestination);
         assertEquals(elementUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
         assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
     }
