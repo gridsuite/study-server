@@ -1338,8 +1338,8 @@ public class StudyTest {
         wireMockUtils.verifyDuplicateModificationGroup(stubUuid, 3);
 
         Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(2, server);
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + duplicatedStudy.getNetworkUuid() + "/reindex-all")).count());
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
         return duplicatedStudy;
     }
 
@@ -2129,7 +2129,7 @@ public class StudyTest {
     }
 
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
-        Message<byte[]> message = output.receive(2000, elementUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, elementUpdateDestination);
         assertEquals(elementUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
         assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
     }
