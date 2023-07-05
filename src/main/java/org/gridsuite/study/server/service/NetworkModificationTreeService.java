@@ -778,7 +778,7 @@ public class NetworkModificationTreeService {
         if (nodeRepository.getGlobalBuildStatus(child.getIdNode()).isBuilt() || nodeRepository.getLocalBuildStatus(child.getIdNode()).isBuilt()) {
             fillInvalidateNodeInfos(child, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
             if (!invalidateOnlyChildrenBuildStatus) {
-                nodeRepository.invalidateBuildStatus(childUuid, changedNodes);
+                nodeRepository.invalidateNodeBuildStatus(childUuid, changedNodes);
             }
             nodeRepository.updateLoadFlowResultAndStatus(childUuid, null, LoadFlowStatus.NOT_DONE);
             nodeRepository.updateSecurityAnalysisResultUuid(childUuid, null);
@@ -812,7 +812,7 @@ public class NetworkModificationTreeService {
             return;
         }
 
-        nodeRepositoryProxy.updateBuildStatus(nodeUuid, newNodeStatus, changedNodes);
+        nodeRepositoryProxy.updateNodeBuildStatus(nodeUuid, newNodeStatus, changedNodes);
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes);
     }
 

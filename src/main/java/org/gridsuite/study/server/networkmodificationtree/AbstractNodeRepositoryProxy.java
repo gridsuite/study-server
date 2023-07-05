@@ -109,10 +109,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationUuid) {
     }
 
-    public void updateBuildStatus(AbstractNode node, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
+    public void updateNodeBuildStatus(AbstractNode node, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
     }
 
-    public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
+    public void invalidateNodeBuildStatus(AbstractNode node, List<UUID> changedNodes) {
     }
 
     public void createNodeInfo(AbstractNode nodeInfo) {
@@ -234,8 +234,8 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getVoltageInitResultUuid(getNode(nodeUuid));
     }
 
-    public void updateBuildStatus(UUID nodeUuid, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
-        updateBuildStatus(getNode(nodeUuid), nodeBuildStatus, changedNodes);
+    public void updateNodeBuildStatus(UUID nodeUuid, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
+        updateNodeBuildStatus(getNode(nodeUuid), nodeBuildStatus, changedNodes);
     }
 
     public BuildStatus getGlobalBuildStatus(UUID nodeUuid) {
@@ -246,8 +246,8 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getLocalBuildStatus(getNode(nodeUuid));
     }
 
-    public void invalidateBuildStatus(UUID nodeUuid, List<UUID> changedNodes) {
-        invalidateBuildStatus(getNode(nodeUuid), changedNodes);
+    public void invalidateNodeBuildStatus(UUID nodeUuid, List<UUID> changedNodes) {
+        invalidateNodeBuildStatus(getNode(nodeUuid), changedNodes);
     }
 
     public void handleExcludeModification(UUID nodeUuid, UUID modificationUuid, boolean active) {
