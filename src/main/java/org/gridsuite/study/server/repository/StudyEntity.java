@@ -9,7 +9,7 @@ package org.gridsuite.study.server.repository;
 import java.util.UUID;
 
 import lombok.*;
-import org.gridsuite.study.server.service.ShortCircuitService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 
 import javax.persistence.*;
 

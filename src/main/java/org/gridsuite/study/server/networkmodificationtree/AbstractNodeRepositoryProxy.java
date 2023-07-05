@@ -16,6 +16,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeInfoRepository;
+import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.PropertyUtils;
 
 import java.util.Collection;
@@ -70,6 +71,9 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     public void updateShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
     }
 
+    public void updateSelectiveShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
+    }
+
     public void updateVoltageInitResultUuid(AbstractNode node, UUID voltageInitResultUuid) {
     }
 
@@ -95,6 +99,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     }
 
     public UUID getShortCircuitAnalysisResultUuid(AbstractNode node) {
+        return null;
+    }
+
+    public UUID getSelectiveShortCircuitAnalysisResultUuid(AbstractNode node) {
         return null;
     }
 
@@ -188,12 +196,16 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         updateLoadFlowStatus(getNode(nodeUuid), loadFlowStatus);
     }
 
+    public void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
+        updateVoltageInitResultUuid(getNode(nodeUuid), voltageInitResultUuid);
+    }
+
     public void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
         updateShortCircuitAnalysisResultUuid(getNode(nodeUuid), shortCircuitAnalysisResultUuid);
     }
 
-    public void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
-        updateVoltageInitResultUuid(getNode(nodeUuid), voltageInitResultUuid);
+    public void updateSelectiveShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+        updateSelectiveShortCircuitAnalysisResultUuid(getNode(nodeUuid), shortCircuitAnalysisResultUuid);
     }
 
     public LoadFlowInfos getLoadFlowInfos(UUID nodeUuid) {
@@ -226,6 +238,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public UUID getShortCircuitAnalysisResultUuid(UUID nodeUuid) {
         return getShortCircuitAnalysisResultUuid(getNode(nodeUuid));
+    }
+
+    public UUID getSelectiveShortCircuitAnalysisResultUuid(UUID nodeUuid) {
+        return getSelectiveShortCircuitAnalysisResultUuid(getNode(nodeUuid));
     }
 
     public UUID getVoltageInitResultUuid(UUID nodeUuid) {

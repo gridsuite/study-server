@@ -21,6 +21,8 @@ import org.gridsuite.study.server.dto.voltageinit.VoltageInitParametersInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -463,11 +465,16 @@ public class ConsumerService {
         networkModificationTreeService.updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
     }
 
+    void updateSelectiveShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+        networkModificationTreeService.updateSelectiveShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
+    }
+
     @Bean
     public Consumer<Message<String>> consumeShortCircuitAnalysisResult() {
         return message -> {
             UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
@@ -476,7 +483,11 @@ public class ConsumerService {
                     LOGGER.info("Short circuit analysis result '{}' available for node '{}'", resultUuid, receiverObj.getNodeUuid());
 
                     // update DB
-                    updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
+                    if(busId == null ) {
+                        updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
+                    } else {
+                        updateSelectiveShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
+                    }
 
                     // send notifications
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());

@@ -18,6 +18,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.LoadflowService;
+import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 
 import java.util.HashSet;
 import java.util.List;
@@ -58,6 +59,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getLoadFlowStatus(),
             LoadflowService.toEntity(modificationNode.getLoadFlowResult()),
             modificationNode.getShortCircuitAnalysisResultUuid(),
+            modificationNode.getSelectiveShortCircuitAnalysisResultUuid(),
             modificationNode.getVoltageInitResultUuid(),
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
@@ -76,6 +78,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getLoadFlowStatus(),
             LoadflowService.fromEntity(node.getLoadFlowResult()),
             node.getShortCircuitAnalysisResultUuid(),
+            node.getSelectiveShortCircuitAnalysisResultUuid(),
             node.getVoltageInitResultUuid(),
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
@@ -155,9 +158,20 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         updateNode(modificationNode, "shortCircuitAnalysisResultUuid");
     }
 
+    public void updateSelectiveShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisUuid) {
+        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+        modificationNode.setSelectiveShortCircuitAnalysisResultUuid(shortCircuitAnalysisUuid);
+        updateNode(modificationNode, "shortCircuitAnalysisResultUuid");
+    }
+
     @Override
     public UUID getShortCircuitAnalysisResultUuid(AbstractNode node) {
         return ((NetworkModificationNode) node).getShortCircuitAnalysisResultUuid();
+    }
+
+    @Override
+    public UUID getSelectiveShortCircuitAnalysisResultUuid(AbstractNode node) {
+        return ((NetworkModificationNode) node).getSelectiveShortCircuitAnalysisResultUuid();
     }
 
     @Override

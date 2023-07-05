@@ -53,6 +53,8 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.PropertyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1126,6 +1128,10 @@ public class StudyService {
         networkModificationTreeService.updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
     }
 
+    void updateSelectiveShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+        networkModificationTreeService.updateSelectiveShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
+    }
+
     void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
         networkModificationTreeService.updateVoltageInitResultUuid(nodeUuid, voltageInitResultUuid);
     }
@@ -1647,14 +1653,23 @@ public class StudyService {
         return result;
     }
 
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String userId) {
-        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid);
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String busId, String userId) {
+        ShortcircuitAnalysisType analysisType = ShortcircuitAnalysisType.Global;
+        if (busId != null) {
+            analysisType = ShortcircuitAnalysisType.Selective;
+        }
+        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid, analysisType);
         prevResultUuidOpt.ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
 
         ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
-        UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, shortCircuitParameters, userId);
+        UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId, shortCircuitParameters, userId);
 
-        updateShortCircuitAnalysisResultUuid(nodeUuid, result);
+        if(analysisType == ShortcircuitAnalysisType.Global) {
+            updateShortCircuitAnalysisResultUuid(nodeUuid, result);
+        } else {
+            updateSelectiveShortCircuitAnalysisResultUuid(nodeUuid, result);
+        }
+
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         return result;
     }
