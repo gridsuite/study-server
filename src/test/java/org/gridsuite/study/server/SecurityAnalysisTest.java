@@ -52,7 +52,6 @@ import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
-import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
@@ -224,8 +223,7 @@ public class SecurityAnalysisTest {
 
                 } else if (("/v1/results?resultsUuids=" + SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_STATUS_JSON)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse().setResponseCode(200);
                     }
                     return new MockResponse().setResponseCode(500);
                 } else {
@@ -533,6 +531,24 @@ public class SecurityAnalysisTest {
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
 
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT, updateType);
+
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
+
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results\\?resultsUuids=" + SECURITY_ANALYSIS_RESULT_UUID)));
+
     }
 
     @Test
@@ -548,8 +564,6 @@ public class SecurityAnalysisTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/provider", studyNameUserIdUuid).header("userId", "userId").content("OpenLoadFlow"))
                 .andExpectAll(status().isOk());
 
-
-
         //get security analysis provider
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/provider", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
@@ -562,13 +576,9 @@ public class SecurityAnalysisTest {
         mockMvc.perform(requestBuilder).andExpect(status().isOk())
                 .andReturn();
 
-
-
         //set security analysis provider
         mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/provider", studyNameUserIdUuid).header("userId", "userId").content("OpenLoadFlow"))
                 .andExpectAll(status().isOk());
-
-
 
         //check removing security analysis
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/result", modificationNode1Uuid)).andExpectAll(
@@ -599,6 +609,8 @@ public class SecurityAnalysisTest {
         updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
 
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results\\?resultsUuids=" + SECURITY_ANALYSIS_RESULT_UUID)));
     }
 
     private void cleanDB() {
