@@ -496,12 +496,6 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_UUID_STRING + "/disableExpiration":
                         return new MockResponse().setResponseCode(200);
 
-                    /*case "/v1/cases/" + CASE_UUID_STRING + "/default-import-parameters":
-                    case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/default-import-parameters":
-                    case "/v1/cases/" + CLONED_CASE_UUID_STRING + "/default-import-parameters":
-                        return new MockResponse().setResponseCode(200).setBody(defaultImportParametersAsString)
-                                .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);*/
-
                     case "/" + CASE_API_VERSION + "/cases/" + IMPORTED_CASE_UUID_STRING:
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2", "s3")));
                         return new MockResponse().setResponseCode(200)

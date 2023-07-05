@@ -50,7 +50,6 @@ public class ConsumerService {
     static final String RESULT_UUID = "resultUuid";
     static final String NETWORK_UUID = "networkUuid";
     static final String NETWORK_ID = "networkId";
-    static final String HEADER_CASE_UUID = "caseUuid";
     static final String HEADER_CASE_FORMAT = "caseFormat";
     static final String HEADER_CASE_NAME = "caseName";
     static final String HEADER_ERROR_MESSAGE = "errorMessage";

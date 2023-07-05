@@ -93,14 +93,14 @@ public class NetworkConversionService {
             uriComponentsBuilder.queryParam("variantId", variantId);
         }
         String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
-                .toUriString();
+            .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(paramatersJson, headers);
 
         ResponseEntity<byte[]> responseEntity = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST,
-                httpEntity, byte[].class);
+            httpEntity, byte[].class);
 
         byte[] bytes = responseEntity.getBody();
         String filename = responseEntity.getHeaders().getContentDisposition().getFilename();
