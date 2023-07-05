@@ -275,7 +275,7 @@ public class StudyService {
         LoadFlowParameters sourceLoadFlowParameters = LoadflowService.fromEntity(sourceStudy.getLoadFlowParameters());
         List<LoadFlowSpecificParameterInfos> sourceSpecificLoadFlowParameters = getAllSpecificLoadFlowParameters(sourceStudy);
         ShortCircuitParameters copiedShortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
-        DynamicSimulationParametersInfos copiedDynamicSimulationParameters = DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters(), objectMapper);
+        DynamicSimulationParametersInfos copiedDynamicSimulationParameters = sourceStudy.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
         SecurityAnalysisParametersValues securityAnalysisParametersValues = sourceStudy.getSecurityAnalysisParameters() == null ? SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues() : SecurityAnalysisService.fromEntity(sourceStudy.getSecurityAnalysisParameters());
 
         ImportParametersInfos copiedImportParametersInfos = StudyService.fromEntity(sourceStudy.getImportParameters());
@@ -316,7 +316,7 @@ public class StudyService {
     }
 
     public static ImportParametersInfos fromEntity(ImportParametersEntity importParametersEntity) {
-        return new ImportParametersInfos(importParametersEntity == null ? Map.of() : importParametersEntity.getParameters());
+        return new ImportParametersInfos(importParametersEntity == null ? Map.of() : Map.copyOf(importParametersEntity.getParameters()));
     }
 
     @Transactional(readOnly = true)

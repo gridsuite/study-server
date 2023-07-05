@@ -58,6 +58,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.stubbing.Answer;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -162,9 +164,7 @@ public class StudyTest {
     private static final String CASE_NAME = "DefaultCaseName";
     private static final UUID EMPTY_MODIFICATION_GROUP_UUID = UUID.randomUUID();
     private static final String EMPTY_ARRAY = "[]";
-
     private static final Map DEFAULT_IMPORT_PARAMETERS = Map.of("param1", "defaultValue1", "param2", "defaultValue2");
-
     private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
 
@@ -769,15 +769,16 @@ public class StudyTest {
         randomListParam.add("paramValue1");
         randomListParam.add("paramValue2");
         importParameters.put("param1", randomListParam);
-
         UUID studyUuid = createStudyWithImportParameters("userId", CASE_UUID, importParameters);
 
-        Map<String, String> importParametersResult = new HashMap<>();
-        importParametersResult.put("param1", "[changedValue1, changedValue2]");
-        importParametersResult.put("param2", "changedValue");
-        mockMvc.perform(get("/v1/studies/{studyUuid}/import/parameters", studyUuid)).andExpectAll(
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/import/parameters", studyUuid)).andExpectAll(
                 status().isOk(),
-                content().string(mapper.writeValueAsString(new ImportParametersInfos(importParametersResult))));
+                content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+
+        Map<String, String> importParametersExpected = new HashMap<>();
+        importParametersExpected.put("param1", "[changedValue1, changedValue2]");
+        importParametersExpected.put("param2", "changedValue");
+        JSONAssert.assertEquals(mapper.writeValueAsString(new ImportParametersInfos(importParametersExpected)), result.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
     }
 
     @Test
