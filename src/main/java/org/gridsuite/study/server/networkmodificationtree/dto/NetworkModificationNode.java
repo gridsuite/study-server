@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.powsybl.loadflow.LoadFlowResult;
 import lombok.*;
@@ -36,37 +35,26 @@ public class NetworkModificationNode extends AbstractNode {
     private String variantId;
 
     @Builder.Default
-    Set<UUID> modificationsToExclude = new HashSet<>();
+    private Set<UUID> modificationsToExclude = new HashSet<>();
 
-    LoadFlowStatus loadFlowStatus;
+    private LoadFlowStatus loadFlowStatus;
 
-    LoadFlowResult loadFlowResult;
+    private LoadFlowResult loadFlowResult;
 
-    UUID shortCircuitAnalysisResultUuid;
+    private UUID shortCircuitAnalysisResultUuid;
 
-    UUID voltageInitResultUuid;
+    private UUID voltageInitResultUuid;
 
-    UUID securityAnalysisResultUuid;
+    private UUID securityAnalysisResultUuid;
 
-    UUID sensitivityAnalysisResultUuid;
+    private UUID sensitivityAnalysisResultUuid;
 
-    UUID dynamicSimulationResultUuid;
+    private UUID dynamicSimulationResultUuid;
 
-    @JsonProperty
-    NodeBuildStatus nodeBuildStatus;
+    private NodeBuildStatus nodeBuildStatus;
 
     @Override
     public NodeType getType() {
         return NodeType.NETWORK_MODIFICATION;
-    }
-
-    @JsonIgnore
-    public void setNodeBuildStatus(BuildStatus buildStatus) {
-        this.nodeBuildStatus = new NodeBuildStatus(buildStatus);
-    }
-
-    @JsonIgnore
-    public void setNodeBuildStatus(BuildStatus globalBuildStatus, BuildStatus localBuildStatus) {
-        this.nodeBuildStatus = new NodeBuildStatus(globalBuildStatus, localBuildStatus);
     }
 }

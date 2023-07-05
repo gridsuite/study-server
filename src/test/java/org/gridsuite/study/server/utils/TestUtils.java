@@ -128,7 +128,7 @@ public final class TestUtils {
             .loadFlowResult(null)
             .securityAnalysisResultUuid(UUID.randomUUID())
             .sensitivityAnalysisResultUuid(UUID.randomUUID())
-            .nodeBuildStatus(new NodeBuildStatus(BuildStatus.NOT_BUILT))
+            .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT))
             .children(Collections.emptyList()).build();
     }
 

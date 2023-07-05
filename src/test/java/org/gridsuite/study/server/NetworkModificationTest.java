@@ -380,7 +380,7 @@ public class NetworkModificationTest {
         assertEquals("variant_5", buildInfos.getDestinationVariantId());
         assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4, modificationGroupUuid5), buildInfos.getModificationGroupUuids());
 
-        modificationNode3.setNodeBuildStatus(BuildStatus.BUILT);  // mark node modificationNode3 as built
+        modificationNode3.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark node modificationNode3 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -391,15 +391,15 @@ public class NetworkModificationTest {
         assertEquals("variant_4", buildInfos.getDestinationVariantId());
         assertEquals(List.of(modificationGroupUuid4), buildInfos.getModificationGroupUuids());
 
-        modificationNode2.setNodeBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode2 as not built
+        modificationNode2.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));  // mark node modificationNode2 as not built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
-        modificationNode4.setNodeBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode4 as built invalid
+        modificationNode4.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));  // mark node modificationNode4 as built invalid
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode4, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
-        modificationNode5.setNodeBuildStatus(BuildStatus.BUILT);  // mark node modificationNode5 as built
+        modificationNode5.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark node modificationNode5 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode5, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -411,7 +411,7 @@ public class NetworkModificationTest {
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(modificationNode4.getId()));
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getGlobalBuildStatus(modificationNode5.getId()));
 
-        modificationNode3.setNodeBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode3 as built
+        modificationNode3.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));  // mark node modificationNode3 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -438,7 +438,7 @@ public class NetworkModificationTest {
         UUID stubId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
 
         // Mark the node status as built
-        modificationNode.setNodeBuildStatus(BuildStatus.BUILT);
+        modificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -562,11 +562,11 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubId, bodyJson, NETWORK_UUID_STRING, VARIANT_ID_2);
 
         // test build status on switch modification
-        modificationNode1.setNodeBuildStatus(BuildStatus.BUILT);  // mark modificationNode1 as built
+        modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark modificationNode1 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
-        modificationNode2.setNodeBuildStatus(BuildStatus.BUILT);  // mark modificationNode2 as built
+        modificationNode2.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark modificationNode2 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -745,7 +745,7 @@ public class NetworkModificationTest {
         body.replace("minActivePower", "100.0");
         body.replace("maxActivePower", "200.0");
         String bodyJsonCreateBis = mapper.writeValueAsString(body);
-        modificationNode1.setNodeBuildStatus(BuildStatus.BUILDING);
+        modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -800,7 +800,7 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, shuntCompensatorAttributesUpdated);
 
         String createShuntCompensatorAttributes2 = "{\"type\":\"" + ModificationType.SHUNT_COMPENSATOR_CREATION + "\",\"shuntCompensatorId\":\"shuntCompensatorId3\",\"shuntCompensatorName\":\"shuntCompensatorName3\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
-        modificationNode1.setNodeBuildStatus(BuildStatus.BUILDING);
+        modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -889,7 +889,7 @@ public class NetworkModificationTest {
                 + "\"shuntConductance2\":\"200.0\"," + "\"shuntSusceptance2\":\"200.0\","
                 + "\"voltageLevelId1\":\"idVL1\"," + "\"busOrBusbarSectionId1\":\"idBus1\","
                 + "\"voltageLevelId2\":\"idVL2\"," + "\"busOrBusbarSectionId2\":\"idBus2\"}";
-        modificationNode1.setNodeBuildStatus(BuildStatus.BUILDING);
+        modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -960,7 +960,7 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, twoWindingsTransformerAttributesUpdated);
 
         String createTwoWindingsTransformerAttributes2 = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId3\",\"equipmentName\":\"2wtName3\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
-        modificationNode1.setNodeBuildStatus(BuildStatus.BUILDING);
+        modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -1276,7 +1276,7 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubPostId, MODIFICATION_UUID, loadAttributesUpdated);
 
         String createLoadAttributes2 = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId3\",\"loadName\":\"loadName3\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
-        modificationNode3.setNodeBuildStatus(BuildStatus.BUILDING);
+        modificationNode3.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -1465,7 +1465,7 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, substationAttributesUpdated);
 
         String createSubstationAttributes2 = "{\"type\":\"" + ModificationType.SUBSTATION_CREATION + "\",\"substationId\":\"substationId2\",\"substationName\":\"substationName2\",\"country\":\"AD\"}";
-        modificationNode1.setNodeBuildStatus(BuildStatus.BUILDING);
+        modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -1538,7 +1538,7 @@ public class NetworkModificationTest {
 
         String createVoltageLevelAttributes2 = "{\"type\":\"" + ModificationType.VOLTAGE_LEVEL_CREATION + "\",\"voltageLevelId\":\"voltageLevelId3\",\"voltageLevelName\":\"voltageLevelName3\""
                 + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s2\"}";
-        modificationNode1.setNodeBuildStatus(BuildStatus.BUILDING);
+        modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -2011,7 +2011,7 @@ public class NetworkModificationTest {
                 expectedBody);
 
         // now we do the same but on a built node
-        node1.setNodeBuildStatus(BuildStatus.BUILT);  // mark node1 as built
+        node1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark node1 as built
         networkModificationTreeService.updateNode(studyUuid, node1, userId);
         checkElementUpdatedMessageSent(studyUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -2266,7 +2266,7 @@ public class NetworkModificationTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID)));
 
         // Mark the node 3 status as built
-        modificationNode3.setNodeBuildStatus(BuildStatus.BUILT);
+        modificationNode3.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -2320,7 +2320,7 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING, VARIANT_ID);
 
         // Mark the node status as built
-        modificationNode.setNodeBuildStatus(BuildStatus.BUILT);
+        modificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));
 
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
@@ -2407,7 +2407,7 @@ public class NetworkModificationTest {
 
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getGlobalBuildStatus(nodeUuid));  // node is built
 
-        networkModificationTreeService.updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
+        networkModificationTreeService.updateNodeBuildStatus(nodeUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
 
         // stop build
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build/stop", studyUuid, nodeUuid))
@@ -2423,8 +2423,7 @@ public class NetworkModificationTest {
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_CANCELLED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(nodeUuid)); // node is not
-                                                                                                      // built
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(nodeUuid)); // node is not built
 
         wireMockServer.verify(1, WireMock.putRequestedFor(WireMock.urlPathEqualTo("/v1/build/stop"))
                 .withQueryParam(QUERY_PARAM_RECEIVER, WireMock.matching(".*"))
@@ -2660,7 +2659,7 @@ public class NetworkModificationTest {
             UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus, String userId) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
-                .loadFlowStatus(LoadFlowStatus.NOT_DONE).nodeBuildStatus(new NodeBuildStatus(buildStatus))
+                .loadFlowStatus(LoadFlowStatus.NOT_DONE).nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
         // Only for tests

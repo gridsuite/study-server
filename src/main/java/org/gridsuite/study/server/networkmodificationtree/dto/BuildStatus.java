@@ -25,7 +25,7 @@ public enum BuildStatus {
         this.severityLevel = severityLevel;
     }
 
-    public static BuildStatus fromApplicationStatus(NetworkModificationResult.ApplicationStatus status) {
+    static BuildStatus from(NetworkModificationResult.ApplicationStatus status) {
         switch (status) {
             case WITH_ERRORS:
                 return BuildStatus.BUILT_WITH_ERROR;

@@ -14,16 +14,12 @@ import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeInfoRepository;
 import org.gridsuite.study.server.utils.PropertyUtils;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -113,7 +109,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationUuid) {
     }
 
-    public void updateBuildStatus(AbstractNode node, BuildStatus globalBuildStatus, BuildStatus localBuildStatus, List<UUID> changedNodes) {
+    public void updateBuildStatus(AbstractNode node, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
     }
 
     public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
@@ -153,16 +149,11 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     }
 
     public void updateNode(AbstractNode node, String... authorizedNullProperties) {
-        var persistedNode = getNode(node.getId());
+        NodeDto persistedNode = getNode(node.getId());
         /* using only DTO values not jpa Entity */
         PropertyUtils.copyNonNullProperties(node, persistedNode, authorizedNullProperties);
 
-        //since the build status is contained in a POJO for clarity reasons in the dto as oposed to two distincts fields in the entity we have to manually handle the mapping
-        if (persistedNode instanceof NetworkModificationNode && ((NetworkModificationNode) node).getNodeBuildStatus() != null) {
-            ((NetworkModificationNode) persistedNode).setNodeBuildStatus(((NetworkModificationNode) node).getNodeBuildStatus().getGlobalBuildStatus(), ((NetworkModificationNode) node).getNodeBuildStatus().getLocalBuildStatus());
-        }
-
-        var entity = toEntity(persistedNode);
+        NodeInfoEntity entity = toEntity(persistedNode);
         entity.markNotNew();
         nodeInfoRepository.save(entity);
     }
@@ -243,8 +234,8 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getVoltageInitResultUuid(getNode(nodeUuid));
     }
 
-    public void updateBuildStatus(UUID nodeUuid, BuildStatus globalBuildStatus, BuildStatus localBuildStatus, List<UUID> changedNodes) {
-        updateBuildStatus(getNode(nodeUuid), globalBuildStatus, localBuildStatus, changedNodes);
+    public void updateBuildStatus(UUID nodeUuid, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
+        updateBuildStatus(getNode(nodeUuid), nodeBuildStatus, changedNodes);
     }
 
     public BuildStatus getGlobalBuildStatus(UUID nodeUuid) {

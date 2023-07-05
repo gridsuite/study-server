@@ -237,7 +237,7 @@ public class StudyControllerDynamicSimulationTest {
                                                                   UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
-                .loadFlowStatus(LoadFlowStatus.CONVERGED).nodeBuildStatus(new NodeBuildStatus(buildStatus))
+                .loadFlowStatus(LoadFlowStatus.CONVERGED).nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
         // Only for tests

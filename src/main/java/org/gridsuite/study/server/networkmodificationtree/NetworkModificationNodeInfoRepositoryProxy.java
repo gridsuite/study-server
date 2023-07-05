@@ -39,7 +39,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public void createNodeInfo(AbstractNode nodeInfo) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) nodeInfo;
         if (Objects.isNull(networkModificationNode.getNodeBuildStatus())) {
-            networkModificationNode.setNodeBuildStatus(BuildStatus.NOT_BUILT);
+            networkModificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
         }
         if (networkModificationNode.getModificationGroupUuid() == null) {
             networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
@@ -82,8 +82,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
             node.getDynamicSimulationResultUuid(),
-            new NodeBuildStatus(node.getGlobalBuildStatus(),
-                    node.getLocalBuildStatus())));
+            NodeBuildStatus.from(node.getLocalBuildStatus(), node.getGlobalBuildStatus())));
     }
 
     @Override
@@ -223,9 +222,9 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void updateBuildStatus(AbstractNode node, BuildStatus globalBuildStatus, BuildStatus localBuildStatus, List<UUID> changedNodes) {
+    public void updateBuildStatus(AbstractNode node, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setNodeBuildStatus(globalBuildStatus, localBuildStatus);
+        modificationNode.setNodeBuildStatus(nodeBuildStatus);
         updateNode(modificationNode, changedNodes);
     }
 
@@ -246,7 +245,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             return;
         }
 
-        modificationNode.setNodeBuildStatus(BuildStatus.NOT_BUILT);
+        modificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
         modificationNode.setVariantId(UUID.randomUUID().toString());
         modificationNode.setReportUuid(UUID.randomUUID());
         updateNode(modificationNode, changedNodes);

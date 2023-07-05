@@ -13,9 +13,9 @@ class BuildStatusTest {
 
     @Test
     void shouldConvertCorrectlyFromApplicationStatus() {
-        assertEquals(BUILT_WITH_ERROR, fromApplicationStatus(NetworkModificationResult.ApplicationStatus.WITH_ERRORS));
-        assertEquals(BUILT_WITH_WARNING, fromApplicationStatus(NetworkModificationResult.ApplicationStatus.WITH_WARNINGS));
-        assertEquals(BUILT, fromApplicationStatus(NetworkModificationResult.ApplicationStatus.ALL_OK));
+        assertEquals(BUILT_WITH_ERROR, from(NetworkModificationResult.ApplicationStatus.WITH_ERRORS));
+        assertEquals(BUILT_WITH_WARNING, from(NetworkModificationResult.ApplicationStatus.WITH_WARNINGS));
+        assertEquals(BUILT, from(NetworkModificationResult.ApplicationStatus.ALL_OK));
     }
 
     @Test
