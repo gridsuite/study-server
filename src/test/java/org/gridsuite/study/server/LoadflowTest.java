@@ -257,7 +257,7 @@ public class LoadflowTest {
         String resultAsString = mvcResult.getResponse().getContentAsString();
         LoadFlowInfos loadFlowInfos = mapper.readValue(resultAsString, LoadFlowInfos.class);
 
-        assertThat(loadFlowInfos, new MatcherLoadFlowInfos(LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.DIVERGED).build()));
+        assertThat(loadFlowInfos, new MatcherLoadFlowInfos(LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.FAILED).build()));
     }
 
     @Test

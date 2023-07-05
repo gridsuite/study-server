@@ -99,7 +99,7 @@ public class LoadflowService {
             result = resp.getBody();
             updateLoadFlowResultAndStatus(nodeUuid, result, computeLoadFlowStatus(result), false);
         } catch (Exception e) {
-            updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.DIVERGED, false);
+            updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.FAILED, false);
             throw new StudyException(LOADFLOW_ERROR, e.getMessage());
         } finally {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW);
