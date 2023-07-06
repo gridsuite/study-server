@@ -54,12 +54,8 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.NOT_DONE).build();
     }
 
-    public BuildStatus getGlobalBuildStatus(AbstractNode node) {
-        return BuildStatus.NOT_BUILT;
-    }
-
-    public BuildStatus getLocalBuildStatus(AbstractNode node) {
-        return BuildStatus.NOT_BUILT;
+    public NodeBuildStatus getNodeBuildStatus(AbstractNode node) {
+        return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
     }
 
     public void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
@@ -238,12 +234,8 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         updateNodeBuildStatus(getNode(nodeUuid), nodeBuildStatus, changedNodes);
     }
 
-    public BuildStatus getGlobalBuildStatus(UUID nodeUuid) {
-        return getGlobalBuildStatus(getNode(nodeUuid));
-    }
-
-    public BuildStatus getLocalBuildStatus(UUID nodeUuid) {
-        return getLocalBuildStatus(getNode(nodeUuid));
+    public NodeBuildStatus getNodeBuildStatus(UUID nodeUuid) {
+        return getNodeBuildStatus(getNode(nodeUuid));
     }
 
     public void invalidateNodeBuildStatus(UUID nodeUuid, List<UUID> changedNodes) {

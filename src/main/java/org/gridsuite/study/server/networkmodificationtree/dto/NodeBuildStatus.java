@@ -32,6 +32,16 @@ public class NodeBuildStatus {
     private BuildStatus localBuildStatus;
 
     @JsonIgnore
+    public boolean isNotBuilt() {
+        return globalBuildStatus.isNotBuilt() || localBuildStatus.isNotBuilt();
+    }
+
+    @JsonIgnore
+    public boolean isBuilding() {
+        return globalBuildStatus.isBuilding() || localBuildStatus.isBuilding();
+    }
+
+    @JsonIgnore
     public boolean isBuilt() {
         return globalBuildStatus.isBuilt() || localBuildStatus.isBuilt();
     }

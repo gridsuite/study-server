@@ -228,13 +228,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public BuildStatus getGlobalBuildStatus(AbstractNode node) {
-        return ((NetworkModificationNode) node).getNodeBuildStatus().getGlobalBuildStatus();
-    }
-
-    @Override
-    public BuildStatus getLocalBuildStatus(AbstractNode node) {
-        return ((NetworkModificationNode) node).getNodeBuildStatus().getLocalBuildStatus();
+    public NodeBuildStatus getNodeBuildStatus(AbstractNode node) {
+        return ((NetworkModificationNode) node).getNodeBuildStatus();
     }
 
     @Override

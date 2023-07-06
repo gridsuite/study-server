@@ -1517,9 +1517,9 @@ public class StudyTest {
         Set<String> request = TestUtils.getRequestsDone(1, server);
         assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports/.*")));
 
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(emptyNode.getId()));
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getGlobalBuildStatus(node1.getId()));
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getGlobalBuildStatus(emptyNodeChild.getId()));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNode.getId()).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node1.getId()).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNodeChild.getId()).getGlobalBuildStatus());
     }
 
     @Test
@@ -1538,9 +1538,9 @@ public class StudyTest {
         Set<String> request = TestUtils.getRequestsDone(3, server);
         assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports/.*")));
 
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(notEmptyNode.getId()));
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(node1.getId()));
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(notEmptyNodeChild.getId()));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(notEmptyNode.getId()).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(node1.getId()).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(notEmptyNodeChild.getId()).getGlobalBuildStatus());
     }
 
     @Test
@@ -1620,9 +1620,9 @@ public class StudyTest {
         var request = TestUtils.getRequestsDone(2, server);
         assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports/.*")));
 
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getGlobalBuildStatus(node1.getId()));
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(emptyNode.getId()));
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(emptyNodeChild.getId()));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node1.getId()).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNode.getId()).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNodeChild.getId()).getGlobalBuildStatus());
 
         mockMvc.perform(get(STUDIES_URL +
                         "/{studyUuid}/subtree?parentNodeUuid={parentSubtreeNode}",
@@ -1742,9 +1742,9 @@ public class StudyTest {
                 .andExpect(status().isForbidden());
 
         // Test Built status when duplicating an empty node
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getGlobalBuildStatus(node3.getId()));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId()).getGlobalBuildStatus());
         duplicateNode(study1Uuid, study1Uuid, emptyNode, node3.getId(), InsertMode.BEFORE, userId);
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getGlobalBuildStatus(node3.getId()));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId()).getGlobalBuildStatus());
     }
 
     @Test
@@ -1783,7 +1783,7 @@ public class StudyTest {
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createTwoWindingsTransformerAttributes, NETWORK_UUID_STRING, VARIANT_ID);
 
         // Invalidation node 3
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(node3.getId()));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId()).getGlobalBuildStatus());
         Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
 
@@ -1871,9 +1871,9 @@ public class StudyTest {
                 .count());
 
         //node2 should be built
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getGlobalBuildStatus(node2.getId()));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node2.getId()).getGlobalBuildStatus());
         //duplicated node2 should now be not built
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getGlobalBuildStatus(nodesAfterDuplication.get(1)));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodesAfterDuplication.get(1)).getGlobalBuildStatus());
 
         //try copy non existing node and expect not found
         mockMvc.perform(post(STUDIES_URL +

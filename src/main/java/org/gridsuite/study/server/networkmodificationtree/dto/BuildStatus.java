@@ -13,7 +13,7 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 public enum BuildStatus {
-    NOT_BUILT(-1),
+    NOT_BUILT(-2),
     BUILDING(-1),
     BUILT(0),
     BUILT_WITH_WARNING(1),
@@ -38,6 +38,14 @@ public enum BuildStatus {
 
     public BuildStatus max(BuildStatus other) {
         return severityLevel >= other.severityLevel ? this : other;
+    }
+
+    public boolean isNotBuilt() {
+        return this.severityLevel == -2;
+    }
+
+    public boolean isBuilding() {
+        return this.severityLevel == -1;
     }
 
     public boolean isBuilt() {

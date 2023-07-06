@@ -726,7 +726,7 @@ public class StudyService {
 
     private void assertNoNodeIsBuilding(UUID studyUuid) {
         networkModificationTreeService.getAllNodes(studyUuid).stream().forEach(node -> {
-            if (networkModificationTreeService.getGlobalBuildStatus(node.getIdNode()) == BuildStatus.BUILDING) {
+            if (networkModificationTreeService.getNodeBuildStatus(node.getIdNode()).isBuilding()) {
                 throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
             }
         });
@@ -734,7 +734,7 @@ public class StudyService {
 
     public void assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid) {
         if (!(networkModificationTreeService.getStudyRootNodeUuid(studyUuid).equals(nodeUuid)
-                || networkModificationTreeService.getGlobalBuildStatus(nodeUuid).isBuilt())) {
+                || networkModificationTreeService.getNodeBuildStatus(nodeUuid).isBuilt())) {
             throw new StudyException(NODE_NOT_BUILT);
         }
     }
@@ -1298,11 +1298,11 @@ public class StudyService {
         }
         networkModificationTreeService.moveStudySubtree(parentNodeToMoveUuid, referenceNodeUuid);
 
-        if (networkModificationTreeService.getGlobalBuildStatus(parentNodeToMoveUuid).isBuilt()) {
+        if (networkModificationTreeService.getNodeBuildStatus(parentNodeToMoveUuid).isBuilt()) {
             updateStatuses(studyUuid, parentNodeToMoveUuid, false, true);
         }
         allChildren.stream()
-                .filter(childUuid -> networkModificationTreeService.getGlobalBuildStatus(childUuid).isBuilt())
+                .filter(childUuid -> networkModificationTreeService.getNodeBuildStatus(childUuid).isBuilt())
                 .forEach(childUuid -> updateStatuses(studyUuid, childUuid, false, true));
 
         notificationService.emitSubtreeMoved(studyUuid, parentNodeToMoveUuid, referenceNodeUuid);
