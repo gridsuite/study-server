@@ -787,8 +787,11 @@ public class NetworkModificationTreeService {
         List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
+        AbstractNodeRepositoryProxy<?, ?, ?> nodeRepositoryProxy = repositories.get(nodeEntity.getType());
+        NodeBuildStatus currentNodeStatus = nodeRepositoryProxy.getNodeBuildStatus(nodeEntity.getIdNode());
 
         BuildStatus newGlobalStatus;
+        BuildStatus newLocalStatus = nodeBuildStatus.getLocalBuildStatus().max(currentNodeStatus.getLocalBuildStatus());
         if (nodeBuildStatus.getGlobalBuildStatus().isBuilt()) {
             NodeEntity previousBuiltNode = doGetLastParentNodeBuilt(nodeEntity);
             BuildStatus previousGlobalBuildStatus = repositories.get(previousBuiltNode.getType()).getNodeBuildStatus(previousBuiltNode.getIdNode()).getGlobalBuildStatus();
@@ -796,10 +799,7 @@ public class NetworkModificationTreeService {
         } else {
             newGlobalStatus = nodeBuildStatus.getGlobalBuildStatus();
         }
-        NodeBuildStatus newNodeStatus = NodeBuildStatus.from(nodeBuildStatus.getLocalBuildStatus(), newGlobalStatus);
-
-        AbstractNodeRepositoryProxy<?, ?, ?> nodeRepositoryProxy = repositories.get(nodeEntity.getType());
-        NodeBuildStatus currentNodeStatus = nodeRepositoryProxy.getNodeBuildStatus(nodeEntity.getIdNode());
+        NodeBuildStatus newNodeStatus = NodeBuildStatus.from(newLocalStatus, newGlobalStatus);
         if (newNodeStatus.equals(currentNodeStatus)) {
             return;
         }
