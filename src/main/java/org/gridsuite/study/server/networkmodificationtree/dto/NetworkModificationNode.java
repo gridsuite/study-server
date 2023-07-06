@@ -35,25 +35,25 @@ public class NetworkModificationNode extends AbstractNode {
     private String variantId;
 
     @Builder.Default
-    Set<UUID> modificationsToExclude = new HashSet<>();
+    private Set<UUID> modificationsToExclude = new HashSet<>();
 
-    LoadFlowStatus loadFlowStatus;
+    private LoadFlowStatus loadFlowStatus;
 
-    LoadFlowResult loadFlowResult;
+    private LoadFlowResult loadFlowResult;
 
-    UUID shortCircuitAnalysisResultUuid;
+    private UUID shortCircuitAnalysisResultUuid;
 
-    UUID selectiveShortCircuitAnalysisResultUuid;
+    private UUID selectiveShortCircuitAnalysisResultUuid;
 
-    UUID voltageInitResultUuid;
+    private UUID voltageInitResultUuid;
 
-    UUID securityAnalysisResultUuid;
+    private UUID securityAnalysisResultUuid;
 
-    UUID sensitivityAnalysisResultUuid;
+    private UUID sensitivityAnalysisResultUuid;
 
-    UUID dynamicSimulationResultUuid;
+    private UUID dynamicSimulationResultUuid;
 
-    BuildStatus buildStatus;
+    private NodeBuildStatus nodeBuildStatus;
 
     @Override
     public NodeType getType() {
