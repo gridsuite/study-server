@@ -791,12 +791,14 @@ public class NetworkModificationTreeService {
         NodeBuildStatus currentNodeStatus = nodeRepositoryProxy.getNodeBuildStatus(nodeEntity.getIdNode());
 
         BuildStatus newGlobalStatus;
-        BuildStatus newLocalStatus = nodeBuildStatus.getLocalBuildStatus().isBuilt() ? nodeBuildStatus.getLocalBuildStatus().max(currentNodeStatus.getLocalBuildStatus()) : nodeBuildStatus.getLocalBuildStatus();
-        if (nodeBuildStatus.getGlobalBuildStatus().isBuilt()) {
+        BuildStatus newLocalStatus;
+        if (nodeBuildStatus.isBuilt()) {
+            newLocalStatus = nodeBuildStatus.getLocalBuildStatus().max(currentNodeStatus.getLocalBuildStatus());
             NodeEntity previousBuiltNode = doGetLastParentNodeBuilt(nodeEntity);
             BuildStatus previousGlobalBuildStatus = repositories.get(previousBuiltNode.getType()).getNodeBuildStatus(previousBuiltNode.getIdNode()).getGlobalBuildStatus();
             newGlobalStatus = nodeBuildStatus.getGlobalBuildStatus().max(previousGlobalBuildStatus);
         } else {
+            newLocalStatus = nodeBuildStatus.getLocalBuildStatus();
             newGlobalStatus = nodeBuildStatus.getGlobalBuildStatus();
         }
         NodeBuildStatus newNodeStatus = NodeBuildStatus.from(newLocalStatus, newGlobalStatus);
