@@ -36,7 +36,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 
@@ -316,7 +315,7 @@ public class ConsumerService {
             String networkId = message.getHeaders().get(NETWORK_ID, String.class);
             String caseFormat = message.getHeaders().get(HEADER_CASE_FORMAT, String.class);
             String caseName = message.getHeaders().get(HEADER_CASE_NAME, String.class);
-            Map<String, Object> importParameters = message.getHeaders().get(HEADER_IMPORT_PARAMETERS, Map.class);
+            Map<String, String> importParameters = message.getHeaders().get(HEADER_IMPORT_PARAMETERS, Map.class);
 
             NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
 
@@ -336,14 +335,7 @@ public class ConsumerService {
                 Long startTime = receiver.getStartTime();
                 UUID importReportUuid = receiver.getReportUuid();
 
-                Map<String, String> defaultValues = networkConversionService.getImportParametersDefaultValues(caseUuid);
-                Map<String, String> modifiedValues;
-                modifiedValues = importParameters != null ?
-                        importParameters.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().toString()))
-                        : new HashMap<>();
-
-                defaultValues.keySet().stream().forEach(key -> modifiedValues.putIfAbsent(key, defaultValues.get(key)));
-                ImportParametersInfos importParametersInfos = new ImportParametersInfos(modifiedValues);
+                ImportParametersInfos importParametersInfos = new ImportParametersInfos(importParameters);
 
                 try {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();

@@ -107,25 +107,6 @@ public class NetworkConversionService {
         return new ExportNetworkInfos(filename, bytes);
     }
 
-    public Map<String, String> getImportParametersDefaultValues(UUID caseUuid) {
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
-                + "/cases/{caseUuid}/default-import-parameters");
-        String path = uriComponentsBuilder.buildAndExpand(caseUuid)
-            .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(headers);
-
-        ParameterizedTypeReference<Map<String, String>> typeRef = new ParameterizedTypeReference<>() {
-        };
-
-        ResponseEntity<Map<String, String>> responseEntity = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET,
-            httpEntity, typeRef);
-
-        return responseEntity.getBody();
-    }
-
     public void reindexStudyNetworkEquipments(UUID networkUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/reindex-all")
             .buildAndExpand(networkUuid)

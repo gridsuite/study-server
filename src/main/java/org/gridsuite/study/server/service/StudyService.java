@@ -1775,12 +1775,6 @@ public class StudyService {
                 .orElse(null);
     }
 
-    public ImportParametersInfos getImportParameters(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(studyEntity -> studyEntity.getImportParameters() != null ? StudyService.fromEntity(studyEntity.getImportParameters()) : new ImportParametersInfos())
-                .orElse(null);
-    }
-
     @Transactional
     public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters) {
         Objects.requireNonNull(studyUuid);
