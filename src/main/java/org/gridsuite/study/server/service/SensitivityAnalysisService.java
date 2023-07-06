@@ -42,6 +42,8 @@ public class SensitivityAnalysisService {
 
     static final String RESULT_UUID = "resultUuid";
 
+    static final String RESULTS_UUIDS = "resultsUuids";
+
     private String sensitivityAnalysisServerBaseUri;
 
     @Autowired
@@ -179,6 +181,15 @@ public class SensitivityAnalysisService {
             .toUriString();
 
         restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
+    }
+
+    public void deleteSensitivityAnalysisResults(List<UUID> uuids) {
+        if (!uuids.isEmpty()) {
+            String path = UriComponentsBuilder
+                    .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results")
+                    .queryParam(RESULTS_UUIDS, uuids).build().toUriString();
+            restTemplate.delete(sensitivityAnalysisServerBaseUri + path, Void.class);
+        }
     }
 
     public void assertSensitivityAnalysisNotRunning(UUID nodeUuid) {

@@ -848,6 +848,14 @@ public class StudyService {
         networkModificationTreeService.getAllNodes(studyUuid).forEach(node -> networkModificationTreeService.updateShortCircuitAnalysisResultUuid(node.getIdNode(), null));
     }
 
+    private void deleteSensitivityAnalysisResult(UUID studyUuid) {
+        List<UUID> sensitivityAnalysisResultUuids = networkModificationTreeService.getStudySensitivityAnalysisResultUuids(studyUuid);
+        if (!sensitivityAnalysisResultUuids.isEmpty()) {
+            sensitivityAnalysisService.deleteSensitivityAnalysisResults(sensitivityAnalysisResultUuids);
+        }
+        networkModificationTreeService.getAllNodes(studyUuid).forEach(node -> networkModificationTreeService.updateSensitivityAnalysisResultUuid(node.getIdNode(), null));
+    }
+
     @Transactional
     public void setSecurityAnalysisParametersValues(UUID studyUuid, SecurityAnalysisParametersValues parameters, String userId) {
         updateSecurityAnalysisParameters(studyUuid, SecurityAnalysisService.toEntity(parameters != null ? parameters : SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues()));
@@ -932,7 +940,7 @@ public class StudyService {
     public void updateSensitivityAnalysisProvider(UUID studyUuid, String provider, String userId) {
         updateProvider(studyUuid, userId, studyEntity -> {
             studyEntity.setSensitivityAnalysisProvider(provider != null ? provider : defaultSensitivityAnalysisProvider);
-            invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
+            deleteSensitivityAnalysisResult(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         });
     }
