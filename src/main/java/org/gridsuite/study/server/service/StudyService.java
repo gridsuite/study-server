@@ -967,6 +967,7 @@ public class StudyService {
         updateShortCircuitParameters(studyUuid, ShortCircuitService.toEntity(parameters != null ? parameters : ShortCircuitService.getDefaultShortCircuitParameters()));
         deleteShortCircuitResult(studyUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
     }
 
     @Transactional
