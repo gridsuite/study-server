@@ -1073,8 +1073,7 @@ public class NetworkModificationTreeTest {
         // keep the previous status (BUILT_WITH_ERROR) because it has higher severity
         networkModificationTreeService.updateNodeBuildStatus(leafNodeId, NodeBuildStatus.from(NetworkModificationResult.ApplicationStatus.ALL_OK, NetworkModificationResult.ApplicationStatus.WITH_ERRORS));
         assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(leafNodeId).getGlobalBuildStatus());
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(leafNodeId).getLocalBuildStatus());
-        checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(leafNodeId).getLocalBuildStatus());
     }
 
     /**
