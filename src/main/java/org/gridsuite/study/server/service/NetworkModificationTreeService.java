@@ -626,6 +626,19 @@ public class NetworkModificationTreeService {
         return uuids;
     }
 
+    @Transactional(readOnly = true)
+    public List<UUID> getStudyShortCircuitResultUuids(UUID studyUuid) {
+        List<UUID> uuids = new ArrayList<>();
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
+        nodes.forEach(n -> {
+            UUID uuid = repositories.get(n.getType()).getShortCircuitAnalysisResultUuid(n.getIdNode());
+            if (uuid != null) {
+                uuids.add(uuid);
+            }
+        });
+        return uuids;
+    }
+
     private void getSecurityAnalysisResultUuids(UUID nodeUuid, List<UUID> uuids) {
         nodesRepository.findById(nodeUuid).flatMap(n -> Optional.ofNullable(repositories.get(n.getType()).getSecurityAnalysisResultUuid(nodeUuid))).ifPresent(uuids::add);
         nodesRepository.findAllByParentNodeIdNode(nodeUuid)

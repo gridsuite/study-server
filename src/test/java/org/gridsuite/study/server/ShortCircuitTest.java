@@ -191,6 +191,11 @@ public class ShortCircuitTest {
                             .build(), shortCircuitAnalysisStoppedDestination);
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+                }  else if (("/v1/results?resultsUuids=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
+                    if (request.getMethod().equals("DELETE")) {
+                        return new MockResponse().setResponseCode(200);
+                    }
+                    return new MockResponse().setResponseCode(500);
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -205,13 +210,16 @@ public class ShortCircuitTest {
     @Test
     public void testShortCircuitAnalysisParameters() throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), UUID.fromString(CASE_SHORT_CIRCUIT_UUID_STRING));
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID_2, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
 
-        //get default ShortCircuitParameters
-        mockMvc.perform(get("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk(),
-                content().string(SHORT_CIRCUIT_PARAMETERS_JSON));
+      mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode1Uuid)
+                        .header("userId", "userId"))
+                .andExpect(status().isOk());
 
         //setting short-circuit analysis Parameters
         //passing self made json because shortCircuitParameter serializer removes the parameters with default value
@@ -235,6 +243,17 @@ public class ShortCircuitTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_PARAMETERS_JSON2));
+
+        //check removing short circuit
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode1Uuid))
+                .andExpectAll(status().isNoContent());
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results\\?resultsUuids=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
     }
 
     @Test

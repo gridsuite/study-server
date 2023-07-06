@@ -28,6 +28,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,6 +43,8 @@ import static org.gridsuite.study.server.StudyException.Type.SHORT_CIRCUIT_ANALY
  */
 @Service
 public class ShortCircuitService {
+
+    static final String RESULTS_UUIDS = "resultsUuids";
     private String shortCircuitServerBaseUri;
 
     @Autowired
@@ -202,6 +205,15 @@ public class ShortCircuitService {
                 .toUriString();
 
         restTemplate.delete(shortCircuitServerBaseUri + path);
+    }
+
+    public void deleteShortCircuitResults(List<UUID> uuids) {
+        if (!uuids.isEmpty()) {
+            String path = UriComponentsBuilder
+                    .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results")
+                    .queryParam(RESULTS_UUIDS, uuids).build().toUriString();
+            restTemplate.delete(shortCircuitServerBaseUri + path, Void.class);
+        }
     }
 
     public void assertShortCircuitAnalysisNotRunning(UUID nodeUuid) {

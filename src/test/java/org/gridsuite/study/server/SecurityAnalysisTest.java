@@ -523,8 +523,8 @@ public class SecurityAnalysisTest {
                 content().string(SECURITY_ANALYSIS_UPDATED_PARAMETERS_JSON));
 
         //check removing security analysis
-        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/result", modificationNode1Uuid)).andExpectAll(
-                status().isNotFound());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result",studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
+                status().isNoContent());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -581,7 +581,7 @@ public class SecurityAnalysisTest {
                 .andExpectAll(status().isOk());
 
         //check removing security analysis
-        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/result", modificationNode1Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/result", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
                 status().isNotFound());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);

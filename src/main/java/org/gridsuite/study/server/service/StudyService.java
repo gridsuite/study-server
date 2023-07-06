@@ -833,11 +833,19 @@ public class StudyService {
     }
 
     private void deleteSecurityAnalysisResult(UUID studyUuid) {
-        List<UUID> securityAnalyseResultUuids = networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid);
-        if (!securityAnalyseResultUuids.isEmpty()) {
-            securityAnalysisService.deleteSaResults(securityAnalyseResultUuids);
+        List<UUID> securityAnalysisResultUuids = networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid);
+        if (!securityAnalysisResultUuids.isEmpty()) {
+            securityAnalysisService.deleteSaResults(securityAnalysisResultUuids);
         }
         networkModificationTreeService.getAllNodes(studyUuid).forEach(node -> networkModificationTreeService.updateSecurityAnalysisResultUuid(node.getIdNode(), null));
+    }
+
+    private void deleteShortCircuitResult(UUID studyUuid) {
+        List<UUID> shortCircuitResultUuids = networkModificationTreeService.getStudyShortCircuitResultUuids(studyUuid);
+        if (!shortCircuitResultUuids.isEmpty()) {
+            shortCircuitService.deleteShortCircuitResults(shortCircuitResultUuids);
+        }
+        networkModificationTreeService.getAllNodes(studyUuid).forEach(node -> networkModificationTreeService.updateShortCircuitAnalysisResultUuid(node.getIdNode(), null));
     }
 
     @Transactional
@@ -957,6 +965,7 @@ public class StudyService {
     @Transactional
     public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParameters parameters, String userId) {
         updateShortCircuitParameters(studyUuid, ShortCircuitService.toEntity(parameters != null ? parameters : ShortCircuitService.getDefaultShortCircuitParameters()));
+        deleteShortCircuitResult(studyUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
