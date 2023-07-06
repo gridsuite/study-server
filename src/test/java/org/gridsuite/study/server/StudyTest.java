@@ -41,12 +41,14 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
+import org.gridsuite.study.server.repository.ImportParametersEntity;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.*;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.hibernate.Hibernate;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -75,6 +77,7 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -555,11 +558,8 @@ public class StudyTest {
         Matcher matcher = receiverPattern.matcher(requestPath);
         if (matcher.find()) {
             String receiverUrlString = matcher.group(1);
-            Map<String, Object> importParameters = new HashMap<String, Object>();
-            ArrayList<String> randomListParam = new ArrayList<String>();
-            randomListParam.add("changedValue1");
-            randomListParam.add("changedValue2");
-            importParameters.put("param1", randomListParam);
+            Map<String, String> importParameters = new HashMap<String, String>();
+            importParameters.put("param1", "changedValue1, changedValue2");
             importParameters.put("param2", "changedValue");
             input.send(MessageBuilder.withPayload("").setHeader("receiver", URLDecoder.decode(receiverUrlString, StandardCharsets.UTF_8))
                     .setHeader("networkUuid", networkInfos.getNetworkUuid().toString())
@@ -751,20 +751,15 @@ public class StudyTest {
 
     @Test
     public void testCreateStudyWithImportParameters() throws Exception {
-        HashMap<String, Object> importParameters = new HashMap<String, Object>();
+        Map<String, Object> importParameters = new HashMap<String, Object>();
         ArrayList<String> randomListParam = new ArrayList<String>();
         randomListParam.add("paramValue1");
         randomListParam.add("paramValue2");
         importParameters.put("param1", randomListParam);
         UUID studyUuid = createStudyWithImportParameters("userId", CASE_UUID, importParameters);
 
-
-        //TODO : get persisted import parameters
-
-        Map<String, String> importParametersExpected = new HashMap<>();
-        importParametersExpected.put("param1", "[changedValue1, changedValue2]");
-        importParametersExpected.put("param2", "changedValue");
-        JSONAssert.assertEquals(mapper.writeValueAsString(new ImportParametersInfos(importParametersExpected)), result.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).get();
+        assertEquals(studyUuid, studyEntity.getId());
     }
 
     @Test
@@ -903,7 +898,7 @@ public class StudyTest {
         return studyUuid;
     }
 
-    private UUID createStudyWithImportParameters(String userId, UUID caseUuid, HashMap<String, Object> importParameters) throws Exception {
+    protected UUID createStudyWithImportParameters(String userId, UUID caseUuid, Map<String, Object> importParameters) throws Exception {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid).header("userId", userId).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(importParameters)))
                 .andExpect(status().isOk())
                 .andReturn();

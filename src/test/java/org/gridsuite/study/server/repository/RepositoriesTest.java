@@ -9,6 +9,7 @@ package org.gridsuite.study.server.repository;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.shortcircuit.StudyType;
+import lombok.SneakyThrows;
 import org.apache.commons.collections4.map.HashedMap;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.After;
@@ -195,5 +196,33 @@ public class RepositoriesTest {
         StudyEntity savedStudyEntity1 = studyRepository.findAll().get(0);
         assertNotNull(savedStudyEntity1.getShortCircuitParameters());
         assertEquals(30., savedStudyEntity1.getShortCircuitParameters().getMinVoltageDropProportionalThreshold(), 0.001);
+    }
+
+    @Test
+    @SneakyThrows
+    @Transactional
+    public void testStudyImportParameters() {
+
+        Map<String, String> importParametersExpected = new HashMap<>();
+        importParametersExpected.put("param1", "changedValue1, changedValue2");
+        importParametersExpected.put("param2", "changedValue");
+
+        StudyEntity studyEntityToSave = StudyEntity.builder()
+                .id(UUID.randomUUID())
+                .networkUuid(UUID.randomUUID())
+                .networkId("networkId")
+                .caseFormat("caseFormat")
+                .caseUuid(UUID.randomUUID())
+                .loadFlowParameters(LoadFlowParametersEntity.builder().build())
+                .importParameters(new ImportParametersEntity(null, importParametersExpected))
+                .build();
+
+        studyRepository.save(studyEntityToSave);
+
+        StudyEntity studyEntity = studyRepository.findAll().get(0);
+        ImportParametersEntity savedImportParameters = studyEntity.getImportParameters();
+        assertEquals(2, savedImportParameters.getParameters().size());
+        assertEquals("param1", "changedValue1, changedValue2", savedImportParameters.getParameters().get("param1"));
+        assertEquals("changedValue", savedImportParameters.getParameters().get("param2"));
     }
 }
