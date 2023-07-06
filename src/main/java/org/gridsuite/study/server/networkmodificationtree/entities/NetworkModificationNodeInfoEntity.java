@@ -12,22 +12,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.repository.LoadFlowResultEntity;
 
-import javax.persistence.CascadeType;
-import javax.persistence.CollectionTable;
-import javax.persistence.Column;
-import javax.persistence.ElementCollection;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.FetchType;
-import javax.persistence.ForeignKey;
-import javax.persistence.Index;
-import javax.persistence.JoinColumn;
-import javax.persistence.OneToOne;
-import javax.persistence.Table;
+import javax.persistence.*;
 import java.util.Set;
 import java.util.UUID;
 
@@ -80,17 +67,10 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @Column(name = "dynamicSimulationResultUuid")
     private UUID dynamicSimulationResultUuid;
 
-    /**
-     * The global build status represents the state of all modifications from the root node to the current node (included) on the network
-     */
-    @Column(name = "buildStatusGlobal", nullable = false)
-    @Enumerated(EnumType.STRING)
-    private BuildStatus globalBuildStatus;
-
-    /**
-     * The local build status represents the state of this node own modifications on the network
-     */
-    @Column(name = "buildStatusLocal", nullable = false)
-    @Enumerated(EnumType.STRING)
-    private BuildStatus localBuildStatus;
+    @Embedded
+    @AttributeOverrides(value = {
+        @AttributeOverride(name = "localBuildStatus", column = @Column(name = "localBuildStatus", nullable = false)),
+        @AttributeOverride(name = "globalBuildStatus", column = @Column(name = "globalBuildStatus", nullable = false))
+    })
+    private NodeBuildStatusEmbeddable nodeBuildStatus;
 }

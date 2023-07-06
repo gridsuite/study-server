@@ -15,10 +15,7 @@ import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepository
 import org.gridsuite.study.server.networkmodificationtree.NetworkModificationNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
@@ -146,8 +143,7 @@ public class NetworkModificationTreeService {
                 null,
                 null,
                 null,
-                BuildStatus.NOT_BUILT,
-                BuildStatus.NOT_BUILT
+                NodeBuildStatus.from(BuildStatus.NOT_BUILT).toEntity()
         );
         UUID studyUuid = anchorNodeEntity.getStudy().getId();
         newNetworkModificationNodeInfoEntity.setName(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()));
@@ -216,9 +212,7 @@ public class NetworkModificationTreeService {
     public void moveStudySubtree(UUID parentNodeToMoveUuid, UUID anchorNodeUuid) {
         List<NodeEntity> children = getChildrenByParentUuid(parentNodeToMoveUuid);
         moveNode(parentNodeToMoveUuid, anchorNodeUuid, InsertMode.CHILD);
-        children.forEach(child -> {
-            moveStudySubtree(child.getIdNode(), parentNodeToMoveUuid);
-        });
+        children.forEach(child -> moveStudySubtree(child.getIdNode(), parentNodeToMoveUuid));
     }
 
     @Transactional

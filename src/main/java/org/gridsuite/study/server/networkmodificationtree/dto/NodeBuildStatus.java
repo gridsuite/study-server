@@ -9,6 +9,7 @@ package org.gridsuite.study.server.networkmodificationtree.dto;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
 
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
@@ -54,5 +55,9 @@ public class NodeBuildStatus {
                 .localBuildStatus(BuildStatus.from(localApplicationStatus))
                 .globalBuildStatus(BuildStatus.from(globalApplicationStatus))
                 .build();
+    }
+
+    public NodeBuildStatusEmbeddable toEntity() {
+        return new NodeBuildStatusEmbeddable(localBuildStatus, globalBuildStatus);
     }
 }

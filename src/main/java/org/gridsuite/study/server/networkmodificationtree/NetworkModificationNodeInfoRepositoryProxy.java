@@ -63,8 +63,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
             modificationNode.getDynamicSimulationResultUuid(),
-            modificationNode.getNodeBuildStatus().getGlobalBuildStatus(),
-            modificationNode.getNodeBuildStatus().getLocalBuildStatus());
+            modificationNode.getNodeBuildStatus().toEntity());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
@@ -82,7 +81,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
             node.getDynamicSimulationResultUuid(),
-            NodeBuildStatus.from(node.getLocalBuildStatus(), node.getGlobalBuildStatus())));
+            node.getNodeBuildStatus().toDto()));
     }
 
     @Override
