@@ -87,7 +87,7 @@ public class ShortCircuitService {
                 .queryParam("reportUuid", reportUuid.toString())
                 .queryParam("reporterId", nodeUuid.toString());
 
-        if(!StringUtils.isBlank(busId)) {
+        if (!StringUtils.isBlank(busId)) {
             uriComponentsBuilder.queryParam("busId", busId);
         }
 
@@ -212,7 +212,7 @@ public class ShortCircuitService {
 
     public void assertShortCircuitAnalysisNotRunning(UUID nodeUuid) {
         String scs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.Global);
-        String selectiveScs = getShortCircuitAnalysisStatus(nodeUuid,  ShortcircuitAnalysisType.Selective);
+        String selectiveScs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.Selective);
         if (ShortCircuitStatus.RUNNING.name().equals(scs) || ShortCircuitStatus.RUNNING.name().equals(selectiveScs)) {
             throw new StudyException(SHORT_CIRCUIT_ANALYSIS_RUNNING);
         }

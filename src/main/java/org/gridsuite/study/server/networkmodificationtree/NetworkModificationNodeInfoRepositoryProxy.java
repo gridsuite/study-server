@@ -19,7 +19,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.LoadflowService;
-import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 
 import java.util.HashSet;
 import java.util.List;

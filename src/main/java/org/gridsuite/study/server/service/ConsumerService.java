@@ -482,7 +482,7 @@ public class ConsumerService {
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
                     // update DB
-                    if(analysisType == ShortcircuitAnalysisType.Global) {
+                    if (analysisType == ShortcircuitAnalysisType.Global) {
                         updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
 
                         // send notifications
@@ -495,8 +495,6 @@ public class ConsumerService {
                         notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SELECTIVE_SHORT_CIRCUIT_STATUS);
                         notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SELECTIVE_SHORT_CIRCUIT_RESULT);
                     }
-
-
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
