@@ -1678,6 +1678,7 @@ public class StudyService {
 
         updateSelectiveShortCircuitAnalysisResultUuid(nodeUuid, result);
 
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SELECTIVE_SHORT_CIRCUIT_STATUS);
         return result;
     }
 

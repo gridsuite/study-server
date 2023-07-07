@@ -479,21 +479,20 @@ public class ConsumerService {
 
                     LOGGER.info("Short circuit analysis result '{}' available for node '{}'", resultUuid, receiverObj.getNodeUuid());
 
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
                     // update DB
                     if(analysisType == ShortcircuitAnalysisType.Global) {
                         updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
 
                         // send notifications
-                        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
                         notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
                         notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
                     } else {
                         updateSelectiveShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
 
                         // send notifications
-                        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
+                        notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SELECTIVE_SHORT_CIRCUIT_STATUS);
                         notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SELECTIVE_SHORT_CIRCUIT_RESULT);
                     }
 
