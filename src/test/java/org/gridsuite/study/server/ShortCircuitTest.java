@@ -337,8 +337,8 @@ public class ShortCircuitTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), shortCircuitAnalysisFailedDestination);
             return resultUuid;
-        }).when(studyService).runShortCircuit(any(), any(), any(), any());
-        studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), null, "");
+        }).when(studyService).runShortCircuit(any(), any(), any());
+        studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), "");
 
         // Test reset uuid result in the database
         assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), ShortcircuitAnalysisType.Global).isEmpty());

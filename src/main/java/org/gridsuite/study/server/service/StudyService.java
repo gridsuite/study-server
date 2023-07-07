@@ -1656,24 +1656,28 @@ public class StudyService {
         return result;
     }
 
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String busId, String userId) {
-        ShortcircuitAnalysisType analysisType = ShortcircuitAnalysisType.Global;
-        if (busId != null) {
-            analysisType = ShortcircuitAnalysisType.Selective;
-        }
-        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid, analysisType);
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String userId) {
+        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid, ShortcircuitAnalysisType.Global);
+        prevResultUuidOpt.ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
+
+        ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
+        UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, null, shortCircuitParameters, userId);
+
+        updateShortCircuitAnalysisResultUuid(nodeUuid, result);
+
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        return result;
+    }
+
+    public UUID runSelectiveShortCircuit(UUID studyUuid, UUID nodeUuid, String busId, String userId) {
+        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid, ShortcircuitAnalysisType.Selective);
         prevResultUuidOpt.ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
 
         ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
         UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId, shortCircuitParameters, userId);
 
-        if(analysisType == ShortcircuitAnalysisType.Global) {
-            updateShortCircuitAnalysisResultUuid(nodeUuid, result);
-        } else {
-            updateSelectiveShortCircuitAnalysisResultUuid(nodeUuid, result);
-        }
+        updateSelectiveShortCircuitAnalysisResultUuid(nodeUuid, result);
 
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         return result;
     }
 

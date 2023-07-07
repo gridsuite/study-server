@@ -471,6 +471,7 @@ public class ConsumerService {
             UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
+            ShortcircuitAnalysisType analysisType = busId == null ? ShortcircuitAnalysisType.Global : ShortcircuitAnalysisType.Selective;
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
@@ -479,17 +480,24 @@ public class ConsumerService {
                     LOGGER.info("Short circuit analysis result '{}' available for node '{}'", resultUuid, receiverObj.getNodeUuid());
 
                     // update DB
-                    if(busId == null ) {
+                    if(analysisType == ShortcircuitAnalysisType.Global) {
                         updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
+
+                        // send notifications
+                        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                        notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+                        notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
                     } else {
                         updateSelectiveShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
+
+                        // send notifications
+                        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                        notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SELECTIVE_SHORT_CIRCUIT_RESULT);
                     }
 
-                    // send notifications
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }

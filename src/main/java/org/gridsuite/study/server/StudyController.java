@@ -507,7 +507,11 @@ public class StudyController {
             @RequestParam(value = "busId", required = false) String busId,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runShortCircuit(studyUuid, nodeUuid, busId, userId));
+        if(busId == null) {
+            return ResponseEntity.ok().body(studyService.runShortCircuit(studyUuid, nodeUuid, userId));
+        } else {
+            return ResponseEntity.ok().body(studyService.runSelectiveShortCircuit(studyUuid, nodeUuid, busId, userId));
+        }
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop")
