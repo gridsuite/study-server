@@ -10,7 +10,6 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
@@ -59,25 +58,19 @@ public class ConsumerService {
     NotificationService notificationService;
     StudyService studyService;
     CaseService caseService;
-    NetworkStoreService networkStoreService;
     NetworkModificationTreeService networkModificationTreeService;
-    NetworkConversionService networkConversionService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
                            StudyService studyService,
                            CaseService caseService,
-                           NetworkModificationTreeService networkModificationTreeService,
-                           NetworkStoreService networkStoreService,
-                           NetworkConversionService networkConversionService) {
+                           NetworkModificationTreeService networkModificationTreeService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
         this.caseService = caseService;
         this.networkModificationTreeService = networkModificationTreeService;
-        this.networkStoreService = networkStoreService;
-        this.networkConversionService = networkConversionService;
     }
 
     @Bean
