@@ -13,9 +13,27 @@ class BuildStatusTest {
 
     @Test
     void shouldConvertCorrectlyFromApplicationStatus() {
-        assertEquals(BUILT_WITH_ERROR, fromApplicationStatus(NetworkModificationResult.ApplicationStatus.WITH_ERRORS));
-        assertEquals(BUILT_WITH_WARNING, fromApplicationStatus(NetworkModificationResult.ApplicationStatus.WITH_WARNINGS));
-        assertEquals(BUILT, fromApplicationStatus(NetworkModificationResult.ApplicationStatus.ALL_OK));
+        assertEquals(BUILT_WITH_ERROR, from(NetworkModificationResult.ApplicationStatus.WITH_ERRORS));
+        assertEquals(BUILT_WITH_WARNING, from(NetworkModificationResult.ApplicationStatus.WITH_WARNINGS));
+        assertEquals(BUILT, from(NetworkModificationResult.ApplicationStatus.ALL_OK));
+    }
+
+    @Test
+    void checkIsNotBuilt() {
+        assertFalse(BUILT_WITH_ERROR.isNotBuilt());
+        assertFalse(BUILT_WITH_WARNING.isNotBuilt());
+        assertFalse(BUILT.isNotBuilt());
+        assertFalse(BUILDING.isNotBuilt());
+        assertTrue(NOT_BUILT.isNotBuilt());
+    }
+
+    @Test
+    void checkIsBuilding() {
+        assertFalse(BUILT_WITH_ERROR.isBuilding());
+        assertFalse(BUILT_WITH_WARNING.isBuilding());
+        assertFalse(BUILT.isBuilding());
+        assertTrue(BUILDING.isBuilding());
+        assertFalse(NOT_BUILT.isBuilding());
     }
 
     @Test

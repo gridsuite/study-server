@@ -16,6 +16,7 @@ import okhttp3.mockwebserver.MockWebServer;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.SecurityAnalysisParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
@@ -127,7 +128,7 @@ public final class TestUtils {
             .loadFlowResult(null)
             .securityAnalysisResultUuid(UUID.randomUUID())
             .sensitivityAnalysisResultUuid(UUID.randomUUID())
-            .buildStatus(BuildStatus.NOT_BUILT)
+            .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT))
             .children(Collections.emptyList()).build();
     }
 
