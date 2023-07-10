@@ -843,6 +843,14 @@ public class StudyService {
         return LoadFlowService.toEntity(allCommonValues, allSpecificValues);
     }
 
+    private void deleteLoadFlowResult(UUID studyUuid) {
+        List<UUID> loadFlowResultUuids = networkModificationTreeService.getLoadFlowResultUuids(studyUuid);
+        if (!loadFlowResultUuids.isEmpty()) {
+            loadflowService.deleteLoadFlowResults(loadFlowResultUuids);
+        }
+        networkModificationTreeService.getAllNodes(studyUuid).forEach(node -> networkModificationTreeService.updateLoadFlowResultUuid(node.getIdNode(), null));
+    }
+
     public SecurityAnalysisParametersValues getSecurityAnalysisParametersValues(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(studyEntity -> studyEntity.getSecurityAnalysisParameters() != null ? SecurityAnalysisService.fromEntity(studyEntity.getSecurityAnalysisParameters()) : SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues())
@@ -853,14 +861,6 @@ public class StudyService {
     public void setSecurityAnalysisParametersValues(UUID studyUuid, SecurityAnalysisParametersValues parameters, String userId) {
         updateSecurityAnalysisParameters(studyUuid, SecurityAnalysisService.toEntity(parameters != null ? parameters : SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues()));
         notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
-    private void deleteLoadFlowResult(UUID studyUuid) {
-        List<UUID> loadFlowResultUuids = networkModificationTreeService.getLoadFlowResultUuids(studyUuid);
-        if (!loadFlowResultUuids.isEmpty()) {
-            loadflowService.deleteLoadFlowResults(loadFlowResultUuids);
-        }
-        networkModificationTreeService.getAllNodes(studyUuid).forEach(node -> networkModificationTreeService.updateLoadFlowResultUuid(node.getIdNode(), null));
     }
 
     @Transactional

@@ -66,8 +66,8 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Embedded
     @AttributeOverrides(value = {
-            @AttributeOverride(name = "localBuildStatus", column = @Column(name = "localBuildStatus", nullable = false)),
-            @AttributeOverride(name = "globalBuildStatus", column = @Column(name = "globalBuildStatus", nullable = false))
+        @AttributeOverride(name = "localBuildStatus", column = @Column(name = "localBuildStatus", nullable = false)),
+        @AttributeOverride(name = "globalBuildStatus", column = @Column(name = "globalBuildStatus", nullable = false))
     })
     private NodeBuildStatusEmbeddable nodeBuildStatus;
 }

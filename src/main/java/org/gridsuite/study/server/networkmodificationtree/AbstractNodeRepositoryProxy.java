@@ -43,11 +43,11 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return null;
     }
 
-    public NodeBuildStatus getNodeBuildStatus(AbstractNode node) {
-        return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
+    public void updateShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
     }
 
-    public void updateShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
+    public NodeBuildStatus getNodeBuildStatus(AbstractNode node) {
+        return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
     }
 
     public void updateLoadFlowResultUuid(AbstractNode node, UUID loadFlowResultUuid) {
