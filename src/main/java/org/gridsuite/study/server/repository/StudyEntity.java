@@ -27,24 +27,6 @@ import java.util.UUID;
 @Table(name = "study")
 public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements BasicStudyEntity {
 
-    public StudyEntity(UUID id, UUID networkUuid, String networkId, String caseFormat, UUID caseUuid, String caseName, String loadFlowProvider, String securityAnalysisProvider, String sensitivityAnalysisProvider, String dynamicSimulationProvider, LoadFlowParametersEntity loadFlowParameters, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, VoltageInitParametersEntity voltageInitParameters, Map<String, String> importParameters) {
-        this.id = id;
-        this.networkUuid = networkUuid;
-        this.networkId = networkId;
-        this.caseFormat = caseFormat;
-        this.caseUuid = caseUuid;
-        this.caseName = caseName;
-        this.loadFlowProvider = loadFlowProvider;
-        this.securityAnalysisProvider = securityAnalysisProvider;
-        this.sensitivityAnalysisProvider = sensitivityAnalysisProvider;
-        this.dynamicSimulationProvider = dynamicSimulationProvider;
-        this.loadFlowParameters = loadFlowParameters;
-        this.shortCircuitParameters = shortCircuitParameters;
-        this.dynamicSimulationParameters = dynamicSimulationParameters;
-        this.voltageInitParameters = voltageInitParameters;
-        this.importParameters = importParameters;
-    }
-
     @Id
     @Column(name = "id")
     private UUID id;
