@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.LoadflowService;
@@ -37,8 +38,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public void createNodeInfo(AbstractNode nodeInfo) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) nodeInfo;
-        if (Objects.isNull(networkModificationNode.getBuildStatus())) {
-            networkModificationNode.setBuildStatus(BuildStatus.NOT_BUILT);
+        if (Objects.isNull(networkModificationNode.getNodeBuildStatus())) {
+            networkModificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
         }
         if (networkModificationNode.getModificationGroupUuid() == null) {
             networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
@@ -62,7 +63,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
             modificationNode.getDynamicSimulationResultUuid(),
-            modificationNode.getBuildStatus());
+            modificationNode.getNodeBuildStatus().toEntity());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
@@ -80,7 +81,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
             node.getDynamicSimulationResultUuid(),
-            node.getBuildStatus()));
+            node.getNodeBuildStatus().toDto()));
     }
 
     @Override
@@ -220,25 +221,25 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus, List<UUID> changedNodes) {
+    public void updateNodeBuildStatus(AbstractNode node, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setBuildStatus(buildStatus);
+        modificationNode.setNodeBuildStatus(nodeBuildStatus);
         updateNode(modificationNode, changedNodes);
     }
 
     @Override
-    public BuildStatus getBuildStatus(AbstractNode node) {
-        return ((NetworkModificationNode) node).getBuildStatus();
+    public NodeBuildStatus getNodeBuildStatus(AbstractNode node) {
+        return ((NetworkModificationNode) node).getNodeBuildStatus();
     }
 
     @Override
-    public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
+    public void invalidateNodeBuildStatus(AbstractNode node, List<UUID> changedNodes) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        if (!modificationNode.getBuildStatus().isBuilt()) {
+        if (!modificationNode.getNodeBuildStatus().isBuilt()) {
             return;
         }
 
-        modificationNode.setBuildStatus(BuildStatus.NOT_BUILT);
+        modificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
         modificationNode.setVariantId(UUID.randomUUID().toString());
         modificationNode.setReportUuid(UUID.randomUUID());
         updateNode(modificationNode, changedNodes);

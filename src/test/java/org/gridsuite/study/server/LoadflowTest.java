@@ -33,10 +33,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
@@ -96,6 +93,9 @@ public class LoadflowTest {
     private static final String NETWORK_LOADFLOW_ERROR_UUID_STRING = "7845000f-5af0-14be-bc3e-10b96e4ef00d";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID NETWORK_UUID_ID = UUID.fromString(NETWORK_UUID_STRING);
+    private static final String CASE_LOADFLOW_EXCEPTION_UUID_STRING = "aaaaaaaa-2c2d-83bb-b45f-20b83e4ef00c";
+    private static final UUID CASE_LOADFLOW_EXCEPTION_UUID = UUID.fromString(CASE_LOADFLOW_EXCEPTION_UUID_STRING);
+    private static final String NETWORK_LOADFLOW_EXCEPTION_UUID_STRING = "aaaaaaaa-5af0-14be-bc3e-10b96e4ef00d";
 
     public static final String LOAD_PARAMETERS_JSON = "{\"commonParameters\":{\"version\":\"1.9\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true,\"dcPowerFactor\":1.0},\"specificParametersPerProvider\":{}}";
     public static final String LOAD_PARAMETERS_JSON2 = "{\"commonParameters\":{\"version\":\"1.9\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true,\"dcPowerFactor\":1.0},\"specificParametersPerProvider\":{}}";
@@ -187,12 +187,14 @@ public class LoadflowTest {
                     return new MockResponse().setResponseCode(200)
                             .setBody(loadFlowErrorString)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_LOADFLOW_EXCEPTION_UUID_STRING + "/run\\?reportId=.*&reportName=.*&provider=(Hades2|OpenLoadFlow)&variantId=.*")) {
+                    return new MockResponse().setResponseCode(500)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                 }
             }
-
         };
 
         server.setDispatcher(dispatcher);
@@ -226,6 +228,33 @@ public class LoadflowTest {
 
         assertThat(lfInfos, new MatcherLoadFlowInfos(
                 LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.DIVERGED).build()));
+    }
+
+    @Test
+    public void testLoadFlowWithException() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_LOADFLOW_EXCEPTION_UUID_STRING), CASE_LOADFLOW_EXCEPTION_UUID, false);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node");
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        // run loadflow : internal server error
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNodeUuid))
+                .andExpect(status().isInternalServerError());
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_LOADFLOW_EXCEPTION_UUID_STRING + "/run\\?reportId=.*&reportName=.*&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos", studyNameUserIdUuid,
+                        modificationNodeUuid)).andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        LoadFlowInfos loadFlowInfos = mapper.readValue(resultAsString, LoadFlowInfos.class);
+
+        assertThat(loadFlowInfos, new MatcherLoadFlowInfos(LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.FAILED).build()));
     }
 
     @Test
@@ -522,7 +551,7 @@ public class LoadflowTest {
             UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
-                .loadFlowStatus(LoadFlowStatus.NOT_DONE).buildStatus(buildStatus)
+                .loadFlowStatus(LoadFlowStatus.NOT_DONE).nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
         // Only for tests
