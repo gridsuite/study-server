@@ -6,12 +6,12 @@
  */
 package org.gridsuite.study.server.repository;
 
-import java.util.UUID;
-
 import lombok.*;
 import org.gridsuite.study.server.service.ShortCircuitService;
 
 import javax.persistence.*;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -27,7 +27,7 @@ import javax.persistence.*;
 @Table(name = "study")
 public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements BasicStudyEntity {
 
-    public StudyEntity(UUID id, UUID networkUuid, String networkId, String caseFormat, UUID caseUuid, String caseName, String loadFlowProvider, String securityAnalysisProvider, String sensitivityAnalysisProvider, String dynamicSimulationProvider, LoadFlowParametersEntity loadFlowParameters, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, VoltageInitParametersEntity voltageInitParameters, ImportParametersEntity importParameters) {
+    public StudyEntity(UUID id, UUID networkUuid, String networkId, String caseFormat, UUID caseUuid, String caseName, String loadFlowProvider, String securityAnalysisProvider, String sensitivityAnalysisProvider, String dynamicSimulationProvider, LoadFlowParametersEntity loadFlowParameters, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, VoltageInitParametersEntity voltageInitParameters, Map<String, String> importParameters) {
         this.id = id;
         this.networkUuid = networkUuid;
         this.networkId = networkId;
@@ -116,13 +116,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             ))
     private SecurityAnalysisParametersEntity securityAnalysisParameters;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "importParametersEntity_id",
-            referencedColumnName = "id",
-            foreignKey = @ForeignKey(
-                    name = "importParameters_id_fk"
-            ))
-    private ImportParametersEntity importParameters;
+    @ElementCollection
+    @CollectionTable(name = "importParameters")
+    private Map<String, String> importParameters;
 
     public ShortCircuitParametersEntity getShortCircuitParameters() {
         if (this.shortCircuitParameters == null) {

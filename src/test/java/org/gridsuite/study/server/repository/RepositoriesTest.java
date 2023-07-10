@@ -202,11 +202,7 @@ public class RepositoriesTest {
     @SneakyThrows
     @Transactional
     public void testStudyImportParameters() {
-
-        Map<String, String> importParametersExpected = new HashMap<>();
-        importParametersExpected.put("param1", "changedValue1, changedValue2");
-        importParametersExpected.put("param2", "changedValue");
-
+        Map<String, String> importParametersExpected = Map.of("param1", "changedValue1, changedValue2", "param2", "changedValue");
         StudyEntity studyEntityToSave = StudyEntity.builder()
                 .id(UUID.randomUUID())
                 .networkUuid(UUID.randomUUID())
@@ -214,15 +210,15 @@ public class RepositoriesTest {
                 .caseFormat("caseFormat")
                 .caseUuid(UUID.randomUUID())
                 .loadFlowParameters(LoadFlowParametersEntity.builder().build())
-                .importParameters(new ImportParametersEntity(null, importParametersExpected))
+                .importParameters(importParametersExpected)
                 .build();
 
         studyRepository.save(studyEntityToSave);
 
         StudyEntity studyEntity = studyRepository.findAll().get(0);
-        ImportParametersEntity savedImportParameters = studyEntity.getImportParameters();
-        assertEquals(2, savedImportParameters.getParameters().size());
-        assertEquals("param1", "changedValue1, changedValue2", savedImportParameters.getParameters().get("param1"));
-        assertEquals("changedValue", savedImportParameters.getParameters().get("param2"));
+        Map<String, String> savedImportParameters = studyEntity.getImportParameters();
+        assertEquals(2, savedImportParameters.size());
+        assertEquals("param1", "changedValue1, changedValue2", savedImportParameters.get("param1"));
+        assertEquals("changedValue", savedImportParameters.get("param2"));
     }
 }

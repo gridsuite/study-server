@@ -13,7 +13,6 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
-import org.gridsuite.study.server.dto.ImportParametersInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -328,14 +327,12 @@ public class ConsumerService {
                 Long startTime = receiver.getStartTime();
                 UUID importReportUuid = receiver.getReportUuid();
 
-                ImportParametersInfos importParametersInfos = new ImportParametersInfos(importParameters);
-
                 try {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                     ShortCircuitParameters shortCircuitParameters = ShortCircuitService.getDefaultShortCircuitParameters();
                     DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
                     VoltageInitParametersInfos voltageInitParametersInfos = VoltageInitService.getDefaultVoltageInitParameters();
-                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadflowService.toEntity(loadFlowParameters, List.of()), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), VoltageInitService.toEntity(voltageInitParametersInfos), importParametersInfos.toEntity(), importReportUuid);
+                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadflowService.toEntity(loadFlowParameters, List.of()), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), VoltageInitService.toEntity(voltageInitParametersInfos), importParameters, importReportUuid);
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);

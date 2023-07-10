@@ -279,7 +279,7 @@ public class StudyService {
         DynamicSimulationParametersInfos copiedDynamicSimulationParameters = sourceStudy.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
         SecurityAnalysisParametersValues securityAnalysisParametersValues = sourceStudy.getSecurityAnalysisParameters() == null ? SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues() : SecurityAnalysisService.fromEntity(sourceStudy.getSecurityAnalysisParameters());
 
-        ImportParametersInfos copiedImportParametersInfos = sourceStudy.getImportParameters().toDto();
+        Map<String, String> copiedImportParametersInfos = sourceStudy.getImportParameters();
         VoltageInitParametersInfos copiedVoltageInitParameters = VoltageInitService.fromEntity(sourceStudy.getVoltageInitParameters());
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
@@ -287,7 +287,7 @@ public class StudyService {
         return basicStudyInfos;
     }
 
-    private void duplicateStudyAsync(BasicStudyInfos basicStudyInfos, StudyEntity sourceStudy, LoadFlowParameters sourceLoadFlowParameters, List<LoadFlowSpecificParameterInfos> sourceSpecificLoadFlowParameters, ShortCircuitParameters copiedShortCircuitParameters, DynamicSimulationParametersInfos copiedDynamicSimulationParameters, VoltageInitParametersInfos copiedVoltageInitParameters, SecurityAnalysisParametersValues securityAnalysisParametersValues, ImportParametersInfos copiedImportParameters, String userId) {
+    private void duplicateStudyAsync(BasicStudyInfos basicStudyInfos, StudyEntity sourceStudy, LoadFlowParameters sourceLoadFlowParameters, List<LoadFlowSpecificParameterInfos> sourceSpecificLoadFlowParameters, ShortCircuitParameters copiedShortCircuitParameters, DynamicSimulationParametersInfos copiedDynamicSimulationParameters, VoltageInitParametersInfos copiedVoltageInitParameters, SecurityAnalysisParametersValues securityAnalysisParametersValues, Map<String, String> copiedImportParameters, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         try {
             startTime.set(System.nanoTime());
@@ -301,7 +301,7 @@ public class StudyService {
             LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
             ShortCircuitParameters shortCircuitParameters = copiedShortCircuitParameters != null ? copiedShortCircuitParameters : ShortCircuitService.getDefaultShortCircuitParameters();
             DynamicSimulationParametersInfos dynamicSimulationParameters = copiedDynamicSimulationParameters != null ? copiedDynamicSimulationParameters : DynamicSimulationService.getDefaultDynamicSimulationParameters();
-            StudyEntity duplicatedStudy = insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters, sourceSpecificLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), VoltageInitService.toEntity(copiedVoltageInitParameters), SecurityAnalysisService.toEntity(securityAnalysisParametersValues), copiedImportParameters.toEntity(), userId, clonedNetworkUuid, clonedCaseUuid);
+            StudyEntity duplicatedStudy = insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters, sourceSpecificLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), VoltageInitService.toEntity(copiedVoltageInitParameters), SecurityAnalysisService.toEntity(securityAnalysisParametersValues), copiedImportParameters, userId, clonedNetworkUuid, clonedCaseUuid);
             reindexStudy(duplicatedStudy);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
@@ -547,9 +547,9 @@ public class StudyService {
 
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
                                               UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
-                                              ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, VoltageInitParametersEntity voltageInitParametersEntity, ImportParametersEntity importParametersEntity, UUID importReportUuid) {
+                                              ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, VoltageInitParametersEntity voltageInitParametersEntity, Map<String, String> importParameters, UUID importReportUuid) {
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertStudyEntity(
-                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersEntity, importParametersEntity));
+                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersEntity, importParameters));
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudiesChanged(studyUuid, userId);
@@ -558,7 +558,7 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity newLoadFlowParameters, ShortCircuitParametersEntity newShortCircuitParameters, DynamicSimulationParametersEntity newDynamicSimulationParameters, VoltageInitParametersEntity newVoltageInitParameters, SecurityAnalysisParametersEntity securityAnalysisParametersEntity, ImportParametersEntity newImportParametersEntity, String userId, UUID clonedNetworkUuid, UUID clonedCaseUuid) {
+    public StudyEntity insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity newLoadFlowParameters, ShortCircuitParametersEntity newShortCircuitParameters, DynamicSimulationParametersEntity newDynamicSimulationParameters, VoltageInitParametersEntity newVoltageInitParameters, SecurityAnalysisParametersEntity securityAnalysisParametersEntity, Map<String, String> newImportParameters, String userId, UUID clonedNetworkUuid, UUID clonedCaseUuid) {
         Objects.requireNonNull(studyInfos.getId());
         Objects.requireNonNull(userId);
         Objects.requireNonNull(clonedNetworkUuid);
@@ -568,12 +568,12 @@ public class StudyService {
         Objects.requireNonNull(sourceStudy.getCaseUuid());
         Objects.requireNonNull(newLoadFlowParameters);
         Objects.requireNonNull(securityAnalysisParametersEntity);
-        Objects.requireNonNull(newImportParametersEntity);
+        Objects.requireNonNull(newImportParameters);
 
         UUID reportUuid = UUID.randomUUID();
         StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(),
                 clonedCaseUuid, sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), sourceStudy.getSecurityAnalysisProvider(),
-                sourceStudy.getSensitivityAnalysisProvider(), sourceStudy.getDynamicSimulationProvider(), newLoadFlowParameters, newShortCircuitParameters, newDynamicSimulationParameters, newVoltageInitParameters, securityAnalysisParametersEntity, newImportParametersEntity);
+                sourceStudy.getSensitivityAnalysisProvider(), sourceStudy.getDynamicSimulationProvider(), newLoadFlowParameters, newShortCircuitParameters, newDynamicSimulationParameters, newVoltageInitParameters, securityAnalysisParametersEntity, newImportParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
@@ -1081,7 +1081,7 @@ public class StudyService {
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
                                           String caseFormat, UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
-                                          UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, VoltageInitParametersEntity voltageInitParameters, ImportParametersEntity importParameters) {
+                                          UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, VoltageInitParametersEntity voltageInitParameters, Map<String, String> importParameters) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
