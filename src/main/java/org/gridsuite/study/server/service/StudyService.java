@@ -312,14 +312,6 @@ public class StudyService {
         }
     }
 
-    public static ImportParametersEntity toEntity(ImportParametersInfos importParametersInfos) {
-        return new ImportParametersEntity(null, importParametersInfos == null ? Map.of() : importParametersInfos);
-    }
-
-    public static ImportParametersInfos fromEntity(ImportParametersEntity importParametersEntity) {
-        return new ImportParametersInfos(importParametersEntity == null ? Map.of() : Map.copyOf(importParametersEntity.getParameters()));
-    }
-
     @Transactional(readOnly = true)
     public StudyInfos getStudyInfos(UUID studyUuid) {
         return StudyService.toStudyInfos(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));

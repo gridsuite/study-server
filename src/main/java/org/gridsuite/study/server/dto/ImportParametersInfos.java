@@ -8,6 +8,7 @@ package org.gridsuite.study.server.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.repository.ImportParametersEntity;
 
 import java.util.HashMap;
@@ -17,13 +18,12 @@ import java.util.Map;
  * @author Etienne Homer <etienne.homer at rte-france.com>
  */
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
-public class ImportParametersInfos extends HashMap<String, String> {
-    public ImportParametersInfos(Map<String, String> values) {
-        super(values);
-    }
+public class ImportParametersInfos {
+    private Map<String, String> parameters = new HashMap<>();
 
     public ImportParametersEntity toEntity() {
-        return new ImportParametersEntity(null, this);
+        return new ImportParametersEntity(null, parameters);
     }
 }
