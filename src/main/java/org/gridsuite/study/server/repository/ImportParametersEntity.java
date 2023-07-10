@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.repository;
 
 import lombok.*;
+import org.gridsuite.study.server.dto.ImportParametersInfos;
 
 import javax.persistence.*;
 import java.util.Map;
@@ -28,6 +29,9 @@ public class ImportParametersEntity {
     private UUID id;
 
     @ElementCollection
-    @CollectionTable
     private Map<String, String> parameters;
+
+    public ImportParametersInfos toDto() {
+        return new ImportParametersInfos(Map.copyOf(getParameters()));
+    }
 }
