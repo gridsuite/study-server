@@ -99,7 +99,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private SecurityAnalysisParametersEntity securityAnalysisParameters;
 
     @ElementCollection
-    @CollectionTable(name = "importParameters")
+    @CollectionTable(name = "importParameters",
+            indexes = {@Index(name = "studyEntity_importParameters_idx1", columnList = "importParameters")},
+            foreignKey = @ForeignKey(name = "studyEntity_importParameters_fk1"))
     private Map<String, String> importParameters;
 
     public ShortCircuitParametersEntity getShortCircuitParameters() {
