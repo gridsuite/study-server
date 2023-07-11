@@ -100,7 +100,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     @ElementCollection
     @CollectionTable(name = "importParameters",
-            indexes = {@Index(name = "studyEntity_importParameters_idx1", columnList = "importParameters")},
+            indexes = {@Index(name = "studyEntity_importParameters_idx1", columnList = "study_entity_id")},
             foreignKey = @ForeignKey(name = "studyEntity_importParameters_fk1"))
     private Map<String, String> importParameters;
 
