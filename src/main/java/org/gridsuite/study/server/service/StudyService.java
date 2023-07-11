@@ -279,7 +279,7 @@ public class StudyService {
         DynamicSimulationParametersInfos copiedDynamicSimulationParameters = sourceStudy.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
         SecurityAnalysisParametersValues securityAnalysisParametersValues = sourceStudy.getSecurityAnalysisParameters() == null ? SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues() : SecurityAnalysisService.fromEntity(sourceStudy.getSecurityAnalysisParameters());
 
-        Map<String, String> copiedImportParametersInfos = sourceStudy.getImportParameters();
+        Map<String, String> copiedImportParametersInfos = Map.copyOf(sourceStudy.getImportParameters());
         VoltageInitParametersInfos copiedVoltageInitParameters = VoltageInitService.fromEntity(sourceStudy.getVoltageInitParameters());
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
