@@ -92,8 +92,6 @@ public class LoadFlowTest {
 
     private static final String LOADFLOW_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
 
-    private static final String LOADFLOW_RESULT_JSON = "{\"resultUuid\":\"0c8de370-3e6c-4d72-b292-d355a97e0d5d\",\"writeTimeStamp\":\"2023-06-13T14:07:30.856705+02:00\",\"componentResults\":[{\"componentResultUuid\":\"4244c84f-855b-4935-a02e-fa34832cf55b\",\"connectedComponentNum\":1,\"synchronousComponentNum\":2,\"status\":\"CONVERGED\",\"iterationCount\":3,\"slackBusId\":\"slackBusId1\",\"slackBusActivePowerMismatch\":4.0,\"distributedActivePower\":5.0},{\"componentResultUuid\":\"83ccb778-1738-40e7-96f8-a341fa054d24\",\"connectedComponentNum\":1,\"synchronousComponentNum\":2,\"status\":\"CONVERGED\",\"iterationCount\":3,\"slackBusId\":\"slackBusId1\",\"slackBusActivePowerMismatch\":4.0,\"distributedActivePower\":5.0}]}\n";
-
     private static final String LOADFLOW_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String VARIANT_ID = "variant_1";
 
@@ -154,6 +152,7 @@ public class LoadFlowTest {
         String loadFlowResultUuidStr = objectMapper.writeValueAsString(LOADFLOW_RESULT_UUID);
 
         String loadFlowErrorResultUuidStr = objectMapper.writeValueAsString(LOADFLOW_ERROR_RESULT_UUID);
+        String loadflowResult = TestUtils.resourceToString("/loadflow-result.json");
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -178,7 +177,7 @@ public class LoadFlowTest {
                             .setBody(loadFlowErrorResultUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID)) {
-                    return new MockResponse().setResponseCode(200).setBody(LOADFLOW_RESULT_JSON)
+                    return new MockResponse().setResponseCode(200).setBody(loadflowResult)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/status")) {
                     return new MockResponse().setResponseCode(200).setBody(LOADFLOW_STATUS_JSON)
@@ -247,9 +246,10 @@ public class LoadFlowTest {
         assertEquals(uuidResponse, UUID.fromString(LOADFLOW_RESULT_UUID));
 
         // get loadflow result
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/result", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
-                status().isOk(),
-                content().string(LOADFLOW_RESULT_JSON));
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/result", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
+                status().isOk()).andReturn();
+
+        assertEquals(TestUtils.resourceToString("/loadflow-result.json"), mvcResult.getResponse().getContentAsString());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID)));
 
@@ -260,7 +260,7 @@ public class LoadFlowTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/status")));
 
-        // stop short circuit analysis
+        // stop loadflow analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/stop", studyNameUserIdUuid, modificationNode3Uuid)).andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);

@@ -47,7 +47,6 @@ public class LoadFlowService {
     static final String RESULTS_UUIDS = "resultsUuids";
     private String loadFlowServerBaseUri;
 
-    @Autowired
     NotificationService notificationService;
 
     private final NetworkService networkStoreService;
@@ -55,18 +54,21 @@ public class LoadFlowService {
     NetworkModificationTreeService networkModificationTreeService;
     private final ObjectMapper objectMapper;
 
-    @Autowired
     private RestTemplate restTemplate;
 
     @Autowired
     public LoadFlowService(
             @Value("${gridsuite.services.loadflow-server.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
             NetworkModificationTreeService networkModificationTreeService,
-            NetworkService networkStoreService, ObjectMapper objectMapper) {
+            NetworkService networkStoreService, ObjectMapper objectMapper,
+            NotificationService notificationService,
+            RestTemplate restTemplate) {
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
         this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
+        this.notificationService = notificationService;
+        this.restTemplate = restTemplate;
     }
 
     public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, LoadFlowParametersInfos loadflowParameters, String provider, String userId) {
