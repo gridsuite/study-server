@@ -18,15 +18,12 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.voltageinit.FilterEquipments;
 import org.gridsuite.study.server.dto.voltageinit.VoltageInitParametersInfos;
 import org.gridsuite.study.server.dto.voltageinit.VoltageInitVoltageLimitsParameterInfos;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.*;
+
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.service.*;
@@ -56,7 +53,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
@@ -183,7 +183,8 @@ public class VoltageInitTest {
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build(), voltageInitFailedDestination);
+                            .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
+                        .build(), voltageInitFailedDestination);
                     return new MockResponse().setResponseCode(200)
                             .setBody(voltageInitErrorResultUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -357,7 +358,7 @@ public class VoltageInitTest {
 
     @Test
     @SneakyThrows
-    public void testResetUuidResultWhenVoltageInitFailed() {
+    public void testNotResetedUuidResultWhenVoltageInitFailed() {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), createVoltageInitParameters());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
@@ -371,13 +372,17 @@ public class VoltageInitTest {
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
-            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), voltageInitFailedDestination);
+            input.send(
+                MessageBuilder.withPayload("")
+                    .setHeader(HEADER_RECEIVER, resultUuidJson)
+                    .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
+                .build(), voltageInitFailedDestination);
             return resultUuid;
         }).when(studyService).runVoltageInit(any(), any(), any());
         studyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), "");
 
-        // Test reset uuid result in the database
-        assertTrue(networkModificationTreeService.getVoltageInitResultUuid(modificationNode.getId()).isEmpty());
+        // Test doesn't reset uuid result in the database
+        assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, networkModificationTreeService.getVoltageInitResultUuid(modificationNode.getId()).get().toString());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -460,7 +465,7 @@ public class VoltageInitTest {
                                                                   UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
-                .loadFlowStatus(LoadFlowStatus.NOT_DONE).buildStatus(buildStatus)
+                .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
         // Only for tests

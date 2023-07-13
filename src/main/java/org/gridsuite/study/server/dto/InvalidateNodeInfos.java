@@ -28,6 +28,8 @@ public class InvalidateNodeInfos {
 
     private List<String> variantIds = new ArrayList<>();
 
+    private List<UUID> loadFlowResultUuids = new ArrayList<>();
+
     private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
 
     private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
@@ -43,6 +45,10 @@ public class InvalidateNodeInfos {
 
     public void addVariantId(String variantId) {
         variantIds.add(variantId);
+    }
+
+    public void addLoadFlowResultUuid(UUID loadFlowResultUuid) {
+        getLoadFlowResultUuids().add(loadFlowResultUuid);
     }
 
     public void addSecurityAnalysisResultUuid(UUID securityAnalysisResultUuid) {

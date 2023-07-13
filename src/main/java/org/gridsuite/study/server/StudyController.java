@@ -64,6 +64,7 @@ public class StudyController {
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final ShortCircuitService shortCircuitService;
     private final VoltageInitService voltageInitService;
+    private final LoadFlowService loadflowService;
     private final CaseService caseService;
 
     public StudyController(StudyService studyService,
@@ -75,6 +76,7 @@ public class StudyController {
             SensitivityAnalysisService sensitivityAnalysisService,
             ShortCircuitService shortCircuitService,
             VoltageInitService voltageInitService,
+            LoadFlowService loadflowService,
             CaseService caseService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -85,6 +87,7 @@ public class StudyController {
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
+        this.loadflowService = loadflowService;
         this.caseService = caseService;
     }
 
@@ -467,8 +470,10 @@ public class StudyController {
                                                          @Nullable @RequestParam("originNodeUuid") UUID originNodeUuid,
                                                          @RequestBody List<UUID> modificationsToCopyUuidList,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         if (originNodeUuid != null) {
+            studyService.assertIsNodeExist(studyUuid, originNodeUuid);
             studyService.assertCanModifyNode(studyUuid, originNodeUuid);
         }
         switch (action) {
@@ -487,12 +492,44 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run")
     @Operation(summary = "run loadflow on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow has started")})
-    public ResponseEntity<Void> runLoadFlow(
+    public ResponseEntity<UUID> runLoadFlow(
             @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("nodeUuid") UUID nodeUuid) {
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertLoadFlowRunnable(nodeUuid);
-        studyService.runLoadFlow(studyUuid, nodeUuid);
+        return ResponseEntity.ok().body(studyService.runLoadFlow(studyUuid, nodeUuid, userId));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/result")
+    @Operation(summary = "Get a loadflow result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow result"),
+            @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
+            @ApiResponse(responseCode = "404", description = "The loadflow result has not been found")})
+    public ResponseEntity<String> getLoadflowResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = loadflowService.getLoadFlowResult(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/status")
+    @Operation(summary = "Get the loadflow status on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow status"),
+            @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
+            @ApiResponse(responseCode = "404", description = "The loadflow status has not been found")})
+    public ResponseEntity<String> getLoadFlowStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = loadflowService.getLoadFlowStatus(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/stop")
+    @Operation(summary = "stop loadflow on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow has been stopped")})
+    public ResponseEntity<Void> stopLoadFlow(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        loadflowService.stopLoadFlow(studyUuid, nodeUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -665,13 +702,13 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getContingencyCount(studyUuid, nonNullContingencyListNames, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/current-limit-violations")
-    @Operation(summary = "Get current limit violations.")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The current limit violations")})
-    public ResponseEntity<List<LimitViolationInfos>> getCurrentLimitViolations(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations")
+    @Operation(summary = "Get limit violations.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The limit violations")})
+    public ResponseEntity<List<LimitViolationInfos>> getLimitViolations(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @Parameter(description = "The limit reduction") @RequestParam("limitReduction") float limitReduction) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getCurrentLimitViolations(studyUuid, nodeUuid, limitReduction));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, limitReduction));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
@@ -1066,16 +1103,6 @@ public class StudyController {
     public ResponseEntity<String> getUniqueNodeName(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
 
         return ResponseEntity.ok().body(networkModificationTreeService.getUniqueNodeName(studyUuid));
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos")
-    @Operation(summary = "get the load flow information (status and result) on study")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The load flow informations"),
-        @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
-    public ResponseEntity<LoadFlowInfos> getLoadFlowInfos(@PathVariable("studyUuid") UUID studyUuid,
-                                                                @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLoadFlowInfos(studyUuid, nodeUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/build")

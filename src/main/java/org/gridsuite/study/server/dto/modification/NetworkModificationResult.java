@@ -32,9 +32,13 @@ public class NetworkModificationResult {
         WITH_ERRORS
     }
 
-    @Schema(description = "Application status")
+    @Schema(description = "Global application status")
     @Builder.Default
     ApplicationStatus applicationStatus = ApplicationStatus.ALL_OK;
+
+    @Schema(description = "Last group application status")
+    @Builder.Default
+    ApplicationStatus lastGroupApplicationStatus = ApplicationStatus.ALL_OK;
 
     @Schema(description = "Network modification impacts")
     @Builder.Default

@@ -84,6 +84,9 @@ public class StudyServiceDynamicSimulationTest {
     @MockBean
     DynamicSimulationService dynamicSimulationService;
 
+    @MockBean
+    LoadFlowService loadFlowService;
+
     @Autowired
     StudyService studyService;
 
@@ -114,7 +117,7 @@ public class StudyServiceDynamicSimulationTest {
         // setup DynamicSimulationService mock
         given(dynamicSimulationService.runDynamicSimulation(eq(""), anyString(), eq(NETWORK_UUID), anyString(), any())).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
-        given(networkModificationTreeService.getLoadFlowStatus(NODE_UUID)).willReturn(Optional.of(LoadFlowStatus.CONVERGED));
+        given(loadFlowService.getLoadFlowStatus(NODE_UUID)).willReturn(LoadFlowStatus.CONVERGED.name());
 
         // init parameters
         DynamicSimulationParametersInfos parameters = new DynamicSimulationParametersInfos();

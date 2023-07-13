@@ -7,22 +7,16 @@
 
 package org.gridsuite.study.server.networkmodificationtree;
 
-import com.powsybl.loadflow.LoadFlowResult;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.LoadFlowInfos;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeInfoRepository;
 import org.gridsuite.study.server.utils.PropertyUtils;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -49,25 +43,14 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return null;
     }
 
-    public LoadFlowStatus getLoadFlowStatus(AbstractNode node) {
-        return LoadFlowStatus.NOT_DONE;
-    }
-
-    public LoadFlowInfos getLoadFlowInfos(AbstractNode node) {
-        return LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.NOT_DONE).build();
-    }
-
-    public BuildStatus getBuildStatus(AbstractNode node) {
-        return BuildStatus.NOT_BUILT;
-    }
-
-    public void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
-    }
-
-    public void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
-    }
-
     public void updateShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
+    }
+
+    public NodeBuildStatus getNodeBuildStatus(AbstractNode node) {
+        return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
+    }
+
+    public void updateLoadFlowResultUuid(AbstractNode node, UUID loadFlowResultUuid) {
     }
 
     public void updateVoltageInitResultUuid(AbstractNode node, UUID voltageInitResultUuid) {
@@ -98,6 +81,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return null;
     }
 
+    public UUID getLoadFlowResultUuid(AbstractNode node) {
+        return null;
+    }
+
     public UUID getVoltageInitResultUuid(AbstractNode node) {
         return null;
     }
@@ -108,10 +95,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationUuid) {
     }
 
-    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus, List<UUID> changedNodes) {
+    public void updateNodeBuildStatus(AbstractNode node, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
     }
 
-    public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
+    public void invalidateNodeBuildStatus(AbstractNode node, List<UUID> changedNodes) {
     }
 
     public void createNodeInfo(AbstractNode nodeInfo) {
@@ -148,10 +135,11 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     }
 
     public void updateNode(AbstractNode node, String... authorizedNullProperties) {
-        var persistedNode = getNode(node.getId());
+        NodeDto persistedNode = getNode(node.getId());
         /* using only DTO values not jpa Entity */
         PropertyUtils.copyNonNullProperties(node, persistedNode, authorizedNullProperties);
-        var entity = toEntity(persistedNode);
+
+        NodeInfoEntity entity = toEntity(persistedNode);
         entity.markNotNew();
         nodeInfoRepository.save(entity);
     }
@@ -176,28 +164,16 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getNode(nodeUuid).getReportUuid();
     }
 
-    public LoadFlowStatus getLoadFlowStatus(UUID nodeUuid) {
-        return getLoadFlowStatus(getNode(nodeUuid));
-    }
-
-    public void updateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
-        updateLoadFlowResultAndStatus(getNode(nodeUuid), loadFlowResult, loadFlowStatus);
-    }
-
-    public void updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
-        updateLoadFlowStatus(getNode(nodeUuid), loadFlowStatus);
-    }
-
     public void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
         updateShortCircuitAnalysisResultUuid(getNode(nodeUuid), shortCircuitAnalysisResultUuid);
     }
 
-    public void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
-        updateVoltageInitResultUuid(getNode(nodeUuid), voltageInitResultUuid);
+    public void updateLoadFlowResultUuid(UUID nodeUuid, UUID loadFlowResultUuid) {
+        updateLoadFlowResultUuid(getNode(nodeUuid), loadFlowResultUuid);
     }
 
-    public LoadFlowInfos getLoadFlowInfos(UUID nodeUuid) {
-        return getLoadFlowInfos(getNode(nodeUuid));
+    public void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
+        updateVoltageInitResultUuid(getNode(nodeUuid), voltageInitResultUuid);
     }
 
     public void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
@@ -228,20 +204,24 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getShortCircuitAnalysisResultUuid(getNode(nodeUuid));
     }
 
+    public UUID getLoadFlowResultUuid(UUID nodeUuid) {
+        return getLoadFlowResultUuid(getNode(nodeUuid));
+    }
+
     public UUID getVoltageInitResultUuid(UUID nodeUuid) {
         return getVoltageInitResultUuid(getNode(nodeUuid));
     }
 
-    public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus, List<UUID> changedNodes) {
-        updateBuildStatus(getNode(nodeUuid), buildStatus, changedNodes);
+    public void updateNodeBuildStatus(UUID nodeUuid, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
+        updateNodeBuildStatus(getNode(nodeUuid), nodeBuildStatus, changedNodes);
     }
 
-    public BuildStatus getBuildStatus(UUID nodeUuid) {
-        return getBuildStatus(getNode(nodeUuid));
+    public NodeBuildStatus getNodeBuildStatus(UUID nodeUuid) {
+        return getNodeBuildStatus(getNode(nodeUuid));
     }
 
-    public void invalidateBuildStatus(UUID nodeUuid, List<UUID> changedNodes) {
-        invalidateBuildStatus(getNode(nodeUuid), changedNodes);
+    public void invalidateNodeBuildStatus(UUID nodeUuid, List<UUID> changedNodes) {
+        invalidateNodeBuildStatus(getNode(nodeUuid), changedNodes);
     }
 
     public void handleExcludeModification(UUID nodeUuid, UUID modificationUuid, boolean active) {
