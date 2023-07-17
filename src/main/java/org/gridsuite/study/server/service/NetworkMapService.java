@@ -133,7 +133,7 @@ public class NetworkMapService {
         return equipmentMapData;
     }
 
-    public String getHvdcLineWithShuntCompensators(UUID networkUuid, String variantId, String hvdcId) {
+    public String getHvdcLineShuntCompensators(UUID networkUuid, String variantId, String hvdcId) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(
                 DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/hvdc-lines/{hvdcId}/shunt-compensators");
         if (!StringUtils.isBlank(variantId)) {
