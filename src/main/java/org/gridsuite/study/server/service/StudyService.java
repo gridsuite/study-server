@@ -550,28 +550,26 @@ public class StudyService {
         Objects.requireNonNull(userId);
 
         StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        SecurityAnalysisParametersValues securityAnalysisParametersValues = sourceStudy.getSecurityAnalysisParameters() == null ? SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues() : SecurityAnalysisService.fromEntity(sourceStudy.getSecurityAnalysisParameters());
 
         List<VariantInfos> networkVariants = networkStoreService.getNetworkVariants(sourceStudy.getNetworkUuid());
         List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(2).collect(Collectors.toList());
-        UUID clonedCaseUuid = caseService.duplicateCase(sourceStudy.getCaseUuid(), false);
-
         Network clonedNetwork = networkStoreService.cloneNetwork(sourceStudy.getNetworkUuid(), targetVariantIds);
         UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
 
+        UUID clonedCaseUuid = caseService.duplicateCase(sourceStudy.getCaseUuid(), false);
+
         Map<String, String> newImportParameters = Map.copyOf(sourceStudy.getImportParameters());
 
-        LoadFlowParameters sourceLoadFlowParameters = LoadFlowService.fromEntity(sourceStudy.getLoadFlowParameters());
-        LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
+        LoadFlowParameters newLoadFlowParameters = LoadFlowService.fromEntity(sourceStudy.getLoadFlowParameters()).copy();
         List<LoadFlowSpecificParameterInfos> sourceSpecificLoadFlowParameters = getAllSpecificLoadFlowParameters(sourceStudy);
+
+        SecurityAnalysisParametersValues securityAnalysisParametersValues = sourceStudy.getSecurityAnalysisParameters() == null ? SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues() : SecurityAnalysisService.fromEntity(sourceStudy.getSecurityAnalysisParameters());
 
         VoltageInitParametersInfos copiedVoltageInitParameters = VoltageInitService.fromEntity(sourceStudy.getVoltageInitParameters());
 
-        ShortCircuitParameters copiedShortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
-        ShortCircuitParameters shortCircuitParameters = copiedShortCircuitParameters != null ? copiedShortCircuitParameters : ShortCircuitService.getDefaultShortCircuitParameters();
+        ShortCircuitParameters shortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
 
-        DynamicSimulationParametersInfos copiedDynamicSimulationParameters = sourceStudy.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
-        DynamicSimulationParametersInfos dynamicSimulationParameters = copiedDynamicSimulationParameters != null ? copiedDynamicSimulationParameters : DynamicSimulationService.getDefaultDynamicSimulationParameters();
+        DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudy.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyInfos.getId())
