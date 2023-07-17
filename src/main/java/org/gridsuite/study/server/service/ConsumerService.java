@@ -461,8 +461,8 @@ public class ConsumerService {
         networkModificationTreeService.updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
     }
 
-    void updateSelectiveShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
-        networkModificationTreeService.updateSelectiveShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
+    void updateOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+        networkModificationTreeService.updateOneBusShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
     }
 
     @Bean
@@ -471,7 +471,7 @@ public class ConsumerService {
             UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
-            ShortcircuitAnalysisType analysisType = busId == null ? ShortcircuitAnalysisType.Global : ShortcircuitAnalysisType.Selective;
+            ShortcircuitAnalysisType analysisType = busId == null ? ShortcircuitAnalysisType.AllBuses : ShortcircuitAnalysisType.OneBus;
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
@@ -482,18 +482,18 @@ public class ConsumerService {
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
                     // update DB
-                    if (analysisType == ShortcircuitAnalysisType.Global) {
+                    if (analysisType == ShortcircuitAnalysisType.AllBuses) {
                         updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
 
                         // send notifications
                         notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
                         notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
                     } else {
-                        updateSelectiveShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
+                        updateOneBusShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
 
                         // send notifications
-                        notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SELECTIVE_SHORT_CIRCUIT_STATUS);
-                        notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SELECTIVE_SHORT_CIRCUIT_RESULT);
+                        notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+                        notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT);
                     }
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());

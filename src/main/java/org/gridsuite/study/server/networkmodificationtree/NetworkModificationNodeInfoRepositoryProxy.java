@@ -59,7 +59,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getLoadFlowStatus(),
             LoadflowService.toEntity(modificationNode.getLoadFlowResult()),
             modificationNode.getShortCircuitAnalysisResultUuid(),
-            modificationNode.getSelectiveShortCircuitAnalysisResultUuid(),
+            modificationNode.getOneBusShortCircuitAnalysisResultUuid(),
             modificationNode.getVoltageInitResultUuid(),
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
@@ -78,7 +78,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getLoadFlowStatus(),
             LoadflowService.fromEntity(node.getLoadFlowResult()),
             node.getShortCircuitAnalysisResultUuid(),
-            node.getSelectiveShortCircuitAnalysisResultUuid(),
+            node.getOneBusShortCircuitAnalysisResultUuid(),
             node.getVoltageInitResultUuid(),
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
@@ -158,9 +158,9 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         updateNode(modificationNode, "shortCircuitAnalysisResultUuid");
     }
 
-    public void updateSelectiveShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisUuid) {
+    public void updateOneBusShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisUuid) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setSelectiveShortCircuitAnalysisResultUuid(shortCircuitAnalysisUuid);
+        modificationNode.setOneBusShortCircuitAnalysisResultUuid(shortCircuitAnalysisUuid);
         updateNode(modificationNode, "shortCircuitAnalysisResultUuid");
     }
 
@@ -170,8 +170,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public UUID getSelectiveShortCircuitAnalysisResultUuid(AbstractNode node) {
-        return ((NetworkModificationNode) node).getSelectiveShortCircuitAnalysisResultUuid();
+    public UUID getOneBusShortCircuitAnalysisResultUuid(AbstractNode node) {
+        return ((NetworkModificationNode) node).getOneBusShortCircuitAnalysisResultUuid();
     }
 
     @Override

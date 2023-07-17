@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service.shortcircuit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.shortcircuit.ShortCircuitAnalysis;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.shortcircuit.StudyType;
 import org.apache.commons.lang3.StringUtils;
@@ -122,6 +123,7 @@ public class ShortCircuitService {
         }
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}" + suffix)
+                .queryParam("full", type == ShortcircuitAnalysisType.OneBus)
                 .buildAndExpand(resultUuidOpt.get()).toUriString();
         try {
             result = restTemplate.getForObject(shortCircuitServerBaseUri + path, String.class);
@@ -138,7 +140,7 @@ public class ShortCircuitService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid, ShortcircuitAnalysisType.Global);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid, ShortcircuitAnalysisType.AllBuses);
         if (resultUuidOpt.isEmpty()) {
             return;
         }
@@ -211,9 +213,9 @@ public class ShortCircuitService {
     }
 
     public void assertShortCircuitAnalysisNotRunning(UUID nodeUuid) {
-        String scs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.Global);
-        String selectiveScs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.Selective);
-        if (ShortCircuitStatus.RUNNING.name().equals(scs) || ShortCircuitStatus.RUNNING.name().equals(selectiveScs)) {
+        String scs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.AllBuses);
+        String oneBusScs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.OneBus);
+        if (ShortCircuitStatus.RUNNING.name().equals(scs) || ShortCircuitStatus.RUNNING.name().equals(oneBusScs)) {
             throw new StudyException(SHORT_CIRCUIT_ANALYSIS_RUNNING);
         }
     }

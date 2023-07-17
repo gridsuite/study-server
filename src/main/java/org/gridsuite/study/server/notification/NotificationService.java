@@ -52,8 +52,8 @@ public class NotificationService {
     public static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS = "sensitivityAnalysis_status";
     public static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED = "sensitivityAnalysis_failed";
     public static final String UPDATE_TYPE_SHORT_CIRCUIT_RESULT = "shortCircuitAnalysisResult";
-    public static final String UPDATE_TYPE_SELECTIVE_SHORT_CIRCUIT_RESULT = "selectiveShortCircuitAnalysisResult";
-    public static final String UPDATE_TYPE_SELECTIVE_SHORT_CIRCUIT_STATUS = "selectiveShortCircuitAnalysis_status";
+    public static final String UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT = "oneBusShortCircuitAnalysisResult";
+    public static final String UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS = "oneBusShortCircuitAnalysis_status";
     public static final String UPDATE_TYPE_SHORT_CIRCUIT_STATUS = "shortCircuitAnalysis_status";
     public static final String UPDATE_TYPE_SHORT_CIRCUIT_FAILED = "shortCircuitAnalysis_failed";
     public static final String UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED = "dynamicSimulation_failed";

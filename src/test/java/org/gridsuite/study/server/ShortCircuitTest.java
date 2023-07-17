@@ -329,7 +329,7 @@ public class ShortCircuitTest {
     }
 
     @Test
-    public void testSelectiveShortCircuit() throws Exception {
+    public void testOneBusShortCircuit() throws Exception {
         MvcResult mvcResult;
         String resultAsString;
         //insert a study
@@ -351,24 +351,24 @@ public class ShortCircuitTest {
         NetworkModificationNode modificationNode4 = createNetworkModificationNode(studyNameUserIdUuid,
             modificationNode3Uuid, UUID.randomUUID(), VARIANT_ID_3, "node 4");
 
-        // run a selective short circuit analysis on root node (not allowed)
+        // run a one bus short circuit analysis on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, rootNodeUuid)
                 .param("busId", "BUS_TEST_ID")
                 .header("userId", "userId"))
             .andExpect(status().isForbidden());
 
-        //run a selective short circuit analysis
+        //run a one bus short circuit analysis
         mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
                 .param("busId", "BUS_TEST_ID")
                 .header("userId", "userId"))
             .andExpect(status().isOk())
             .andReturn();
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SELECTIVE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SELECTIVE_SHORT_CIRCUIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SELECTIVE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
@@ -376,9 +376,9 @@ public class ShortCircuitTest {
         UUID uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
         assertEquals(uuidResponse, UUID.fromString(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
 
-        // get selective short circuit result
+        // get one bus short circuit result
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode3Uuid)
-            .param("type", ShortcircuitAnalysisType.Selective.name()))
+            .param("type", ShortcircuitAnalysisType.OneBus.name()))
             .andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
@@ -386,9 +386,9 @@ public class ShortCircuitTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
 
-        // get selective short circuit status
+        // get one bus short circuit status
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, modificationNode3Uuid)
-            .param("type", ShortcircuitAnalysisType.Selective.name()))
+            .param("type", ShortcircuitAnalysisType.OneBus.name()))
             .andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON)
@@ -408,8 +408,8 @@ public class ShortCircuitTest {
 
         // Set an uuid result in the database
         networkModificationTreeService.updateShortCircuitAnalysisResultUuid(modificationNode.getId(), resultUuid);
-        assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), ShortcircuitAnalysisType.Global).isPresent());
-        assertEquals(resultUuid, networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), ShortcircuitAnalysisType.Global).get());
+        assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), ShortcircuitAnalysisType.AllBuses).isPresent());
+        assertEquals(resultUuid, networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), ShortcircuitAnalysisType.AllBuses).get());
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
@@ -419,7 +419,7 @@ public class ShortCircuitTest {
         studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), "");
 
         // Test reset uuid result in the database
-        assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), ShortcircuitAnalysisType.Global).isEmpty());
+        assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), ShortcircuitAnalysisType.AllBuses).isEmpty());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -456,9 +456,9 @@ public class ShortCircuitTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
                 status().isNoContent());
 
-        // No selective short circuit result
+        // No one bus short circuit result
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode1Uuid)
-                    .param("type", ShortcircuitAnalysisType.Selective.name()))
+                    .param("type", ShortcircuitAnalysisType.OneBus.name()))
                 .andExpectAll(status().isNoContent());
 
         // No short circuit status

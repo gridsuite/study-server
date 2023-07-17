@@ -510,7 +510,7 @@ public class StudyController {
         if (busId == null) {
             return ResponseEntity.ok().body(studyService.runShortCircuit(studyUuid, nodeUuid, userId));
         } else {
-            return ResponseEntity.ok().body(studyService.runSelectiveShortCircuit(studyUuid, nodeUuid, busId, userId));
+            return ResponseEntity.ok().body(studyService.runShortCircuit(studyUuid, nodeUuid, userId, busId));
         }
     }
 
@@ -530,7 +530,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
     public ResponseEntity<String> getShortCircuitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                        @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "Global") ShortcircuitAnalysisType type) {
+                                                        @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "AllBuses") ShortcircuitAnalysisType type) {
         String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid, type);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
@@ -543,7 +543,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The short circuit analysis status has not been found")})
     public ResponseEntity<String> getShortCircuitAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "Global") ShortcircuitAnalysisType type) {
+                                                                @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "AllBuses") ShortcircuitAnalysisType type) {
         String result = shortCircuitService.getShortCircuitAnalysisStatus(nodeUuid, type);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();

@@ -554,8 +554,8 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void updateSelectiveShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateSelectiveShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid));
+    public void updateOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateOneBusShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid));
     }
 
     @Transactional
@@ -601,8 +601,8 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public Optional<UUID> getShortCircuitAnalysisResultUuid(UUID nodeUuid, ShortcircuitAnalysisType type) {
-        if (ShortcircuitAnalysisType.Selective.equals(type)) {
-            return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSelectiveShortCircuitAnalysisResultUuid(nodeUuid));
+        if (ShortcircuitAnalysisType.OneBus.equals(type)) {
+            return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getOneBusShortCircuitAnalysisResultUuid(nodeUuid));
         } else {
             return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getShortCircuitAnalysisResultUuid(nodeUuid));
         }

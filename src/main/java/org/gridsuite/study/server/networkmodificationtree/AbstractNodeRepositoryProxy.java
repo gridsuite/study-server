@@ -67,7 +67,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     public void updateShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
     }
 
-    public void updateSelectiveShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
+    public void updateOneBusShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
     }
 
     public void updateVoltageInitResultUuid(AbstractNode node, UUID voltageInitResultUuid) {
@@ -98,7 +98,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return null;
     }
 
-    public UUID getSelectiveShortCircuitAnalysisResultUuid(AbstractNode node) {
+    public UUID getOneBusShortCircuitAnalysisResultUuid(AbstractNode node) {
         return null;
     }
 
@@ -201,8 +201,8 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         updateShortCircuitAnalysisResultUuid(getNode(nodeUuid), shortCircuitAnalysisResultUuid);
     }
 
-    public void updateSelectiveShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
-        updateSelectiveShortCircuitAnalysisResultUuid(getNode(nodeUuid), shortCircuitAnalysisResultUuid);
+    public void updateOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+        updateOneBusShortCircuitAnalysisResultUuid(getNode(nodeUuid), shortCircuitAnalysisResultUuid);
     }
 
     public LoadFlowInfos getLoadFlowInfos(UUID nodeUuid) {
@@ -237,8 +237,8 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getShortCircuitAnalysisResultUuid(getNode(nodeUuid));
     }
 
-    public UUID getSelectiveShortCircuitAnalysisResultUuid(UUID nodeUuid) {
-        return getSelectiveShortCircuitAnalysisResultUuid(getNode(nodeUuid));
+    public UUID getOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid) {
+        return getOneBusShortCircuitAnalysisResultUuid(getNode(nodeUuid));
     }
 
     public UUID getVoltageInitResultUuid(UUID nodeUuid) {
