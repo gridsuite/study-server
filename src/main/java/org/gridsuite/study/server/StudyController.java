@@ -31,6 +31,8 @@ import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.service.*;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -559,8 +561,10 @@ public class StudyController {
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
     public ResponseEntity<String> getShortCircuitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid);
+                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @PageableDefault(size = Integer.MAX_VALUE) Pageable pageable) {
+        String suffix = "?page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize();
+        String result = shortCircuitService.getShortCircuitAnalysisResultOrStatus(nodeUuid, suffix);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }

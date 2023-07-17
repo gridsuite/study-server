@@ -17,6 +17,8 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -42,6 +44,9 @@ import static org.gridsuite.study.server.StudyException.Type.SHORT_CIRCUIT_ANALY
  */
 @Service
 public class ShortCircuitService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ShortCircuitService.class);
+
     private String shortCircuitServerBaseUri;
 
     @Autowired
@@ -117,6 +122,9 @@ public class ShortCircuitService {
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}" + suffix)
                 .buildAndExpand(resultUuidOpt.get()).toUriString();
+
+        LOGGER.info("get courcirc path '{}'", path);
+
         try {
             result = restTemplate.getForObject(shortCircuitServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
