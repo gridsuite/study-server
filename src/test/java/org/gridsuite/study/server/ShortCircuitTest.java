@@ -182,7 +182,7 @@ public class ShortCircuitTest {
                     return new MockResponse().setResponseCode(200)
                             .setBody(shortCircuitAnalysisErrorResultUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)) {
+                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?full=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")) {
@@ -295,7 +295,7 @@ public class ShortCircuitTest {
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?full=false")));
 
         // get short circuit status
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
@@ -383,7 +383,7 @@ public class ShortCircuitTest {
                 content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
             );
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?full=true")));
 
         // get one bus short circuit status
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, modificationNode3Uuid)

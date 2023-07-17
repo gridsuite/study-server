@@ -121,9 +121,14 @@ public class ShortCircuitService {
             return null;
         }
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}" + suffix)
-                .queryParam("full", type == ShortcircuitAnalysisType.OneBus)
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}" + suffix);
+
+        //when fetching results, full param is passed
+        if(StringUtils.isBlank(suffix)) {
+            uriComponentsBuilder = uriComponentsBuilder.queryParam("full", type == ShortcircuitAnalysisType.OneBus);
+        }
+
+        String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
         try {
             result = restTemplate.getForObject(shortCircuitServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
