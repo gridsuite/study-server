@@ -13,7 +13,6 @@ import com.google.common.io.ByteStreams;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.loadflow.LoadFlowParameters;
 import okhttp3.mockwebserver.MockWebServer;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
@@ -124,8 +123,7 @@ public final class TestUtils {
             .modificationGroupUuid(UUID.randomUUID())
             .variantId(UUID.randomUUID().toString())
             .reportUuid(reportUuid)
-            .loadFlowStatus(LoadFlowStatus.NOT_DONE)
-            .loadFlowResult(null)
+            .loadFlowResultUuid(UUID.randomUUID())
             .securityAnalysisResultUuid(UUID.randomUUID())
             .sensitivityAnalysisResultUuid(UUID.randomUUID())
             .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT))

@@ -7,9 +7,7 @@
 package org.gridsuite.study.server.repository;
 
 import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.shortcircuit.StudyType;
-import org.apache.commons.collections4.map.HashedMap;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.After;
 import org.junit.Test;
@@ -19,7 +17,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.Assert.*;
 
@@ -52,31 +53,6 @@ public class RepositoriesTest {
     @Test
     @Transactional
     public void testStudyRepository() {
-        Map<String, String> metrics = new HashedMap<>();
-        metrics.put("key1", "value1");
-        metrics.put("key2", "value2");
-        LoadFlowResultEntity loadFlowResultEntity = new LoadFlowResultEntity(null, false, metrics, "logs", new ArrayList<>());
-        LoadFlowResultEntity loadFlowResultEntity2 = new LoadFlowResultEntity(null, false, metrics, "logs2", new ArrayList<>());
-        LoadFlowResultEntity loadFlowResultEntity3 = new LoadFlowResultEntity(null, true, metrics, "logs3", new ArrayList<>());
-
-        ComponentResultEmbeddable componentResultEmbeddable1 = new ComponentResultEmbeddable(1, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 1.0, 1.3);
-        ComponentResultEmbeddable componentResultEmbeddable2 = new ComponentResultEmbeddable(2, 2, LoadFlowResult.ComponentResult.Status.CONVERGED, 2, "slackBusId", 2.0, 1.4);
-
-        loadFlowResultEntity.getComponentResults().add(componentResultEmbeddable1);
-        loadFlowResultEntity.getComponentResults().add(componentResultEmbeddable2);
-
-        ComponentResultEmbeddable componentResultEmbeddable3 = new ComponentResultEmbeddable(3, 3, LoadFlowResult.ComponentResult.Status.FAILED, 3, "slackBusId", 3.0, 1.5);
-        ComponentResultEmbeddable componentResultEmbeddable4 = new ComponentResultEmbeddable(1, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 4, "slackBusId", 4.0, 1.6);
-
-        loadFlowResultEntity2.getComponentResults().add(componentResultEmbeddable3);
-        loadFlowResultEntity2.getComponentResults().add(componentResultEmbeddable4);
-
-        ComponentResultEmbeddable componentResultEmbeddable5 = new ComponentResultEmbeddable(3, 3, LoadFlowResult.ComponentResult.Status.FAILED, 5, "slackBusId", 5.0, 1.7);
-        ComponentResultEmbeddable componentResultEmbeddable6 = new ComponentResultEmbeddable(1, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 6, "slackBusId", 6.0, 1.8);
-
-        loadFlowResultEntity3.getComponentResults().add(componentResultEmbeddable5);
-        loadFlowResultEntity3.getComponentResults().add(componentResultEmbeddable6);
-
         Set<String> countriesTemp = new HashSet<>();
         countriesTemp.add("FR");
         LoadFlowParametersEntity loadFlowParametersEntity = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,

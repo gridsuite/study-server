@@ -11,8 +11,14 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.repository.LoadFlowResultEntity;
+
+import javax.persistence.CollectionTable;
+import javax.persistence.Column;
+import javax.persistence.ElementCollection;
+import javax.persistence.Entity;
+import javax.persistence.ForeignKey;
+import javax.persistence.Index;
+import javax.persistence.Table;
 
 import javax.persistence.*;
 import java.util.Set;
@@ -40,23 +46,14 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @CollectionTable(foreignKey = @ForeignKey(name = "networkModificationNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "networkModificationNodeInfoEntity_modificationsToExclude_idx", columnList = "network_modification_node_info_entity_id_node")})
     private Set<UUID> modificationsToExclude;
 
-    @Column(name = "loadFlowStatus")
-    @Enumerated(EnumType.STRING)
-    private LoadFlowStatus loadFlowStatus;
-
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "loadFlowResultEntity_id",
-        referencedColumnName = "id",
-        foreignKey = @ForeignKey(
-            name = "loadFlowResult_id_fk"
-        ))
-    private LoadFlowResultEntity loadFlowResult;
-
     @Column(name = "shortCircuitAnalysisResultUuid")
     private UUID shortCircuitAnalysisResultUuid;
 
     @Column(name = "oneBusShortCircuitAnalysisResultUuid")
     private UUID oneBusShortCircuitAnalysisResultUuid;
+
+    @Column(name = "loadflowResultUuid")
+    private UUID loadFlowResultUuid;
 
     @Column(name = "voltageInitResultUuid")
     private UUID voltageInitResultUuid;

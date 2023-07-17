@@ -1,0 +1,26 @@
+{
+  "resultUuid": "0c8de370-3e6c-4d72-b292-d355a97e0d5d",
+  "writeTimeStamp": "2023-06-13T14:07:30.856705+02:00",
+  "componentResults": [
+    {
+      "componentResultUuid": "4244c84f-855b-4935-a02e-fa34832cf55b",
+      "connectedComponentNum": 1,
+      "synchronousComponentNum": 2,
+      "status": "CONVERGED",
+      "iterationCount": 3,
+      "slackBusId": "slackBusId1",
+      "slackBusActivePowerMismatch": 4.0,
+      "distributedActivePower": 5.0
+    },
+    {
+      "componentResultUuid": "83ccb778-1738-40e7-96f8-a341fa054d24",
+      "connectedComponentNum": 1,
+      "synchronousComponentNum": 2,
+      "status": "CONVERGED",
+      "iterationCount": 3,
+      "slackBusId": "slackBusId1",
+      "slackBusActivePowerMismatch": 4.0,
+      "distributedActivePower": 5.0
+    }
+  ]
+}

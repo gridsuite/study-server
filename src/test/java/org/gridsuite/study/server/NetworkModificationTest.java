@@ -32,7 +32,6 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -1897,16 +1896,6 @@ public class NetworkModificationTest {
                         .withBody(mapper.writeValueAsString(Optional.empty()))
                         .withHeader("Content-Type", "application/json"))).getId();
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
-                studyNameUserIdUuid, UUID.randomUUID(), modification1, modification2).header(USER_ID_HEADER, "userId"))
-            .andExpect(status().isNotFound());
-
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
-                studyNameUserIdUuid1, modificationNodeUuid, modification1, modification2).header(USER_ID_HEADER, "userId"))
-            .andExpect(status().isForbidden());
-        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
-        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
-
         // switch the 2 modifications order (modification1 is set at the end, after modification2)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
                 studyNameUserIdUuid, modificationNodeUuid, modification1).header(USER_ID_HEADER, "userId"))
@@ -1953,6 +1942,34 @@ public class NetworkModificationTest {
     }
 
     @Test
+    public void testReorderModificationErrorCase() throws Exception {
+        String userId = "userId";
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "node", userId);
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        UUID modification1 = UUID.randomUUID();
+        UUID modification2 = UUID.randomUUID();
+        UUID studyNameUserIdUuid1 = UUID.randomUUID();
+        UUID nodeIdUuid1 = UUID.randomUUID();
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
+                        studyNameUserIdUuid, nodeIdUuid1, modification1, modification2).header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isNotFound());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, nodeIdUuid1);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, nodeIdUuid1);
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
+                        studyNameUserIdUuid1, modificationNodeUuid, modification1, modification2).header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isForbidden());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
+    }
+
+    @Test
     public void testDuplicateModification() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
@@ -1970,22 +1987,6 @@ public class NetworkModificationTest {
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(Optional.empty()))
                         .withHeader("Content-Type", "application/json"))).getId();
-
-        // Random/bad studyId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
-                UUID.randomUUID(), rootNodeUuid)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(modificationUuidListBody)
-                .header(USER_ID_HEADER, "userId"))
-            .andExpect(status().isForbidden());
-
-        // Random/bad nodeId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
-                studyUuid, UUID.randomUUID())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(modificationUuidListBody)
-                .header(USER_ID_HEADER, "userId"))
-            .andExpect(status().isNotFound());
 
         // duplicate 2 modifications in node1
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
@@ -2051,6 +2052,37 @@ public class NetworkModificationTest {
     }
 
     @Test
+    public void testDuplicateModificationErrorCase() throws Exception {
+        String userId = "userId";
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "New node 1", "userId");
+        UUID nodeUuid1 = node1.getId();
+        UUID modification1 = UUID.randomUUID();
+        UUID modification2 = UUID.randomUUID();
+        String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
+
+        // Random/bad studyId error case
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
+                        UUID.randomUUID(), rootNodeUuid)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody)
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isNotFound());
+
+        // Random/bad nodeId error case
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
+                        studyUuid, UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody)
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isNotFound());
+
+    }
+
+    @Test
     public void testCutAndPasteModification() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
@@ -2071,22 +2103,6 @@ public class NetworkModificationTest {
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(Optional.empty()))
                         .withHeader("Content-Type", "application/json"))).getId();
-
-        // Random/bad studyId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
-                        UUID.randomUUID(), rootNodeUuid, UUID.randomUUID())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(modificationUuidListBody)
-                        .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().isForbidden());
-
-        // Random/bad nodeId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
-                        studyUuid, UUID.randomUUID(), UUID.randomUUID())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(modificationUuidListBody)
-                        .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().isNotFound());
 
         // move 2 modifications within node 1
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
@@ -2151,6 +2167,39 @@ public class NetworkModificationTest {
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void testCutAndPasteModificationErrorCase() throws Exception {
+        String userId = "userId";
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "New node 1", userId);
+        UUID nodeUuid1 = node1.getId();
+        NetworkModificationNode node2 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "New node 2", userId);
+        UUID nodeUuid2 = node2.getId();
+        UUID modification1 = UUID.randomUUID();
+        UUID modification2 = UUID.randomUUID();
+        String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
+
+        // Random/bad studyId error case
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
+                        UUID.randomUUID(), rootNodeUuid, UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody)
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isNotFound());
+
+        // Random/bad nodeId error case
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
+                        studyUuid, UUID.randomUUID(), UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody)
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -2660,7 +2709,7 @@ public class NetworkModificationTest {
             UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus, String userId) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
-                .loadFlowStatus(LoadFlowStatus.NOT_DONE).nodeBuildStatus(NodeBuildStatus.from(buildStatus))
+                .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
         // Only for tests

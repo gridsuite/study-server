@@ -7,10 +7,7 @@
 
 package org.gridsuite.study.server.networkmodificationtree;
 
-import com.powsybl.loadflow.LoadFlowResult;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.LoadFlowInfos;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -46,25 +43,14 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return null;
     }
 
-    public LoadFlowStatus getLoadFlowStatus(AbstractNode node) {
-        return LoadFlowStatus.NOT_DONE;
-    }
-
-    public LoadFlowInfos getLoadFlowInfos(AbstractNode node) {
-        return LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.NOT_DONE).build();
+    public void updateShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
     }
 
     public NodeBuildStatus getNodeBuildStatus(AbstractNode node) {
         return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
     }
 
-    public void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
-    }
-
-    public void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
-    }
-
-    public void updateShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
+    public void updateLoadFlowResultUuid(AbstractNode node, UUID loadFlowResultUuid) {
     }
 
     public void updateOneBusShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
@@ -99,6 +85,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     }
 
     public UUID getOneBusShortCircuitAnalysisResultUuid(AbstractNode node) {
+        return null;
+    }
+
+    public UUID getLoadFlowResultUuid(AbstractNode node) {
         return null;
     }
 
@@ -181,32 +171,20 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getNode(nodeUuid).getReportUuid();
     }
 
-    public LoadFlowStatus getLoadFlowStatus(UUID nodeUuid) {
-        return getLoadFlowStatus(getNode(nodeUuid));
+    public void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+        updateShortCircuitAnalysisResultUuid(getNode(nodeUuid), shortCircuitAnalysisResultUuid);
     }
 
-    public void updateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
-        updateLoadFlowResultAndStatus(getNode(nodeUuid), loadFlowResult, loadFlowStatus);
-    }
-
-    public void updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
-        updateLoadFlowStatus(getNode(nodeUuid), loadFlowStatus);
+    public void updateLoadFlowResultUuid(UUID nodeUuid, UUID loadFlowResultUuid) {
+        updateLoadFlowResultUuid(getNode(nodeUuid), loadFlowResultUuid);
     }
 
     public void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
         updateVoltageInitResultUuid(getNode(nodeUuid), voltageInitResultUuid);
     }
 
-    public void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
-        updateShortCircuitAnalysisResultUuid(getNode(nodeUuid), shortCircuitAnalysisResultUuid);
-    }
-
     public void updateOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
         updateOneBusShortCircuitAnalysisResultUuid(getNode(nodeUuid), shortCircuitAnalysisResultUuid);
-    }
-
-    public LoadFlowInfos getLoadFlowInfos(UUID nodeUuid) {
-        return getLoadFlowInfos(getNode(nodeUuid));
     }
 
     public void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
@@ -239,6 +217,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public UUID getOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid) {
         return getOneBusShortCircuitAnalysisResultUuid(getNode(nodeUuid));
+    }
+
+    public UUID getLoadFlowResultUuid(UUID nodeUuid) {
+        return getLoadFlowResultUuid(getNode(nodeUuid));
     }
 
     public UUID getVoltageInitResultUuid(UUID nodeUuid) {

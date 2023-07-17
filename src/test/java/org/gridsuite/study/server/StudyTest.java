@@ -20,7 +20,6 @@ import com.powsybl.iidm.network.Line;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.xml.XMLImporter;
-import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
@@ -849,7 +848,7 @@ public class StudyTest {
             UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus, String userId) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
-                .loadFlowStatus(LoadFlowStatus.NOT_DONE).nodeBuildStatus(NodeBuildStatus.from(buildStatus))
+                .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
         // Only for tests
@@ -1246,8 +1245,6 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
 
-        node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
-        node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         node2.setSensitivityAnalysisResultUuid(UUID.randomUUID());
         node2.setShortCircuitAnalysisResultUuid(UUID.randomUUID());
@@ -1293,13 +1290,11 @@ public class StudyTest {
         NetworkModificationNode duplicatedModificationNode = (NetworkModificationNode) duplicatedRootNode.getChildren().get(0);
         assertEquals(2, duplicatedModificationNode.getChildren().size());
 
-        assertEquals(LoadFlowStatus.NOT_DONE, ((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getLoadFlowStatus());
-        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getLoadFlowResult());
+        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getLoadFlowResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getSecurityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getSensitivityAnalysisResultUuid());
 
-        assertEquals(LoadFlowStatus.NOT_DONE, ((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getLoadFlowStatus());
-        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getLoadFlowResult());
+        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getLoadFlowResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSecurityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSensitivityAnalysisResultUuid());
 
@@ -1360,8 +1355,7 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPost(stubUuid, createLoadAttributes, NETWORK_UUID_STRING);
 
-        node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
-        node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
+        node2.setLoadFlowResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -1676,8 +1670,7 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
 
-        node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
-        node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
+        node2.setLoadFlowResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -1803,8 +1796,7 @@ public class StudyTest {
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
 
         node2.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));
-        node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
-        node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
+        node2.setLoadFlowResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
