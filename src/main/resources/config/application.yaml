@@ -6,7 +6,7 @@ spring:
 
   cloud:
     function:
-      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeDsResult;consumeDsStopped;consumeDsFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed;consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed
+      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeDsResult;consumeDsStopped;consumeDsFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed;consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -40,6 +40,15 @@ spring:
         consumeBuildFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.failed
           group: studyBuildFailedGroup
+        consumeLoadFlowResult-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.result
+          group: studyLoadFlowResultGroup
+        consumeLoadFlowStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.stopped
+          group: studyLoadFlowStoppedGroup
+        consumeLoadFlowFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.failed
+          group: studyLoadFlowFailedGroup
         consumeSensitivityAnalysisResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.result
           group: studySensitivityAnalysisResultGroup
