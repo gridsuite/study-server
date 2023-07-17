@@ -614,6 +614,8 @@ public class ConsumerService {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
             String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
+            String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
+            ShortcircuitAnalysisType analysisType = busId == null ? ShortcircuitAnalysisType.AllBuses : ShortcircuitAnalysisType.OneBus;
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
@@ -621,13 +623,23 @@ public class ConsumerService {
 
                     LOGGER.info("Short circuit analysis failed for node '{}'", receiverObj.getNodeUuid());
 
-                    // delete Short circuit analysis result in database
-                    updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
+                    if (analysisType == ShortcircuitAnalysisType.AllBuses) {
+                        // delete Short circuit analysis result in database
+                        updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
 
-                    // send notification for failed computation
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                        // send notification for failed computation
+                        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
-                    notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED, errorMessage, userId);
+                        notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED, errorMessage, userId);
+                    } else {
+                        // delete one bus Short circuit analysis result in database
+                        updateOneBusShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
+
+                        // send notification for failed computation
+                        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                        notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_FAILED, errorMessage, userId);
+                    }
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }

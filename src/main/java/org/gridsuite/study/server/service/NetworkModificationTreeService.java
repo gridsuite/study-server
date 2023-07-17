@@ -551,9 +551,6 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    }
-
-    @Transactional
     public void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateVoltageInitResultUuid(nodeUuid, voltageInitResultUuid));
     }
