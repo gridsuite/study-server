@@ -124,7 +124,7 @@ public class ShortCircuitService {
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}" + suffix);
 
         //when fetching results, full param is passed
-        if(StringUtils.isBlank(suffix)) {
+        if (StringUtils.isBlank(suffix)) {
             uriComponentsBuilder = uriComponentsBuilder.queryParam("full", type == ShortcircuitAnalysisType.OneBus);
         }
 
