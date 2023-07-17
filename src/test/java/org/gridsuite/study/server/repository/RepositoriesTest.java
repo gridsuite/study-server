@@ -8,6 +8,7 @@ package org.gridsuite.study.server.repository;
 
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.StudyType;
+import lombok.SneakyThrows;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.After;
 import org.junit.Test;
@@ -17,10 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.Assert.*;
 
@@ -171,5 +169,29 @@ public class RepositoriesTest {
         StudyEntity savedStudyEntity1 = studyRepository.findAll().get(0);
         assertNotNull(savedStudyEntity1.getShortCircuitParameters());
         assertEquals(30., savedStudyEntity1.getShortCircuitParameters().getMinVoltageDropProportionalThreshold(), 0.001);
+    }
+
+    @Test
+    @SneakyThrows
+    @Transactional
+    public void testStudyImportParameters() {
+        Map<String, String> importParametersExpected = Map.of("param1", "changedValue1, changedValue2", "param2", "changedValue");
+        StudyEntity studyEntityToSave = StudyEntity.builder()
+                .id(UUID.randomUUID())
+                .networkUuid(UUID.randomUUID())
+                .networkId("networkId")
+                .caseFormat("caseFormat")
+                .caseUuid(UUID.randomUUID())
+                .loadFlowParameters(LoadFlowParametersEntity.builder().build())
+                .importParameters(importParametersExpected)
+                .build();
+
+        studyRepository.save(studyEntityToSave);
+
+        StudyEntity studyEntity = studyRepository.findAll().get(0);
+        Map<String, String> savedImportParameters = studyEntity.getImportParameters();
+        assertEquals(2, savedImportParameters.size());
+        assertEquals("param1", "changedValue1, changedValue2", savedImportParameters.get("param1"));
+        assertEquals("changedValue", savedImportParameters.get("param2"));
     }
 }
