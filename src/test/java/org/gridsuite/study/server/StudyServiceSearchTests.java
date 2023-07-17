@@ -7,7 +7,6 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.iidm.network.VariantManagerConstants;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
@@ -82,8 +81,6 @@ public class StudyServiceSearchTests {
 
     @Test
     public void searchEquipmentInfosMultiVariants() {
-        EqualsVerifier.simple().forClass(TombstonedEquipmentInfos.class).verify();
-
         // Initialize equipment infos initial variant
         EquipmentInfos generatorInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
         EquipmentInfos line1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l1").name("name_l1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LINE").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();

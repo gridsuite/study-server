@@ -25,6 +25,8 @@ public class NodeModificationInfos {
 
     private UUID reportUuid;
 
+    private UUID loadFlowUuid;
+
     private UUID securityAnalysisUuid;
 
     private UUID sensitivityAnalysisUuid;
