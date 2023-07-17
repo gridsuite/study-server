@@ -66,6 +66,7 @@ public class StudyController {
     private final VoltageInitService voltageInitService;
     private final LoadFlowService loadflowService;
     private final CaseService caseService;
+    private final ActuatorHealthService actuatorHealthService;
 
     public StudyController(StudyService studyService,
             NetworkService networkStoreService,
@@ -77,7 +78,8 @@ public class StudyController {
             ShortCircuitService shortCircuitService,
             VoltageInitService voltageInitService,
             LoadFlowService loadflowService,
-            CaseService caseService) {
+            CaseService caseService,
+            ActuatorHealthService actuatorHealthService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -89,6 +91,7 @@ public class StudyController {
         this.voltageInitService = voltageInitService;
         this.loadflowService = loadflowService;
         this.caseService = caseService;
+        this.actuatorHealthService = actuatorHealthService;
     }
 
     @InitBinder
@@ -1353,6 +1356,14 @@ public class StudyController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/optional-up-services")
+    @Operation(summary = "Get all the available optional services")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of available optional services")})
+    public ResponseEntity<List<String>> getOptionalUpServices() {
+        List<String> upServices = actuatorHealthService.getOptionalUpServices();
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(upServices);
     }
 
     enum UpdateModificationAction {
