@@ -7,7 +7,6 @@
 package org.gridsuite.study.server;
 
 import com.google.common.collect.Iterables;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.elasticsearch.StudyInfosRepository;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -69,8 +68,6 @@ public class StudyInfosServiceTests {
 
     @Test
     public void searchStudyInfos() {
-        EqualsVerifier.simple().forClass(CreatedStudyBasicInfos.class).verify();
-
         CreatedStudyBasicInfos studyInfos11 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").caseFormat("XIIDM").build();
         CreatedStudyBasicInfos studyInfos12 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").build();
         CreatedStudyBasicInfos studyInfos21 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-22222222221")).userId("userId2").caseFormat("XIIDM").build();

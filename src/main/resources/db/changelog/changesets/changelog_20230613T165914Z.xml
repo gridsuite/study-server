@@ -1,0 +1,32 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="tourian1 (generated)" id="1686675567717-3">
+        <addColumn tableName="network_modification_node_info">
+            <column name="loadflow_result_uuid" type="uuid"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="tourian1 (generated)" id="1686675567717-4">
+        <dropForeignKeyConstraint baseTableName="load_flow_result_entity_component_results" constraintName="loadFlowResultEntity_componentResults_fk"/>
+    </changeSet>
+    <changeSet author="tourian1 (generated)" id="1686675567717-5">
+        <dropForeignKeyConstraint baseTableName="load_flow_result_entity_metrics" constraintName="loadFlowResultEntity_metrics_fk"/>
+    </changeSet>
+    <changeSet author="tourian1 (generated)" id="1686675567717-6">
+        <dropForeignKeyConstraint baseTableName="network_modification_node_info" constraintName="loadFlowResult_id_fk"/>
+    </changeSet>
+    <changeSet author="tourian1 (generated)" id="1686675567717-7">
+        <dropTable tableName="load_flow_result"/>
+    </changeSet>
+    <changeSet author="tourian1 (generated)" id="1686675567717-8">
+        <dropTable tableName="load_flow_result_entity_component_results"/>
+    </changeSet>
+    <changeSet author="tourian1 (generated)" id="1686675567717-9">
+        <dropTable tableName="load_flow_result_entity_metrics"/>
+    </changeSet>
+    <changeSet author="tourian1 (generated)" id="1686675567717-10">
+        <dropColumn columnName="load_flow_result_entity_id" tableName="network_modification_node_info"/>
+    </changeSet>
+    <changeSet author="tourian1 (generated)" id="1686675567717-11">
+        <dropColumn columnName="load_flow_status" tableName="network_modification_node_info"/>
+    </changeSet>
+</databaseChangeLog>
