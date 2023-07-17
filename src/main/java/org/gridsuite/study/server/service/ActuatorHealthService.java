@@ -22,7 +22,8 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 
@@ -32,28 +33,33 @@ public class ActuatorHealthService {
     static final String ACTUATOR_HEALTH_PATH = "/actuator/health";
     static final String ACTUATOR_HEALTH_STATUS_JSON_FIELD = "status";
     static final String ACTUATOR_HEALTH_STATUS_UP = "UP";
+    static final int ACTUATOR_HEALTH_TIMEOUT_IN_MS = 2000;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
-    private Map<String, String> optionalServices;
+    private final Map<String, String> optionalServices;
+
+    StudyServerExecutionService studyServerExecutionService;
 
     public ActuatorHealthService(@Value("${gridsuite.services.security-analysis-server.base-uri}") String securityAnalysisServerBaseUri,
                                  @Value("${gridsuite.services.sensitivity-analysis-server.base-uri}") String sensitivityAnalysisServerBaseUri,
                                  @Value("${gridsuite.services.shortcircuit-server.base-uri}") String shortcircuitServerBaseUri,
-                                 @Value("${gridsuite.services.dynamic-simulation-server.base-uri}") String dynamicSimulationServerBaseUri) {
+                                 @Value("${gridsuite.services.dynamic-simulation-server.base-uri}") String dynamicSimulationServerBaseUri,
+                                 StudyServerExecutionService executionService) {
+        studyServerExecutionService = executionService;
         optionalServices = Map.of("security-analysis-server", securityAnalysisServerBaseUri,
-            "sensitivity-analysis-server", sensitivityAnalysisServerBaseUri,
-            "shortcircuit-server", shortcircuitServerBaseUri,
-            "dynamic-simulation-server", dynamicSimulationServerBaseUri);
+                "sensitivity-analysis-server", sensitivityAnalysisServerBaseUri,
+                "shortcircuit-server", shortcircuitServerBaseUri,
+                "dynamic-simulation-server", dynamicSimulationServerBaseUri);
         restTemplate = new RestTemplate(getClientHttpRequestFactory());
     }
 
     private SimpleClientHttpRequestFactory getClientHttpRequestFactory() {
         SimpleClientHttpRequestFactory clientHttpRequestFactory = new SimpleClientHttpRequestFactory();
-        clientHttpRequestFactory.setConnectTimeout(2000); // TODO which timeout values ?
-        clientHttpRequestFactory.setReadTimeout(2000);
+        clientHttpRequestFactory.setConnectTimeout(ACTUATOR_HEALTH_TIMEOUT_IN_MS);
+        clientHttpRequestFactory.setReadTimeout(ACTUATOR_HEALTH_TIMEOUT_IN_MS);
         return clientHttpRequestFactory;
     }
 
@@ -76,6 +82,24 @@ public class ActuatorHealthService {
     }
 
     public List<String> getOptionalUpServices() {
-        return optionalServices.keySet().stream().filter(this::isServerUp).collect(Collectors.toList());
+        try {
+            List<CompletableFuture<String>> listOfFutures = optionalServices.keySet().stream().map(this::isUpFuture).toList();
+            CompletableFuture<List<String>> futureOfList = CompletableFuture
+                    .allOf(listOfFutures.toArray(new CompletableFuture[0]))
+                    .thenApply(v -> listOfFutures.stream().map(CompletableFuture::join).toList());
+            return futureOfList.get().stream().filter(Objects::nonNull).toList();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return List.of();
+        } catch (Exception e) {
+            return List.of();
+        }
     }
+
+    private CompletableFuture<String> isUpFuture(String serverName) {
+        return studyServerExecutionService.supplyAsync(() ->
+            isServerUp(serverName) ? serverName : null
+        );
+    }
+
 }
