@@ -287,6 +287,25 @@ public class NetworkModificationService {
         }
     }
 
+    public Optional<NetworkModificationResult> duplicateModificationsInGroup(UUID originGroupUuid, UUID networkUuid, NodeModificationInfos nodeInfos) {
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "duplications")
+            .queryParam("networkUuid", networkUuid)
+            .queryParam("reportUuid", nodeInfos.getReportUuid())
+            .queryParam("reporterId", nodeInfos.getId())
+            .queryParam("variantId", nodeInfos.getVariantId())
+            .queryParam("duplicateFrom", originGroupUuid);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        return restTemplate.exchange(
+            getNetworkModificationServerURI(false) + path.buildAndExpand(nodeInfos.getModificationGroupUuid()).toUriString(),
+            HttpMethod.PUT,
+            new HttpEntity<>(headers),
+            new ParameterizedTypeReference<Optional<NetworkModificationResult>>() {
+            }).getBody();
+    }
+
     private String buildReceiver(UUID nodeUuid) {
         String receiver;
         try {
