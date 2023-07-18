@@ -421,10 +421,10 @@ public class NetworkMapTest {
     }
 
     @Test
-    public void testGetHvdcLineWithShuntCompensators() throws Exception {
+    public void testGetHvdcLineShuntCompensators() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         final String responseBody = "{\"id\":\"HVDC1\",\"hvdcType\":\"LCC\",\"mcsOnside1\":[],\"mcsOnside2\":[]}";
-        wireMockUtils.stubHvdcLinesShuntCompensatorsGet(NETWORK_UUID_STRING, HVDC_LINE_ID_1, responseBody);
+        UUID stubUuid = wireMockUtils.stubHvdcLinesShuntCompensatorsGet(NETWORK_UUID_STRING, HVDC_LINE_ID_1, responseBody);
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -436,12 +436,14 @@ public class NetworkMapTest {
                 .andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         assertEquals(responseBody, resultAsString);
+
+        wireMockUtils.verifyHvdcLinesShuntCompensatorsGet(stubUuid, NETWORK_UUID_STRING, HVDC_LINE_ID_1);
     }
 
     @Test
-    public void testGetHvdcLineWithShuntCompensatorsError() throws Exception {
+    public void testGetHvdcLineShuntCompensatorsError() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
-        wireMockUtils.stubHvdcLinesShuntCompensatorsGetError(NETWORK_UUID_STRING, HVDC_LINE_ID_ERR);
+        UUID stubUuid = wireMockUtils.stubHvdcLinesShuntCompensatorsGetError(NETWORK_UUID_STRING, HVDC_LINE_ID_ERR);
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -451,6 +453,7 @@ public class NetworkMapTest {
                         studyNameUserIdUuid, rootNodeUuid, HVDC_LINE_ID_ERR))
                 .andExpect(status().is5xxServerError())
                 .andReturn();
+        wireMockUtils.verifyHvdcLinesShuntCompensatorsGet(stubUuid, NETWORK_UUID_STRING, HVDC_LINE_ID_ERR);
     }
 
     @Test
@@ -609,6 +612,7 @@ public class NetworkMapTest {
 
         try {
             TestUtils.assertServerRequestsEmptyThenShutdown(server);
+            TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         } catch (IOException e) {

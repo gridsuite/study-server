@@ -288,4 +288,10 @@ public class WireMockUtils {
             .willReturn(WireMock.serverError().withBody("Internal Server Error"))
         ).getId();
     }
+
+    public void verifyHvdcLinesShuntCompensatorsGet(UUID stubUuid, String networkUuid, String hvdcId) {
+        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/hvdc-lines/" + hvdcId + "/shunt-compensators"));
+        wireMock.verify(1, requestBuilder);
+        removeRequestForStub(stubUuid, 1);
+    }
 }
