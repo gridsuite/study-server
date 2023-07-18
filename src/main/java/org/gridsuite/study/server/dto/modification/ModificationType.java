@@ -19,6 +19,7 @@ public enum ModificationType {
     LOAD_MODIFICATION,
     GENERATOR_MODIFICATION,
     EQUIPMENT_DELETION,
+    BATTERY_CREATION,
     GENERATOR_CREATION,
     LINE_CREATION,
     TWO_WINDINGS_TRANSFORMER_CREATION,
@@ -42,6 +43,8 @@ public enum ModificationType {
                 return "loads";
             case LOAD_MODIFICATION:
                 return "loads-modification";
+            case BATTERY_CREATION:
+                return "batteries";
             case GENERATOR_CREATION:
                 return "generators";
             case LINE_CREATION:
