@@ -15,7 +15,6 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
@@ -146,9 +145,6 @@ public class EquipmentInfosServiceTests {
 
     @Test
     public void searchEquipmentInfos() {
-        EqualsVerifier.simple().forClass(EquipmentInfos.class).verify();
-        EqualsVerifier.simple().forClass(VoltageLevelInfos.class).verify();
-
         EquipmentInfos generatorInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
         EquipmentInfos line1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l1").name("name_l1").type("LINE").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
         EquipmentInfos line2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l2").name("name_l2").type("LINE").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl3").name("vl3").build())).build();

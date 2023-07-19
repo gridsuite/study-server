@@ -65,7 +65,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         int ignoreSize = node.getModificationsToExclude().size(); // to load the lazy collection
         return completeNodeInfo(node, new NetworkModificationNode(node.getModificationGroupUuid(),
             node.getVariantId(),
-            node.getModificationsToExclude(),
+            new HashSet<>(node.getModificationsToExclude()), // Need to create a new set because it is a persistent set (org.hibernate.collection.internal.PersistentSet)
             node.getLoadFlowResultUuid(),
             node.getShortCircuitAnalysisResultUuid(),
             node.getVoltageInitResultUuid(),

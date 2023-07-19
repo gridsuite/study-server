@@ -326,6 +326,18 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusbarSections(studyUuid, nodeUuid, voltageLevelId, inUpstreamBuiltParentNode));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/{hvdcId}/shunt-compensators")
+    @Operation(summary = "For a given hvdc line, get its related Shunt compensators in case of LCC converter station")
+    @ApiResponse(responseCode = "200", description = "Hvdc line type and its shunt compensators on each side")
+    public ResponseEntity<String> getHvdcLineShuntCompensators(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @PathVariable("hvdcId") String hvdcId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+        String hvdcInfos = studyService.getHvdcLineShuntCompensators(studyUuid, nodeUuid, inUpstreamBuiltParentNode, hvdcId);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(hvdcInfos);
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines")
     @Operation(summary = "Get Network lines graphics")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of line graphics with the given ids, all otherwise")})

@@ -6,12 +6,12 @@
  */
 package org.gridsuite.study.server.repository;
 
-import java.util.UUID;
-
 import lombok.*;
 import org.gridsuite.study.server.service.ShortCircuitService;
 
 import javax.persistence.*;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -26,23 +26,6 @@ import javax.persistence.*;
 @Builder
 @Table(name = "study")
 public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements BasicStudyEntity {
-
-    public StudyEntity(UUID id, UUID networkUuid, String networkId, String caseFormat, UUID caseUuid, String caseName, String loadFlowProvider, String securityAnalysisProvider, String sensitivityAnalysisProvider, String dynamicSimulationProvider, LoadFlowParametersEntity loadFlowParameters, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, VoltageInitParametersEntity voltageInitParameters) {
-        this.id = id;
-        this.networkUuid = networkUuid;
-        this.networkId = networkId;
-        this.caseFormat = caseFormat;
-        this.caseUuid = caseUuid;
-        this.caseName = caseName;
-        this.loadFlowProvider = loadFlowProvider;
-        this.securityAnalysisProvider = securityAnalysisProvider;
-        this.sensitivityAnalysisProvider = sensitivityAnalysisProvider;
-        this.dynamicSimulationProvider = dynamicSimulationProvider;
-        this.loadFlowParameters = loadFlowParameters;
-        this.shortCircuitParameters = shortCircuitParameters;
-        this.dynamicSimulationParameters = dynamicSimulationParameters;
-        this.voltageInitParameters = voltageInitParameters;
-    }
 
     @Id
     @Column(name = "id")
@@ -114,6 +97,12 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
                     name = "securityAnalysisParameters_id_fk"
             ))
     private SecurityAnalysisParametersEntity securityAnalysisParameters;
+
+    @ElementCollection
+    @CollectionTable(name = "importParameters",
+            indexes = {@Index(name = "studyEntity_importParameters_idx1", columnList = "study_entity_id")},
+            foreignKey = @ForeignKey(name = "studyEntity_importParameters_fk1"))
+    private Map<String, String> importParameters;
 
     public ShortCircuitParametersEntity getShortCircuitParameters() {
         if (this.shortCircuitParameters == null) {
