@@ -582,7 +582,7 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public Optional<UUID> getShortCircuitAnalysisResultUuid(UUID nodeUuid, ShortcircuitAnalysisType type) {
-        if (ShortcircuitAnalysisType.OneBus.equals(type)) {
+        if (ShortcircuitAnalysisType.ONE_BUS.equals(type)) {
             return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getOneBusShortCircuitAnalysisResultUuid(nodeUuid));
         } else {
             return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getShortCircuitAnalysisResultUuid(nodeUuid));

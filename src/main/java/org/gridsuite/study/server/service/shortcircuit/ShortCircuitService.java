@@ -123,9 +123,10 @@ public class ShortCircuitService {
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}" + suffix);
 
-        //when fetching results, full param is passed
-        if (StringUtils.isBlank(suffix)) {
-            uriComponentsBuilder = uriComponentsBuilder.queryParam("full", type == ShortcircuitAnalysisType.OneBus);
+        // when suffix is blank, we are actually getting the results (otherwise, for now, it's only the status), so we add some results specific query params:
+        // For OneBus, we force "full" results: fault results even without limit violations are returned
+        if (StringUtils.isBlank(suffix) && type == ShortcircuitAnalysisType.ONE_BUS) {
+            uriComponentsBuilder = uriComponentsBuilder.queryParam("full", true);
         }
 
         String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
@@ -144,7 +145,7 @@ public class ShortCircuitService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid, ShortcircuitAnalysisType.AllBuses);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid, ShortcircuitAnalysisType.ALL_BUSES);
         if (resultUuidOpt.isEmpty()) {
             return;
         }
@@ -217,8 +218,8 @@ public class ShortCircuitService {
     }
 
     public void assertShortCircuitAnalysisNotRunning(UUID nodeUuid) {
-        String scs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.AllBuses);
-        String oneBusScs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.OneBus);
+        String scs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.ALL_BUSES);
+        String oneBusScs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.ONE_BUS);
         if (ShortCircuitStatus.RUNNING.name().equals(scs) || ShortCircuitStatus.RUNNING.name().equals(oneBusScs)) {
             throw new StudyException(SHORT_CIRCUIT_ANALYSIS_RUNNING);
         }

@@ -553,7 +553,7 @@ public class ConsumerService {
             UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
-            ShortcircuitAnalysisType analysisType = busId == null ? ShortcircuitAnalysisType.AllBuses : ShortcircuitAnalysisType.OneBus;
+            ShortcircuitAnalysisType analysisType = busId == null ? ShortcircuitAnalysisType.ALL_BUSES : ShortcircuitAnalysisType.ONE_BUS;
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
@@ -564,7 +564,7 @@ public class ConsumerService {
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
                     // update DB
-                    if (analysisType == ShortcircuitAnalysisType.AllBuses) {
+                    if (analysisType == ShortcircuitAnalysisType.ALL_BUSES) {
                         updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
 
                         // send notifications
@@ -615,7 +615,7 @@ public class ConsumerService {
             String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
             String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
             String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
-            ShortcircuitAnalysisType analysisType = busId == null ? ShortcircuitAnalysisType.AllBuses : ShortcircuitAnalysisType.OneBus;
+            ShortcircuitAnalysisType analysisType = busId == null ? ShortcircuitAnalysisType.ALL_BUSES : ShortcircuitAnalysisType.ONE_BUS;
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
@@ -623,7 +623,7 @@ public class ConsumerService {
 
                     LOGGER.info("Short circuit analysis failed for node '{}'", receiverObj.getNodeUuid());
 
-                    if (analysisType == ShortcircuitAnalysisType.AllBuses) {
+                    if (analysisType == ShortcircuitAnalysisType.ALL_BUSES) {
                         // delete Short circuit analysis result in database
                         updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
 

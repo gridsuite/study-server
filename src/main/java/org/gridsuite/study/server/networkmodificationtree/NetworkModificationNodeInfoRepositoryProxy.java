@@ -124,6 +124,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         updateNode(modificationNode, "loadFlowResultUuid");
     }
 
+    @Override
     public void updateOneBusShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisUuid) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         modificationNode.setOneBusShortCircuitAnalysisResultUuid(shortCircuitAnalysisUuid);
