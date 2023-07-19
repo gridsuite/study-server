@@ -210,8 +210,7 @@ public class VoltageInitService {
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group")
             .buildAndExpand(resultUuidOpt.get()).toUriString();
         try {
-            String res = restTemplate.getForObject(voltageInitServerBaseUri + path, String.class);
-            modificationsGroupUuid = UUID.fromString(res);
+            modificationsGroupUuid = restTemplate.getForObject(voltageInitServerBaseUri + path, UUID.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(NO_VOLTAGE_INIT_MODIFICATIONS_GROUP_FOR_NODE, "The node " + nodeUuid + " has no voltage init modifications group");

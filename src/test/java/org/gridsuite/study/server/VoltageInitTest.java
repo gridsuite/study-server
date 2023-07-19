@@ -231,7 +231,7 @@ public class VoltageInitTest {
                     return new MockResponse().setResponseCode(200).setBody(VOLTAGE_INIT_STATUS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group")) {
-                    return new MockResponse().setResponseCode(200).setBody(MODIFICATIONS_GROUP_UUID)
+                    return new MockResponse().setResponseCode(200).setBody("\"" + MODIFICATIONS_GROUP_UUID + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/groups/.*/duplications.*")) {
                     Optional<NetworkModificationResult> networkModificationResult =
