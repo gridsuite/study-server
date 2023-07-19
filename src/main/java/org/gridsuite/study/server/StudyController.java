@@ -323,6 +323,18 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusbarSections(studyUuid, nodeUuid, voltageLevelId, inUpstreamBuiltParentNode));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/{hvdcId}/shunt-compensators")
+    @Operation(summary = "For a given hvdc line, get its related Shunt compensators in case of LCC converter station")
+    @ApiResponse(responseCode = "200", description = "Hvdc line type and its shunt compensators on each side")
+    public ResponseEntity<String> getHvdcLineShuntCompensators(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @PathVariable("hvdcId") String hvdcId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+        String hvdcInfos = studyService.getHvdcLineShuntCompensators(studyUuid, nodeUuid, inUpstreamBuiltParentNode, hvdcId);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(hvdcInfos);
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines")
     @Operation(summary = "Get Network lines graphics")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of line graphics with the given ids, all otherwise")})
@@ -503,8 +515,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/result")
     @Operation(summary = "Get a loadflow result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow result"),
-            @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
-            @ApiResponse(responseCode = "404", description = "The loadflow result has not been found")})
+        @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The loadflow result has not been found")})
     public ResponseEntity<String> getLoadflowResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String result = loadflowService.getLoadFlowResult(nodeUuid);
@@ -515,8 +527,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/status")
     @Operation(summary = "Get the loadflow status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow status"),
-            @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
-            @ApiResponse(responseCode = "404", description = "The loadflow status has not been found")})
+        @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The loadflow status has not been found")})
     public ResponseEntity<String> getLoadFlowStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String result = loadflowService.getLoadFlowStatus(nodeUuid);
