@@ -43,6 +43,8 @@ public class ActuatorHealthService {
 
     StudyServerExecutionService studyServerExecutionService;
 
+    private String targetServerUri = null;
+
     public ActuatorHealthService(@Value("${gridsuite.services.security-analysis-server.base-uri}") String securityAnalysisServerBaseUri,
                                  @Value("${gridsuite.services.sensitivity-analysis-server.base-uri}") String sensitivityAnalysisServerBaseUri,
                                  @Value("${gridsuite.services.shortcircuit-server.base-uri}") String shortcircuitServerBaseUri,
@@ -56,6 +58,10 @@ public class ActuatorHealthService {
         restTemplate = new RestTemplate(getClientHttpRequestFactory());
     }
 
+    public void setTargetServerUri(String serverUri) {
+        this.targetServerUri = serverUri;
+    }
+
     private SimpleClientHttpRequestFactory getClientHttpRequestFactory() {
         SimpleClientHttpRequestFactory clientHttpRequestFactory = new SimpleClientHttpRequestFactory();
         clientHttpRequestFactory.setConnectTimeout(ACTUATOR_HEALTH_TIMEOUT_IN_MS);
@@ -63,31 +69,13 @@ public class ActuatorHealthService {
         return clientHttpRequestFactory;
     }
 
-    private boolean isServerUp(String serverName) {
-        String result;
-        try {
-            result = restTemplate.getForObject(optionalServices.get(serverName) + DELIMITER + ACTUATOR_HEALTH_PATH, String.class);
-        } catch (RestClientException e) {
-            return false;
-        }
-        try {
-            JsonNode node = OBJECT_MAPPER.readTree(result).path(ACTUATOR_HEALTH_STATUS_JSON_FIELD);
-            if (!node.isMissingNode() && node.asText().equalsIgnoreCase(ACTUATOR_HEALTH_STATUS_UP)) {
-                return true;
-            }
-        } catch (JsonProcessingException e) {
-            return false;
-        }
-        return false;
-    }
-
     public List<String> getOptionalUpServices() {
         try {
             List<CompletableFuture<String>> listOfFutures = optionalServices.keySet().stream().map(this::isUpFuture).toList();
             CompletableFuture<List<String>> futureOfList = CompletableFuture
                     .allOf(listOfFutures.toArray(new CompletableFuture[0]))
-                    .thenApply(v -> listOfFutures.stream().map(CompletableFuture::join).toList());
-            return futureOfList.get().stream().filter(Objects::nonNull).toList();
+                    .thenApply(v -> listOfFutures.stream().map(CompletableFuture::join).filter(Objects::nonNull).toList());
+            return futureOfList.get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return List.of();
@@ -102,4 +90,21 @@ public class ActuatorHealthService {
         );
     }
 
+    private boolean isServerUp(String serverName) {
+        String result;
+        try {
+            result = restTemplate.getForObject((targetServerUri != null ? targetServerUri : optionalServices.get(serverName)) + DELIMITER + ACTUATOR_HEALTH_PATH, String.class);
+        } catch (RestClientException e) {
+            return false;
+        }
+        try {
+            JsonNode node = OBJECT_MAPPER.readTree(result).path(ACTUATOR_HEALTH_STATUS_JSON_FIELD);
+            if (!node.isMissingNode() && node.asText().equalsIgnoreCase(ACTUATOR_HEALTH_STATUS_UP)) {
+                return true;
+            }
+        } catch (JsonProcessingException e) {
+            return false;
+        }
+        return false;
+    }
 }
