@@ -102,47 +102,28 @@ public class ShortCircuitService {
     }
 
     public String getShortCircuitAnalysisResult(UUID nodeUuid, String mode) {
-        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "?mode=" + mode);
+        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "?mode=" + mode, false);
     }
 
     public String getShortCircuitAnalysisPagedResult(UUID nodeUuid, String mode, Pageable pageable) {
         String suffix = "?mode=" + mode + "&page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize();
-
-        String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid);
-
-        if (resultUuidOpt.isEmpty()) {
-            return null;
-        }
-
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/paged-results/{resultUuid}" + suffix)
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
-
-        try {
-            result = restTemplate.getForObject(shortCircuitServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
-            }
-            throw e;
-        }
-        return result;
+        return getShortCircuitAnalysisResultOrStatus(nodeUuid, suffix, true);
     }
 
     public String getShortCircuitAnalysisStatus(UUID nodeUuid) {
-        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "/status");
+        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "/status", false);
     }
 
-    public String getShortCircuitAnalysisResultOrStatus(UUID nodeUuid, String suffix) {
+    public String getShortCircuitAnalysisResultOrStatus(UUID nodeUuid, String suffix, boolean paged) {
         String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid);
 
         if (resultUuidOpt.isEmpty()) {
             return null;
         }
-
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}" + suffix)
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
+        String resourceName = paged ? "/paged-results" : "/results";
+        String pathStr = DELIMITER + SHORT_CIRCUIT_API_VERSION + resourceName + "/{resultUuid}" + suffix;
+        String path = UriComponentsBuilder.fromPath(pathStr).buildAndExpand(resultUuidOpt.get()).toUriString();
 
         try {
             result = restTemplate.getForObject(shortCircuitServerBaseUri + path, String.class);
