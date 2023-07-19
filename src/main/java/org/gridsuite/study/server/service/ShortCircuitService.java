@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -104,8 +105,32 @@ public class ShortCircuitService {
         return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getShortCircuitAnalysisResult(UUID nodeUuid) {
-        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "");
+    public String getShortCircuitAnalysisResult(UUID nodeUuid, String mode) {
+        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "?mode=" + mode);
+    }
+
+    public String getShortCircuitAnalysisPagedResult(UUID nodeUuid, String mode, Pageable pageable) {
+        String suffix = "?mode=" + mode + "&page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize();
+
+        String result;
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid);
+
+        if (resultUuidOpt.isEmpty()) {
+            return null;
+        }
+
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/paged-results/{resultUuid}" + suffix)
+                .buildAndExpand(resultUuidOpt.get()).toUriString();
+
+        try {
+            result = restTemplate.getForObject(shortCircuitServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
+            }
+            throw e;
+        }
+        return result;
     }
 
     public String getShortCircuitAnalysisStatus(UUID nodeUuid) {

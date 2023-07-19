@@ -562,9 +562,22 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
     public ResponseEntity<String> getShortCircuitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @Parameter(description = "Full or summary or none fault results") @RequestParam(name = "mode", required = false, defaultValue = "WITH_LIMIT_VIOLATIONS") String mode) {
+        String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid, mode);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/paged-results")
+    @Operation(summary = "Get a short circuit analysis result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis result"),
+        @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
+    public ResponseEntity<String> getShortCircuitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @Parameter(description = "Full or summary or none fault results") @RequestParam(name = "mode", required = false, defaultValue = "WITH_LIMIT_VIOLATIONS") String mode,
                                                                @PageableDefault(size = Integer.MAX_VALUE) Pageable pageable) {
-        String suffix = "?page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize();
-        String result = shortCircuitService.getShortCircuitAnalysisResultOrStatus(nodeUuid, suffix);
+        String result = shortCircuitService.getShortCircuitAnalysisPagedResult(nodeUuid, mode, pageable);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
