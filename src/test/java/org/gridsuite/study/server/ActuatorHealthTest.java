@@ -52,6 +52,8 @@ public class ActuatorHealthTest {
     @Autowired
     private ActuatorHealthService actuatorHealthService;
 
+    private static final List<String> OPTIONAL_SERVICES = List.of("dynamic-simulation-server", "shortcircuit-server", "security-analysis-server", "sensitivity-analysis-server", "voltage-init-server");
+
     @Before
     public void setup() throws IOException {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
@@ -72,9 +74,9 @@ public class ActuatorHealthTest {
         // We receive all server names in the response, but the order is random (N concurrent calls on isServerUp).
         // So compare the content no matter the order.
         List<String> servers = objectMapper.readValue(response, new TypeReference<>() { });
-        assertTrue(CollectionUtils.isEqualCollection(servers, List.of("dynamic-simulation-server", "shortcircuit-server", "security-analysis-server", "sensitivity-analysis-server")));
+        assertTrue(CollectionUtils.isEqualCollection(servers, OPTIONAL_SERVICES));
 
-        wireMockUtils.verifyActuatorHealth(stubUuid, 4);
+        wireMockUtils.verifyActuatorHealth(stubUuid, OPTIONAL_SERVICES.size());
     }
 
     @Test
@@ -104,7 +106,7 @@ public class ActuatorHealthTest {
         // no up server expected
         assertEquals("[]", resultAsString);
 
-        wireMockUtils.verifyActuatorHealth(stubUuid, 4);
+        wireMockUtils.verifyActuatorHealth(stubUuid, OPTIONAL_SERVICES.size());
     }
 
     @After

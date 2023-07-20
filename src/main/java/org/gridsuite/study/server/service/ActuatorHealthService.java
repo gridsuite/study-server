@@ -49,11 +49,13 @@ public class ActuatorHealthService {
                                  @Value("${gridsuite.services.sensitivity-analysis-server.base-uri}") String sensitivityAnalysisServerBaseUri,
                                  @Value("${gridsuite.services.shortcircuit-server.base-uri}") String shortcircuitServerBaseUri,
                                  @Value("${gridsuite.services.dynamic-simulation-server.base-uri}") String dynamicSimulationServerBaseUri,
+                                 @Value("${gridsuite.services.voltage-init-server.base-uri}") String voltageInitServerBaseUri,
                                  StudyServerExecutionService executionService) {
         studyServerExecutionService = executionService;
         optionalServices = Map.of("security-analysis-server", securityAnalysisServerBaseUri,
                 "sensitivity-analysis-server", sensitivityAnalysisServerBaseUri,
                 "shortcircuit-server", shortcircuitServerBaseUri,
+                "voltage-init-server", voltageInitServerBaseUri,
                 "dynamic-simulation-server", dynamicSimulationServerBaseUri);
         restTemplate = new RestTemplate(getClientHttpRequestFactory());
     }
