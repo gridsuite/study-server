@@ -1370,7 +1370,7 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/optional-up-services")
+    @GetMapping(value = "/optional-up-services")
     @Operation(summary = "Get all the available optional services")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of available optional services")})
     public ResponseEntity<List<String>> getOptionalUpServices() {
