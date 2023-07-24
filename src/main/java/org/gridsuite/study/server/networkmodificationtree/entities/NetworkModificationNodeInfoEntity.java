@@ -49,6 +49,9 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @Column(name = "shortCircuitAnalysisResultUuid")
     private UUID shortCircuitAnalysisResultUuid;
 
+    @Column(name = "oneBusShortCircuitAnalysisResultUuid")
+    private UUID oneBusShortCircuitAnalysisResultUuid;
+
     @Column(name = "loadflowResultUuid")
     private UUID loadFlowResultUuid;
 
