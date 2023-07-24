@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.shortcircuit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,6 +17,8 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NetworkService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -67,7 +69,7 @@ public class ShortCircuitService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, ShortCircuitParameters shortCircuitParameters, String userId) {
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String busId, ShortCircuitParameters shortCircuitParameters, String userId) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
         UUID reportUuid = getReportUuid(nodeUuid);
@@ -85,6 +87,10 @@ public class ShortCircuitService {
                 .queryParam("reportUuid", reportUuid.toString())
                 .queryParam("reporterId", nodeUuid.toString());
 
+        if (!StringUtils.isBlank(busId)) {
+            uriComponentsBuilder.queryParam("busId", busId);
+        }
+
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -99,24 +105,31 @@ public class ShortCircuitService {
         return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getShortCircuitAnalysisResult(UUID nodeUuid) {
-        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "");
+    public String getShortCircuitAnalysisResult(UUID nodeUuid, ShortcircuitAnalysisType type) {
+        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "", type);
     }
 
-    public String getShortCircuitAnalysisStatus(UUID nodeUuid) {
-        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "/status");
+    public String getShortCircuitAnalysisStatus(UUID nodeUuid, ShortcircuitAnalysisType type) {
+        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "/status", type);
     }
 
-    public String getShortCircuitAnalysisResultOrStatus(UUID nodeUuid, String suffix) {
+    public String getShortCircuitAnalysisResultOrStatus(UUID nodeUuid, String suffix, ShortcircuitAnalysisType type) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid, type);
 
         if (resultUuidOpt.isEmpty()) {
             return null;
         }
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}" + suffix)
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}" + suffix);
+
+        // when suffix is blank, we are actually getting the results (otherwise, for now, it's only the status), so we add some results specific query params:
+        // For OneBus, we force "full" results: fault results even without limit violations are returned
+        if (StringUtils.isBlank(suffix) && type == ShortcircuitAnalysisType.ONE_BUS) {
+            uriComponentsBuilder = uriComponentsBuilder.queryParam("full", true);
+        }
+
+        String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
         try {
             result = restTemplate.getForObject(shortCircuitServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
@@ -132,7 +145,7 @@ public class ShortCircuitService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid, ShortcircuitAnalysisType.ALL_BUSES);
         if (resultUuidOpt.isEmpty()) {
             return;
         }
@@ -205,8 +218,9 @@ public class ShortCircuitService {
     }
 
     public void assertShortCircuitAnalysisNotRunning(UUID nodeUuid) {
-        String scs = getShortCircuitAnalysisStatus(nodeUuid);
-        if (ShortCircuitStatus.RUNNING.name().equals(scs)) {
+        String scs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.ALL_BUSES);
+        String oneBusScs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.ONE_BUS);
+        if (ShortCircuitStatus.RUNNING.name().equals(scs) || ShortCircuitStatus.RUNNING.name().equals(oneBusScs)) {
             throw new StudyException(SHORT_CIRCUIT_ANALYSIS_RUNNING);
         }
     }
