@@ -125,7 +125,9 @@ public class ShortCircuitService {
     }
 
     public String getShortCircuitAnalysisResult(UUID nodeUuid, String mode, ShortcircuitAnalysisType type) {
-        String params = "?mode=" + mode;
+        // For ONE_BUS results, we always want full results mode
+        String overridedMode = type == ShortcircuitAnalysisType.ONE_BUS ? "FULL" : mode;
+        String params = "?mode=" + overridedMode;
         String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, type);
         if (resultPath == null) {
             return null;
