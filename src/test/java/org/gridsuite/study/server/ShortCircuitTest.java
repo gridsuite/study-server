@@ -175,7 +175,7 @@ public class ShortCircuitTest {
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=WITH_LIMIT_VIOLATIONS")) {
                     return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/paged-results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=WITH_LIMIT_VIOLATIONS&page=0&size=20")) {
+                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results" +"\\?mode=WITH_LIMIT_VIOLATIONS&page=0&size=20")) {
                     return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")) {
@@ -361,14 +361,14 @@ public class ShortCircuitTest {
         assertEquals(uuidResponse, UUID.fromString(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
 
         // get short circuit result with pagination
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/paged-results?page=0&size=20", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/results/fault_results?page=0&size=20", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/paged-results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=WITH_LIMIT_VIOLATIONS&page=0&size=20")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results\\?mode=WITH_LIMIT_VIOLATIONS&page=0&size=20")));
 
         // get short circuit result with pagination but with unknown node
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/paged-results?page=0&size=20", studyNameUserIdUuid, unknownModificationNodeUuid)).andExpect(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/results/fault_results?page=0&size=20", studyNameUserIdUuid, unknownModificationNodeUuid)).andExpect(
                 status().isNoContent());
 
         assertTrue(TestUtils.getRequestsDone(0, server).isEmpty());

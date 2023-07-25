@@ -101,32 +101,53 @@ public class ShortCircuitService {
         return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getShortCircuitAnalysisResult(UUID nodeUuid, String mode) {
-        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "?mode=" + mode, false);
-    }
-
-    public String getShortCircuitAnalysisPagedResult(UUID nodeUuid, String mode, Pageable pageable) {
-        String suffix = "?mode=" + mode + "&page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize();
-        return getShortCircuitAnalysisResultOrStatus(nodeUuid, suffix, true);
-    }
-
-    public String getShortCircuitAnalysisStatus(UUID nodeUuid) {
-        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "/status", false);
-    }
-
-    public String getShortCircuitAnalysisResultOrStatus(UUID nodeUuid, String suffix, boolean paged) {
-        String result;
+    private String getShortCircuitAnalysisResultResourcePath(UUID nodeUuid) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid);
 
         if (resultUuidOpt.isEmpty()) {
             return null;
         }
-        String resourceName = paged ? "/paged-results" : "/results";
-        String pathStr = DELIMITER + SHORT_CIRCUIT_API_VERSION + resourceName + "/{resultUuid}" + suffix;
-        String path = UriComponentsBuilder.fromPath(pathStr).buildAndExpand(resultUuidOpt.get()).toUriString();
+        return UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results" + "/{resultUuid}").buildAndExpand(resultUuidOpt.get()).toUriString();
+    }
 
+    private String getShortCircuitAnalysisFaultResultsResourcePath(UUID nodeUuid) {
+        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid);
+        if (resultPath == null) {
+            return null;
+        }
+        return UriComponentsBuilder.fromPath(resultPath + "/fault_results").toUriString();
+    }
+
+    public String getShortCircuitAnalysisResult(UUID nodeUuid, String mode) {
+        String params = "?mode=" + mode;
+        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid);
+        if (resultPath == null) {
+            return null;
+        }
+        return getShortCircuitAnalysisResource(resultPath + params);
+    }
+
+    public String getShortCircuitAnalysisFaultResultsPage(UUID nodeUuid, String mode, Pageable pageable) {
+        String params = "?mode=" + mode + "&page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize();
+        String faultResultsPath = getShortCircuitAnalysisFaultResultsResourcePath(nodeUuid);
+        if (faultResultsPath == null) {
+            return null;
+        }
+        return getShortCircuitAnalysisResource(faultResultsPath + params);
+    }
+
+    public String getShortCircuitAnalysisStatus(UUID nodeUuid) {
+        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid);
+        if (resultPath == null) {
+            return null;
+        }
+        return getShortCircuitAnalysisResource(resultPath + "/status");
+    }
+
+    public String getShortCircuitAnalysisResource(String resourcePath) {
+        String result;
         try {
-            result = restTemplate.getForObject(shortCircuitServerBaseUri + path, String.class);
+            result = restTemplate.getForObject(shortCircuitServerBaseUri + resourcePath, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
