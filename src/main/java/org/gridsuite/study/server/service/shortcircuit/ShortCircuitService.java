@@ -121,7 +121,7 @@ public class ShortCircuitService {
         if (resultPath == null) {
             return null;
         }
-        return UriComponentsBuilder.fromPath(resultPath + "/fault_results").toUriString();
+        return UriComponentsBuilder.fromPath(resultPath + "/fault_results/paged").toUriString();
     }
 
     public String getShortCircuitAnalysisResult(UUID nodeUuid, String mode, ShortcircuitAnalysisType type) {

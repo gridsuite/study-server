@@ -587,7 +587,7 @@ public class StudyController {
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/results/fault_results")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/results/fault_results/paged")
     @Operation(summary = "Get a fault results page for the short circuit analysis result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis result fault results page"),
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
