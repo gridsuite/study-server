@@ -21,6 +21,7 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -44,6 +45,7 @@ import static org.gridsuite.study.server.StudyException.Type.SHORT_CIRCUIT_ANALY
  */
 @Service
 public class ShortCircuitService {
+
     private String shortCircuitServerBaseUri;
 
     @Autowired
@@ -105,33 +107,55 @@ public class ShortCircuitService {
         return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getShortCircuitAnalysisResult(UUID nodeUuid, ShortcircuitAnalysisType type) {
-        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "", type);
-    }
-
-    public String getShortCircuitAnalysisStatus(UUID nodeUuid, ShortcircuitAnalysisType type) {
-        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "/status", type);
-    }
-
-    public String getShortCircuitAnalysisResultOrStatus(UUID nodeUuid, String suffix, ShortcircuitAnalysisType type) {
-        String result;
+    private String getShortCircuitAnalysisResultResourcePath(UUID nodeUuid, ShortcircuitAnalysisType type) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid, type);
 
         if (resultUuidOpt.isEmpty()) {
             return null;
         }
+        return UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results" + "/{resultUuid}").buildAndExpand(resultUuidOpt.get()).toUriString();
+    }
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}" + suffix);
-
-        // when suffix is blank, we are actually getting the results (otherwise, for now, it's only the status), so we add some results specific query params:
-        // For OneBus, we force "full" results: fault results even without limit violations are returned
-        if (StringUtils.isBlank(suffix) && type == ShortcircuitAnalysisType.ONE_BUS) {
-            uriComponentsBuilder = uriComponentsBuilder.queryParam("full", true);
+    private String getShortCircuitAnalysisFaultResultsResourcePath(UUID nodeUuid) {
+        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, ShortcircuitAnalysisType.ALL_BUSES);
+        if (resultPath == null) {
+            return null;
         }
+        return UriComponentsBuilder.fromPath(resultPath + "/fault_results/paged").toUriString();
+    }
 
-        String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+    public String getShortCircuitAnalysisResult(UUID nodeUuid, String mode, ShortcircuitAnalysisType type) {
+        // For ONE_BUS results, we always want full results mode
+        String overridedMode = type == ShortcircuitAnalysisType.ONE_BUS ? "FULL" : mode;
+        String params = "?mode=" + overridedMode;
+        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, type);
+        if (resultPath == null) {
+            return null;
+        }
+        return getShortCircuitAnalysisResource(resultPath + params);
+    }
+
+    public String getShortCircuitAnalysisFaultResultsPage(UUID nodeUuid, String mode, Pageable pageable) {
+        String params = "?mode=" + mode + "&page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize();
+        String faultResultsPath = getShortCircuitAnalysisFaultResultsResourcePath(nodeUuid);
+        if (faultResultsPath == null) {
+            return null;
+        }
+        return getShortCircuitAnalysisResource(faultResultsPath + params);
+    }
+
+    public String getShortCircuitAnalysisStatus(UUID nodeUuid, ShortcircuitAnalysisType type) {
+        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, type);
+        if (resultPath == null) {
+            return null;
+        }
+        return getShortCircuitAnalysisResource(resultPath + "/status");
+    }
+
+    public String getShortCircuitAnalysisResource(String resourcePath) {
+        String result;
         try {
-            result = restTemplate.getForObject(shortCircuitServerBaseUri + path, String.class);
+            result = restTemplate.getForObject(shortCircuitServerBaseUri + resourcePath, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
