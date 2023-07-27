@@ -1078,19 +1078,25 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<RootNode> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
-        StudyInfos studyInfos = studyService.getStudyInfos(studyUuid);
-        if(studyInfos == null) {
-            return ResponseEntity.notFound().build();
-        }
         try {
             RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
 
             return rootNode != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNode)
                 : ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            studyService.createStudy(studyService.getStudyCaseUuid(studyUuid), userId, studyUuid, null, false);
-            return ResponseEntity.notFound().build();
+        } catch (StudyException e) {
+            if(Type.ELEMENT_NOT_FOUND.equals(e.getType())) {
+                StudyInfos studyInfos = studyService.getStudyInfos(studyUuid);
+                if(studyInfos == null) {
+                    throw e;
+                }
+                // if the study does exist and this exception is thrown
+                // it means something is wrong with the study
+                // we try to recreate it from existing case
+                studyService.createStudy(studyService.getStudyCaseUuid(studyUuid), userId, studyUuid, null, false);
+                return ResponseEntity.notFound().build();
+            }
+            throw e;
         }
     }
 

@@ -542,10 +542,10 @@ public class StudyService {
         LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
-    public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
-                                              UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
-                                              ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, VoltageInitParametersEntity voltageInitParametersEntity, Map<String, String> importParameters, UUID importReportUuid) {
-        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertStudyEntity(
+    public CreatedStudyBasicInfos insertOrUpdateStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
+                                                      UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
+                                                      ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, VoltageInitParametersEntity voltageInitParametersEntity, Map<String, String> importParameters, UUID importReportUuid) {
+        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertOrUpdateStudyEntity(
                 studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersEntity, importParameters));
         studyInfosService.add(createdStudyBasicInfos);
 
@@ -1128,9 +1128,9 @@ public class StudyService {
         loadflowService.invalidateLoadFlowStatus(networkModificationTreeService.getLoadFlowResultUuids(studyUuid));
     }
 
-    private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
-                                          String caseFormat, UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
-                                          UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, VoltageInitParametersEntity voltageInitParameters, Map<String, String> importParameters) {
+    private StudyEntity insertOrUpdateStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
+                                                  String caseFormat, UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
+                                                  UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, VoltageInitParametersEntity voltageInitParameters, Map<String, String> importParameters) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
@@ -1141,22 +1141,23 @@ public class StudyService {
         Objects.requireNonNull(shortCircuitParameters);
         Objects.requireNonNull(importParameters);
 
-        StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
+        StudyEntity studyEntity = studyRepository.findById(uuid).orElse(null);
+        // if study with same UUID exists, we update it with new network ID/UUID
+        // used when reimporting broken study
+        if (studyEntity != null) {
+            studyEntity.setNetworkId(networkId);
+            studyEntity.setNetworkUuid(networkUuid);
+        } else {
+            studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
                 defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParameters, null, importParameters);
-        return self.insertStudy(studyEntity, importReportUuid);
+        }
+        return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
+
     }
 
     @Transactional
-    public StudyEntity insertStudy(StudyEntity studyEntity, UUID importReportUuid) {
-        StudyEntity study = studyRepository.findById(studyEntity.getId()).orElse(null);
-
-        if(study == null) {
-            study = studyRepository.save(studyEntity);
-        } else {
-            study.setNetworkUuid(studyEntity.getNetworkUuid());
-            study.setNetworkId(studyEntity.getNetworkId());
-            studyRepository.save(study);
-        }
+    public StudyEntity saveStudyThenCreateBasicTree(StudyEntity studyEntity, UUID importReportUuid) {
+        var study = studyRepository.save(studyEntity);
 
         networkModificationTreeService.createBasicTree(study, importReportUuid);
         return study;
