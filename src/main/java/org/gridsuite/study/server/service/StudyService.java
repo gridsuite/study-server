@@ -305,6 +305,11 @@ public class StudyService {
         return StudyService.toStudyInfos(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
     }
 
+    @Transactional(readOnly = true)
+    public UUID getStudyCaseUuid(UUID studyUuid) {
+        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getCaseUuid();
+    }
+
     public List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
         return studyInfosService.search(query);
     }
@@ -468,8 +473,9 @@ public class StudyService {
             studyEntity.ifPresent(s -> {
                 caseUuid.set(studyEntity.get().getCaseUuid());
                 networkModificationTreeService.doDeleteTree(studyUuid);
-                studyRepository.deleteById(studyUuid);
-                studyInfosService.deleteByUuid(studyUuid);
+                //TODO: remove when finished, to test only
+                //studyRepository.deleteById(studyUuid);
+                //studyInfosService.deleteByUuid(studyUuid);
             });
             deleteStudyInfos = new DeleteStudyInfos(networkUuid, caseUuid.get(), nodesModificationInfos);
         } else {
@@ -509,9 +515,10 @@ public class StudyService {
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
-                        studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid())),
-                        studyServerExecutionService.runAsync(deleteStudyInfos.getCaseUuid() != null ? () -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()) : () -> {
-                        })
+                        studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid()))
+                        //TODO: remove when finished, to test only
+                        //studyServerExecutionService.runAsync(deleteStudyInfos.getCaseUuid() != null ? () -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()) : () -> {
+                        //})
                 );
 
                 executeInParallel.get();
@@ -1141,7 +1148,15 @@ public class StudyService {
 
     @Transactional
     public StudyEntity insertStudy(StudyEntity studyEntity, UUID importReportUuid) {
-        var study = studyRepository.save(studyEntity);
+        StudyEntity study = studyRepository.findById(studyEntity.getId()).orElse(null);
+
+        if(study == null) {
+            study = studyRepository.save(studyEntity);
+        } else {
+            study.setNetworkUuid(studyEntity.getNetworkUuid());
+            study.setNetworkId(studyEntity.getNetworkId());
+            studyRepository.save(study);
+        }
 
         networkModificationTreeService.createBasicTree(study, importReportUuid);
         return study;

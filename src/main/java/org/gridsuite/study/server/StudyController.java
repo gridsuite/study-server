@@ -1076,11 +1076,22 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "network modification tree"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public ResponseEntity<RootNode> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
-        return rootNode != null ?
-            ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNode)
-            : ResponseEntity.notFound().build();
+    public ResponseEntity<RootNode> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                               @RequestHeader(HEADER_USER_ID) String userId) {
+        StudyInfos studyInfos = studyService.getStudyInfos(studyUuid);
+        if(studyInfos == null) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
+
+            return rootNode != null ?
+                ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNode)
+                : ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            studyService.createStudy(studyService.getStudyCaseUuid(studyUuid), userId, studyUuid, null, false);
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @GetMapping(value = "/studies/{studyUuid}/subtree")
