@@ -182,7 +182,10 @@ public class ShortCircuitTest {
                     return new MockResponse().setResponseCode(200)
                             .setBody(shortCircuitAnalysisErrorResultUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "(\\?full=true|)")) {
+                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=WITH_LIMIT_VIOLATIONS")) {
+                    return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged" + "\\?mode=WITH_LIMIT_VIOLATIONS&page=0&size=20")) {
                     return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")) {
@@ -267,6 +270,8 @@ public class ShortCircuitTest {
                 modificationNode3Uuid, UUID.randomUUID(), VARIANT_ID_3, "node 4");
         UUID modificationNode4Uuid = modificationNode4.getId();
 
+        UUID unknownModificationNodeUuid = UUID.randomUUID();
+
         // run a short circuit analysis on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, rootNodeUuid)
                         .header("userId", "userId"))
@@ -295,7 +300,13 @@ public class ShortCircuitTest {
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=WITH_LIMIT_VIOLATIONS")));
+
+        // get short circuit result but with unknown node
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, unknownModificationNodeUuid)).andExpect(
+                status().isNoContent());
+
+        assertTrue(TestUtils.getRequestsDone(0, server).isEmpty());
 
         // get short circuit status
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
@@ -328,6 +339,65 @@ public class ShortCircuitTest {
     }
 
     @Test
+    public void testPagedShortCircuit() throws Exception {
+        MvcResult mvcResult;
+        String resultAsString;
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID_2, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        UUID unknownModificationNodeUuid = UUID.randomUUID();
+
+        //run a short circuit analysis
+        mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode1Uuid)
+                        .header("userId", "userId"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        UUID uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
+        assertEquals(uuidResponse, UUID.fromString(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
+
+        // get short circuit result with pagination
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/results/fault_results/paged?page=0&size=20", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
+                status().isOk(),
+                content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged\\?mode=WITH_LIMIT_VIOLATIONS&page=0&size=20")));
+
+        // get short circuit result with pagination but with unknown node
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/results/fault_results/paged?page=0&size=20", studyNameUserIdUuid, unknownModificationNodeUuid)).andExpect(
+                status().isNoContent());
+
+        assertTrue(TestUtils.getRequestsDone(0, server).isEmpty());
+
+        // get short circuit status
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
+                status().isOk(),
+                content().string(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
+
+        // stop short circuit analysis
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)).andExpect(status().isOk());
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
+    }
+
     public void testOneBusShortCircuit() throws Exception {
         MvcResult mvcResult;
         String resultAsString;
