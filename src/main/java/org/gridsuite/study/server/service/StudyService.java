@@ -1922,7 +1922,7 @@ public class StudyService {
     public void setSensitivityAnalysisParametersValues(UUID studyUuid, SensitivityAnalysisParametersValues parameters, String userId) {
         updateSensitivityAnalysisParameters(studyUuid,
                 SensitivityAnalysisService.toEntity(parameters != null ? parameters :
-                        sensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues()));
+                        SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues()));
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
