@@ -45,11 +45,11 @@ public class ActuatorHealthService {
 
     private String targetServerUri = null;
 
-    public ActuatorHealthService(@Value("${gridsuite.services.security-analysis-server.base-uri}") String securityAnalysisServerBaseUri,
-                                 @Value("${gridsuite.services.sensitivity-analysis-server.base-uri}") String sensitivityAnalysisServerBaseUri,
-                                 @Value("${gridsuite.services.shortcircuit-server.base-uri}") String shortcircuitServerBaseUri,
-                                 @Value("${gridsuite.services.dynamic-simulation-server.base-uri}") String dynamicSimulationServerBaseUri,
-                                 @Value("${gridsuite.services.voltage-init-server.base-uri}") String voltageInitServerBaseUri,
+    public ActuatorHealthService(@Value("${gridsuite.services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
+                                 @Value("${gridsuite.services.sensitivity-analysis-server.base-uri:http://sensitivity-analysis-server/}") String sensitivityAnalysisServerBaseUri,
+                                 @Value("${gridsuite.services.shortcircuit-server.base-uri:http://shortcircuit-server/}") String shortcircuitServerBaseUri,
+                                 @Value("${gridsuite.services.dynamic-simulation-server.base-uri:http://dynamic-simulation-server/}") String dynamicSimulationServerBaseUri,
+                                 @Value("${gridsuite.services.voltage-init-server.base-uri:http://voltage-init-server/}") String voltageInitServerBaseUri,
                                  StudyServerExecutionService executionService) {
         studyServerExecutionService = executionService;
         optionalServices = Map.of("security-analysis-server", securityAnalysisServerBaseUri,
