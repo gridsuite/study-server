@@ -515,10 +515,9 @@ public class StudyService {
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
-                        studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid()))
-                        //TODO: remove when finished, to test only
-                        //studyServerExecutionService.runAsync(deleteStudyInfos.getCaseUuid() != null ? () -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()) : () -> {
-                        //})
+                        studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid())),
+                        studyServerExecutionService.runAsync(deleteStudyInfos.getCaseUuid() != null ? () -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()) : () -> {
+                        })
                 );
 
                 executeInParallel.get();

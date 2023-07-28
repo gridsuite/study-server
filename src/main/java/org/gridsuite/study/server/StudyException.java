@@ -68,6 +68,7 @@ public class StudyException extends RuntimeException {
         URI_SYNTAX,
         TIME_SERIES_BAD_TYPE,
         FILTERS_NOT_FOUND,
+        BROKEN_STUDY,
     }
 
     private final Type type;

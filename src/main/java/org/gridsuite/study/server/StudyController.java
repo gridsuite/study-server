@@ -1087,13 +1087,17 @@ public class StudyController {
         } catch (StudyException e) {
             if(Type.ELEMENT_NOT_FOUND.equals(e.getType())) {
                 StudyInfos studyInfos = studyService.getStudyInfos(studyUuid);
+                UUID caseUuid = studyService.getStudyCaseUuid(studyUuid);
                 if(studyInfos == null) {
                     throw e;
+                }
+                if (caseUuid == null || !caseService.caseExists(caseUuid)) {
+                    throw new StudyException(Type.BROKEN_STUDY);
                 }
                 // if the study does exist and this exception is thrown
                 // it means something is wrong with the study
                 // we try to recreate it from existing case
-                studyService.createStudy(studyService.getStudyCaseUuid(studyUuid), userId, studyUuid, null, false);
+                studyService.createStudy(caseUuid, userId, studyUuid, null, false);
                 return ResponseEntity.notFound().build();
             }
             throw e;
