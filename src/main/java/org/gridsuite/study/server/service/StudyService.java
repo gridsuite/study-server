@@ -567,6 +567,10 @@ public class StudyService {
 
         SecurityAnalysisParametersValues securityAnalysisParametersValues = sourceStudy.getSecurityAnalysisParameters() == null ? SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues() : SecurityAnalysisService.fromEntity(sourceStudy.getSecurityAnalysisParameters());
 
+        SensitivityAnalysisParametersValues sensitivityAnalysisParametersValues = sourceStudy.getSensitivityAnalysisParameters() == null ?
+                SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues() :
+                SensitivityAnalysisService.fromEntity(sourceStudy.getSensitivityAnalysisParameters());
+
         VoltageInitParametersInfos copiedVoltageInitParameters = VoltageInitService.fromEntity(sourceStudy.getVoltageInitParameters());
 
         ShortCircuitParameters shortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
@@ -586,6 +590,7 @@ public class StudyService {
                 .dynamicSimulationParameters(DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper))
                 .shortCircuitParameters(ShortCircuitService.toEntity(shortCircuitParameters))
                 .voltageInitParameters(VoltageInitService.toEntity(copiedVoltageInitParameters))
+                .sensitivityAnalysisParameters(SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues))
                 .importParameters(newImportParameters)
                 .build();
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), UUID.randomUUID()));
@@ -884,6 +889,14 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
+    public SensitivityAnalysisParametersValues getSensitivityAnalysisParametersValues(UUID studyUuid) {
+        return studyRepository.findById(studyUuid)
+                .map(studyEntity -> studyEntity.getSensitivityAnalysisParameters() != null ?
+                        SensitivityAnalysisService.fromEntity(studyEntity.getSensitivityAnalysisParameters()) :
+                        SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues())
+                .orElse(null);
+    }
+
     @Transactional
     public void setLoadFlowParameters(UUID studyUuid, LoadFlowParametersValues parameters, String userId) {
         updateLoadFlowParameters(studyUuid, createParametersEntity(parameters));
@@ -1135,7 +1148,7 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParameters, null, importParameters);
+                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParameters, null, null, importParameters);
         return self.insertStudy(studyEntity, importReportUuid);
     }
 
@@ -1905,4 +1918,16 @@ public class StudyService {
                 .orElse(null);
     }
 
+    @Transactional
+    public void setSensitivityAnalysisParametersValues(UUID studyUuid, SensitivityAnalysisParametersValues parameters, String userId) {
+        updateSensitivityAnalysisParameters(studyUuid,
+                SensitivityAnalysisService.toEntity(parameters != null ? parameters :
+                        sensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues()));
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    public void updateSensitivityAnalysisParameters(UUID studyUuid, SensitivityAnalysisParametersEntity sensitivityAnalysisParametersEntity) {
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
+        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setSensitivityAnalysisParameters(sensitivityAnalysisParametersEntity));
+    }
 }
