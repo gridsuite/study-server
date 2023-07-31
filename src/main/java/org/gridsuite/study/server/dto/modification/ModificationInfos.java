@@ -33,7 +33,6 @@ import java.util.UUID;
     @JsonSubTypes.Type(value = ModificationInfos.class, name = "GROOVY_SCRIPT"),
     @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "LOAD_CREATION"),
     @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "LOAD_MODIFICATION"),
-    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "BATTERY_CREATION"),
     @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "GENERATOR_CREATION"),
     @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "GENERATOR_MODIFICATION"),
     @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "LINE_CREATION"),
