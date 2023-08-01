@@ -231,7 +231,7 @@ public class VoltageInitTest {
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status")) {
                     return new MockResponse().setResponseCode(200).setBody(VOLTAGE_INIT_STATUS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group")) {
+                } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")) {
                     return new MockResponse().setResponseCode(200).setBody("\"" + MODIFICATIONS_GROUP_UUID + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/groups/.*/duplications.*")) {
@@ -433,7 +433,7 @@ public class VoltageInitTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", studyNameUserIdUuid, modificationNode3Uuid)
             .header("userId", "userId")).andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
-            r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group") ||
+            r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID) ||
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
                 r.matches("/v1/groups/.*/duplications.*")

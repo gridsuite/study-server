@@ -207,7 +207,7 @@ public class VoltageInitService {
         }
 
         UUID modificationsGroupUuid;
-        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group-uuid")
             .buildAndExpand(resultUuidOpt.get()).toUriString();
         try {
             modificationsGroupUuid = restTemplate.getForObject(voltageInitServerBaseUri + path, UUID.class);
