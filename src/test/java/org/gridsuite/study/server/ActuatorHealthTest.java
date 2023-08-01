@@ -11,8 +11,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.service.ActuatorHealthService;
+import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,6 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
+@DisableElasticsearch
 @SpringBootTest
 public class ActuatorHealthTest {
 
@@ -51,19 +54,20 @@ public class ActuatorHealthTest {
     private ObjectMapper objectMapper;
     @Autowired
     private ActuatorHealthService actuatorHealthService;
-
-    private static final List<String> OPTIONAL_SERVICES = List.of("dynamic-simulation-server", "shortcircuit-server", "security-analysis-server", "sensitivity-analysis-server", "voltage-init-server");
+    @Autowired
+    private RemoteServicesProperties remoteServicesProperties;
 
     @Before
     public void setup() throws IOException {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
         wireMockUtils = new WireMockUtils(wireMockServer);
         wireMockServer.start();
+
+        remoteServicesProperties.getServices().stream().forEach(s -> s.setBaseUri(wireMockServer.baseUrl()));
     }
 
     @Test
     public void testActuatorHealthUp() throws Exception {
-        actuatorHealthService.setTargetServerUri(wireMockServer.baseUrl());
         UUID stubUuid = wireMockUtils.stubActuatorHealthGet("{\"status\":\"UP\"}");
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/up-optional-services"))
@@ -73,10 +77,14 @@ public class ActuatorHealthTest {
 
         // We receive all server names in the response, but the order is random (N concurrent calls on isServerUp).
         // So compare the content no matter the order.
-        List<String> servers = objectMapper.readValue(response, new TypeReference<>() { });
-        assertTrue(CollectionUtils.isEqualCollection(servers, OPTIONAL_SERVICES));
+        List<String> names = objectMapper.readValue(response, new TypeReference<>() { });
+        List<String> expectedNames = remoteServicesProperties.getServices().stream()
+            .filter(RemoteServicesProperties.Service::getOptional)
+            .map(RemoteServicesProperties.Service::getName)
+            .toList();
+        assertTrue(CollectionUtils.isEqualCollection(expectedNames, names));
 
-        wireMockUtils.verifyActuatorHealth(stubUuid, OPTIONAL_SERVICES.size());
+        wireMockUtils.verifyActuatorHealth(stubUuid, expectedNames.size());
     }
 
     @Test
@@ -95,7 +103,6 @@ public class ActuatorHealthTest {
     }
 
     private void getActuatorHealthAllDown(String jsonContent) throws Exception {
-        actuatorHealthService.setTargetServerUri(wireMockServer.baseUrl());
         UUID stubUuid = wireMockUtils.stubActuatorHealthGet(jsonContent);
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/up-optional-services"))
@@ -106,7 +113,7 @@ public class ActuatorHealthTest {
         // no up server expected
         assertEquals("[]", resultAsString);
 
-        wireMockUtils.verifyActuatorHealth(stubUuid, OPTIONAL_SERVICES.size());
+        wireMockUtils.verifyActuatorHealth(stubUuid, remoteServicesProperties.getServices().stream().filter(RemoteServicesProperties.Service::getOptional).toList().size());
     }
 
     @After

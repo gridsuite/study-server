@@ -16,13 +16,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Map;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -31,41 +29,26 @@ import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 
 @Service
 public class ActuatorHealthService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ActuatorHealthService.class);
 
     private static final String ACTUATOR_HEALTH_PATH = "/actuator/health";
     private static final String ACTUATOR_HEALTH_STATUS_JSON_FIELD = "status";
     private static final String ACTUATOR_HEALTH_STATUS_UP = "UP";
     private static final int ACTUATOR_HEALTH_TIMEOUT_IN_MS = 2000;
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     private final RestTemplate restTemplate;
 
-    private final Map<String, String> optionalServices;
+    private final StudyServerExecutionService executionService;
 
-    private final StudyServerExecutionService studyServerExecutionService;
+    private final RemoteServicesProperties remoteServicesProperties;
 
-    private String targetServerUri = null;
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(ActuatorHealthService.class);
-
-    public ActuatorHealthService(@Value("${gridsuite.services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
-                                 @Value("${gridsuite.services.sensitivity-analysis-server.base-uri:http://sensitivity-analysis-server/}") String sensitivityAnalysisServerBaseUri,
-                                 @Value("${gridsuite.services.shortcircuit-server.base-uri:http://shortcircuit-server/}") String shortcircuitServerBaseUri,
-                                 @Value("${gridsuite.services.dynamic-simulation-server.base-uri:http://dynamic-simulation-server/}") String dynamicSimulationServerBaseUri,
-                                 @Value("${gridsuite.services.voltage-init-server.base-uri:http://voltage-init-server/}") String voltageInitServerBaseUri,
-                                 StudyServerExecutionService executionService) {
-        studyServerExecutionService = executionService;
-        optionalServices = Map.of("security-analysis-server", securityAnalysisServerBaseUri,
-                "sensitivity-analysis-server", sensitivityAnalysisServerBaseUri,
-                "shortcircuit-server", shortcircuitServerBaseUri,
-                "voltage-init-server", voltageInitServerBaseUri,
-                "dynamic-simulation-server", dynamicSimulationServerBaseUri);
-        restTemplate = new RestTemplate(getClientHttpRequestFactory());
-    }
-
-    public void setTargetServerUri(String serverUri) {
-        this.targetServerUri = serverUri;
+    public ActuatorHealthService(ObjectMapper objectMapper, StudyServerExecutionService executionService, RemoteServicesProperties remoteServicesProperties) {
+        this.objectMapper = objectMapper;
+        this.executionService = executionService;
+        this.remoteServicesProperties = remoteServicesProperties;
+        this.restTemplate = new RestTemplate(getClientHttpRequestFactory());
     }
 
     private SimpleClientHttpRequestFactory getClientHttpRequestFactory() {
@@ -76,33 +59,37 @@ public class ActuatorHealthService {
     }
 
     public List<String> getUpOptionalServices() {
-        List<CompletableFuture<String>> listOfFutures = optionalServices.keySet().stream().map(this::isUpFuture).toList();
-        return listOfFutures.stream().map(CompletableFuture::join).filter(Objects::nonNull).toList();
+        return remoteServicesProperties.getServices().stream()
+            .filter(RemoteServicesProperties.Service::getOptional)
+            .map(this::isUpFuture)
+            .map(CompletableFuture::join)
+            .filter(Objects::nonNull)
+            .toList();
     }
 
-    private CompletableFuture<String> isUpFuture(String serverName) {
-        return studyServerExecutionService.supplyAsync(() ->
-            isServerUp(serverName) ? serverName : null
+    private CompletableFuture<String> isUpFuture(RemoteServicesProperties.Service service) {
+        return executionService.supplyAsync(() ->
+            isServerUp(service) ? service.getName() : null
         );
     }
 
-    private boolean isServerUp(String serverName) {
+    private boolean isServerUp(RemoteServicesProperties.Service service) {
         String result;
         try {
-            result = restTemplate.getForObject((targetServerUri != null ? targetServerUri : optionalServices.get(serverName)) + DELIMITER + ACTUATOR_HEALTH_PATH, String.class);
+            result = restTemplate.getForObject(service.getBaseUri() + DELIMITER + ACTUATOR_HEALTH_PATH, String.class);
         } catch (RestClientException e) {
-            LOGGER.error("Network error while testing '{}': {}", serverName, e.toString());
+            LOGGER.error(String.format("Network error while testing '%s': %s", service.getName(), e.getMessage()), e);
             return false;
         }
         try {
-            JsonNode node = OBJECT_MAPPER.readTree(result).path(ACTUATOR_HEALTH_STATUS_JSON_FIELD);
+            JsonNode node = objectMapper.readTree(result).path(ACTUATOR_HEALTH_STATUS_JSON_FIELD);
             if (node.isMissingNode()) {
-                LOGGER.error("Cannot find {} json node while testing '{}'", ACTUATOR_HEALTH_STATUS_JSON_FIELD, serverName);
+                LOGGER.error("Cannot find {} json node while testing '{}'", ACTUATOR_HEALTH_STATUS_JSON_FIELD, service.getName());
             } else {
                 return node.asText().equalsIgnoreCase(ACTUATOR_HEALTH_STATUS_UP);
             }
         } catch (JsonProcessingException e) {
-            LOGGER.error("Json parsing error while testing '{}': {}", serverName, e.toString());
+            LOGGER.error(String.format("Json parsing error while testing '%s': %s", service.getName(), e.getMessage()), e);
             return false;
         }
         return false;
