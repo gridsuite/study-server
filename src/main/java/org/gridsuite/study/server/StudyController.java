@@ -1370,11 +1370,11 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/optional-up-services")
+    @GetMapping(value = "/up-optional-services")
     @Operation(summary = "Get all the available optional services")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of available optional services")})
-    public ResponseEntity<List<String>> getOptionalUpServices() {
-        List<String> upServices = actuatorHealthService.getOptionalUpServices();
+    public ResponseEntity<List<String>> getUpOptionalServices() {
+        List<String> upServices = actuatorHealthService.getUpOptionalServices();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(upServices);
     }
 

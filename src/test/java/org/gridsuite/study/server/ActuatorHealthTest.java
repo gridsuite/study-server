@@ -66,7 +66,7 @@ public class ActuatorHealthTest {
         actuatorHealthService.setTargetServerUri(wireMockServer.baseUrl());
         UUID stubUuid = wireMockUtils.stubActuatorHealthGet("{\"status\":\"UP\"}");
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/optional-up-services"))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/up-optional-services"))
                 .andExpect(status().isOk())
                 .andReturn();
         String response = mvcResult.getResponse().getContentAsString();
@@ -98,7 +98,7 @@ public class ActuatorHealthTest {
         actuatorHealthService.setTargetServerUri(wireMockServer.baseUrl());
         UUID stubUuid = wireMockUtils.stubActuatorHealthGet(jsonContent);
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/optional-up-services"))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/up-optional-services"))
                 .andExpect(status().isOk())
                 .andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();

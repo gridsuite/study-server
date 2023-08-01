@@ -14,6 +14,8 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
@@ -30,10 +32,10 @@ import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 @Service
 public class ActuatorHealthService {
 
-    static final String ACTUATOR_HEALTH_PATH = "/actuator/health";
-    static final String ACTUATOR_HEALTH_STATUS_JSON_FIELD = "status";
-    static final String ACTUATOR_HEALTH_STATUS_UP = "UP";
-    static final int ACTUATOR_HEALTH_TIMEOUT_IN_MS = 2000;
+    private static final String ACTUATOR_HEALTH_PATH = "/actuator/health";
+    private static final String ACTUATOR_HEALTH_STATUS_JSON_FIELD = "status";
+    private static final String ACTUATOR_HEALTH_STATUS_UP = "UP";
+    private static final int ACTUATOR_HEALTH_TIMEOUT_IN_MS = 2000;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -41,9 +43,11 @@ public class ActuatorHealthService {
 
     private final Map<String, String> optionalServices;
 
-    StudyServerExecutionService studyServerExecutionService;
+    private final StudyServerExecutionService studyServerExecutionService;
 
     private String targetServerUri = null;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ActuatorHealthService.class);
 
     public ActuatorHealthService(@Value("${gridsuite.services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
                                  @Value("${gridsuite.services.sensitivity-analysis-server.base-uri:http://sensitivity-analysis-server/}") String sensitivityAnalysisServerBaseUri,
@@ -71,19 +75,9 @@ public class ActuatorHealthService {
         return clientHttpRequestFactory;
     }
 
-    public List<String> getOptionalUpServices() {
-        try {
-            List<CompletableFuture<String>> listOfFutures = optionalServices.keySet().stream().map(this::isUpFuture).toList();
-            CompletableFuture<List<String>> futureOfList = CompletableFuture
-                    .allOf(listOfFutures.toArray(new CompletableFuture[0]))
-                    .thenApply(v -> listOfFutures.stream().map(CompletableFuture::join).filter(Objects::nonNull).toList());
-            return futureOfList.get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return List.of();
-        } catch (Exception e) {
-            return List.of();
-        }
+    public List<String> getUpOptionalServices() {
+        List<CompletableFuture<String>> listOfFutures = optionalServices.keySet().stream().map(this::isUpFuture).toList();
+        return listOfFutures.stream().map(CompletableFuture::join).filter(Objects::nonNull).toList();
     }
 
     private CompletableFuture<String> isUpFuture(String serverName) {
@@ -97,14 +91,18 @@ public class ActuatorHealthService {
         try {
             result = restTemplate.getForObject((targetServerUri != null ? targetServerUri : optionalServices.get(serverName)) + DELIMITER + ACTUATOR_HEALTH_PATH, String.class);
         } catch (RestClientException e) {
+            LOGGER.error("Network error while testing '{}': {}", serverName, e.toString());
             return false;
         }
         try {
             JsonNode node = OBJECT_MAPPER.readTree(result).path(ACTUATOR_HEALTH_STATUS_JSON_FIELD);
-            if (!node.isMissingNode() && node.asText().equalsIgnoreCase(ACTUATOR_HEALTH_STATUS_UP)) {
-                return true;
+            if (node.isMissingNode()) {
+                LOGGER.error("Cannot find {} json node while testing '{}'", ACTUATOR_HEALTH_STATUS_JSON_FIELD, serverName);
+            } else {
+                return node.asText().equalsIgnoreCase(ACTUATOR_HEALTH_STATUS_UP);
             }
         } catch (JsonProcessingException e) {
+            LOGGER.error("Json parsing error while testing '{}': {}", serverName, e.toString());
             return false;
         }
         return false;
