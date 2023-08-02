@@ -1392,6 +1392,18 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Clone the voltage init modifications, then append them to node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init modifications have been appended.")})
+    public ResponseEntity<Void> copyVoltageInitModifications(@PathVariable("studyUuid") UUID studyUuid,
+                                                             @PathVariable("nodeUuid") UUID nodeUuid,
+                                                             @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.copyVoltageInitModifications(studyUuid, nodeUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
     enum UpdateModificationAction {
         MOVE, COPY
     }
