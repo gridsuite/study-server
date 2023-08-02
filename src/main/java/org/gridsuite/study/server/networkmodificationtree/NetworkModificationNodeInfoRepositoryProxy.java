@@ -7,10 +7,6 @@
 
 package org.gridsuite.study.server.networkmodificationtree;
 
-import com.powsybl.loadflow.LoadFlowResult;
-import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.LoadFlowInfos;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -18,14 +14,11 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
-import org.gridsuite.study.server.service.LoadflowService;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -56,9 +49,9 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getModificationGroupUuid(),
             modificationNode.getVariantId(),
             modificationNode.getModificationsToExclude(),
-            modificationNode.getLoadFlowStatus(),
-            LoadflowService.toEntity(modificationNode.getLoadFlowResult()),
             modificationNode.getShortCircuitAnalysisResultUuid(),
+            modificationNode.getOneBusShortCircuitAnalysisResultUuid(),
+            modificationNode.getLoadFlowResultUuid(),
             modificationNode.getVoltageInitResultUuid(),
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
@@ -73,10 +66,10 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         int ignoreSize = node.getModificationsToExclude().size(); // to load the lazy collection
         return completeNodeInfo(node, new NetworkModificationNode(node.getModificationGroupUuid(),
             node.getVariantId(),
-            node.getModificationsToExclude(),
-            node.getLoadFlowStatus(),
-            LoadflowService.fromEntity(node.getLoadFlowResult()),
+            new HashSet<>(node.getModificationsToExclude()), // Need to create a new set because it is a persistent set (org.hibernate.collection.internal.PersistentSet)
+            node.getLoadFlowResultUuid(),
             node.getShortCircuitAnalysisResultUuid(),
+            node.getOneBusShortCircuitAnalysisResultUuid(),
             node.getVoltageInitResultUuid(),
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
@@ -118,38 +111,6 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public LoadFlowStatus getLoadFlowStatus(AbstractNode node) {
-        LoadFlowStatus status = ((NetworkModificationNode) node).getLoadFlowStatus();
-        return status != null ? status : LoadFlowStatus.NOT_DONE;
-    }
-
-    @Override
-    public void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
-        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setLoadFlowResult(loadFlowResult);
-        modificationNode.setLoadFlowStatus(loadFlowStatus);
-        updateNode(modificationNode, "loadFlowResult");
-    }
-
-    @Override
-    //TODO overloading this method here is kind of a hack of the whole philosophy
-    //of the AbstractNodeRepositoryProxy. It's done to avoid converting from entities
-    //to dtos and back to entitites, which generate spurious database queries:
-    //subentities are deleted and reinserted all the time (for example LoadFlowResult)
-    //Everything should be refactored to use the same style as this method: load entities,
-    //modify them and let jpa flush the changes to the database when the transaction is committed.
-    public void updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
-        this.nodeInfoRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).setLoadFlowStatus(loadFlowStatus);
-    }
-
-    @Override
-    public void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
-        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setLoadFlowStatus(loadFlowStatus);
-        updateNode(modificationNode);
-    }
-
-    @Override
     public void updateShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisUuid) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         modificationNode.setShortCircuitAnalysisResultUuid(shortCircuitAnalysisUuid);
@@ -157,8 +118,32 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
+    public void updateLoadFlowResultUuid(AbstractNode node, UUID loadFlowUuid) {
+        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+        modificationNode.setLoadFlowResultUuid(loadFlowUuid);
+        updateNode(modificationNode, "loadFlowResultUuid");
+    }
+
+    @Override
+    public void updateOneBusShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisUuid) {
+        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+        modificationNode.setOneBusShortCircuitAnalysisResultUuid(shortCircuitAnalysisUuid);
+        updateNode(modificationNode, "shortCircuitAnalysisResultUuid");
+    }
+
+    @Override
     public UUID getShortCircuitAnalysisResultUuid(AbstractNode node) {
         return ((NetworkModificationNode) node).getShortCircuitAnalysisResultUuid();
+    }
+
+    @Override
+    public UUID getOneBusShortCircuitAnalysisResultUuid(AbstractNode node) {
+        return ((NetworkModificationNode) node).getOneBusShortCircuitAnalysisResultUuid();
+    }
+
+    @Override
+    public UUID getLoadFlowResultUuid(AbstractNode node) {
+        return ((NetworkModificationNode) node).getLoadFlowResultUuid();
     }
 
     @Override
@@ -171,12 +156,6 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public UUID getVoltageInitResultUuid(AbstractNode node) {
         return ((NetworkModificationNode) node).getVoltageInitResultUuid();
-    }
-
-    @Override
-    public LoadFlowInfos getLoadFlowInfos(AbstractNode node) {
-        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        return LoadFlowInfos.builder().loadFlowStatus(modificationNode.getLoadFlowStatus()).loadFlowResult(modificationNode.getLoadFlowResult()).build();
     }
 
     @Override
@@ -253,6 +232,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
             .variantId(networkModificationNode.getVariantId())
             .reportUuid(networkModificationNode.getReportUuid())
+            .loadFlowUuid(networkModificationNode.getLoadFlowResultUuid())
             .securityAnalysisUuid(networkModificationNode.getSecurityAnalysisResultUuid())
             .sensitivityAnalysisUuid(networkModificationNode.getSensitivityAnalysisResultUuid())
             .shortCircuitAnalysisUuid(networkModificationNode.getShortCircuitAnalysisResultUuid())

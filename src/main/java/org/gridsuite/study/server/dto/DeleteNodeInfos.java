@@ -30,6 +30,8 @@ public class DeleteNodeInfos {
 
     private List<String> variantIds = new ArrayList<>();
 
+    private List<UUID> loadFlowResultUuids = new ArrayList<>();
+
     private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
 
     private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
@@ -49,6 +51,10 @@ public class DeleteNodeInfos {
 
     public void addVariantId(String variantId) {
         variantIds.add(variantId);
+    }
+
+    public void addLoadFlowResultUuid(UUID loadFlowResultUuid) {
+        loadFlowResultUuids.add(loadFlowResultUuid);
     }
 
     public void addSecurityAnalysisResultUuid(UUID securityAnalysisResultUuid) {

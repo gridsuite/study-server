@@ -13,7 +13,6 @@ import com.google.common.io.ByteStreams;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.loadflow.LoadFlowParameters;
 import okhttp3.mockwebserver.MockWebServer;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
@@ -22,7 +21,7 @@ import org.gridsuite.study.server.repository.SecurityAnalysisParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.VoltageInitParametersEntity;
-import org.gridsuite.study.server.service.ShortCircuitService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.junit.platform.commons.util.StringUtils;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 
@@ -124,8 +123,7 @@ public final class TestUtils {
             .modificationGroupUuid(UUID.randomUUID())
             .variantId(UUID.randomUUID().toString())
             .reportUuid(reportUuid)
-            .loadFlowStatus(LoadFlowStatus.NOT_DONE)
-            .loadFlowResult(null)
+            .loadFlowResultUuid(UUID.randomUUID())
             .securityAnalysisResultUuid(UUID.randomUUID())
             .sensitivityAnalysisResultUuid(UUID.randomUUID())
             .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT))

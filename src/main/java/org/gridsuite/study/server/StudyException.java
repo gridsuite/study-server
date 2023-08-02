@@ -27,6 +27,7 @@ public class StudyException extends RuntimeException {
         SENSITIVITY_ANALYSIS_NOT_FOUND,
         SENSITIVITY_ANALYSIS_ERROR,
         SHORT_CIRCUIT_ANALYSIS_NOT_FOUND,
+        LOADFLOW_NOT_FOUND,
         SHORT_CIRCUIT_ANALYSIS_RUNNING,
         VOLTAGE_INIT_NOT_FOUND,
         VOLTAGE_INIT_RUNNING,
@@ -67,6 +68,8 @@ public class StudyException extends RuntimeException {
         URI_SYNTAX,
         TIME_SERIES_BAD_TYPE,
         FILTERS_NOT_FOUND,
+        NO_VOLTAGE_INIT_RESULTS_FOR_NODE,
+        NO_VOLTAGE_INIT_MODIFICATIONS_GROUP_FOR_NODE
     }
 
     private final Type type;

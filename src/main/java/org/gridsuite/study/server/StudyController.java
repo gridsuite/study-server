@@ -31,6 +31,9 @@ import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.service.*;
+import org.springframework.data.domain.Pageable;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -64,6 +67,7 @@ public class StudyController {
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final ShortCircuitService shortCircuitService;
     private final VoltageInitService voltageInitService;
+    private final LoadFlowService loadflowService;
     private final CaseService caseService;
 
     public StudyController(StudyService studyService,
@@ -75,6 +79,7 @@ public class StudyController {
             SensitivityAnalysisService sensitivityAnalysisService,
             ShortCircuitService shortCircuitService,
             VoltageInitService voltageInitService,
+            LoadFlowService loadflowService,
             CaseService caseService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -85,6 +90,7 @@ public class StudyController {
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
+        this.loadflowService = loadflowService;
         this.caseService = caseService;
     }
 
@@ -320,6 +326,18 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusbarSections(studyUuid, nodeUuid, voltageLevelId, inUpstreamBuiltParentNode));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/{hvdcId}/shunt-compensators")
+    @Operation(summary = "For a given hvdc line, get its related Shunt compensators in case of LCC converter station")
+    @ApiResponse(responseCode = "200", description = "Hvdc line type and its shunt compensators on each side")
+    public ResponseEntity<String> getHvdcLineShuntCompensators(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @PathVariable("hvdcId") String hvdcId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+        String hvdcInfos = studyService.getHvdcLineShuntCompensators(studyUuid, nodeUuid, inUpstreamBuiltParentNode, hvdcId);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(hvdcInfos);
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines")
     @Operation(summary = "Get Network lines graphics")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of line graphics with the given ids, all otherwise")})
@@ -467,8 +485,10 @@ public class StudyController {
                                                          @Nullable @RequestParam("originNodeUuid") UUID originNodeUuid,
                                                          @RequestBody List<UUID> modificationsToCopyUuidList,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         if (originNodeUuid != null) {
+            studyService.assertIsNodeExist(studyUuid, originNodeUuid);
             studyService.assertCanModifyNode(studyUuid, originNodeUuid);
         }
         switch (action) {
@@ -487,12 +507,44 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run")
     @Operation(summary = "run loadflow on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow has started")})
-    public ResponseEntity<Void> runLoadFlow(
+    public ResponseEntity<UUID> runLoadFlow(
             @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("nodeUuid") UUID nodeUuid) {
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertLoadFlowRunnable(nodeUuid);
-        studyService.runLoadFlow(studyUuid, nodeUuid);
+        return ResponseEntity.ok().body(studyService.runLoadFlow(studyUuid, nodeUuid, userId));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/result")
+    @Operation(summary = "Get a loadflow result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow result"),
+        @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The loadflow result has not been found")})
+    public ResponseEntity<String> getLoadflowResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = loadflowService.getLoadFlowResult(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/status")
+    @Operation(summary = "Get the loadflow status on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow status"),
+        @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The loadflow status has not been found")})
+    public ResponseEntity<String> getLoadFlowStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = loadflowService.getLoadFlowStatus(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/stop")
+    @Operation(summary = "stop loadflow on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow has been stopped")})
+    public ResponseEntity<Void> stopLoadFlow(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        loadflowService.stopLoadFlow(studyUuid, nodeUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -502,9 +554,14 @@ public class StudyController {
     public ResponseEntity<UUID> runShortCircuit(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestParam(value = "busId", required = false) String busId,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runShortCircuit(studyUuid, nodeUuid, userId));
+        if (busId == null) {
+            return ResponseEntity.ok().body(studyService.runShortCircuit(studyUuid, nodeUuid, userId));
+        } else {
+            return ResponseEntity.ok().body(studyService.runShortCircuit(studyUuid, nodeUuid, userId, busId));
+        }
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop")
@@ -522,9 +579,25 @@ public class StudyController {
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
     public ResponseEntity<String> getShortCircuitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid);
+                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @Parameter(description = "Full or only those with limit violations or none fault results") @RequestParam(name = "mode", required = false, defaultValue = "WITH_LIMIT_VIOLATIONS") String mode,
+                                                               @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type) {
+        String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid, mode, type);
         return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/results/fault_results/paged")
+    @Operation(summary = "Get a fault results page for the short circuit analysis result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis result fault results page"),
+        @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
+    public ResponseEntity<String> getShortCircuitAnalysisFaultResultsPage(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @Parameter(description = "Full or only those with limit violations or none fault results") @RequestParam(name = "mode", required = false, defaultValue = "WITH_LIMIT_VIOLATIONS") String mode,
+                                                               Pageable pageable) {
+        String faultResultsPage = shortCircuitService.getShortCircuitAnalysisFaultResultsPage(nodeUuid, mode, pageable);
+        return faultResultsPage != null ? ResponseEntity.ok().body(faultResultsPage) :
                 ResponseEntity.noContent().build();
     }
 
@@ -534,8 +607,9 @@ public class StudyController {
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The short circuit analysis status has not been found")})
     public ResponseEntity<String> getShortCircuitAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = shortCircuitService.getShortCircuitAnalysisStatus(nodeUuid);
+                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type) {
+        String result = shortCircuitService.getShortCircuitAnalysisStatus(nodeUuid, type);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -1068,16 +1142,6 @@ public class StudyController {
         return ResponseEntity.ok().body(networkModificationTreeService.getUniqueNodeName(studyUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos")
-    @Operation(summary = "get the load flow information (status and result) on study")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The load flow informations"),
-        @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
-    public ResponseEntity<LoadFlowInfos> getLoadFlowInfos(@PathVariable("studyUuid") UUID studyUuid,
-                                                                @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLoadFlowInfos(studyUuid, nodeUuid));
-    }
-
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/build")
     @Operation(summary = "build a study node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been built"),
@@ -1325,6 +1389,18 @@ public class StudyController {
             @RequestBody(required = false) SecurityAnalysisParametersValues securityAnalysisParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Clone the voltage init modifications, then append them to node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init modifications have been appended.")})
+    public ResponseEntity<Void> copyVoltageInitModifications(@PathVariable("studyUuid") UUID studyUuid,
+                                                             @PathVariable("nodeUuid") UUID nodeUuid,
+                                                             @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.copyVoltageInitModifications(studyUuid, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 

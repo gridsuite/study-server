@@ -20,7 +20,6 @@ import com.powsybl.iidm.network.Line;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.xml.XMLImporter;
-import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
@@ -87,14 +86,14 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
@@ -159,7 +158,7 @@ public class StudyTest {
     private static final String CASE_NAME = "DefaultCaseName";
     private static final UUID EMPTY_MODIFICATION_GROUP_UUID = UUID.randomUUID();
     private static final String EMPTY_ARRAY = "[]";
-
+    private static final Map DEFAULT_IMPORT_PARAMETERS = Map.of("param1", "defaultValue1", "param2", "defaultValue2");
     private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
 
@@ -553,10 +552,14 @@ public class StudyTest {
         Matcher matcher = receiverPattern.matcher(requestPath);
         if (matcher.find()) {
             String receiverUrlString = matcher.group(1);
+            Map<String, String> importParameters = new HashMap<String, String>();
+            importParameters.put("param1", "changedValue1, changedValue2");
+            importParameters.put("param2", "changedValue");
             input.send(MessageBuilder.withPayload("").setHeader("receiver", URLDecoder.decode(receiverUrlString, StandardCharsets.UTF_8))
                     .setHeader("networkUuid", networkInfos.getNetworkUuid().toString())
                     .setHeader("networkId", networkInfos.getNetworkId())
                     .setHeader("caseFormat", format)
+                    .setHeader("importParameters", importParameters)
                     .build(), "case.import.succeeded");
         }
     }
@@ -742,14 +745,15 @@ public class StudyTest {
 
     @Test
     public void testCreateStudyWithImportParameters() throws Exception {
-        HashMap<String, Object> importParameters = new HashMap<String, Object>();
+        Map<String, Object> importParameters = new HashMap<String, Object>();
         ArrayList<String> randomListParam = new ArrayList<String>();
         randomListParam.add("paramValue1");
         randomListParam.add("paramValue2");
-        importParameters.put("randomListParam", randomListParam);
-        importParameters.put("randomParam2", "randomParamValue");
+        importParameters.put("param1", randomListParam);
+        UUID studyUuid = createStudyWithImportParameters("userId", CASE_UUID, importParameters);
 
-        createStudyWithImportParameters("userId", CASE_UUID, importParameters);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).get();
+        assertEquals(studyUuid, studyEntity.getId());
     }
 
     @Test
@@ -849,7 +853,7 @@ public class StudyTest {
             UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus, String userId) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
-                .loadFlowStatus(LoadFlowStatus.NOT_DONE).nodeBuildStatus(NodeBuildStatus.from(buildStatus))
+                .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
         // Only for tests
@@ -888,7 +892,7 @@ public class StudyTest {
         return studyUuid;
     }
 
-    private UUID createStudyWithImportParameters(String userId, UUID caseUuid, HashMap<String, Object> importParameters) throws Exception {
+    protected UUID createStudyWithImportParameters(String userId, UUID caseUuid, Map<String, Object> importParameters) throws Exception {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid).header("userId", userId).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(importParameters)))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -934,7 +938,6 @@ public class StudyTest {
     }
 
     private void assertStudyCreation(UUID studyUuid, String userId, String... errorMessage) {
-
         assertTrue(studyRepository.findById(studyUuid).isPresent());
 
         // assert that the broker message has been sent a study creation request message
@@ -1246,8 +1249,6 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
 
-        node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
-        node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         node2.setSensitivityAnalysisResultUuid(UUID.randomUUID());
         node2.setShortCircuitAnalysisResultUuid(UUID.randomUUID());
@@ -1293,13 +1294,11 @@ public class StudyTest {
         NetworkModificationNode duplicatedModificationNode = (NetworkModificationNode) duplicatedRootNode.getChildren().get(0);
         assertEquals(2, duplicatedModificationNode.getChildren().size());
 
-        assertEquals(LoadFlowStatus.NOT_DONE, ((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getLoadFlowStatus());
-        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getLoadFlowResult());
+        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getLoadFlowResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getSecurityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getSensitivityAnalysisResultUuid());
 
-        assertEquals(LoadFlowStatus.NOT_DONE, ((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getLoadFlowStatus());
-        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getLoadFlowResult());
+        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getLoadFlowResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSecurityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSensitivityAnalysisResultUuid());
 
@@ -1307,8 +1306,8 @@ public class StudyTest {
         wireMockUtils.verifyDuplicateModificationGroup(stubUuid, 3);
 
         Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(2, server);
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + duplicatedStudy.getNetworkUuid() + "/reindex-all")).count());
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
         return duplicatedStudy;
     }
 
@@ -1360,8 +1359,7 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPost(stubUuid, createLoadAttributes, NETWORK_UUID_STRING);
 
-        node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
-        node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
+        node2.setLoadFlowResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -1676,8 +1674,7 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
 
-        node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
-        node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
+        node2.setLoadFlowResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -1803,8 +1800,7 @@ public class StudyTest {
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
 
         node2.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));
-        node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
-        node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
+        node2.setLoadFlowResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
