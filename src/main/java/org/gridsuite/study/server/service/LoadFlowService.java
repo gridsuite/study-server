@@ -17,8 +17,8 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.LoadFlowSpecificParameterEntity;
+import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -54,16 +54,15 @@ public class LoadFlowService {
     NetworkModificationTreeService networkModificationTreeService;
     private final ObjectMapper objectMapper;
 
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     @Autowired
-    public LoadFlowService(
-            @Value("${gridsuite.services.loadflow-server.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
+    public LoadFlowService(RemoteServicesProperties remoteServicesProperties,
             NetworkModificationTreeService networkModificationTreeService,
             NetworkService networkStoreService, ObjectMapper objectMapper,
             NotificationService notificationService,
             RestTemplate restTemplate) {
-        this.loadFlowServerBaseUri = loadFlowServerBaseUri;
+        this.loadFlowServerBaseUri = StudyUtils.getServiceUri(remoteServicesProperties, "loadflow-server");
         this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;

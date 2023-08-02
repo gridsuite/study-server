@@ -10,10 +10,11 @@ package org.gridsuite.study.server.service.client.dynamicsimulation.impl;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
+import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -36,9 +37,9 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
 public class DynamicSimulationClientImpl extends AbstractRestClient implements DynamicSimulationClient {
 
     @Autowired
-    public DynamicSimulationClientImpl(@Value("${gridsuite.services.dynamic-simulation-server.base-uri:http://dynamic-simulation-server/}") String baseUri,
+    public DynamicSimulationClientImpl(RemoteServicesProperties remoteServicesProperties,
                                        RestTemplate restTemplate) {
-        super(baseUri, restTemplate);
+        super(StudyUtils.getServiceUri(remoteServicesProperties, "dynamic-simulation-server"), restTemplate);
     }
 
     @Override

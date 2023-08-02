@@ -11,10 +11,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
+import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
+import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -36,9 +37,9 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
 public class DynamicMappingClientImpl extends AbstractRestClient implements DynamicMappingClient {
 
     @Autowired
-    public DynamicMappingClientImpl(@Value("${gridsuite.services.dynamic-mapping-server.base-uri:http://dynamic-mapping-server/}") String baseUri,
+    public DynamicMappingClientImpl(RemoteServicesProperties remoteServicesProperties,
                                     RestTemplate restTemplate) {
-        super(baseUri, restTemplate);
+        super(StudyUtils.getServiceUri(remoteServicesProperties, "dynamic-mapping-server"), restTemplate);
     }
 
     @Override

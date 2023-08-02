@@ -149,7 +149,8 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
         timeSeriesGroupMetadata.setMetadatas(List.of(new TimeSeriesMetadataRest(TIME_SERIES_NAME_1), new TimeSeriesMetadataRest(TIME_SERIES_NAME_2)));
 
         // config client
-        timeSeriesClient = new TimeSeriesClientImpl(initMockWebServer(), restTemplate);
+        timeSeriesClient = new TimeSeriesClientImpl(null, restTemplate);
+        timeSeriesClient.setBaseUri(initMockWebServer());
     }
 
     @Test

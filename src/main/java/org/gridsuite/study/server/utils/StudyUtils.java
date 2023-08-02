@@ -11,9 +11,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.HttpStatusCodeException;
+
+import java.util.Objects;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -47,5 +50,14 @@ public final class StudyUtils {
         }
 
         return responseBody;
+    }
+
+    public static String getServiceUri(RemoteServicesProperties properties, String serviceName) {
+        String defaultName = "http://" + serviceName + "/";
+        return Objects.isNull(properties) ? defaultName : properties.getServices().stream()
+            .filter(s -> s.getName().equalsIgnoreCase(serviceName))
+            .map(RemoteServicesProperties.Service::getBaseUri)
+            .findFirst()
+            .orElse(defaultName);
     }
 }

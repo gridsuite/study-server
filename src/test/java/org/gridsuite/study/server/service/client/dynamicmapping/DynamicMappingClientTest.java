@@ -28,6 +28,7 @@ import java.util.List;
 
 import static org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -68,7 +69,8 @@ public class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
         super.setup();
 
         // config client
-        dynamicMappingClient = new DynamicMappingClientImpl(initMockWebServer(), restTemplate);
+        dynamicMappingClient = new DynamicMappingClientImpl(null, restTemplate);
+        dynamicMappingClient.setBaseUri(initMockWebServer());
     }
 
     @Test
@@ -154,7 +156,7 @@ public class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
 
         // --- check result --- //
         // must be null
-        assertEquals(null, modelInfosList);
+        assertNull(modelInfosList);
     }
 
     @Test(expected = StudyException.class)

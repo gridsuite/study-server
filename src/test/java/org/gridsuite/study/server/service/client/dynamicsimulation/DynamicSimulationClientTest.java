@@ -61,7 +61,8 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
         super.setup();
 
         // config client
-        dynamicSimulationClient = new DynamicSimulationClientImpl(initMockWebServer(), restTemplate);
+        dynamicSimulationClient = new DynamicSimulationClientImpl(null, restTemplate);
+        dynamicSimulationClient.setBaseUri(initMockWebServer());
     }
 
     @Test

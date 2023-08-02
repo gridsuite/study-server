@@ -13,8 +13,8 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
+import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -52,10 +52,10 @@ public class SensitivityAnalysisService {
     private final NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
-    SensitivityAnalysisService(@Value("${gridsuite.services.sensitivity-analysis-server.base-uri:http://sensitivity-analysis-server/}") String sensitivityAnalysisServerBaseUri,
+    SensitivityAnalysisService(RemoteServicesProperties remoteServicesProperties,
                                NetworkModificationTreeService networkModificationTreeService,
                                ObjectMapper objectMapper) {
-        this.sensitivityAnalysisServerBaseUri = sensitivityAnalysisServerBaseUri;
+        this.sensitivityAnalysisServerBaseUri = StudyUtils.getServiceUri(remoteServicesProperties, "sensitivity-analysis-server");
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
     }
@@ -121,7 +121,7 @@ public class SensitivityAnalysisService {
     }
 
     public String getSensitivityAnalysisStatus(UUID nodeUuid) {
-        String result = null;
+        String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
 
         if (resultUuidOpt.isEmpty()) {

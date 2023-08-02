@@ -17,8 +17,8 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
+import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -57,11 +57,10 @@ public class ShortCircuitService {
     private RestTemplate restTemplate;
 
     @Autowired
-    public ShortCircuitService(
-            @Value("${gridsuite.services.shortcircuit-server.base-uri:http://shortcircuit-server/}") String shortCircuitServerBaseUri,
+    public ShortCircuitService(RemoteServicesProperties remoteServicesProperties,
             NetworkModificationTreeService networkModificationTreeService,
             NetworkService networkStoreService, ObjectMapper objectMapper) {
-        this.shortCircuitServerBaseUri = shortCircuitServerBaseUri;
+        this.shortCircuitServerBaseUri = StudyUtils.getServiceUri(remoteServicesProperties, "shortcircuit-server");
         this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;

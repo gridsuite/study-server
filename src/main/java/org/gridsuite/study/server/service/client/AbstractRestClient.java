@@ -20,7 +20,7 @@ public abstract class AbstractRestClient implements RestClient {
 
     private final RestTemplate restTemplate;
 
-    private final String baseUri;
+    private String baseUri;
 
     protected AbstractRestClient(String baseUri, RestTemplate restTemplate) {
         this.baseUri = baseUri;
@@ -35,5 +35,10 @@ public abstract class AbstractRestClient implements RestClient {
     @Override
     public String getBaseUri() {
         return baseUri;
+    }
+
+    @Override
+    public void setBaseUri(String uri) {
+        baseUri = uri;
     }
 }

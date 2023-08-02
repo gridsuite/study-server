@@ -21,8 +21,8 @@ import org.gridsuite.study.server.dto.SecurityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.SecurityAnalysisParametersValues;
 import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
 import org.gridsuite.study.server.repository.SecurityAnalysisParametersEntity;
+import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -62,17 +62,17 @@ public class SecurityAnalysisService {
     private static final double DEFAULT_HIGH_VOLTAGE_ABSOLUTE_THRESHOLD = 1.0; // 1.0 kV
 
     @Autowired
-    public SecurityAnalysisService(@Value("${gridsuite.services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
+    public SecurityAnalysisService(RemoteServicesProperties remoteServicesProperties,
             NetworkModificationTreeService networkModificationTreeService,
             ObjectMapper objectMapper) {
-        this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
+        this.securityAnalysisServerBaseUri = StudyUtils.getServiceUri(remoteServicesProperties, "security-analysis-server");
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
     }
 
     public String getSecurityAnalysisResult(UUID nodeUuid, List<String> limitTypes) {
         Objects.requireNonNull(limitTypes);
-        String result = null;
+        String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
 
         if (resultUuidOpt.isEmpty()) {
