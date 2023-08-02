@@ -49,7 +49,7 @@ public class NetworkConversionService {
         this.objectMapper = objectMapper;
     }
 
-    public void persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
+    public void persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, String> importParameters) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(
@@ -70,7 +70,7 @@ public class NetworkConversionService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(importParameters, headers);
+        HttpEntity<Map<String, String>> httpEntity = new HttpEntity<>(importParameters, headers);
 
         restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity,
                 Void.class);

@@ -251,7 +251,7 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean duplicateCase) {
+    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, String> importParameters, boolean duplicateCase) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         UUID importReportUuid = UUID.randomUUID();
         UUID caseUuidToUse = caseUuid;
@@ -260,6 +260,25 @@ public class StudyService {
                 caseUuidToUse = caseService.duplicateCase(caseUuid, true);
             }
             persistentStoreWithNotificationOnError(caseUuidToUse, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
+        } catch (Exception e) {
+            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            throw e;
+        }
+
+        return basicStudyInfos;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, String> getStudyImportParameters (UUID studyUuid) {
+        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getImportParameters();
+    }
+
+    public BasicStudyInfos reimportStudy(UUID caseUuid, String userId, UUID studyUuid) {
+        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+        Map<String, String> importParameters = getStudyImportParameters(studyUuid);
+        UUID importReportUuid = UUID.randomUUID();
+        try {
+            persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
         } catch (Exception e) {
             self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             throw e;
@@ -472,8 +491,8 @@ public class StudyService {
             nodesModificationInfos = networkModificationTreeService.getAllNodesModificationInfos(studyUuid);
             studyEntity.ifPresent(s -> {
                 caseUuid.set(studyEntity.get().getCaseUuid());
-                networkModificationTreeService.doDeleteTree(studyUuid);
                 //TODO: remove when finished, to test only
+                //networkModificationTreeService.doDeleteTree(studyUuid);
                 //studyRepository.deleteById(studyUuid);
                 //studyInfosService.deleteByUuid(studyUuid);
             });
@@ -512,12 +531,12 @@ public class StudyService {
                                 .map(NodeModificationInfos::getVoltageInitUuid).filter(Objects::nonNull).forEach(voltageInitService::deleteVoltageInitResult)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
                                 .map(NodeModificationInfos::getDynamicSimulationUuid).filter(Objects::nonNull).forEach(dynamicSimulationService::deleteResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
+                        /*studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
+                        */studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
-                        studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid())),
-                        studyServerExecutionService.runAsync(deleteStudyInfos.getCaseUuid() != null ? () -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()) : () -> {
-                        })
+                        studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid()))
+                        /*studyServerExecutionService.runAsync(deleteStudyInfos.getCaseUuid() != null ? () -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()) : () -> {
+                        })*/
                 );
 
                 executeInParallel.get();
@@ -630,7 +649,7 @@ public class StudyService {
         }
     }
 
-    private void persistentStoreWithNotificationOnError(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
+    private void persistentStoreWithNotificationOnError(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, String> importParameters) {
         try {
             networkConversionService.persistentStore(caseUuid, studyUuid, userId, importReportUuid, importParameters);
         } catch (HttpStatusCodeException e) {
@@ -1146,11 +1165,14 @@ public class StudyService {
         if (studyEntity != null) {
             studyEntity.setNetworkId(networkId);
             studyEntity.setNetworkUuid(networkUuid);
+
+            studyEntity = studyRepository.save(studyEntity);
+            return studyEntity;
         } else {
             studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
                 defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParameters, null, importParameters);
+            return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
         }
-        return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
 
     }
 

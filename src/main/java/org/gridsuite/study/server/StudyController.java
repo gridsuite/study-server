@@ -7,6 +7,8 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.commons.reporter.ReporterModel;
+import com.powsybl.iidm.network.Network;
+import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
@@ -139,10 +141,23 @@ public class StudyController {
     public ResponseEntity<BasicStudyInfos> createStudy(@PathVariable("caseUuid") UUID caseUuid,
                                                        @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                        @RequestParam(required = false, value = "duplicateCase", defaultValue = "false") Boolean duplicateCase,
-                                                       @RequestBody(required = false) Map<String, Object> importParameters,
+                                                       @RequestBody(required = false) Map<String, String> importParameters,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         caseService.assertCaseExists(caseUuid);
         BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid, importParameters, duplicateCase);
+        return ResponseEntity.ok().body(createStudy);
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/cases/{caseUuid}")
+    @Operation(summary = "reimport study network of a study from an existing case")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The id of the network imported"),
+        @ApiResponse(responseCode = "409", description = "The study already exists or the case doesn't exist")})
+    public ResponseEntity<BasicStudyInfos> reimportStudyFromCase(@PathVariable("caseUuid") UUID caseUuid,
+                                                       @PathVariable("studyUuid") UUID studyUuid,
+                                                       @RequestHeader(HEADER_USER_ID) String userId) {
+        caseService.assertCaseExists(caseUuid);
+        BasicStudyInfos createStudy = studyService.reimportStudy(caseUuid, userId, studyUuid);
         return ResponseEntity.ok().body(createStudy);
     }
 
@@ -207,6 +222,39 @@ public class StudyController {
                                               @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/network")
+    @Operation(summary = "get study root network")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The network was successfully fetched"),
+        @ApiResponse(responseCode = "403", description = "The subtree can't be copied above the root node nor around itself"),
+        @ApiResponse(responseCode = "404", description = "The source study or subtree doesn't exist")})
+    public ResponseEntity<Network> getStudyRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
+                                                       @RequestHeader(HEADER_USER_ID) String userId) {
+        UUID networkUUID = networkStoreService.getNetworkUuid(studyUuid);
+
+        try {
+            networkStoreService.getNetwork(networkUUID, PreloadingStrategy.COLLECTION, null);
+
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            StudyInfos studyInfos = studyService.getStudyInfos(studyUuid);
+            UUID caseUuid = studyService.getStudyCaseUuid(studyUuid);
+            if(studyInfos == null) {
+                throw e;
+            }
+            if (caseUuid == null || !caseService.caseExists(caseUuid)) {
+                throw new StudyException(Type.BROKEN_STUDY);
+            }
+            // if the study does exist and this exception is thrown
+            // it means something is wrong with the study
+            // we try to recreate it from existing case
+            studyService.reimportStudy(caseUuid, userId, studyUuid);
+
+
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/subtrees", params = {"subtreeToCutParentNodeUuid", "referenceNodeUuid"})
