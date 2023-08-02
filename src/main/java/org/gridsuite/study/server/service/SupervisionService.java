@@ -1,6 +1,5 @@
 package org.gridsuite.study.server.service;
 
-import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -13,7 +12,7 @@ import java.util.stream.Collectors;
 public class SupervisionService {
     private final StudyRepository studyRepository;
 
-    public SupervisionService (StudyRepository studyRepository) {
+    public SupervisionService(StudyRepository studyRepository) {
         this.studyRepository = studyRepository;
     }
 
