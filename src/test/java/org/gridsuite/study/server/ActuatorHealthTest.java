@@ -9,8 +9,6 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
-import org.apache.commons.collections4.CollectionUtils;
-import org.gridsuite.study.server.service.ActuatorHealthService;
 import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
@@ -32,7 +30,6 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -53,8 +50,6 @@ public class ActuatorHealthTest {
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
-    private ActuatorHealthService actuatorHealthService;
-    @Autowired
     private RemoteServicesProperties remoteServicesProperties;
 
     @Before
@@ -63,7 +58,14 @@ public class ActuatorHealthTest {
         wireMockUtils = new WireMockUtils(wireMockServer);
         wireMockServer.start();
 
-        remoteServicesProperties.getServices().stream().forEach(s -> s.setBaseUri(wireMockServer.baseUrl()));
+        remoteServicesProperties.getServices().forEach(s -> s.setBaseUri(wireMockServer.baseUrl()));
+    }
+
+    private List<String> getOptionalServicesNames() {
+        return remoteServicesProperties.getServices().stream()
+                .filter(RemoteServicesProperties.Service::getOptional)
+                .map(RemoteServicesProperties.Service::getName)
+                .toList();
     }
 
     @Test
@@ -75,16 +77,10 @@ public class ActuatorHealthTest {
                 .andReturn();
         String response = mvcResult.getResponse().getContentAsString();
 
-        // We receive all server names in the response, but the order is random (N concurrent calls on isServerUp).
-        // So compare the content no matter the order.
         List<String> names = objectMapper.readValue(response, new TypeReference<>() { });
-        List<String> expectedNames = remoteServicesProperties.getServices().stream()
-            .filter(RemoteServicesProperties.Service::getOptional)
-            .map(RemoteServicesProperties.Service::getName)
-            .toList();
-        assertTrue(CollectionUtils.isEqualCollection(expectedNames, names));
+        assertEquals(getOptionalServicesNames(), names);
 
-        wireMockUtils.verifyActuatorHealth(stubUuid, expectedNames.size());
+        wireMockUtils.verifyActuatorHealth(stubUuid, getOptionalServicesNames().size());
     }
 
     @Test
@@ -113,7 +109,7 @@ public class ActuatorHealthTest {
         // no up server expected
         assertEquals("[]", resultAsString);
 
-        wireMockUtils.verifyActuatorHealth(stubUuid, remoteServicesProperties.getServices().stream().filter(RemoteServicesProperties.Service::getOptional).toList().size());
+        wireMockUtils.verifyActuatorHealth(stubUuid, getOptionalServicesNames().size());
     }
 
     @After
