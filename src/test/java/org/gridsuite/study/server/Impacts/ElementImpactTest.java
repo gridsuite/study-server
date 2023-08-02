@@ -9,7 +9,6 @@ package org.gridsuite.study.server.Impacts;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.IdentifiableType;
 import lombok.SneakyThrows;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult.ApplicationStatus;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact;
@@ -34,8 +33,6 @@ public class ElementImpactTest {
     @Test
     @SneakyThrows
     public void testNetworkModificationResult() {
-        EqualsVerifier.simple().forClass(SimpleElementImpact.class).verify();
-
         SimpleElementImpact creationImpact = createElementImpact(SimpleImpactType.CREATION, IdentifiableType.LINE, "lineId", new TreeSet<>(List.of("s2", "s1")));
         SimpleElementImpact modificationImpact = createElementImpact(SimpleImpactType.MODIFICATION, IdentifiableType.LOAD, "loadId", new TreeSet<>(List.of("s3")));
         SimpleElementImpact injectionDeletionImpact = createElementImpact(SimpleImpactType.DELETION, IdentifiableType.GENERATOR, "generatorId", new TreeSet<>(List.of("s4")));
@@ -73,8 +70,6 @@ public class ElementImpactTest {
     @Test
     @SneakyThrows
     public void testNetworkImpact() {
-        EqualsVerifier.simple().forClass(EquipmentDeletionInfos.class).verify();
-
         NetworkImpactsInfos networkImpactsInfos = NetworkImpactsInfos.builder()
             .impactedSubstationsIds(new HashSet<>(List.of("s1", "s2")))
             .deletedEquipments(

@@ -53,6 +53,9 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     public void updateLoadFlowResultUuid(AbstractNode node, UUID loadFlowResultUuid) {
     }
 
+    public void updateOneBusShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
+    }
+
     public void updateVoltageInitResultUuid(AbstractNode node, UUID voltageInitResultUuid) {
     }
 
@@ -78,6 +81,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     }
 
     public UUID getShortCircuitAnalysisResultUuid(AbstractNode node) {
+        return null;
+    }
+
+    public UUID getOneBusShortCircuitAnalysisResultUuid(AbstractNode node) {
         return null;
     }
 
@@ -176,6 +183,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         updateVoltageInitResultUuid(getNode(nodeUuid), voltageInitResultUuid);
     }
 
+    public void updateOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+        updateOneBusShortCircuitAnalysisResultUuid(getNode(nodeUuid), shortCircuitAnalysisResultUuid);
+    }
+
     public void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
         updateSecurityAnalysisResultUuid(getNode(nodeUuid), securityAnalysisResultUuid);
     }
@@ -202,6 +213,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public UUID getShortCircuitAnalysisResultUuid(UUID nodeUuid) {
         return getShortCircuitAnalysisResultUuid(getNode(nodeUuid));
+    }
+
+    public UUID getOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid) {
+        return getOneBusShortCircuitAnalysisResultUuid(getNode(nodeUuid));
     }
 
     public UUID getLoadFlowResultUuid(UUID nodeUuid) {

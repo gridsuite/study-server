@@ -20,6 +20,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
+import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -135,6 +136,7 @@ public class NetworkModificationTreeService {
                 newGroupUuid,
                 UUID.randomUUID().toString(),
                 new HashSet<>(),
+                null,
                 null,
                 null,
                 null,
@@ -539,6 +541,11 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
+    public void updateOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateOneBusShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid));
+    }
+
+    @Transactional
     public void updateLoadFlowResultUuid(UUID nodeUuid, UUID loadFlowResultUuid) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowResultUuid(nodeUuid, loadFlowResultUuid));
     }
@@ -574,8 +581,12 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<UUID> getShortCircuitAnalysisResultUuid(UUID nodeUuid) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getShortCircuitAnalysisResultUuid(nodeUuid));
+    public Optional<UUID> getShortCircuitAnalysisResultUuid(UUID nodeUuid, ShortcircuitAnalysisType type) {
+        if (ShortcircuitAnalysisType.ONE_BUS.equals(type)) {
+            return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getOneBusShortCircuitAnalysisResultUuid(nodeUuid));
+        } else {
+            return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getShortCircuitAnalysisResultUuid(nodeUuid));
+        }
     }
 
     @Transactional(readOnly = true)
