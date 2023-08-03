@@ -42,6 +42,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
@@ -227,33 +228,22 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/network")
     @Operation(summary = "get study root network")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The network was successfully fetched"),
+        @ApiResponse(responseCode = "200", description = "The network does exists"),
         @ApiResponse(responseCode = "403", description = "The subtree can't be copied above the root node nor around itself"),
         @ApiResponse(responseCode = "404", description = "The source study or subtree doesn't exist")})
-    public ResponseEntity<Network> getStudyRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
-                                                       @RequestHeader(HEADER_USER_ID) String userId) {
+    public ResponseEntity<Network> getStudyNetwork(@PathVariable("studyUuid") UUID studyUuid,
+                                                   @RequestParam("reimportNetworkIfNotFound") boolean reimportNetworkIfNotFound,
+                                                   @RequestHeader(HEADER_USER_ID) String userId) {
         UUID networkUUID = networkStoreService.getNetworkUuid(studyUuid);
-
         try {
-            networkStoreService.getNetwork(networkUUID, PreloadingStrategy.COLLECTION, null);
+            networkStoreService.getNetwork(networkUUID, PreloadingStrategy.NONE, null);
 
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            StudyInfos studyInfos = studyService.getStudyInfos(studyUuid);
-            UUID caseUuid = studyService.getStudyCaseUuid(studyUuid);
-            if(studyInfos == null) {
-                throw e;
+            return ResponseEntity.noContent().build();
+        } catch (ResponseStatusException e) {
+            if (reimportNetworkIfNotFound) {
+                studyService.reimportStudyNetwork(studyUuid, userId);
             }
-            if (caseUuid == null || !caseService.caseExists(caseUuid)) {
-                throw new StudyException(Type.BROKEN_STUDY);
-            }
-            // if the study does exist and this exception is thrown
-            // it means something is wrong with the study
-            // we try to recreate it from existing case
-            studyService.reimportStudy(caseUuid, userId, studyUuid);
-
-
-            return ResponseEntity.notFound().build();
+            throw e;
         }
     }
 

@@ -275,7 +275,7 @@ public class StudyService {
 
     public BasicStudyInfos reimportStudy(UUID caseUuid, String userId, UUID studyUuid) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        Map<String, String> importParameters = getStudyImportParameters(studyUuid);
+        Map<String, String> importParameters = new HashMap<>();//getStudyImportParameters(studyUuid);
         UUID importReportUuid = UUID.randomUUID();
         try {
             persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
@@ -534,9 +534,9 @@ public class StudyService {
                         /*studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
                         */studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
-                        studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid()))
-                        /*studyServerExecutionService.runAsync(deleteStudyInfos.getCaseUuid() != null ? () -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()) : () -> {
-                        })*/
+                        studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid())),
+                        studyServerExecutionService.runAsync(deleteStudyInfos.getCaseUuid() != null ? () -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()) : () -> {
+                        })
                 );
 
                 executeInParallel.get();
@@ -563,11 +563,21 @@ public class StudyService {
     public CreatedStudyBasicInfos insertOrUpdateStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
                                                       UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
                                                       ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, VoltageInitParametersEntity voltageInitParametersEntity, Map<String, String> importParameters, UUID importReportUuid) {
-        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertOrUpdateStudyEntity(
-                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersEntity, importParameters));
-        studyInfosService.add(createdStudyBasicInfos);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
+        // if studyEntity is not null, it means we are import network for existing study
+        // we only update network ID and UUID sent by network conversion server
+        if(studyEntity != null) {
+            studyEntity = self.updateStudyEntityNetwork(studyEntity, networkInfos);
 
-        notificationService.emitStudiesChanged(studyUuid, userId);
+            notificationService.emitStudyReimportDone(studyUuid, userId);
+        } else {
+            studyEntity = insertStudyEntity(
+                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersEntity, importParameters);
+
+            notificationService.emitStudiesChanged(studyUuid, userId);
+        }
+        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
+        studyInfosService.add(createdStudyBasicInfos);
 
         return createdStudyBasicInfos;
     }
@@ -1146,9 +1156,9 @@ public class StudyService {
         loadflowService.invalidateLoadFlowStatus(networkModificationTreeService.getLoadFlowResultUuids(studyUuid));
     }
 
-    private StudyEntity insertOrUpdateStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
-                                                  String caseFormat, UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
-                                                  UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, VoltageInitParametersEntity voltageInitParameters, Map<String, String> importParameters) {
+    private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
+                                          String caseFormat, UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
+                                          UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, VoltageInitParametersEntity voltageInitParameters, Map<String, String> importParameters) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
@@ -1159,21 +1169,21 @@ public class StudyService {
         Objects.requireNonNull(shortCircuitParameters);
         Objects.requireNonNull(importParameters);
 
-        StudyEntity studyEntity = studyRepository.findById(uuid).orElse(null);
-        // if study with same UUID exists, we update it with new network ID/UUID
-        // used when reimporting broken study
-        if (studyEntity != null) {
-            studyEntity.setNetworkId(networkId);
-            studyEntity.setNetworkUuid(networkUuid);
+        StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
+            defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParameters, null, importParameters);
+        return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
+    }
 
-            studyEntity = studyRepository.save(studyEntity);
-            return studyEntity;
-        } else {
-            studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParameters, null, importParameters);
-            return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
+    @Transactional
+    public StudyEntity updateStudyEntityNetwork (StudyEntity studyEntity, NetworkInfos networkInfos) {
+        if (networkInfos != null) {
+            studyEntity.setNetworkId(networkInfos.getNetworkId());
+            studyEntity.setNetworkUuid(networkInfos.getNetworkUuid());
+
+            studyRepository.save(studyEntity);
         }
 
+        return studyEntity;
     }
 
     @Transactional
@@ -1942,4 +1952,21 @@ public class StudyService {
                 .orElse(null);
     }
 
+    public void reimportStudyNetwork (UUID studyUuid, String userId) {
+        // check study existence
+        StudyInfos studyInfos = self.getStudyInfos(studyUuid);
+        if (studyInfos == null) {
+            throw new StudyException(StudyException.Type.STUDY_NOT_FOUND);
+        }
+
+        // if study does exist, we check linked case existence
+        UUID caseUuid = self.getStudyCaseUuid(studyUuid);
+        if (caseUuid == null || !caseService.caseExists(caseUuid)) {
+            // if it does not exist anymore, we send a BROKEN STUDY exception
+            throw new StudyException(StudyException.Type.BROKEN_STUDY);
+        }
+
+        // else, we reimport the study from the existing case
+        self.reimportStudy(caseUuid, userId, studyUuid);
+    }
 }
