@@ -75,4 +75,3 @@ gridsuite:
       name: voltage-init-server
       base-uri: http://localhost:5038
       optional: true
-
