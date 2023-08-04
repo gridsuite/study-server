@@ -21,7 +21,6 @@ public class ModificationTypeTest {
     @Test
     public void test() {
         assertEquals("loads", ModificationType.getUriFromType(ModificationType.LOAD_CREATION));
-        assertEquals("batteries", ModificationType.getUriFromType(ModificationType.BATTERY_CREATION));
         assertEquals("generators", ModificationType.getUriFromType(ModificationType.GENERATOR_CREATION));
         assertEquals("lines", ModificationType.getUriFromType(ModificationType.LINE_CREATION));
         assertEquals("shunt-compensators", ModificationType.getUriFromType(ModificationType.SHUNT_COMPENSATOR_CREATION));

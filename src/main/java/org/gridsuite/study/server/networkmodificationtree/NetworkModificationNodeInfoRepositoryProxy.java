@@ -50,6 +50,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getVariantId(),
             modificationNode.getModificationsToExclude(),
             modificationNode.getShortCircuitAnalysisResultUuid(),
+            modificationNode.getOneBusShortCircuitAnalysisResultUuid(),
             modificationNode.getLoadFlowResultUuid(),
             modificationNode.getVoltageInitResultUuid(),
             modificationNode.getSecurityAnalysisResultUuid(),
@@ -68,6 +69,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             new HashSet<>(node.getModificationsToExclude()), // Need to create a new set because it is a persistent set (org.hibernate.collection.internal.PersistentSet)
             node.getLoadFlowResultUuid(),
             node.getShortCircuitAnalysisResultUuid(),
+            node.getOneBusShortCircuitAnalysisResultUuid(),
             node.getVoltageInitResultUuid(),
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
@@ -123,8 +125,20 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
+    public void updateOneBusShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisUuid) {
+        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+        modificationNode.setOneBusShortCircuitAnalysisResultUuid(shortCircuitAnalysisUuid);
+        updateNode(modificationNode, "shortCircuitAnalysisResultUuid");
+    }
+
+    @Override
     public UUID getShortCircuitAnalysisResultUuid(AbstractNode node) {
         return ((NetworkModificationNode) node).getShortCircuitAnalysisResultUuid();
+    }
+
+    @Override
+    public UUID getOneBusShortCircuitAnalysisResultUuid(AbstractNode node) {
+        return ((NetworkModificationNode) node).getOneBusShortCircuitAnalysisResultUuid();
     }
 
     @Override
