@@ -69,6 +69,8 @@ public class StudyException extends RuntimeException {
         TIME_SERIES_BAD_TYPE,
         FILTERS_NOT_FOUND,
         BROKEN_STUDY,
+        NO_VOLTAGE_INIT_RESULTS_FOR_NODE,
+        NO_VOLTAGE_INIT_MODIFICATIONS_GROUP_FOR_NODE
     }
 
     private final Type type;
