@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ServerWebInputException;
 
-import static org.gridsuite.study.server.StudyException.Type.BROKEN_STUDY;
 import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
 
 /**

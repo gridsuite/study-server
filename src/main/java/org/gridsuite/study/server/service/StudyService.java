@@ -275,7 +275,7 @@ public class StudyService {
 
     public BasicStudyInfos reimportStudy(UUID caseUuid, String userId, UUID studyUuid) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        Map<String, Object> importParameters = new HashMap<>(getStudyImportParameters(studyUuid));
+        Map<String, Object> importParameters = new HashMap<>(self.getStudyImportParameters(studyUuid));
         UUID importReportUuid = UUID.randomUUID();
 
         persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
@@ -487,7 +487,6 @@ public class StudyService {
             nodesModificationInfos = networkModificationTreeService.getAllNodesModificationInfos(studyUuid);
             studyEntity.ifPresent(s -> {
                 caseUuid.set(studyEntity.get().getCaseUuid());
-                //TODO: remove when finished, to test only
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
