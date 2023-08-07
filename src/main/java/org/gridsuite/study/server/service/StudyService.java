@@ -269,20 +269,16 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, String> getStudyImportParameters (UUID studyUuid) {
+    public Map<String, String> getStudyImportParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getImportParameters();
     }
 
     public BasicStudyInfos reimportStudy(UUID caseUuid, String userId, UUID studyUuid) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        Map<String, String> importParameters = new HashMap<>();//getStudyImportParameters(studyUuid);
+        Map<String, String> importParameters = getStudyImportParameters(studyUuid);
         UUID importReportUuid = UUID.randomUUID();
-        try {
-            persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
-        } catch (Exception e) {
-            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-            throw e;
-        }
+
+        persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
 
         return basicStudyInfos;
     }
@@ -566,7 +562,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
         // if studyEntity is not null, it means we are import network for existing study
         // we only update network ID and UUID sent by network conversion server
-        if(studyEntity != null) {
+        if (studyEntity != null) {
             studyEntity = self.updateStudyEntityNetwork(studyEntity, networkInfos);
 
             notificationService.emitStudyReimportDone(studyUuid, userId);
@@ -1175,7 +1171,7 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity updateStudyEntityNetwork (StudyEntity studyEntity, NetworkInfos networkInfos) {
+    public StudyEntity updateStudyEntityNetwork(StudyEntity studyEntity, NetworkInfos networkInfos) {
         if (networkInfos != null) {
             studyEntity.setNetworkId(networkInfos.getNetworkId());
             studyEntity.setNetworkUuid(networkInfos.getNetworkUuid());
@@ -1952,7 +1948,7 @@ public class StudyService {
                 .orElse(null);
     }
 
-    public void reimportStudyNetwork (UUID studyUuid, String userId) {
+    public void reimportStudyNetwork(UUID studyUuid, String userId) {
         // check study existence
         StudyInfos studyInfos = self.getStudyInfos(studyUuid);
         if (studyInfos == null) {

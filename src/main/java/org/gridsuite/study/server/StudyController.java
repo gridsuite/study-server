@@ -153,7 +153,7 @@ public class StudyController {
     @Operation(summary = "reimport study network of a study from an existing case")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The id of the network imported"),
-        @ApiResponse(responseCode = "409", description = "The study already exists or the case doesn't exist")})
+        @ApiResponse(responseCode = "424", description = "The case doesn't exist")})
     public ResponseEntity<BasicStudyInfos> reimportStudyFromCase(@PathVariable("caseUuid") UUID caseUuid,
                                                        @PathVariable("studyUuid") UUID studyUuid,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
@@ -1114,32 +1114,11 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "network modification tree"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public ResponseEntity<RootNode> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        try {
-            RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
-
-            return rootNode != null ?
-                ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNode)
-                : ResponseEntity.notFound().build();
-        } catch (StudyException e) {
-            if(Type.ELEMENT_NOT_FOUND.equals(e.getType())) {
-                StudyInfos studyInfos = studyService.getStudyInfos(studyUuid);
-                UUID caseUuid = studyService.getStudyCaseUuid(studyUuid);
-                if(studyInfos == null) {
-                    throw e;
-                }
-                if (caseUuid == null || !caseService.caseExists(caseUuid)) {
-                    throw new StudyException(Type.BROKEN_STUDY);
-                }
-                // if the study does exist and this exception is thrown
-                // it means something is wrong with the study
-                // we try to recreate it from existing case
-                studyService.createStudy(caseUuid, userId, studyUuid, null, false);
-                return ResponseEntity.notFound().build();
-            }
-            throw e;
-        }
+    public ResponseEntity<RootNode> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
+        return rootNode != null ?
+            ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNode)
+            : ResponseEntity.notFound().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/subtree")
