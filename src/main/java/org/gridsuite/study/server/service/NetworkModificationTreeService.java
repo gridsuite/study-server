@@ -324,12 +324,6 @@ public class NetworkModificationTreeService {
             .build();
         repositories.get(node.getType()).createNodeInfo(root);
 
-        notificationService.emitRootNodeInserted(getStudyUuidForNodeId(node.getIdNode()), node.getIdNode());
-      /*  // userId is null when creating initial nodes, we don't need to send element update notifications in this case
-        if (userId != null) {
-            notificationService.emitElementUpdated(studyUuid, userId);
-        }*/
-
         return node;
     }
 

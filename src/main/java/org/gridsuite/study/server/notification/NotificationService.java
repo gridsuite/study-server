@@ -182,16 +182,6 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitRootNodeInserted(UUID studyUuid, UUID nodeCreated) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_UPDATE_TYPE, NODE_CREATED)
-            .setHeader(HEADER_NEW_NODE, nodeCreated)
-            .build()
-        );
-    }
-
-    @PostCompletion
     public void emitNodeInserted(UUID studyUuid, UUID parentNode, UUID nodeCreated, InsertMode insertMode) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
