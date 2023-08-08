@@ -57,18 +57,18 @@
     </changeSet>
     <changeSet author="marcelinhug" id="rename_FKhv4sw663c5fkfkw42vsrlrbxo">
         <dropForeignKeyConstraint baseTableName="load_flow_specific_parameters" constraintName="FKhv4sw663c5fkfkw42vsrlrbxo"/>
-        <addForeignKeyConstraint baseTableName="load_flow_specific_parameters" baseColumnNames="load_flow_parameters_id" referencedTableName="load_flow_parameters" referencedColumnNames="id" constraintName="loadflowSpecificParameters_loadflowParameters_id_fk" deferrable="false" initiallyDeferred="false" validate="true" onDelete="CASCADE" onUpdate="CASCADE" />
+        <addForeignKeyConstraint baseTableName="load_flow_specific_parameters" baseColumnNames="load_flow_parameters_id" referencedTableName="load_flow_parameters" referencedColumnNames="id" constraintName="loadflowSpecificParameters_loadflowParameters_id_fk" deferrable="false" initiallyDeferred="false" validate="true" />
     </changeSet>
     <changeSet author="marcelinhug" id="rename_FKc40g1mgugxpmbmpr4m1c8w7pv">
         <dropForeignKeyConstraint baseTableName="network_modification_node_info" constraintName="FKc40g1mgugxpmbmpr4m1c8w7pv"/>
-        <addForeignKeyConstraint baseTableName="network_modification_node_info" baseColumnNames="id_node" referencedTableName="node" referencedColumnNames="id_node" constraintName="networkModificationNodeInfo_node_idNode_fk" deferrable="false" initiallyDeferred="false" validate="true" onDelete="CASCADE" onUpdate="CASCADE" />
+        <addForeignKeyConstraint baseTableName="network_modification_node_info" baseColumnNames="id_node" referencedTableName="node" referencedColumnNames="id_node" constraintName="networkModificationNodeInfo_node_idNode_fk" deferrable="false" initiallyDeferred="false" validate="true" />
     </changeSet>    
     <changeSet author="marcelinhug" id="rename_FK4x41cf843vsqsrl1y9ao1508e">
         <dropForeignKeyConstraint baseTableName="root_node_info" constraintName="FK4x41cf843vsqsrl1y9ao1508e"/>
-        <addForeignKeyConstraint baseTableName="root_node_info" baseColumnNames="id_node" referencedTableName="node" referencedColumnNames="id_node" constraintName="rootNodeInfo_node_idNode_fk" deferrable="false" initiallyDeferred="false" validate="true" onDelete="CASCADE" onUpdate="CASCADE" />
+        <addForeignKeyConstraint baseTableName="root_node_info" baseColumnNames="id_node" referencedTableName="node" referencedColumnNames="id_node" constraintName="rootNodeInfo_node_idNode_fk" deferrable="false" initiallyDeferred="false" validate="true" />
     </changeSet> 
     <changeSet author="marcelinhug" id="rename_FKhp898n3yyweyjpx3j9wko9ajg">
         <dropForeignKeyConstraint baseTableName="voltage_init_parameters_voltage_limits" constraintName="FKhp898n3yyweyjpx3j9wko9ajg"/>
-        <addForeignKeyConstraint baseTableName="voltage_init_parameters_voltage_limits" baseColumnNames="voltage_init_parameters_id" referencedTableName="voltage_init_parameters" referencedColumnNames="id" constraintName="voltageInitParametersVoltageLimits_voltageInitParameters_id_fk" deferrable="false" initiallyDeferred="false" validate="true" onDelete="CASCADE" onUpdate="CASCADE" />
+        <addForeignKeyConstraint baseTableName="voltage_init_parameters_voltage_limits" baseColumnNames="voltage_init_parameters_id" referencedTableName="voltage_init_parameters" referencedColumnNames="id" constraintName="voltageInitParametersVoltageLimits_voltageInitParameters_id_fk" deferrable="false" initiallyDeferred="false" validate="true" />
     </changeSet>      
 </databaseChangeLog>
