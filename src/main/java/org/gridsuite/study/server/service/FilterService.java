@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.voltageinit.FilterEquipments;
-import org.gridsuite.study.server.utils.StudyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
@@ -43,7 +42,7 @@ public class FilterService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     public FilterService(RemoteServicesProperties remoteServicesProperties) {
-        setFilterServerBaseUri(StudyUtils.getServiceUri(remoteServicesProperties, "filter-server"));
+        setFilterServerBaseUri(remoteServicesProperties.getServiceUri("filter-server"));
     }
 
     public static void setFilterServerBaseUri(String filterServerBaseUri) {

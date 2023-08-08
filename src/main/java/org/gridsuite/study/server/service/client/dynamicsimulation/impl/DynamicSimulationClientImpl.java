@@ -13,7 +13,6 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
-import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -39,7 +38,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     @Autowired
     public DynamicSimulationClientImpl(RemoteServicesProperties remoteServicesProperties,
                                        RestTemplate restTemplate) {
-        super(StudyUtils.getServiceUri(remoteServicesProperties, "dynamic-simulation-server"), restTemplate);
+        super(remoteServicesProperties.getServiceUri("dynamic-simulation-server"), restTemplate);
     }
 
     @Override

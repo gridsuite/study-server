@@ -21,7 +21,6 @@ import org.gridsuite.study.server.dto.SecurityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.SecurityAnalysisParametersValues;
 import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
 import org.gridsuite.study.server.repository.SecurityAnalysisParametersEntity;
-import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -65,7 +64,7 @@ public class SecurityAnalysisService {
     public SecurityAnalysisService(RemoteServicesProperties remoteServicesProperties,
             NetworkModificationTreeService networkModificationTreeService,
             ObjectMapper objectMapper) {
-        this.securityAnalysisServerBaseUri = StudyUtils.getServiceUri(remoteServicesProperties, "security-analysis-server");
+        this.securityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("security-analysis-server");
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
     }

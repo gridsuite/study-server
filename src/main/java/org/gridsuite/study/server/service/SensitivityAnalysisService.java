@@ -13,7 +13,6 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
-import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -55,7 +54,7 @@ public class SensitivityAnalysisService {
     SensitivityAnalysisService(RemoteServicesProperties remoteServicesProperties,
                                NetworkModificationTreeService networkModificationTreeService,
                                ObjectMapper objectMapper) {
-        this.sensitivityAnalysisServerBaseUri = StudyUtils.getServiceUri(remoteServicesProperties, "sensitivity-analysis-server");
+        this.sensitivityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("sensitivity-analysis-server");
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
     }

@@ -14,7 +14,6 @@ package org.gridsuite.study.server.service;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
-import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -43,7 +42,7 @@ public class NetworkMapService {
 
     @Autowired
     public NetworkMapService(RemoteServicesProperties remoteServicesProperties) {
-        this.networkMapServerBaseUri = StudyUtils.getServiceUri(remoteServicesProperties, "network-map-server");
+        this.networkMapServerBaseUri = remoteServicesProperties.getServiceUri("network-map-server");
     }
 
     public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, String infoType) {

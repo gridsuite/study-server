@@ -12,7 +12,6 @@ package org.gridsuite.study.server.service;
  */
 
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -34,7 +33,7 @@ public class GeoDataService {
 
     @Autowired
     public GeoDataService(RemoteServicesProperties remoteServicesProperties) {
-        this.geoDataServerBaseUri = StudyUtils.getServiceUri(remoteServicesProperties, "geo-data-server");
+        this.geoDataServerBaseUri = remoteServicesProperties.getServiceUri("geo-data-server");
     }
 
     public String getLinesGraphics(UUID networkUuid, String variantId, List<String> linesIds) {

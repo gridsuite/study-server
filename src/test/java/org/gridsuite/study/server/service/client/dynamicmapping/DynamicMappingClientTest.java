@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelVariableDefinitionInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.VariablesSetInfos;
+import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.client.dynamicmapping.impl.DynamicMappingClientImpl;
@@ -64,13 +65,16 @@ public class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    RemoteServicesProperties remoteServicesProperties;
+
     @Override
     public void setup() {
         super.setup();
 
         // config client
-        dynamicMappingClient = new DynamicMappingClientImpl(null, restTemplate);
-        dynamicMappingClient.setBaseUri(initMockWebServer());
+        remoteServicesProperties.setServiceUri("dynamic-mapping-server", initMockWebServer());
+        dynamicMappingClient = new DynamicMappingClientImpl(remoteServicesProperties, restTemplate);
     }
 
     @Test

@@ -11,6 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
@@ -27,5 +28,23 @@ public class RemoteServicesProperties {
         private String name;
         private String baseUri;
         private Boolean optional = false;
+    }
+
+    public String getServiceUri(String serviceName) {
+        String defaultUri = "http://" + serviceName + "/";
+        return Objects.isNull(services) ? defaultUri : services.stream()
+                .filter(s -> s.getName().equalsIgnoreCase(serviceName))
+                .map(RemoteServicesProperties.Service::getBaseUri)
+                .findFirst()
+                .orElse(defaultUri);
+    }
+
+    public void setServiceUri(String serviceName, String newUri) {
+        if (!Objects.isNull(services)) {
+            services.stream()
+                .filter(s -> s.getName().equalsIgnoreCase(serviceName))
+                .findFirst()
+                .ifPresent(s -> s.setBaseUri(newUri));
+        }
     }
 }

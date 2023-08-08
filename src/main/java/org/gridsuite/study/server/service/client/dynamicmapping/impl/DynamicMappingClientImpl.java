@@ -14,7 +14,6 @@ import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
-import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -39,7 +38,7 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
     @Autowired
     public DynamicMappingClientImpl(RemoteServicesProperties remoteServicesProperties,
                                     RestTemplate restTemplate) {
-        super(StudyUtils.getServiceUri(remoteServicesProperties, "dynamic-mapping-server"), restTemplate);
+        super(remoteServicesProperties.getServiceUri("dynamic-mapping-server"), restTemplate);
     }
 
     @Override

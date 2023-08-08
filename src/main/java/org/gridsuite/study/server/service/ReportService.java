@@ -12,7 +12,6 @@ import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelDeserializer;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
 import lombok.NonNull;
-import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -45,7 +44,7 @@ public class ReportService {
     public ReportService(
                          ObjectMapper objectMapper,
                          RemoteServicesProperties remoteServicesProperties) {
-        this.reportServerBaseUri = StudyUtils.getServiceUri(remoteServicesProperties, "report-server");
+        this.reportServerBaseUri = remoteServicesProperties.getServiceUri("report-server");
         ReporterModelJsonModule reporterModelJsonModule = new ReporterModelJsonModule();
         reporterModelJsonModule.setSerializers(null); // FIXME: remove when dicos will be used on the front side
         objectMapper.registerModule(reporterModelJsonModule);

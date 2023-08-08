@@ -21,7 +21,6 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.FilterEquipmentsEmbeddable;
 import org.gridsuite.study.server.repository.VoltageInitParametersEntity;
 import org.gridsuite.study.server.repository.VoltageInitParametersVoltageLimitsEntity;
-import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -57,7 +56,7 @@ public class VoltageInitService {
     @Autowired
     public VoltageInitService(RemoteServicesProperties remoteServicesProperties,
             NetworkModificationTreeService networkModificationTreeService, ObjectMapper objectMapper) {
-        this.voltageInitServerBaseUri = StudyUtils.getServiceUri(remoteServicesProperties, "voltage-init-server");
+        this.voltageInitServerBaseUri = remoteServicesProperties.getServiceUri("voltage-init-server");
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
     }

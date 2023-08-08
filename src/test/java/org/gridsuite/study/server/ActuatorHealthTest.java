@@ -44,11 +44,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class ActuatorHealthTest {
 
     private WireMockServer wireMockServer;
+
     private WireMockUtils wireMockUtils;
+
     @Autowired
     private MockMvc mockMvc;
+
     @Autowired
     private ObjectMapper objectMapper;
+
     @Autowired
     private RemoteServicesProperties remoteServicesProperties;
 

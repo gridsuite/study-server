@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -41,7 +40,7 @@ public class ActionsService {
 
     @Autowired
     public ActionsService(RemoteServicesProperties remoteServicesProperties) {
-        this.actionsServerBaseUri = StudyUtils.getServiceUri(remoteServicesProperties, "actions-server");
+        this.actionsServerBaseUri = remoteServicesProperties.getServiceUri("actions-server");
     }
 
     public Integer getContingencyCount(UUID networkUuid, String variantId, List<String> contingencyListNames) {

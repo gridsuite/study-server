@@ -21,7 +21,6 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -65,7 +64,7 @@ public class ShortCircuitService {
     public ShortCircuitService(RemoteServicesProperties remoteServicesProperties,
                                NetworkModificationTreeService networkModificationTreeService,
                                NetworkService networkStoreService, ObjectMapper objectMapper) {
-        this.shortCircuitServerBaseUri = StudyUtils.getServiceUri(remoteServicesProperties, "shortcircuit-server");
+        this.shortCircuitServerBaseUri = remoteServicesProperties.getServiceUri("shortcircuit-server");
         this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
