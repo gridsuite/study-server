@@ -22,7 +22,6 @@ import org.gridsuite.study.server.repository.FilterEquipmentsEmbeddable;
 import org.gridsuite.study.server.repository.VoltageInitParametersEntity;
 import org.gridsuite.study.server.repository.VoltageInitParametersVoltageLimitsEntity;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -55,10 +54,9 @@ public class VoltageInitService {
     private RestTemplate restTemplate;
 
     @Autowired
-    public VoltageInitService(
-            @Value("${gridsuite.services.voltage-init-server.base-uri:http://voltage-init-server/}") String voltageInitServerBaseUri,
+    public VoltageInitService(RemoteServicesProperties remoteServicesProperties,
             NetworkModificationTreeService networkModificationTreeService, ObjectMapper objectMapper) {
-        this.voltageInitServerBaseUri = voltageInitServerBaseUri;
+        this.voltageInitServerBaseUri = remoteServicesProperties.getServiceUri("voltage-init-server");
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
     }
@@ -170,7 +168,7 @@ public class VoltageInitService {
         Objects.requireNonNull(parameters);
         List<VoltageInitParametersVoltageLimitsEntity> voltageLimits = new ArrayList<>();
         if (parameters.getVoltageLimits() != null) {
-            parameters.getVoltageLimits().stream().forEach(voltageLimit ->
+            parameters.getVoltageLimits().forEach(voltageLimit ->
                     voltageLimits.add(new VoltageInitParametersVoltageLimitsEntity(null, voltageLimit.getLowVoltageLimit(), voltageLimit.getHighVoltageLimit(), voltageLimit.getPriority(), FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(voltageLimit.getFilters())))
             );
         }
@@ -184,7 +182,7 @@ public class VoltageInitService {
     public static VoltageInitParametersInfos fromEntity(VoltageInitParametersEntity voltageInitParameters) {
         Objects.requireNonNull(voltageInitParameters);
         List<VoltageInitVoltageLimitsParameterInfos> voltageLimits = new ArrayList<>();
-        voltageInitParameters.getVoltageLimits().stream().forEach(voltageLimit ->
+        voltageInitParameters.getVoltageLimits().forEach(voltageLimit ->
                 voltageLimits.add(new VoltageInitVoltageLimitsParameterInfos(voltageLimit.getPriority(),
                         voltageLimit.getLowVoltageLimit(),
                         voltageLimit.getHighVoltageLimit(),
@@ -199,4 +197,25 @@ public class VoltageInitService {
     public static VoltageInitParametersInfos getDefaultVoltageInitParameters() {
         return new VoltageInitParametersInfos();
     }
+
+    public UUID getModificationsGroupUuid(UUID nodeUuid) {
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getVoltageInitResultUuid(nodeUuid);
+        if (resultUuidOpt.isEmpty()) {
+            throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, "The node " + nodeUuid + " has no voltage init results");
+        }
+
+        UUID modificationsGroupUuid;
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group-uuid")
+            .buildAndExpand(resultUuidOpt.get()).toUriString();
+        try {
+            modificationsGroupUuid = restTemplate.getForObject(voltageInitServerBaseUri + path, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(NO_VOLTAGE_INIT_MODIFICATIONS_GROUP_FOR_NODE, "The node " + nodeUuid + " has no voltage init modifications group");
+            }
+            throw e;
+        }
+        return modificationsGroupUuid;
+    }
+
 }

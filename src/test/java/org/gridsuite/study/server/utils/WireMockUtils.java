@@ -294,4 +294,16 @@ public class WireMockUtils {
         wireMock.verify(1, requestBuilder);
         removeRequestForStub(stubUuid, 1);
     }
+
+    public UUID stubActuatorHealthGet(String jsonResponse) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/actuator/health"))
+                .willReturn(WireMock.ok().withBody(jsonResponse))
+        ).getId();
+    }
+
+    public void verifyActuatorHealth(UUID stubUuid, int nbServer) {
+        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/actuator/health"));
+        wireMock.verify(nbServer, requestBuilder);
+        removeRequestForStub(stubUuid, nbServer);
+    }
 }

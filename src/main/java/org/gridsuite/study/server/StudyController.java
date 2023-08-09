@@ -69,6 +69,7 @@ public class StudyController {
     private final VoltageInitService voltageInitService;
     private final LoadFlowService loadflowService;
     private final CaseService caseService;
+    private final ActuatorHealthService actuatorHealthService;
 
     public StudyController(StudyService studyService,
             NetworkService networkStoreService,
@@ -80,7 +81,8 @@ public class StudyController {
             ShortCircuitService shortCircuitService,
             VoltageInitService voltageInitService,
             LoadFlowService loadflowService,
-            CaseService caseService) {
+            CaseService caseService,
+            ActuatorHealthService actuatorHealthService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -92,6 +94,7 @@ public class StudyController {
         this.voltageInitService = voltageInitService;
         this.loadflowService = loadflowService;
         this.caseService = caseService;
+        this.actuatorHealthService = actuatorHealthService;
     }
 
     @InitBinder
@@ -1390,6 +1393,26 @@ public class StudyController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId);
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Clone the voltage init modifications, then append them to node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init modifications have been appended.")})
+    public ResponseEntity<Void> copyVoltageInitModifications(@PathVariable("studyUuid") UUID studyUuid,
+                                                             @PathVariable("nodeUuid") UUID nodeUuid,
+                                                             @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.copyVoltageInitModifications(studyUuid, nodeUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/up-optional-services")
+    @Operation(summary = "Get all the available optional services")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of available optional services")})
+    public ResponseEntity<List<String>> getUpOptionalServices() {
+        List<String> upServices = actuatorHealthService.getUpOptionalServices();
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(upServices);
     }
 
     enum UpdateModificationAction {
