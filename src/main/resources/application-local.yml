@@ -28,33 +28,50 @@ powsybl:
 
 gridsuite:
   services:
-    geo-data-server:
+    -
+      name: geo-data-server
       base-uri: http://localhost:8087
-    network-map-server:
+    -
+      name: network-map-server
       base-uri: http://localhost:5006
-    network-modification-server:
+    -
+      name: network-modification-server
       base-uri: http://localhost:5007
-    loadflow-server:
+    -
+      name: loadflow-server
       base-uri: http://localhost:5008
-    actions-server:
+    -
+      name: actions-server
       base-uri: http://localhost:5022
-    filter-server:
+    -
+      name: filter-server
       base-uri: http://localhost:5027
-    security-analysis-server:
+    -
+      name: security-analysis-server
       base-uri: http://localhost:5023
-    report-server:
+      optional: true
+    -
+      name: report-server
       base-uri: http://localhost:5028
-    sensitivity-analysis-server:
+    -
+      name: sensitivity-analysis-server
       base-uri: http://localhost:5030
-    shortcircuit-server:
+      optional: true
+    -
+      name: shortcircuit-server
       base-uri: http://localhost:5031
-    dynamic-simulation-server:
+      optional: true
+    -
+      name: dynamic-simulation-server
       base-uri: http://localhost:5032
-    timeseries-server:
+      optional: true
+    -
+      name: timeseries-server
       base-uri: http://localhost:5037
-    dynamic-mapping-server:
+    -
+      name: dynamic-mapping-server
       base-uri: http://localhost:5036
-    voltage-init-server:
+    -
+      name: voltage-init-server
       base-uri: http://localhost:5038
-
-
+      optional: true

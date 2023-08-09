@@ -15,7 +15,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -42,9 +41,8 @@ public class NetworkMapService {
     private String networkMapServerBaseUri;
 
     @Autowired
-    public NetworkMapService(
-            @Value("${gridsuite.services.network-map-server.base-uri:http://network-map-server/}") String networkMapServerBaseUri) {
-        this.networkMapServerBaseUri = networkMapServerBaseUri;
+    public NetworkMapService(RemoteServicesProperties remoteServicesProperties) {
+        this.networkMapServerBaseUri = remoteServicesProperties.getServiceUri("network-map-server");
     }
 
     public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, String infoType) {
