@@ -14,6 +14,7 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -21,8 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
@@ -58,18 +59,42 @@ public class ActuatorHealthService {
         return clientHttpRequestFactory;
     }
 
-    public List<String> getUpOptionalServices() {
-        return remoteServicesProperties.getServices().stream()
-            .filter(RemoteServicesProperties.Service::getOptional)
-            .map(this::isUpFuture)
-            .map(CompletableFuture::join)
-            .filter(Objects::nonNull)
-            .toList();
+    public String getUpOptionalServices() {
+        // parallel health status check for all services marked as "optional: true" in application.yaml
+        List<ObjectNode> servicesNodes = remoteServicesProperties.getServices().stream()
+                .filter(RemoteServicesProperties.Service::getOptional)
+                .map(this::checkServiceFuture)
+                .map(CompletableFuture::join)
+                .toList();
+
+        // merge all objects into a single one, to get:
+        //  <
+        //      "security-analysis-server": <
+        //          "status":"up"
+        //      >,
+        //      ...
+        //   >
+        ObjectNode mergedNode = objectMapper.createObjectNode();
+        for (ObjectNode node : servicesNodes) {
+            for (Iterator<String> it = node.fieldNames(); it.hasNext(); ) {
+                String fieldName = it.next();
+                mergedNode.putIfAbsent(fieldName, node.get(fieldName));
+            }
+        }
+        return mergedNode.toString();
     }
 
-    private CompletableFuture<String> isUpFuture(RemoteServicesProperties.Service service) {
+    private ObjectNode result2json(String serviceName, boolean isUp) {
+        ObjectNode propertiesNode = objectMapper.createObjectNode();
+        propertiesNode.put("status", isUp ? "up" : "down");
+        ObjectNode serviceNode = objectMapper.createObjectNode();
+        serviceNode.set(serviceName, propertiesNode);
+        return serviceNode;
+    }
+
+    private CompletableFuture<ObjectNode> checkServiceFuture(RemoteServicesProperties.Service service) {
         return executionService.supplyAsync(() ->
-            isServerUp(service) ? service.getName() : null
+            result2json(service.getName(), isServerUp(service))
         );
     }
 
