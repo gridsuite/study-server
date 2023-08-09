@@ -13,7 +13,6 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.voltageinit.FilterEquipments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
@@ -42,8 +41,8 @@ public class FilterService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public FilterService(@Value("${gridsuite.services.filter-server.base-uri:http://filter-server/}") String filterServerBaseUri) {
-        setFilterServerBaseUri(filterServerBaseUri);
+    public FilterService(RemoteServicesProperties remoteServicesProperties) {
+        setFilterServerBaseUri(remoteServicesProperties.getServiceUri("filter-server"));
     }
 
     public static void setFilterServerBaseUri(String filterServerBaseUri) {

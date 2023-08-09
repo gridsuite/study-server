@@ -9,10 +9,10 @@ package org.gridsuite.study.server.service.client.timeseries.impl;
 
 import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
+import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -31,9 +31,9 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
 public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeriesClient {
 
     @Autowired
-    public TimeSeriesClientImpl(@Value("${gridsuite.services.timeseries-server.base-uri:http://timeseries-server/}") String baseUri,
+    public TimeSeriesClientImpl(RemoteServicesProperties remoteServicesProperties,
                                 RestTemplate restTemplate) {
-        super(baseUri, restTemplate);
+        super(remoteServicesProperties.getServiceUri("timeseries-server"), restTemplate);
     }
 
     @Override
