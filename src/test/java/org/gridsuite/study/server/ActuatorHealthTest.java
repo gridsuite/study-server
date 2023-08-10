@@ -74,7 +74,7 @@ public class ActuatorHealthTest {
                 .andReturn();
         String response = mvcResult.getResponse().getContentAsString();
         // all services are supposed to be Up
-        assertEquals("{\"loadflow-server\":{\"status\":\"up\"},\"security-analysis-server\":{\"status\":\"up\"},\"voltage-init-server\":{\"status\":\"up\"}}", response);
+        assertEquals("[{\"service\":\"loadflow-server\",\"status\":\"UP\"},{\"service\":\"security-analysis-server\",\"status\":\"UP\"},{\"service\":\"voltage-init-server\",\"status\":\"UP\"}]", response);
         wireMockUtils.verifyActuatorHealth(stubUuid, optionalServices.size());
     }
 
@@ -105,7 +105,7 @@ public class ActuatorHealthTest {
                 .andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         // all services are supposed to be Down
-        assertEquals("{\"sensitivity-analysis-server\":{\"status\":\"down\"},\"shortcircuit-server\":{\"status\":\"down\"}}", resultAsString);
+        assertEquals("[{\"service\":\"sensitivity-analysis-server\",\"status\":\"DOWN\"},{\"service\":\"shortcircuit-server\",\"status\":\"DOWN\"}]", resultAsString);
 
         wireMockUtils.verifyActuatorHealth(stubUuid, optionalServices.size());
     }

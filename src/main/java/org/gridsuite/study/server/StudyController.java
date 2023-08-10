@@ -1410,9 +1410,8 @@ public class StudyController {
     @GetMapping(value = "/optional-services")
     @Operation(summary = "Get all the optional services and their status")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of optional services")})
-    public ResponseEntity<String> getOptionalServices() {
-        String optionalServicesStatus = actuatorHealthService.getOptionalServices();
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(optionalServicesStatus);
+    public ResponseEntity<List<ActuatorHealthService.ServiceStatusInfos>> getOptionalServices() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(actuatorHealthService.getOptionalServices());
     }
 
     enum UpdateModificationAction {
