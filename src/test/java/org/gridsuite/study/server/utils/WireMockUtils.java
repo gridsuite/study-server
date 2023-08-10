@@ -269,7 +269,7 @@ public class WireMockUtils {
         removeRequestForStub(stubId, nbRequests);
     }
 
-    private void removeRequestForStub(UUID stubId, int nbRequests) {
+    public void removeRequestForStub(UUID stubId, int nbRequests) {
         List<ServeEvent> serveEvents = wireMock.getServeEvents(ServeEventQuery.forStubMapping(stubId)).getServeEvents();
         assertEquals(nbRequests, serveEvents.size());
         for (ServeEvent serveEvent : serveEvents) {
@@ -291,6 +291,17 @@ public class WireMockUtils {
 
     public void verifyHvdcLinesShuntCompensatorsGet(UUID stubUuid, String networkUuid, String hvdcId) {
         RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/hvdc-lines/" + hvdcId + "/shunt-compensators"));
+        wireMock.verify(1, requestBuilder);
+        removeRequestForStub(stubUuid, 1);
+    }
+
+    public UUID stubCaseExists(String caseUuid, boolean returnedValue) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/exists"))
+            .willReturn(WireMock.ok().withBody(returnedValue ? "true" : "false"))).getId();
+    }
+
+    public void verifyCaseExists(UUID stubUuid, String caseUuid) {
+        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/exists"));
         wireMock.verify(1, requestBuilder);
         removeRequestForStub(stubUuid, 1);
     }

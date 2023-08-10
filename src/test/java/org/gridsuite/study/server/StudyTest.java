@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
@@ -72,6 +73,7 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -87,6 +89,7 @@ import java.util.stream.Stream;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyException.Type.BROKEN_STUDY;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
@@ -135,6 +138,7 @@ public class StudyTest {
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final String USER_ID_HEADER = "userId";
+    private static final String REIMPORT_NETWORK_IF_NOT_FOUND_HEADER = "reimportNetworkIfNotFound";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final UUID CLONED_CASE_UUID = UUID.fromString(CLONED_CASE_UUID_STRING);
@@ -299,7 +303,7 @@ public class StudyTest {
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
-        caseService.setCaseServerBaseUri(baseUrl);
+        //caseService.setCaseServerBaseUri(baseUrl);
         networkConversionService.setNetworkConversionServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
@@ -307,6 +311,7 @@ public class StudyTest {
 
         String baseUrlWireMock = wireMockServer.baseUrl();
         networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
+        caseService.setCaseServerBaseUri(baseUrlWireMock);
 
         // FIXME: remove lines when dicos will be used on the front side
         mapper.registerModule(new ReporterModelJsonModule() {
@@ -320,6 +325,7 @@ public class StudyTest {
         String networkInfos2AsString = mapper.writeValueAsString(NETWORK_INFOS_2);
         String networkInfos3AsString = mapper.writeValueAsString(NETWORK_INFOS_3);
         String clonedCaseUuidAsString = mapper.writeValueAsString(CLONED_CASE_UUID);
+
 
         ROOT_REPORT_TEST.addSubReporter(REPORT_TEST);
 
@@ -414,6 +420,7 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200);
                 }
 
+
                 switch (path) {
                     case "/v1/networks/" + NETWORK_UUID_STRING:
                     case "/v1/studies/cases/{caseUuid}":
@@ -423,7 +430,7 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody("XIIDM")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/cases/" + CASE_UUID_STRING + "/exists":
+                    /*case "/v1/cases/" + CASE_UUID_STRING + "/exists":
                     case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/exists":
                     case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/exists":
                     case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/exists":
@@ -432,7 +439,7 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_UUID_CAUSING_IMPORT_ERROR + "/exists":
                     case "/v1/cases/" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "/exists":
                         return new MockResponse().setResponseCode(200).setBody("true")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .addHeader("Content-Type", "application/json; charset=utf-8");*/
                     case "/v1/cases/" + CASE_UUID_STRING + "/infos":
                         return new MockResponse().setResponseCode(200)
                                 .setBody("{\"uuid\":\"" + CASE_UUID_STRING + "\",\"name\":\"" + TEST_FILE_UCTE + "\",\"format\":\"UCTE\"}")
@@ -758,7 +765,63 @@ public class StudyTest {
 
     @Test
     public void testCreateStudyWithDuplicateCase() throws Exception {
+
         createStudyWithDuplicateCase("userId", CASE_UUID);
+    }
+
+    @Test
+    public void testReimportStudyOnErrorWithExistingCase() throws Exception {
+        UUID studyUuid = createStudy("userId", CASE_UUID);
+        String userId = "userId";
+
+        when(networkStoreService.getNetwork(NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Network '" + NETWORK_UUID + "' not found"));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/network", studyUuid)
+                .param(REIMPORT_NETWORK_IF_NOT_FOUND_HEADER, "true")
+                .header(USER_ID_HEADER, userId))
+            .andExpect(status().isNotFound());
+
+        Set<String> requests = TestUtils.getRequestsDone(3, server);
+        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
+        assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CASE_UUID)));
+
+        // studies updated
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+
+        // study reimport done notification
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        headers = message.getHeaders();
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_REIMPORT_DONE, headers.get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+    }
+
+    @Test
+    public void testReimportStudyOnErrorWithoutExistingCase() throws Exception {
+        String caseUuidString = "958cc6ff-53b1-45b1-bcf8-7bb1244e2229";
+        UUID caseUuid = UUID.fromString(caseUuidString);
+        String userId = "userId";
+
+        UUID stubUuid = wireMockUtils.stubCaseExists(caseUuidString, false);
+        UUID studyUuid = createStudy("userId", caseUuid);
+        wireMockUtils.verifyCaseExists(stubUuid, caseUuidString);
+
+        when(networkStoreService.getNetwork(NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Network '" + NETWORK_UUID + "' not found"));
+
+        stubUuid = wireMockUtils.stubCaseExists(caseUuidString, false);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/network", studyUuid)
+                .param(REIMPORT_NETWORK_IF_NOT_FOUND_HEADER, "true")
+                .header(USER_ID_HEADER, userId))
+            .andExpectAll(
+                status().isNotFound(),
+                content().string(BROKEN_STUDY.toString()));
+
+        wireMockUtils.verifyCaseExists(stubUuid, caseUuidString);
     }
 
     @Test

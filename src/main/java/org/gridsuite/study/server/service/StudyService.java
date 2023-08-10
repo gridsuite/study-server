@@ -273,9 +273,19 @@ public class StudyService {
         return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getImportParameters();
     }
 
-    public BasicStudyInfos reimportStudy(UUID caseUuid, String userId, UUID studyUuid) {
+    public BasicStudyInfos reimportStudy (UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters) {
+        return reimportStudy(caseUuid, userId, studyUuid, importParameters, false);
+    }
+
+    public BasicStudyInfos reimportStudy (UUID caseUuid, String userId, UUID studyUuid) {
+        return reimportStudy(caseUuid, userId, studyUuid, null, true);
+    }
+
+    private BasicStudyInfos reimportStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        Map<String, Object> importParameters = new HashMap<>(self.getStudyImportParameters(studyUuid));
+        if(shouldLoadPreviousImportParameters) {
+            importParameters = new HashMap<>(self.getStudyImportParameters(studyUuid));
+        }
         UUID importReportUuid = UUID.randomUUID();
 
         persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);

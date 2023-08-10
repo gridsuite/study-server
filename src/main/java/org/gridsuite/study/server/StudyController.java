@@ -156,9 +156,10 @@ public class StudyController {
         @ApiResponse(responseCode = "424", description = "The case doesn't exist")})
     public ResponseEntity<BasicStudyInfos> reimportStudyFromCase(@PathVariable("caseUuid") UUID caseUuid,
                                                        @PathVariable("studyUuid") UUID studyUuid,
+                                                       @RequestBody(required = false) Map<String, Object> importParameters,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         caseService.assertCaseExists(caseUuid);
-        BasicStudyInfos createStudy = studyService.reimportStudy(caseUuid, userId, studyUuid);
+        BasicStudyInfos createStudy = studyService.reimportStudy(caseUuid, userId, studyUuid, importParameters);
         return ResponseEntity.ok().body(createStudy);
     }
 

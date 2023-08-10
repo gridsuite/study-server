@@ -47,6 +47,12 @@ public class SendInput extends PostServeAction {
             messageBuilder.setHeader(HEADER_RECEIVER, receiverParam.firstValue());
         }
 
+        parameters.forEach((key, value) -> {
+            if (!("destination".equals(key) && "payload".equals(key))) {
+                messageBuilder.setHeader(key, value);
+            }
+        });
+
         input.send(messageBuilder.build(), destination);
     }
 }
