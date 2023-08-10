@@ -6,8 +6,6 @@
  */
 package org.gridsuite.study.server;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -51,9 +49,6 @@ public class ActuatorHealthTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
     private RemoteServicesProperties remoteServicesProperties;
 
     @Before
@@ -65,26 +60,22 @@ public class ActuatorHealthTest {
         remoteServicesProperties.getServices().forEach(s -> s.setBaseUri(wireMockServer.baseUrl()));
     }
 
-    private List<String> getOptionalServicesNames() {
-        return remoteServicesProperties.getServices().stream()
-                .filter(RemoteServicesProperties.Service::getOptional)
-                .map(RemoteServicesProperties.Service::getName)
-                .toList();
-    }
-
     @Test
     public void testActuatorHealthUp() throws Exception {
+        // any optional service will be mocked as UP
         UUID stubUuid = wireMockUtils.stubActuatorHealthGet("{\"status\":\"UP\"}");
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/up-optional-services"))
+        // select 3 services to be optional
+        List<String> optionalServices = List.of("loadflow-server", "security-analysis-server", "voltage-init-server");
+        remoteServicesProperties.getServices().forEach(s -> s.setOptional(optionalServices.contains(s.getName())));
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/optional-services"))
                 .andExpect(status().isOk())
                 .andReturn();
         String response = mvcResult.getResponse().getContentAsString();
-
-        List<String> names = objectMapper.readValue(response, new TypeReference<>() { });
-        assertEquals(getOptionalServicesNames(), names);
-
-        wireMockUtils.verifyActuatorHealth(stubUuid, getOptionalServicesNames().size());
+        // all services are supposed to be Up
+        assertEquals("[{\"name\":\"loadflow-server\",\"status\":\"UP\"},{\"name\":\"security-analysis-server\",\"status\":\"UP\"},{\"name\":\"voltage-init-server\",\"status\":\"UP\"}]", response);
+        wireMockUtils.verifyActuatorHealth(stubUuid, optionalServices.size());
     }
 
     @Test
@@ -105,15 +96,18 @@ public class ActuatorHealthTest {
     private void getActuatorHealthAllDown(String jsonContent) throws Exception {
         UUID stubUuid = wireMockUtils.stubActuatorHealthGet(jsonContent);
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/up-optional-services"))
+        // select 2 services to be optional
+        List<String> optionalServices = List.of("sensitivity-analysis-server", "shortcircuit-server");
+        remoteServicesProperties.getServices().forEach(s -> s.setOptional(optionalServices.contains(s.getName())));
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/optional-services"))
                 .andExpect(status().isOk())
                 .andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
+        // all services are supposed to be Down
+        assertEquals("[{\"name\":\"sensitivity-analysis-server\",\"status\":\"DOWN\"},{\"name\":\"shortcircuit-server\",\"status\":\"DOWN\"}]", resultAsString);
 
-        // no up server expected
-        assertEquals("[]", resultAsString);
-
-        wireMockUtils.verifyActuatorHealth(stubUuid, getOptionalServicesNames().size());
+        wireMockUtils.verifyActuatorHealth(stubUuid, optionalServices.size());
     }
 
     @After
