@@ -12,13 +12,16 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.dynamicsimulation.Event;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.dynamicsimulation.EventEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -56,8 +59,20 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
             modificationNode.getDynamicSimulationResultUuid(),
-            modificationNode.getNodeBuildStatus().toEntity());
+            modificationNode.getNodeBuildStatus().toEntity(), null);
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
+    }
+
+    @Override
+    protected NetworkModificationNodeInfoEntity completeEntityNodeInfo(AbstractNode node, NetworkModificationNodeInfoEntity entity) {
+        NetworkModificationNodeInfoEntity nodeInfoEntity = super.completeEntityNodeInfo(node, entity);
+        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+
+        // enrich with events
+        nodeInfoEntity.setEvents(modificationNode.getEvents().stream()
+                .map(event -> new EventEntity(nodeInfoEntity, event))
+                .collect(Collectors.toList()));
+        return nodeInfoEntity;
     }
 
     @Override
@@ -74,7 +89,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
             node.getDynamicSimulationResultUuid(),
-            node.getNodeBuildStatus().toDto()));
+            node.getNodeBuildStatus().toDto(),
+                node.getEvents().stream().map(Event::new).collect(Collectors.toList())));
     }
 
     @Override

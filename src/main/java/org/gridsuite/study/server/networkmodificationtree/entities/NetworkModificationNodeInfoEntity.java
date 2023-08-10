@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.gridsuite.study.server.networkmodificationtree.entities.dynamicsimulation.EventEntity;
 
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -21,6 +22,8 @@ import javax.persistence.Index;
 import javax.persistence.Table;
 
 import javax.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -32,7 +35,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "NetworkModificationNodeInfo  ")
+@Table(name = "NetworkModificationNodeInfo")
 public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Column
@@ -73,4 +76,8 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
         @AttributeOverride(name = "globalBuildStatus", column = @Column(name = "globalBuildStatus", nullable = false))
     })
     private NodeBuildStatusEmbeddable nodeBuildStatus;
+
+    @OneToMany(mappedBy = "nodeInfo", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("eventOrder ASC")
+    private List<EventEntity> events = new ArrayList<>();
 }
