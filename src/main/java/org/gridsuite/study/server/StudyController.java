@@ -1448,4 +1448,23 @@ public class StudyController {
             setValue(ModificationType.getTypeFromUri(text));
         }
     }
+
+    @GetMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
+    @Operation(summary = "Get sensitivity analysis parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters")})
+    public ResponseEntity<SensitivityAnalysisParametersValues> getSensitivityAnalysisParametersValues(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParametersValues(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
+    @Operation(summary = "set sensitivity analysis parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set")})
+    public ResponseEntity<Void> setSensitivityAnalysisParametersValues(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) SensitivityAnalysisParametersValues sensitivityAnalysisParametersValues,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setSensitivityAnalysisParametersValues(studyUuid, sensitivityAnalysisParametersValues, userId);
+        return ResponseEntity.ok().build();
+    }
 }
