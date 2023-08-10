@@ -16,11 +16,9 @@ import org.gridsuite.study.server.networkmodificationtree.dto.dynamicsimulation.
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.dynamicsimulation.EventEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.springframework.util.CollectionUtils;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -59,38 +57,42 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
             modificationNode.getDynamicSimulationResultUuid(),
-            modificationNode.getNodeBuildStatus().toEntity(), null);
+            modificationNode.getNodeBuildStatus().toEntity(),
+            new ArrayList<>());
+
+        // enrich with dynamic simulation events
+        if (!CollectionUtils.isEmpty(modificationNode.getEvents())) {
+            networkModificationNodeInfoEntity.addEvents(modificationNode.getEvents().stream()
+                    .map(EventEntity::new)
+                    .collect(Collectors.toList()));
+        }
+
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
-    }
-
-    @Override
-    protected NetworkModificationNodeInfoEntity completeEntityNodeInfo(AbstractNode node, NetworkModificationNodeInfoEntity entity) {
-        NetworkModificationNodeInfoEntity nodeInfoEntity = super.completeEntityNodeInfo(node, entity);
-        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-
-        // enrich with events
-        nodeInfoEntity.setEvents(modificationNode.getEvents().stream()
-                .map(event -> new EventEntity(nodeInfoEntity, event))
-                .collect(Collectors.toList()));
-        return nodeInfoEntity;
     }
 
     @Override
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
         @SuppressWarnings("unused")
         int ignoreSize = node.getModificationsToExclude().size(); // to load the lazy collection
-        return completeNodeInfo(node, new NetworkModificationNode(node.getModificationGroupUuid(),
-            node.getVariantId(),
-            new HashSet<>(node.getModificationsToExclude()), // Need to create a new set because it is a persistent set (org.hibernate.collection.internal.PersistentSet)
-            node.getLoadFlowResultUuid(),
-            node.getShortCircuitAnalysisResultUuid(),
-            node.getOneBusShortCircuitAnalysisResultUuid(),
-            node.getVoltageInitResultUuid(),
-            node.getSecurityAnalysisResultUuid(),
-            node.getSensitivityAnalysisResultUuid(),
-            node.getDynamicSimulationResultUuid(),
-            node.getNodeBuildStatus().toDto(),
-                node.getEvents().stream().map(Event::new).collect(Collectors.toList())));
+        NetworkModificationNode networkModificationNode = new NetworkModificationNode(node.getModificationGroupUuid(),
+                node.getVariantId(),
+                new HashSet<>(node.getModificationsToExclude()), // Need to create a new set because it is a persistent set (org.hibernate.collection.internal.PersistentSet)
+                node.getLoadFlowResultUuid(),
+                node.getShortCircuitAnalysisResultUuid(),
+                node.getOneBusShortCircuitAnalysisResultUuid(),
+                node.getVoltageInitResultUuid(),
+                node.getSecurityAnalysisResultUuid(),
+                node.getSensitivityAnalysisResultUuid(),
+                node.getDynamicSimulationResultUuid(),
+                node.getNodeBuildStatus().toDto(),
+                new ArrayList<>());
+
+        // enrich with dynamic simulation events
+        if (node.getEvents() != null && node.getEvents().size() > 0 /* to load the lazy collection */) {
+            networkModificationNode.setEvents(node.getEvents().stream().map(Event::new).collect(Collectors.toList()));
+        }
+
+        return completeNodeInfo(node, networkModificationNode);
     }
 
     @Override

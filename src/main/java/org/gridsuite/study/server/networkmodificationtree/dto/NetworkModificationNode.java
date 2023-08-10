@@ -50,6 +50,7 @@ public class NetworkModificationNode extends AbstractNode {
 
     private NodeBuildStatus nodeBuildStatus;
 
+    @Builder.Default
     private List<Event> events = new ArrayList<>();
 
     @Override

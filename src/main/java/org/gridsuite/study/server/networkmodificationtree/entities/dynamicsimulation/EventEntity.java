@@ -63,11 +63,10 @@ public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "updated_date")
     private Date updatedDate;
 
-    public EventEntity(NetworkModificationNodeInfoEntity nodeInfo, Event event) {
+    public EventEntity(Event event) {
 
         UUID newID = UUID.randomUUID();
         this.id = newID;
-        this.nodeInfo = nodeInfo;
         this.equipmentType = event.getEquipmentType();
         this.eventType = event.getEventType();
         this.eventOrder = event.getEventOrder();

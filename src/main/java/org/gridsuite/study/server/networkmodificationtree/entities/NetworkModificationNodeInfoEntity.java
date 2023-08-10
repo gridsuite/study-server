@@ -22,10 +22,7 @@ import javax.persistence.Index;
 import javax.persistence.Table;
 
 import javax.persistence.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -80,4 +77,15 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @OneToMany(mappedBy = "nodeInfo", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("eventOrder ASC")
     private List<EventEntity> events = new ArrayList<>();
+
+    // --- util methods ---//
+    public void addEvents(Collection<EventEntity> eventEntities) {
+        eventEntities.forEach(eventEntity -> eventEntity.setNodeInfo(this));
+        this.events.addAll(eventEntities);
+    }
+
+    public void removeEvents(Collection<EventEntity> eventEntities) {
+        eventEntities.forEach(eventEntity -> eventEntity.setNodeInfo(null));
+        this.events.removeAll(eventEntities);
+    }
 }
