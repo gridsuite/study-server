@@ -34,7 +34,7 @@ public class ActuatorHealthService {
     @Builder
     @Getter
     public static class ServiceStatusInfos {
-        private String service;
+        private String name;
         private String status;
     }
 
@@ -79,7 +79,7 @@ public class ActuatorHealthService {
 
     private ServiceStatusInfos toServiceStatusInfos(String serviceName, boolean isUp) {
         return ServiceStatusInfos.builder()
-            .service(serviceName)
+            .name(serviceName)
             .status(isUp ? ACTUATOR_HEALTH_STATUS_UP : ACTUATOR_HEALTH_STATUS_DOWN)
             .build();
     }
