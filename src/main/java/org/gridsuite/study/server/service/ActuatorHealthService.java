@@ -59,7 +59,7 @@ public class ActuatorHealthService {
         return clientHttpRequestFactory;
     }
 
-    public String getUpOptionalServices() {
+    public String getOptionalServices() {
         // parallel health status check for all services marked as "optional: true" in application.yaml
         List<ObjectNode> servicesNodes = remoteServicesProperties.getServices().stream()
                 .filter(RemoteServicesProperties.Service::getOptional)

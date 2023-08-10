@@ -69,7 +69,7 @@ public class ActuatorHealthTest {
         List<String> optionalServices = List.of("loadflow-server", "security-analysis-server", "voltage-init-server");
         remoteServicesProperties.getServices().forEach(s -> s.setOptional(optionalServices.contains(s.getName())));
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/up-optional-services"))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/optional-services"))
                 .andExpect(status().isOk())
                 .andReturn();
         String response = mvcResult.getResponse().getContentAsString();
@@ -100,7 +100,7 @@ public class ActuatorHealthTest {
         List<String> optionalServices = List.of("sensitivity-analysis-server", "shortcircuit-server");
         remoteServicesProperties.getServices().forEach(s -> s.setOptional(optionalServices.contains(s.getName())));
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/up-optional-services"))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/optional-services"))
                 .andExpect(status().isOk())
                 .andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
