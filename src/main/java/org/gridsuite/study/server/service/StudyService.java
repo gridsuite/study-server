@@ -49,6 +49,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.dynamicsimulation.Event;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
@@ -1814,6 +1815,8 @@ public class StudyService {
                 .orElse(null);
     }
 
+    // --- Dynamic Simulation service methods BEGIN --- //
+
     public List<MappingInfos> getDynamicSimulationMappings(UUID studyUuid) {
         // get mapping from study uuid
         return dynamicSimulationService.getMappings(studyUuid);
@@ -1839,6 +1842,22 @@ public class StudyService {
         return studyRepository.findById(studyUuid)
                 .map(studyEntity -> studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters())
                 .orElse(null);
+    }
+
+    public List<Event> getDynamicSimulationEvents(UUID nodeUuid) {
+        return null;
+    }
+
+    public void createDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, Event event) {
+
+    }
+
+    public void updateDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, UUID networkEventUuid, Event event) {
+
+    }
+
+    public void deleteDynamicSimulationEvents(UUID studyUuid, UUID nodeUuid, String userId, List<UUID> networkEventUuids) {
+
     }
 
     @Transactional
@@ -1906,6 +1925,8 @@ public class StudyService {
     public DynamicSimulationStatus getDynamicSimulationStatus(UUID nodeUuid) {
         return dynamicSimulationService.getStatus(nodeUuid);
     }
+
+    // --- Dynamic Simulation service methods END --- //
 
     public String getNetworkElementsIds(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode, String equipmentType) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
