@@ -1407,12 +1407,11 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/up-optional-services")
-    @Operation(summary = "Get all the available optional services")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of available optional services")})
-    public ResponseEntity<List<String>> getUpOptionalServices() {
-        List<String> upServices = actuatorHealthService.getUpOptionalServices();
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(upServices);
+    @GetMapping(value = "/optional-services")
+    @Operation(summary = "Get all the optional services and their status")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of optional services")})
+    public ResponseEntity<List<ActuatorHealthService.ServiceStatusInfos>> getOptionalServices() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(actuatorHealthService.getOptionalServices());
     }
 
     enum UpdateModificationAction {
