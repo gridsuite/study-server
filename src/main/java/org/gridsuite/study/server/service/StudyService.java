@@ -1705,6 +1705,7 @@ public class StudyService {
         prevResultUuidOpt.ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
 
         ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
+        shortCircuitParameters.setWithFortescueResult(false);
         UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, null, shortCircuitParameters, userId);
 
         updateShortCircuitAnalysisResultUuid(nodeUuid, result);
@@ -1718,6 +1719,7 @@ public class StudyService {
         prevResultUuidOpt.ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
 
         ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
+        shortCircuitParameters.setWithFortescueResult(true);
         UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId, shortCircuitParameters, userId);
 
         updateOneBusShortCircuitAnalysisResultUuid(nodeUuid, result);
