@@ -18,6 +18,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.solver.IdaSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SimSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverTypeInfos;
+import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.client.dynamicsimulation.impl.DynamicSimulationClientImpl;
@@ -56,12 +57,16 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    RemoteServicesProperties remoteServicesProperties;
+
     @Override
     public void setup() {
         super.setup();
 
         // config client
-        dynamicSimulationClient = new DynamicSimulationClientImpl(initMockWebServer(), restTemplate);
+        remoteServicesProperties.setServiceUri("dynamic-simulation-server", initMockWebServer());
+        dynamicSimulationClient = new DynamicSimulationClientImpl(remoteServicesProperties, restTemplate);
     }
 
     @Test

@@ -574,10 +574,11 @@ public class VoltageInitTest {
                 .hvdcAcEmulation(true)
                 .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-
+        SensitivityAnalysisParametersEntity defaultSensitivityAnalysisParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
         VoltageInitParametersEntity voltageInitParametersEntity = VoltageInitService.toEntity(voltageInitParameters);
 
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", "defaultLoadflowProvider", defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, voltageInitParametersEntity, null);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", "defaultLoadflowProvider",
+                defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, voltageInitParametersEntity, null, defaultSensitivityAnalysisParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
