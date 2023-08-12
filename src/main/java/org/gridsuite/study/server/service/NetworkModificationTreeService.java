@@ -143,8 +143,7 @@ public class NetworkModificationTreeService {
                 null,
                 null,
                 null,
-                NodeBuildStatus.from(BuildStatus.NOT_BUILT).toEntity(),
-                null
+                NodeBuildStatus.from(BuildStatus.NOT_BUILT).toEntity()
         );
         UUID studyUuid = anchorNodeEntity.getStudy().getId();
         newNetworkModificationNodeInfoEntity.setName(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()));

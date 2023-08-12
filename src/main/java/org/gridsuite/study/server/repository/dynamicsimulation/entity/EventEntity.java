@@ -4,14 +4,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.networkmodificationtree.entities.dynamicsimulation;
+package org.gridsuite.study.server.repository.dynamicsimulation.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.gridsuite.study.server.networkmodificationtree.dto.dynamicsimulation.Event;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.repository.AbstractManuallyAssignedIdentifierEntity;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -30,28 +29,27 @@ import static javax.persistence.TemporalType.TIMESTAMP;
 @Getter
 @Setter
 @Entity
-@Table(name = "event")
+@Table(name = "event", indexes = {@Index(name = "event_node_id_index", columnList = "node_id")})
 public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
 
-    @Column(name = "equipmentType")
+    @Column(name = "equipment_type")
     private String equipmentType;
 
-    @Column(name = "eventType")
+    @Column(name = "event_type")
     private String eventType;
 
-    @Column(name = "eventOrder")
+    @Column(name = "event_order")
     private int eventOrder;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<EventPropertyEntity> properties = new HashSet<>();
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "idNode", foreignKey = @ForeignKey(name = "node_info_event_fk"))
-    private NetworkModificationNodeInfoEntity nodeInfo;
+    @Column(name = "node_id")
+    private UUID nodeId; // weak reference to node id of NodeEntity
 
     @CreatedDate
     @Temporal(TIMESTAMP)
@@ -63,16 +61,14 @@ public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "updated_date")
     private Date updatedDate;
 
-    public EventEntity(Event event) {
-
-        UUID newID = UUID.randomUUID();
-        this.id = newID;
+    public EventEntity(EventInfos event) {
+        this.id = event.getId() == null ? UUID.randomUUID() : event.getId();
+        this.nodeId = event.getNodeId();
         this.equipmentType = event.getEquipmentType();
         this.eventType = event.getEventType();
         this.eventOrder = event.getEventOrder();
         this.properties = event.getProperties() != null ? event.getProperties().stream()
-                .map(eventProperty -> new EventPropertyEntity(newID, eventProperty))
+                .map(eventProperty -> new EventPropertyEntity(this.id, eventProperty))
                 .collect(Collectors.toSet()) : null;
-
     }
 }

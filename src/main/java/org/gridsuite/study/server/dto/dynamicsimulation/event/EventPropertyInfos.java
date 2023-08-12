@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.networkmodificationtree.dto.dynamicsimulation;
+package org.gridsuite.study.server.dto.dynamicsimulation.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,7 +20,7 @@ import org.gridsuite.study.server.utils.PropertyType;
 @NoArgsConstructor
 @Getter
 @Setter
-public class EventProperty {
+public class EventPropertyInfos {
 
     private String name;
 

@@ -12,14 +12,13 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.dynamicsimulation.Event;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.dynamicsimulation.EventEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
-import org.springframework.util.CollectionUtils;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -57,16 +56,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
             modificationNode.getDynamicSimulationResultUuid(),
-            modificationNode.getNodeBuildStatus().toEntity(),
-            new ArrayList<>());
-
-        // enrich with dynamic simulation events
-        if (!CollectionUtils.isEmpty(modificationNode.getEvents())) {
-            networkModificationNodeInfoEntity.addEvents(modificationNode.getEvents().stream()
-                    .map(EventEntity::new)
-                    .collect(Collectors.toList()));
-        }
-
+            modificationNode.getNodeBuildStatus().toEntity());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
@@ -74,25 +64,17 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
         @SuppressWarnings("unused")
         int ignoreSize = node.getModificationsToExclude().size(); // to load the lazy collection
-        NetworkModificationNode networkModificationNode = new NetworkModificationNode(node.getModificationGroupUuid(),
-                node.getVariantId(),
-                new HashSet<>(node.getModificationsToExclude()), // Need to create a new set because it is a persistent set (org.hibernate.collection.internal.PersistentSet)
-                node.getLoadFlowResultUuid(),
-                node.getShortCircuitAnalysisResultUuid(),
-                node.getOneBusShortCircuitAnalysisResultUuid(),
-                node.getVoltageInitResultUuid(),
-                node.getSecurityAnalysisResultUuid(),
-                node.getSensitivityAnalysisResultUuid(),
-                node.getDynamicSimulationResultUuid(),
-                node.getNodeBuildStatus().toDto(),
-                new ArrayList<>());
-
-        // enrich with dynamic simulation events
-        if (node.getEvents() != null && node.getEvents().size() > 0 /* to load the lazy collection */) {
-            networkModificationNode.setEvents(node.getEvents().stream().map(Event::new).collect(Collectors.toList()));
-        }
-
-        return completeNodeInfo(node, networkModificationNode);
+        return completeNodeInfo(node, new NetworkModificationNode(node.getModificationGroupUuid(),
+            node.getVariantId(),
+            new HashSet<>(node.getModificationsToExclude()), // Need to create a new set because it is a persistent set (org.hibernate.collection.internal.PersistentSet)
+            node.getLoadFlowResultUuid(),
+            node.getShortCircuitAnalysisResultUuid(),
+            node.getOneBusShortCircuitAnalysisResultUuid(),
+            node.getVoltageInitResultUuid(),
+            node.getSecurityAnalysisResultUuid(),
+            node.getSensitivityAnalysisResultUuid(),
+            node.getDynamicSimulationResultUuid(),
+            node.getNodeBuildStatus().toDto()));
     }
 
     @Override

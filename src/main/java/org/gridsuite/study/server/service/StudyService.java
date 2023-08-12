@@ -49,11 +49,12 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.dynamicsimulation.Event;
+import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
@@ -137,6 +138,7 @@ public class StudyService {
     private final SecurityAnalysisService securityAnalysisService;
     private final DynamicSimulationService dynamicSimulationService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
+    private final DynamicSimulationEventService dynamicSimulationEventService;
     private final ActionsService actionsService;
     private final CaseService caseService;
     private final FilterService filterService;
@@ -178,7 +180,8 @@ public class StudyService {
             FilterService filterService,
             SensitivityAnalysisService sensitivityAnalysisService,
             DynamicSimulationService dynamicSimulationService,
-            VoltageInitService voltageInitService) {
+            VoltageInitService voltageInitService,
+            DynamicSimulationEventService dynamicSimulationEventService) {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
         this.defaultSensitivityAnalysisProvider = defaultSensitivityAnalysisProvider;
@@ -207,6 +210,7 @@ public class StudyService {
         this.filterService = filterService;
         this.dynamicSimulationService = dynamicSimulationService;
         this.voltageInitService = voltageInitService;
+        this.dynamicSimulationEventService = dynamicSimulationEventService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -1844,20 +1848,24 @@ public class StudyService {
                 .orElse(null);
     }
 
-    public List<Event> getDynamicSimulationEvents(UUID nodeUuid) {
-        return null;
+    @Transactional(readOnly = true)
+    public List<EventInfos> getDynamicSimulationEvents(UUID nodeUuid) {
+        return dynamicSimulationEventService.getEvents(nodeUuid);
     }
 
-    public void createDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, Event event) {
-
+    @Transactional
+    public void createDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, EventInfos event) {
+        dynamicSimulationEventService.createEvent(nodeUuid, event);
     }
 
-    public void updateDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, UUID networkEventUuid, Event event) {
-
+    @Transactional
+    public void updateDynamicSimulationEvents(UUID studyUuid, UUID nodeUuid, String userId, List<EventInfos> events) {
+        dynamicSimulationEventService.updateEvents(nodeUuid, events);
     }
 
-    public void deleteDynamicSimulationEvents(UUID studyUuid, UUID nodeUuid, String userId, List<UUID> networkEventUuids) {
-
+    @Transactional
+    public void deleteDynamicSimulationEvents(UUID studyUuid, UUID nodeUuid, String userId, List<UUID> eventUuids) {
+        dynamicSimulationEventService.deleteEvents(nodeUuid, eventUuids);
     }
 
     @Transactional

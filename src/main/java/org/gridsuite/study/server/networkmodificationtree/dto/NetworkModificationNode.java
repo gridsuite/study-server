@@ -9,10 +9,11 @@ package org.gridsuite.study.server.networkmodificationtree.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.study.server.networkmodificationtree.dto.dynamicsimulation.Event;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -49,9 +50,6 @@ public class NetworkModificationNode extends AbstractNode {
     private UUID dynamicSimulationResultUuid;
 
     private NodeBuildStatus nodeBuildStatus;
-
-    @Builder.Default
-    private List<Event> events = new ArrayList<>();
 
     @Override
     public NodeType getType() {

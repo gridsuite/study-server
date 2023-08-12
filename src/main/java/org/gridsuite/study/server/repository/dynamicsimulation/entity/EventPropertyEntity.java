@@ -4,13 +4,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.networkmodificationtree.entities.dynamicsimulation;
+package org.gridsuite.study.server.repository.dynamicsimulation.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.gridsuite.study.server.networkmodificationtree.dto.dynamicsimulation.EventProperty;
+import org.gridsuite.study.server.dto.dynamicsimulation.event.EventPropertyInfos;
 import org.gridsuite.study.server.utils.PropertyType;
 
 import javax.persistence.*;
@@ -48,7 +48,7 @@ public class EventPropertyEntity implements Serializable {
     @MapsId("eventId")
     private EventEntity event;
 
-    public EventPropertyEntity(UUID eventId, EventProperty eventProperty) {
+    public EventPropertyEntity(UUID eventId, EventPropertyInfos eventProperty) {
         this.eventId = eventId;
         this.name = eventProperty.getName();
         this.value = eventProperty.getValue();

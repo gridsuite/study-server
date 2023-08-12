@@ -5,16 +5,17 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.networkmodificationtree.dto.dynamicsimulation;
+package org.gridsuite.study.server.dto.dynamicsimulation.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.gridsuite.study.server.networkmodificationtree.entities.dynamicsimulation.EventEntity;
+import org.gridsuite.study.server.repository.dynamicsimulation.entity.EventEntity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -24,7 +25,11 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @Getter
 @Setter
-public class Event {
+public class EventInfos {
+
+    private UUID id;
+
+    private UUID nodeId;
 
     private String equipmentType;
 
@@ -32,14 +37,16 @@ public class Event {
 
     private int eventOrder;
 
-    private List<EventProperty> properties = new ArrayList<>();
+    private List<EventPropertyInfos> properties = new ArrayList<>();
 
-    public Event(EventEntity eventEntity) {
+    public EventInfos(EventEntity eventEntity) {
+        this.id = eventEntity.getId();
+        this.nodeId = eventEntity.getNodeId();
         this.equipmentType = eventEntity.getEquipmentType();
         this.eventType = eventEntity.getEventType();
         this.eventOrder = eventEntity.getEventOrder();
         this.properties = eventEntity.getProperties().stream()
-                .map(eventPropertyEntity -> new EventProperty(eventPropertyEntity.getName(), eventPropertyEntity.getValue(), eventPropertyEntity.getType()))
+                .map(eventPropertyEntity -> new EventPropertyInfos(eventPropertyEntity.getName(), eventPropertyEntity.getValue(), eventPropertyEntity.getType()))
                 .collect(Collectors.toList());
     }
 
