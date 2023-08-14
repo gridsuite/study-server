@@ -53,7 +53,11 @@ public class SendInput extends PostServeAction {
             }
         });
 
-        input.send(messageBuilder.build(), destination);
+        // Wiremock does not accept to send a request http in a post serve action
+        // For that it is necessary to use the webhook extension which only sends a http request
+        // This is not suitable for our case, i.e. java code that sends a request
+        // That's why we do it in another thread
+        new Thread(() -> input.send(messageBuilder.build(), destination)).start();
     }
 }
 
