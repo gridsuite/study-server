@@ -12,7 +12,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
+import org.gridsuite.study.server.dto.SensitivityAnalysisParametersValues;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
+import org.gridsuite.study.server.repository.SensitivityAnalysisParametersEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -49,6 +51,9 @@ public class SensitivityAnalysisService {
     private final ObjectMapper objectMapper;
 
     private final NetworkModificationTreeService networkModificationTreeService;
+    private static final double FLOW_FLOW_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE = 0.0;
+    private static final double FLOW_VOLTAGE_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE = 0.0;
+    private static final double ANGLE_FLOW_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE = 0.0;
 
     @Autowired
     SensitivityAnalysisService(RemoteServicesProperties remoteServicesProperties,
@@ -185,5 +190,29 @@ public class SensitivityAnalysisService {
         if (SensitivityAnalysisStatus.RUNNING.name().equals(sas)) {
             throw new StudyException(SENSITIVITY_ANALYSIS_RUNNING);
         }
+    }
+
+    public static SensitivityAnalysisParametersEntity toEntity(SensitivityAnalysisParametersValues parameters) {
+        Objects.requireNonNull(parameters);
+        return new SensitivityAnalysisParametersEntity(parameters.getFlowFlowSensitivityValueThreshold(),
+                parameters.getAngleFlowSensitivityValueThreshold(),
+                parameters.getFlowVoltageSensitivityValueThreshold());
+    }
+
+    public static SensitivityAnalysisParametersValues fromEntity(SensitivityAnalysisParametersEntity entity) {
+        Objects.requireNonNull(entity);
+        return SensitivityAnalysisParametersValues.builder()
+                .flowFlowSensitivityValueThreshold(entity.getFlowFlowSensitivityValueThreshold())
+                .angleFlowSensitivityValueThreshold(entity.getAngleFlowSensitivityValueThreshold())
+                .flowVoltageSensitivityValueThreshold(entity.getFlowVoltageSensitivityValueThreshold())
+                .build();
+    }
+
+    public static SensitivityAnalysisParametersValues getDefaultSensitivityAnalysisParametersValues() {
+        return SensitivityAnalysisParametersValues.builder()
+                .flowFlowSensitivityValueThreshold(FLOW_FLOW_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE)
+                .angleFlowSensitivityValueThreshold(ANGLE_FLOW_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE)
+                .flowVoltageSensitivityValueThreshold(FLOW_VOLTAGE_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE)
+                .build();
     }
 }
