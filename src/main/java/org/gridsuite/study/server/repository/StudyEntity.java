@@ -98,6 +98,14 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             ))
     private SecurityAnalysisParametersEntity securityAnalysisParameters;
 
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "sensitivityAnalysisParametersEntity_id",
+            referencedColumnName = "id",
+            foreignKey = @ForeignKey(
+                    name = "sensitivityAnalysisParameters_id_fk"
+            ))
+    private SensitivityAnalysisParametersEntity sensitivityAnalysisParameters;
+
     @ElementCollection
     @CollectionTable(name = "importParameters",
             indexes = {@Index(name = "studyEntity_importParameters_idx1", columnList = "study_entity_id")},

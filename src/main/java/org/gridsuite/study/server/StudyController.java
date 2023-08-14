@@ -72,6 +72,7 @@ public class StudyController {
     private final VoltageInitService voltageInitService;
     private final LoadFlowService loadflowService;
     private final CaseService caseService;
+    private final ActuatorHealthService actuatorHealthService;
 
     public StudyController(StudyService studyService,
             NetworkService networkStoreService,
@@ -83,7 +84,8 @@ public class StudyController {
             ShortCircuitService shortCircuitService,
             VoltageInitService voltageInitService,
             LoadFlowService loadflowService,
-            CaseService caseService) {
+            CaseService caseService,
+            ActuatorHealthService actuatorHealthService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -95,6 +97,7 @@ public class StudyController {
         this.voltageInitService = voltageInitService;
         this.loadflowService = loadflowService;
         this.caseService = caseService;
+        this.actuatorHealthService = actuatorHealthService;
     }
 
     @InitBinder
@@ -1443,6 +1446,13 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping(value = "/optional-services")
+    @Operation(summary = "Get all the optional services and their status")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of optional services")})
+    public ResponseEntity<List<ActuatorHealthService.ServiceStatusInfos>> getOptionalServices() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(actuatorHealthService.getOptionalServices());
+    }
+
     enum UpdateModificationAction {
         MOVE, COPY
     }
@@ -1476,5 +1486,24 @@ public class StudyController {
         public void setAsText(final String text) throws IllegalArgumentException {
             setValue(ModificationType.getTypeFromUri(text));
         }
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
+    @Operation(summary = "Get sensitivity analysis parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters")})
+    public ResponseEntity<SensitivityAnalysisParametersValues> getSensitivityAnalysisParametersValues(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParametersValues(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
+    @Operation(summary = "set sensitivity analysis parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set")})
+    public ResponseEntity<Void> setSensitivityAnalysisParametersValues(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) SensitivityAnalysisParametersValues sensitivityAnalysisParametersValues,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setSensitivityAnalysisParametersValues(studyUuid, sensitivityAnalysisParametersValues, userId);
+        return ResponseEntity.ok().build();
     }
 }

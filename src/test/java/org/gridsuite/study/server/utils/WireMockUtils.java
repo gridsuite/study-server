@@ -272,7 +272,7 @@ public class WireMockUtils {
         removeRequestForStub(stubId, nbRequests);
     }
 
-    public void removeRequestForStub(UUID stubId, int nbRequests) {
+    private void removeRequestForStub(UUID stubId, int nbRequests) {
         List<ServeEvent> serveEvents = wireMock.getServeEvents(ServeEventQuery.forStubMapping(stubId)).getServeEvents();
         assertEquals(nbRequests, serveEvents.size());
         for (ServeEvent serveEvent : serveEvents) {
@@ -344,5 +344,17 @@ public class WireMockUtils {
 
     public void verifyDisableCaseExpiration(UUID stubUuid, String caseUuid) {
         verifyPutRequest(stubUuid, "/v1/cases/" + caseUuid + "/disableExpiration", false, Map.of(), null);
+    }
+
+    public UUID stubActuatorHealthGet(String jsonResponse) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/actuator/health"))
+                .willReturn(WireMock.ok().withBody(jsonResponse))
+        ).getId();
+    }
+
+    public void verifyActuatorHealth(UUID stubUuid, int nbServer) {
+        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/actuator/health"));
+        wireMock.verify(nbServer, requestBuilder);
+        removeRequestForStub(stubUuid, nbServer);
     }
 }

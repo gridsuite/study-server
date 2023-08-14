@@ -15,7 +15,6 @@ import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -63,10 +62,10 @@ public class NetworkModificationService {
     private final ObjectMapper objectMapper;
 
     @Autowired
-    NetworkModificationService(@Value("${gridsuite.services.network-modification-server.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
+    NetworkModificationService(RemoteServicesProperties remoteServicesProperties,
                                NetworkService networkStoreService,
                                ObjectMapper objectMapper) {
-        this.networkModificationServerBaseUri = networkModificationServerBaseUri;
+        this.networkModificationServerBaseUri = remoteServicesProperties.getServiceUri("network-modification-server");
         this.networkStoreService = networkStoreService;
         this.objectMapper = objectMapper;
     }

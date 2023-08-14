@@ -77,6 +77,7 @@ public class NotificationService {
 
     public static final String HEADER_INSERT_MODE = "insertMode";
     public static final String HEADER_NEW_NODE = "newNode";
+    public static final String HEADER_REFERENCE_NODE_UUID = "referenceNodeUuid";
     public static final String HEADER_MOVED_NODE = "movedNode";
     public static final String HEADER_PARENT_NODE = "parentNode";
     public static final String HEADER_REMOVE_CHILDREN = "removeChildren";
@@ -182,13 +183,14 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitNodeInserted(UUID studyUuid, UUID parentNode, UUID nodeCreated, InsertMode insertMode) {
+    public void emitNodeInserted(UUID studyUuid, UUID parentNode, UUID nodeCreated, InsertMode insertMode, UUID referenceNodeUuid) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_UPDATE_TYPE, NODE_CREATED)
                 .setHeader(HEADER_PARENT_NODE, parentNode)
                 .setHeader(HEADER_NEW_NODE, nodeCreated)
                 .setHeader(HEADER_INSERT_MODE, insertMode.name())
+                .setHeader(HEADER_REFERENCE_NODE_UUID, referenceNodeUuid)
                 .build()
         );
     }
