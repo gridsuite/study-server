@@ -3,11 +3,9 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
-import okhttp3.mockwebserver.MockResponse;
 import org.gridsuite.study.server.dto.BasicStudyInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -46,12 +44,12 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringRunner.class)
@@ -85,9 +83,7 @@ public class StudyServiceTest {
     ObjectMapper mapper;
     ObjectWriter objectWriter;
 
-    private static final long TIMEOUT = 100000;
-
-    private static final String FIRST_VARIANT_ID = "first_variant_id";
+    private static final long TIMEOUT = 1000;
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
@@ -122,11 +118,19 @@ public class StudyServiceTest {
     private final String studyUpdateDestination = "study.update";
 
     @Test
-    public void testReimportStudyOnErrorWithExistingCase() throws Exception {
-        UUID studyUuid = createStudy("userId", CASE_UUID);
+    public void testReimportStudyOnNetworkNotFoundWithExistingCase() throws Exception {
+        Map<String, Object> importParameters = new HashMap<>();
+        importParameters.put("param1", "changedValue1, changedValue2");
+        importParameters.put("param2", "changedValue");
         String userId = "userId";
 
+        UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
+
         when(networkStoreService.getNetwork(NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Network '" + NETWORK_UUID + "' not found"));
+
+        UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), true);
+        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE");
+        UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(CASE_UUID.toString());
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/network", studyUuid)
                 .param(REIMPORT_NETWORK_IF_NOT_FOUND_HEADER, "true")
@@ -147,22 +151,35 @@ public class StudyServiceTest {
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
 
-        /*Set<String> requests = TestUtils.getRequestsDone(3, server);
-        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
-        assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CASE_UUID)));*/
-
-
+        wireMockUtils.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
+        wireMockUtils.verifyImportNetwork(postNetworkStubId, CASE_UUID.toString());
+        Thread.sleep(4000);
+        wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, CASE_UUID.toString());
     }
 
-    private UUID createStudy(String userId, UUID caseUuid) throws Exception {
+    @Test
+    public void testReimportStudyOnNetworkNotFoundWithMissingCase() throws Exception {
+        Map<String, Object> importParameters = new HashMap<>();
+        String userId = "userId";
+
+        UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
+
+        when(networkStoreService.getNetwork(NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Network '" + NETWORK_UUID + "' not found"));
+
+        UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), false);
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/network", studyUuid)
+                .param(REIMPORT_NETWORK_IF_NOT_FOUND_HEADER, "true")
+                .header(USER_ID_HEADER, userId))
+            .andExpectAll(status().isInternalServerError(), content().string(StudyException.Type.BROKEN_STUDY.name()));
+
+        wireMockUtils.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
+    }
+
+    private UUID createStudy(String userId, UUID caseUuid, Map<String, Object> importParameters) throws Exception {
         // mock API calls
 
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(caseUuid.toString(), true);
-
-        Map<String, Object> importParameters = new HashMap<>();
-        importParameters.put("param1", "changedValue1, changedValue2");
-        importParameters.put("param2", "changedValue");
 
         UUID postNetworkStubId = wireMockUtils.stubImportNetwork(caseUuid.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE");
 
