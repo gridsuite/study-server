@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -31,6 +32,8 @@ public class WireMockUtils {
     private static final String URI_NETWORK_MODIFICATION = "/v1/network-modifications";
 
     private static final String URI_NETWORK_MODIFICATION_GROUPS = "/v1/groups";
+
+    private static final String FIRST_VARIANT_ID = "first_variant_id";
 
     private final WireMockServer wireMock;
 
@@ -297,12 +300,49 @@ public class WireMockUtils {
 
     public UUID stubCaseExists(String caseUuid, boolean returnedValue) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/exists"))
-            .willReturn(WireMock.ok().withBody(returnedValue ? "true" : "false"))).getId();
+                .willReturn(WireMock.ok().withBody(returnedValue ? "true" : "false")
+                .withHeader("Content-Type", "application/json; charset=utf-8"))
+        ).getId();
     }
 
     public void verifyCaseExists(UUID stubUuid, String caseUuid) {
         RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/exists"));
         wireMock.verify(1, requestBuilder);
         removeRequestForStub(stubUuid, 1);
+    }
+
+    public UUID stubImportNetwork(String caseUuid, Map<String, Object> importParameters, String networkUuid, String networkId, String caseFormat) {
+        UUID importNetworkStubId = wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
+            .withQueryParam("caseUuid", WireMock.equalTo(caseUuid))
+            .withQueryParam("variantId", WireMock.equalTo(FIRST_VARIANT_ID))
+            .withQueryParam("receiver", WireMock.matching(".*"))
+            .withPostServeAction(POST_ACTION_SEND_INPUT,
+                Map.of(
+                    "payload", "",
+                    "destination", "case.import.succeeded",
+                    "networkUuid", networkUuid,
+                    "networkId", networkId,
+                    "caseFormat", caseFormat,
+                    "importParameters", importParameters))
+
+            .willReturn(WireMock.ok())).getId();
+
+        return importNetworkStubId;
+    }
+
+    public void verifyImportNetwork(UUID stubUuid, String caseUuid) {
+        verifyPostRequest(stubUuid, "/v1/networks",
+            Map.of("caseUuid", WireMock.equalTo(caseUuid.toString()), "variantId", WireMock.equalTo(FIRST_VARIANT_ID), "receiver", WireMock.matching(".*")));
+    }
+
+    public UUID stubDisableCaseExpiration(String caseUuid) {
+        UUID disableCaseExpirationStubId = wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/disableExpiration"))
+            .willReturn(WireMock.ok())).getId();
+
+        return disableCaseExpirationStubId;
+    }
+
+    public void verifyDisableCaseExpiration(UUID stubUuid, String caseUuid) {
+        verifyPutRequest(stubUuid, "/v1/cases/" + caseUuid + "/disableExpiration", false, Map.of(), null);
     }
 }

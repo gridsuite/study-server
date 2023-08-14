@@ -128,18 +128,13 @@ public class StudyServiceTest {
 
         when(networkStoreService.getNetwork(NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Network '" + NETWORK_UUID + "' not found"));
 
-        /*mockMvc.perform(get("/v1/studies/{studyUuid}/network", studyUuid)
+        mockMvc.perform(get("/v1/studies/{studyUuid}/network", studyUuid)
                 .param(REIMPORT_NETWORK_IF_NOT_FOUND_HEADER, "true")
                 .header(USER_ID_HEADER, userId))
-            .andExpect(status().isNotFound());*/
-
-        /*Set<String> requests = TestUtils.getRequestsDone(3, server);
-        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
-        assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CASE_UUID)));*/
+            .andExpect(status().isNotFound());
 
         // studies updated
-        /*Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         MessageHeaders headers = message.getHeaders();
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -150,34 +145,28 @@ public class StudyServiceTest {
         headers = message.getHeaders();
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_REIMPORT_DONE, headers.get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));*/
+        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+
+        /*Set<String> requests = TestUtils.getRequestsDone(3, server);
+        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
+        assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CASE_UUID)));*/
+
+
     }
 
     private UUID createStudy(String userId, UUID caseUuid) throws Exception {
-        UUID stubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/exists"))
-            .willReturn(WireMock.ok().withBody("true").withHeader("Content-Type", "application/json; charset=utf-8"))).getId();
+        // mock API calls
 
-        Map<String, String> importParameters = new HashMap<String, String>();
+        UUID caseExistsStubId = wireMockUtils.stubCaseExists(caseUuid.toString(), true);
+
+        Map<String, Object> importParameters = new HashMap<>();
         importParameters.put("param1", "changedValue1, changedValue2");
         importParameters.put("param2", "changedValue");
 
-        UUID stubId2 = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
-            .withQueryParam("caseUuid", WireMock.equalTo(caseUuid.toString()))
-            .withQueryParam("variantId", WireMock.equalTo(FIRST_VARIANT_ID))
-            .withQueryParam("receiver", WireMock.matching(".*"))
-            .withPostServeAction(POST_ACTION_SEND_INPUT,
-                Map.of(
-                    "payload", "",
-                    "destination", "case.import.succeeded",
-                    "networkUuid", NETWORK_UUID,
-                    "networkId", "20140116_0830_2D4_UX1_pst",
-                    "caseFormat", "UCTE",
-                    "importParameters", importParameters))
+        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(caseUuid.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE");
 
-            .willReturn(WireMock.ok())).getId();
-
-        UUID stubId3 = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/disableExpiration"))
-            .willReturn(WireMock.ok())).getId();
+        UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(caseUuid.toString());
 
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid).header("userId", userId))
             .andExpect(status().isOk())
@@ -188,9 +177,10 @@ public class StudyServiceTest {
 
         assertStudyCreation(studyUuid, userId);
 
-        wireMockUtils.removeRequestForStub(stubId, 1);
-        wireMockUtils.removeRequestForStub(stubId2, 1);
-        wireMockUtils.removeRequestForStub(stubId3, 1);
+        // assert API calls have been made
+        wireMockUtils.verifyCaseExists(caseExistsStubId, caseUuid.toString());
+        wireMockUtils.verifyImportNetwork(postNetworkStubId, caseUuid.toString());
+        wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, caseUuid.toString());
 
         return studyUuid;
     }
@@ -231,12 +221,6 @@ public class StudyServiceTest {
         cleanDB();
 
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
-
-        try {
-            Thread.sleep(4000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
 
         try {
             TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
