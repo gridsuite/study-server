@@ -1853,14 +1853,24 @@ public class StudyService {
         return dynamicSimulationEventService.getEvents(nodeUuid);
     }
 
+    @Transactional(readOnly = true)
+    public EventInfos getDynamicSimulationEvent(UUID nodeUuid, String equipmentId) {
+        return dynamicSimulationEventService.getEvent(nodeUuid, equipmentId);
+    }
+
     @Transactional
     public void createDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, EventInfos event) {
         dynamicSimulationEventService.createEvent(nodeUuid, event);
     }
 
     @Transactional
-    public void updateDynamicSimulationEvents(UUID studyUuid, UUID nodeUuid, String userId, List<EventInfos> events) {
-        dynamicSimulationEventService.updateEvents(nodeUuid, events);
+    public void updateDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, EventInfos event) {
+        dynamicSimulationEventService.updateEvent(nodeUuid, event);
+    }
+
+    @Transactional
+    public void moveDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, UUID eventUuid, UUID beforeUuid) {
+        dynamicSimulationEventService.moveEvent(nodeUuid, eventUuid, beforeUuid);
     }
 
     @Transactional

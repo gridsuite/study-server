@@ -1331,6 +1331,19 @@ public class StudyController {
         return ResponseEntity.ok().body(dynamicSimulationEvents);
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events/search/equipment-id/{equipmentId}")
+    @Operation(summary = "Get dynamic simulation event from a node with a given equipment id")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The dynamic simulation event was returned"),
+            @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<EventInfos> getDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                       @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                       @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId) {
+        EventInfos dynamicSimulationEvent = studyService.getDynamicSimulationEvent(nodeUuid, equipmentId);
+        return dynamicSimulationEvent != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(dynamicSimulationEvent) :
+                ResponseEntity.noContent().build();
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events")
     @Operation(summary = "Create a dynamic simulation event for a node")
     @ApiResponses(value = {
@@ -1345,18 +1358,32 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events/{uuid}")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events")
     @Operation(summary = "Update a dynamic simulation event in the study network")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The dynamic simulation event was updated"),
         @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<Void> updateDynamicSimulationEvents(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> updateDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @Parameter(description = "Dynamic simulation event UUID") @PathVariable("uuid") UUID eventUuid,
-                                                             @RequestBody List<EventInfos> events,
+                                                             @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.updateDynamicSimulationEvents(studyUuid, nodeUuid, userId, events);
+        studyService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events/move/{eventUuid}")
+    @Operation(summary = "Move a dynamic simulation event in the list")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The dynamic simulation event was moved"),
+            @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Void> moveDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                             @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                             @Parameter(description = "Event UUID") @PathVariable("eventUuid") UUID eventUuid,
+                                                             @Parameter(description = "UUID  of the before event at the new position") @RequestParam(value = "beforeUuid", required = false) UUID beforeUuid,
+                                                             @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.moveDynamicSimulationEvent(studyUuid, nodeUuid, userId, eventUuid, beforeUuid);
         return ResponseEntity.ok().build();
     }
 

@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server.dto.dynamicsimulation.event;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,9 +28,12 @@ import java.util.stream.Collectors;
 @Setter
 public class EventInfos {
 
+    @JsonProperty("uuid")
     private UUID id;
 
     private UUID nodeId;
+
+    private String equipmentId;
 
     private String equipmentType;
 
@@ -42,6 +46,7 @@ public class EventInfos {
     public EventInfos(EventEntity eventEntity) {
         this.id = eventEntity.getId();
         this.nodeId = eventEntity.getNodeId();
+        this.equipmentId = eventEntity.getEquipmentId();
         this.equipmentType = eventEntity.getEquipmentType();
         this.eventType = eventEntity.getEventType();
         this.eventOrder = eventEntity.getEventOrder();

@@ -48,8 +48,9 @@ public class EventPropertyEntity implements Serializable {
     @MapsId("eventId")
     private EventEntity event;
 
-    public EventPropertyEntity(UUID eventId, EventPropertyInfos eventProperty) {
-        this.eventId = eventId;
+    public EventPropertyEntity(EventEntity event, EventPropertyInfos eventProperty) {
+        this.eventId = event.getId();
+        this.event = event;
         this.name = eventProperty.getName();
         this.value = eventProperty.getValue();
         this.type = eventProperty.getType();

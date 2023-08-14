@@ -32,9 +32,11 @@ import static javax.persistence.TemporalType.TIMESTAMP;
 @Table(name = "event", indexes = {@Index(name = "event_node_id_index", columnList = "node_id")})
 public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
+
+    @Column(name = "equipment_id")
+    private String equipmentId;
 
     @Column(name = "equipment_type")
     private String equipmentType;
@@ -43,7 +45,7 @@ public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private String eventType;
 
     @Column(name = "event_order")
-    private int eventOrder;
+    private Integer eventOrder;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<EventPropertyEntity> properties = new HashSet<>();
@@ -64,11 +66,12 @@ public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     public EventEntity(EventInfos event) {
         this.id = event.getId() == null ? UUID.randomUUID() : event.getId();
         this.nodeId = event.getNodeId();
+        this.equipmentId = event.getEquipmentId();
         this.equipmentType = event.getEquipmentType();
         this.eventType = event.getEventType();
         this.eventOrder = event.getEventOrder();
         this.properties = event.getProperties() != null ? event.getProperties().stream()
-                .map(eventProperty -> new EventPropertyEntity(this.id, eventProperty))
+                .map(eventProperty -> new EventPropertyEntity(this, eventProperty))
                 .collect(Collectors.toSet()) : null;
     }
 }
