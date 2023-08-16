@@ -125,7 +125,6 @@ public class StudyServiceTest {
         importParameters.put("param2", "changedValue");
         String userId = "userId";
 
-
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
 
         when(networkStoreService.getNetwork(NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Network '" + NETWORK_UUID + "' not found"));

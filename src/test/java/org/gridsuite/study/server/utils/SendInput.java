@@ -11,7 +11,6 @@ import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.extension.PostServeAction;
 import com.github.tomakehurst.wiremock.http.QueryParameter;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
-import org.elasticsearch.common.util.concurrent.CountDown;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.messaging.support.MessageBuilder;
 
@@ -59,14 +58,15 @@ public class SendInput extends PostServeAction {
             }
         });
 
-
         // Wiremock does not accept to send a request http in a post serve action
         // For that it is necessary to use the webhook extension which only sends a http request
         // This is not suitable for our case, i.e. java code that sends a request
         // That's why we do it in another thread
         new Thread(() -> {
             input.send(messageBuilder.build(), destination);
-            countDownLatch.countDown();
+            if(countDownLatch != null) {
+                countDownLatch.countDown();
+            }
         }
         ).start();
 
