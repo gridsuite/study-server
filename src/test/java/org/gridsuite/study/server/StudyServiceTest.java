@@ -44,12 +44,12 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.gridsuite.study.server.StudyConstants.HEADER_IMPORT_PARAMETERS;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -119,6 +119,21 @@ public class StudyServiceTest {
     private final String studyUpdateDestination = "study.update";
 
     @Test
+    public void testReimportStudyOnNetworkFound() throws Exception {
+        Map<String, Object> importParameters = new HashMap<>();
+        importParameters.put("param1", "changedValue1, changedValue2");
+        importParameters.put("param2", "changedValue");
+        String userId = "userId";
+
+        UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/network", studyUuid)
+                .param(REIMPORT_NETWORK_IF_NOT_FOUND_HEADER, "true")
+                .header(USER_ID_HEADER, userId))
+            .andExpect(status().isNoContent());
+    }
+
+    @Test
     public void testReimportStudyOnNetworkNotFoundWithExistingCase() throws Exception {
         Map<String, Object> importParameters = new HashMap<>();
         importParameters.put("param1", "changedValue1, changedValue2");
@@ -175,6 +190,68 @@ public class StudyServiceTest {
                 .param(REIMPORT_NETWORK_IF_NOT_FOUND_HEADER, "true")
                 .header(USER_ID_HEADER, userId))
             .andExpectAll(status().isInternalServerError(), content().string(StudyException.Type.BROKEN_STUDY.name()));
+
+        wireMockUtils.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
+    }
+
+    @Test
+    public void testReimportStudyFromExistingCase () throws Exception {
+        String userId = "userId";
+        Map<String, Object> importParameters = new HashMap<>();
+        UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
+
+        Map<String, Object> newImportParameters = new HashMap<>();
+        importParameters.put("param1", "changedValue1, changedValue2");
+        importParameters.put("param2", "changedValue");
+
+        UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), true);
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(CASE_UUID_STRING, newImportParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE", countDownLatch);
+        UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(CASE_UUID.toString());
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/cases/{caseUuid}", studyUuid, CASE_UUID)
+                .param(HEADER_IMPORT_PARAMETERS, mapper.writeValueAsString(newImportParameters))
+                .header(USER_ID_HEADER, userId))
+            .andExpectAll(status().isOk());
+
+        countDownLatch.await();
+
+        // studies updated
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+
+        // study reimport done notification
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        headers = message.getHeaders();
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_REIMPORT_DONE, headers.get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+
+        wireMockUtils.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
+        wireMockUtils.verifyImportNetwork(postNetworkStubId, CASE_UUID_STRING);
+        wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, CASE_UUID.toString());
+
+    }
+
+    @Test
+    public void testReimportStudyFromUnexistingCase () throws Exception {
+        String userId = "userId";
+        Map<String, Object> importParameters = new HashMap<>();
+        UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
+
+        Map<String, Object> newImportParameters = new HashMap<>();
+        importParameters.put("param1", "changedValue1, changedValue2");
+        importParameters.put("param2", "changedValue");
+
+        UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), false);
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/cases/{caseUuid}", studyUuid, CASE_UUID)
+                .param(HEADER_IMPORT_PARAMETERS, mapper.writeValueAsString(newImportParameters))
+                .header(USER_ID_HEADER, userId))
+            .andExpectAll(status().isFailedDependency());
 
         wireMockUtils.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
     }
