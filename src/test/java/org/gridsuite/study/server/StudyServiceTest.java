@@ -195,7 +195,7 @@ public class StudyServiceTest {
     }
 
     @Test
-    public void testReimportStudyFromExistingCase () throws Exception {
+    public void testReimportStudyFromExistingCase() throws Exception {
         String userId = "userId";
         Map<String, Object> importParameters = new HashMap<>();
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
@@ -237,7 +237,7 @@ public class StudyServiceTest {
     }
 
     @Test
-    public void testReimportStudyFromUnexistingCase () throws Exception {
+    public void testReimportStudyFromUnexistingCase() throws Exception {
         String userId = "userId";
         Map<String, Object> importParameters = new HashMap<>();
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
