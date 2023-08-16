@@ -323,7 +323,6 @@ public class NetworkModificationTreeService {
             .reportUuid(importReportUuid)
             .build();
         repositories.get(node.getType()).createNodeInfo(root);
-
         return node;
     }
 

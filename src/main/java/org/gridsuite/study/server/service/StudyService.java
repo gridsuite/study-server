@@ -570,7 +570,7 @@ public class StudyService {
                                                       UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
                                                       ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, VoltageInitParametersEntity voltageInitParametersEntity, Map<String, String> importParameters, UUID importReportUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
-        // if studyEntity is not null, it means we are import network for existing study
+        // if studyEntity is not null, it means we are importing network for existing study
         // we only update network ID and UUID sent by network conversion server
         if (studyEntity != null) {
             studyEntity = self.updateStudyEntityNetwork(studyEntity, networkInfos);

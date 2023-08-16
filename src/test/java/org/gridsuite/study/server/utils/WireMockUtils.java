@@ -13,7 +13,6 @@ import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
-import lombok.SneakyThrows;
 
 import java.util.List;
 import java.util.Map;
@@ -343,7 +342,6 @@ public class WireMockUtils {
             Map.of("caseUuid", WireMock.equalTo(caseUuid.toString()), "variantId", WireMock.equalTo(FIRST_VARIANT_ID), "receiver", WireMock.matching(".*")));
     }
 
-    @SneakyThrows
     public UUID stubDisableCaseExpiration(String caseUuid) {
         UUID disableCaseExpirationStubId = wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/disableExpiration"))
             .willReturn(WireMock.ok())).getId();
@@ -351,7 +349,6 @@ public class WireMockUtils {
         return disableCaseExpirationStubId;
     }
 
-    @SneakyThrows
     public void verifyDisableCaseExpiration(UUID stubUuid, String caseUuid) {
         verifyPutRequest(stubUuid, "/v1/cases/" + caseUuid + "/disableExpiration", false, Map.of(), null);
     }
