@@ -134,6 +134,23 @@ public class StudyServiceTest {
     }
 
     @Test
+    public void testNetworkNotFoundWithoutReimportingStudy() throws Exception {
+        Map<String, Object> importParameters = new HashMap<>();
+        importParameters.put("param1", "changedValue1, changedValue2");
+        importParameters.put("param2", "changedValue");
+        String userId = "userId";
+
+        UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
+
+        when(networkStoreService.getNetwork(NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Network '" + NETWORK_UUID + "' not found"));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/network", studyUuid)
+                .param(REIMPORT_NETWORK_IF_NOT_FOUND_HEADER, "false")
+                .header(USER_ID_HEADER, userId))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
     public void testReimportStudyOnNetworkNotFoundWithExistingCase() throws Exception {
         Map<String, Object> importParameters = new HashMap<>();
         importParameters.put("param1", "changedValue1, changedValue2");
