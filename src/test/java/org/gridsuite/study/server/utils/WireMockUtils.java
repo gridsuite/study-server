@@ -9,6 +9,7 @@ package org.gridsuite.study.server.utils;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.admin.model.ServeEventQuery;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
@@ -17,11 +18,10 @@ import lombok.SneakyThrows;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.CountDownLatch;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
-import static org.gridsuite.study.server.utils.wiremock.SemaphoreReleaseAction.POST_ACTION_SEMAPHORE_RELEASE;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -314,19 +314,24 @@ public class WireMockUtils {
         removeRequestForStub(stubUuid, 1);
     }
 
-    public UUID stubImportNetwork(String caseUuid, Map<String, Object> importParameters, String networkUuid, String networkId, String caseFormat) {
+    public UUID stubImportNetwork(String caseUuid, Map<String, Object> importParameters, String networkUuid, String networkId, String caseFormat, CountDownLatch countDownLatch) {
         UUID importNetworkStubId = wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
             .withQueryParam("caseUuid", WireMock.equalTo(caseUuid))
             .withQueryParam("variantId", WireMock.equalTo(FIRST_VARIANT_ID))
             .withQueryParam("receiver", WireMock.matching(".*"))
             .withPostServeAction(POST_ACTION_SEND_INPUT,
-                Map.of(
-                    "payload", "",
-                    "destination", "case.import.succeeded",
-                    "networkUuid", networkUuid,
-                    "networkId", networkId,
-                    "caseFormat", caseFormat,
-                    "importParameters", importParameters))
+                Parameters.from(
+                    Map.of(
+                        "payload", "",
+                        "destination", "case.import.succeeded",
+                        "networkUuid", networkUuid,
+                        "networkId", networkId,
+                        "caseFormat", caseFormat,
+                        "importParameters", importParameters,
+                        "latch", countDownLatch
+                    )
+                )
+            )
 
             .willReturn(WireMock.ok())).getId();
 
@@ -339,23 +344,16 @@ public class WireMockUtils {
     }
 
     @SneakyThrows
-    public UUID stubDisableCaseExpiration(String caseUuid, Semaphore semaphore) {
+    public UUID stubDisableCaseExpiration(String caseUuid) {
         UUID disableCaseExpirationStubId = wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/disableExpiration"))
-            .withPostServeAction(POST_ACTION_SEMAPHORE_RELEASE, Map.of())
             .willReturn(WireMock.ok())).getId();
-
-        semaphore.acquire();
 
         return disableCaseExpirationStubId;
     }
 
     @SneakyThrows
-    public void verifyDisableCaseExpiration(UUID stubUuid, String caseUuid, Semaphore semaphore) {
-        semaphore.acquire();
-
+    public void verifyDisableCaseExpiration(UUID stubUuid, String caseUuid) {
         verifyPutRequest(stubUuid, "/v1/cases/" + caseUuid + "/disableExpiration", false, Map.of(), null);
-
-        semaphore.release();
     }
 
     public UUID stubActuatorHealthGet(String jsonResponse) {

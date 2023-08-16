@@ -11,8 +11,12 @@ import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.extension.PostServeAction;
 import com.github.tomakehurst.wiremock.http.QueryParameter;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import org.elasticsearch.common.util.concurrent.CountDown;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.messaging.support.MessageBuilder;
+
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
@@ -40,6 +44,8 @@ public class SendInput extends PostServeAction {
     public void doAction(ServeEvent serveEvent, Admin admin, Parameters parameters) {
         Object payload = parameters.get("payload");
         String destination = parameters.get("destination").toString();
+        CountDownLatch countDownLatch = (CountDownLatch) (parameters.get("latch"));
+        List<String> paramsNotToPass = List.of("countDownLatch", "destination", "payload");
 
         MessageBuilder<?> messageBuilder = MessageBuilder.withPayload(payload);
         QueryParameter receiverParam = serveEvent.getRequest().getQueryParams().get(QUERY_PARAM_RECEIVER);
@@ -48,16 +54,22 @@ public class SendInput extends PostServeAction {
         }
 
         parameters.forEach((key, value) -> {
-            if (!(key.equals("destination") || key.equals("payload"))) {
+            if (!paramsNotToPass.contains(key)) {
                 messageBuilder.setHeader(key, value);
             }
         });
+
 
         // Wiremock does not accept to send a request http in a post serve action
         // For that it is necessary to use the webhook extension which only sends a http request
         // This is not suitable for our case, i.e. java code that sends a request
         // That's why we do it in another thread
-        new Thread(() -> input.send(messageBuilder.build(), destination)).start();
+        new Thread(() -> {
+            input.send(messageBuilder.build(), destination);
+            countDownLatch.countDown();
+        }
+        ).start();
+
     }
 }
 
