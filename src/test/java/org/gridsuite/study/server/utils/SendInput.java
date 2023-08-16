@@ -64,12 +64,11 @@ public class SendInput extends PostServeAction {
         // That's why we do it in another thread
         new Thread(() -> {
             input.send(messageBuilder.build(), destination);
-            if(countDownLatch != null) {
+            if (countDownLatch != null) {
                 countDownLatch.countDown();
             }
         }
         ).start();
-
     }
 }
 
