@@ -230,11 +230,10 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/network")
-    @Operation(summary = "get study root network")
+    @Operation(summary = "check study root network existence")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The network does exists"),
-        @ApiResponse(responseCode = "403", description = "The subtree can't be copied above the root node nor around itself"),
-        @ApiResponse(responseCode = "404", description = "The source study or subtree doesn't exist")})
+        @ApiResponse(responseCode = "204", description = "The network does exists"),
+        @ApiResponse(responseCode = "404", description = "The network doesn't exist - Will try to reimport the network if params is set to true")})
     public ResponseEntity<Network> getStudyNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                    @RequestParam("reimportNetworkIfNotFound") boolean reimportNetworkIfNotFound,
                                                    @RequestHeader(HEADER_USER_ID) String userId) {
