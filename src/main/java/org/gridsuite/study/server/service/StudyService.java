@@ -1860,22 +1860,46 @@ public class StudyService {
 
     @Transactional
     public void createDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, EventInfos event) {
-        dynamicSimulationEventService.createEvent(nodeUuid, event);
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_CREATING_IN_PROGRESS);
+        try {
+            dynamicSimulationEventService.createEvent(nodeUuid, event);
+        } finally {
+            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+        }
     }
 
     @Transactional
     public void updateDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, EventInfos event) {
-        dynamicSimulationEventService.updateEvent(nodeUuid, event);
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_UPDATING_IN_PROGRESS);
+        try {
+            dynamicSimulationEventService.updateEvent(nodeUuid, event);
+        } finally {
+            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+        }
     }
 
     @Transactional
     public void moveDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, UUID eventUuid, UUID beforeUuid) {
-        dynamicSimulationEventService.moveEvent(nodeUuid, eventUuid, beforeUuid);
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_UPDATING_IN_PROGRESS);
+        try {
+            dynamicSimulationEventService.moveEvent(nodeUuid, eventUuid, beforeUuid);
+        } finally {
+            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+        }
     }
 
     @Transactional
     public void deleteDynamicSimulationEvents(UUID studyUuid, UUID nodeUuid, String userId, List<UUID> eventUuids) {
-        dynamicSimulationEventService.deleteEvents(nodeUuid, eventUuids);
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_DELETING_IN_PROGRESS);
+        try {
+            dynamicSimulationEventService.deleteEvents(nodeUuid, eventUuids);
+        } finally {
+            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+        }
     }
 
     @Transactional

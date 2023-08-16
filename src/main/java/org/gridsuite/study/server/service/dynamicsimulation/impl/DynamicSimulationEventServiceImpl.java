@@ -19,6 +19,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
@@ -36,7 +37,7 @@ public class DynamicSimulationEventServiceImpl implements DynamicSimulationEvent
     @Transactional(readOnly = true)
     @Override
     public List<EventInfos> getEvents(UUID nodeUuid) {
-        return eventRepository.findAllByNodeId(nodeUuid).stream().map(EventInfos::new).toList();
+        return eventRepository.findAllByNodeId(nodeUuid).stream().map(EventInfos::new).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -101,7 +102,7 @@ public class DynamicSimulationEventServiceImpl implements DynamicSimulationEvent
 
         Optional<EventEntity> eventEntityOpt = eventEntities.stream().filter(elem -> elem.getId().equals(eventUuid)).findFirst();
 
-        beforeEntityOpt.ifPresent(beforeEntity -> {
+        beforeEntityOpt.ifPresent(beforeEntity ->
             eventEntityOpt.ifPresent(eventEntity -> {
                 int insertIndex = eventEntities.indexOf(beforeEntity);
                 if (insertIndex != -1) {
@@ -113,8 +114,8 @@ public class DynamicSimulationEventServiceImpl implements DynamicSimulationEvent
 
                     eventRepository.saveAll(eventEntities);
                 }
-            });
-        });
+            })
+        );
     }
 
     @Transactional
