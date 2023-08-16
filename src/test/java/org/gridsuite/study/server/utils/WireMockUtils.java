@@ -12,13 +12,16 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import lombok.SneakyThrows;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
+import static org.gridsuite.study.server.utils.wiremock.SemaphoreReleaseAction.POST_ACTION_SEMAPHORE_RELEASE;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -335,15 +338,24 @@ public class WireMockUtils {
             Map.of("caseUuid", WireMock.equalTo(caseUuid.toString()), "variantId", WireMock.equalTo(FIRST_VARIANT_ID), "receiver", WireMock.matching(".*")));
     }
 
-    public UUID stubDisableCaseExpiration(String caseUuid) {
+    @SneakyThrows
+    public UUID stubDisableCaseExpiration(String caseUuid, Semaphore semaphore) {
         UUID disableCaseExpirationStubId = wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/disableExpiration"))
+            .withPostServeAction(POST_ACTION_SEMAPHORE_RELEASE, Map.of())
             .willReturn(WireMock.ok())).getId();
+
+        semaphore.acquire();
 
         return disableCaseExpirationStubId;
     }
 
-    public void verifyDisableCaseExpiration(UUID stubUuid, String caseUuid) {
+    @SneakyThrows
+    public void verifyDisableCaseExpiration(UUID stubUuid, String caseUuid, Semaphore semaphore) {
+        semaphore.acquire();
+
         verifyPutRequest(stubUuid, "/v1/cases/" + caseUuid + "/disableExpiration", false, Map.of(), null);
+
+        semaphore.release();
     }
 
     public UUID stubActuatorHealthGet(String jsonResponse) {

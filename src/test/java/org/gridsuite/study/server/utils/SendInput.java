@@ -19,7 +19,7 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
 
 /**
  * Class that implements an action we want to execute after mocking an API call
- * See 'Post-serve actions' in https://wiremock.org/docs/extending-wiremock/
+ * See 'Post-serve actions' in <a href="https://wiremock.org/docs/extending-wiremock/">...</a>
  */
 public class SendInput extends PostServeAction {
 
@@ -48,7 +48,7 @@ public class SendInput extends PostServeAction {
         }
 
         parameters.forEach((key, value) -> {
-            if (!("destination".equals(key) && "payload".equals(key))) {
+            if (!(key.equals("destination") || key.equals("payload"))) {
                 messageBuilder.setHeader(key, value);
             }
         });

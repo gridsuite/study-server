@@ -16,6 +16,7 @@ import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.SemaphoreReleaseAction;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,6 +42,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
@@ -101,9 +103,11 @@ public class StudyServiceTest {
     @MockBean
     private NetworkStoreService networkStoreService;
 
+    private final Semaphore semaphore = new Semaphore(1);
+
     @Before
     public void setup() throws IOException {
-        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
+        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input), new SemaphoreReleaseAction(semaphore)));
         wireMockUtils = new WireMockUtils(wireMockServer);
 
         objectWriter = mapper.writer().withDefaultPrettyPrinter();
@@ -130,7 +134,7 @@ public class StudyServiceTest {
 
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), true);
         UUID postNetworkStubId = wireMockUtils.stubImportNetwork(CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE");
-        UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(CASE_UUID.toString());
+        UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(CASE_UUID.toString(), semaphore);
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/network", studyUuid)
                 .param(REIMPORT_NETWORK_IF_NOT_FOUND_HEADER, "true")
@@ -153,8 +157,7 @@ public class StudyServiceTest {
 
         wireMockUtils.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
         wireMockUtils.verifyImportNetwork(postNetworkStubId, CASE_UUID.toString());
-        Thread.sleep(4000);
-        wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, CASE_UUID.toString());
+        wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, CASE_UUID.toString(), semaphore);
     }
 
     @Test
@@ -183,7 +186,7 @@ public class StudyServiceTest {
 
         UUID postNetworkStubId = wireMockUtils.stubImportNetwork(caseUuid.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE");
 
-        UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(caseUuid.toString());
+        UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(caseUuid.toString(), semaphore);
 
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid).header("userId", userId))
             .andExpect(status().isOk())
@@ -197,7 +200,7 @@ public class StudyServiceTest {
         // assert API calls have been made
         wireMockUtils.verifyCaseExists(caseExistsStubId, caseUuid.toString());
         wireMockUtils.verifyImportNetwork(postNetworkStubId, caseUuid.toString());
-        wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, caseUuid.toString());
+        wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, caseUuid.toString(), semaphore);
 
         return studyUuid;
     }
