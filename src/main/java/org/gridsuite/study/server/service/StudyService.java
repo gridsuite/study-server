@@ -1695,7 +1695,12 @@ public class StudyService {
         try {
             sensitivityAnalysisInputData = objectMapper.readValue(sensitivityAnalysisInput, SensitivityAnalysisInputData.class);
             if (sensitivityAnalysisInputData.getParameters() == null) {
+                SensitivityAnalysisParametersValues sensitivityAnalysisParametersValues = getSensitivityAnalysisParametersValues(studyUuid);
                 SensitivityAnalysisParameters sensitivityAnalysisParameters = SensitivityAnalysisParameters.load();
+                sensitivityAnalysisParameters.setAngleFlowSensitivityValueThreshold(sensitivityAnalysisParametersValues.getAngleFlowSensitivityValueThreshold());
+                sensitivityAnalysisParameters.setFlowFlowSensitivityValueThreshold(sensitivityAnalysisParametersValues.getFlowFlowSensitivityValueThreshold());
+                sensitivityAnalysisParameters.setFlowVoltageSensitivityValueThreshold(sensitivityAnalysisParametersValues.getFlowVoltageSensitivityValueThreshold());
+
                 LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
                 List<LoadFlowSpecificParameterInfos> specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SENSITIVITY_ANALYSIS);
                 sensitivityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
