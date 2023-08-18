@@ -15,7 +15,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -42,9 +41,8 @@ public class NetworkMapService {
     private String networkMapServerBaseUri;
 
     @Autowired
-    public NetworkMapService(
-            @Value("${gridsuite.services.network-map-server.base-uri:http://network-map-server/}") String networkMapServerBaseUri) {
-        this.networkMapServerBaseUri = networkMapServerBaseUri;
+    public NetworkMapService(RemoteServicesProperties remoteServicesProperties) {
+        this.networkMapServerBaseUri = remoteServicesProperties.getServiceUri("network-map-server");
     }
 
     public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, String infoType) {
@@ -114,7 +112,7 @@ public class NetworkMapService {
 
     public String getEquipmentMapData(UUID networkUuid, String variantId, String equipmentPath, String equipmentId) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(
-                DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath + "/{equipmentUuid}");
+                DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath + "/{equipmentId}");
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -129,6 +127,22 @@ public class NetworkMapService {
             } else {
                 throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
             }
+        }
+        return equipmentMapData;
+    }
+
+    public String getHvdcLineShuntCompensators(UUID networkUuid, String variantId, String hvdcId) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(
+                DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/hvdc-lines/{hvdcId}/shunt-compensators");
+        if (!StringUtils.isBlank(variantId)) {
+            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        String path = builder.buildAndExpand(networkUuid, hvdcId).toUriString();
+        String equipmentMapData;
+        try {
+            equipmentMapData = restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
         }
         return equipmentMapData;
     }

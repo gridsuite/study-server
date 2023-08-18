@@ -10,6 +10,7 @@ package org.gridsuite.study.server.service;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Supplier;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -33,5 +34,9 @@ public class StudyServerExecutionService {
 
     public CompletableFuture<Void> runAsync(Runnable runnable) {
         return CompletableFuture.runAsync(runnable, executorService);
+    }
+
+    public <T> CompletableFuture<T> supplyAsync(Supplier<T> supplier) {
+        return CompletableFuture.supplyAsync(supplier, executorService);
     }
 }

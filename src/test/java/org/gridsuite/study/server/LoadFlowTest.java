@@ -21,14 +21,12 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
-import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
-import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.ShortCircuitService;
+import org.gridsuite.study.server.service.SensitivityAnalysisService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -363,7 +361,9 @@ public class LoadFlowTest {
                 .useReactiveLimits(true)
                 .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null);
+        SensitivityAnalysisParametersEntity defaultSensitivityAnalysisParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider,
+                defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, defaultSensitivityAnalysisParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

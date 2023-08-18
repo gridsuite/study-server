@@ -19,6 +19,7 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.apache.commons.collections4.ListUtils;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesMetadataRest;
+import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractRestClientTest;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.client.timeseries.impl.TimeSeriesClientImpl;
@@ -59,6 +60,9 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    RemoteServicesProperties remoteServicesProperties;
 
     @Override
     @NotNull
@@ -149,7 +153,8 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
         timeSeriesGroupMetadata.setMetadatas(List.of(new TimeSeriesMetadataRest(TIME_SERIES_NAME_1), new TimeSeriesMetadataRest(TIME_SERIES_NAME_2)));
 
         // config client
-        timeSeriesClient = new TimeSeriesClientImpl(initMockWebServer(), restTemplate);
+        remoteServicesProperties.setServiceUri("timeseries-server", initMockWebServer());
+        timeSeriesClient = new TimeSeriesClientImpl(remoteServicesProperties, restTemplate);
     }
 
     @Test

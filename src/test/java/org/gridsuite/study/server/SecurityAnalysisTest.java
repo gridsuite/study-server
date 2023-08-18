@@ -29,6 +29,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -417,6 +418,7 @@ public class SecurityAnalysisTest {
             .dcPowerFactor(1.0)
             .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
+        SensitivityAnalysisParametersEntity defaultSensitivityAnalysisParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
         SecurityAnalysisParametersValues securityAnalysisParametersValues = SecurityAnalysisParametersValues.builder()
                 .lowVoltageAbsoluteThreshold(0.0)
                 .lowVoltageProportionalThreshold(0.0)
@@ -425,7 +427,8 @@ public class SecurityAnalysisTest {
                 .flowProportionalThreshold(0.1)
                 .build();
         SecurityAnalysisParametersEntity securityAnalysisParametersEntity = SecurityAnalysisService.toEntity(securityAnalysisParametersValues);
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, securityAnalysisParametersEntity);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider,
+                defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, securityAnalysisParametersEntity, defaultSensitivityAnalysisParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

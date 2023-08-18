@@ -30,11 +30,9 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
-import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
-import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
@@ -532,7 +530,9 @@ public class SingleLineDiagramTest {
             .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
             .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, null);
+        SensitivityAnalysisParametersEntity defaultSensitivityAnalysisParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider,
+                defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, null, defaultSensitivityAnalysisParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

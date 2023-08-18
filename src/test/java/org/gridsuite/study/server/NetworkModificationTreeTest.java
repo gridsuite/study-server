@@ -42,6 +42,7 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -867,6 +868,8 @@ public class NetworkModificationTreeTest {
         assertEquals(NotificationService.NODE_CREATED, mess.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(newParentNode.getId(), mess.getHeaders().get(NotificationService.HEADER_PARENT_NODE));
         assertEquals(mode.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
+        assertEquals(parentNode.getId(), mess.getHeaders().get(NotificationService.HEADER_REFERENCE_NODE_UUID));
+
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
     }
 

@@ -23,13 +23,12 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.gridsuite.study.server.dto.LoadFlowSpecificParameterInfos;
-import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -146,6 +145,9 @@ public class SensitivityAnalysisTest {
     private final String sensitivityAnalysisResultDestination = "sensitivityanalysis.result";
     private final String sensitivityAnalysisStoppedDestination = "sensitivityanalysis.stopped";
     private final String sensitivityAnalysisFailedDestination = "sensitivityanalysis.failed";
+
+    public static final String SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":0.0,\"angleFlowSensitivityValueThreshold\":0.0,\"flowVoltageSensitivityValueThreshold\":0.0}";
+    public static final String SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":90.0,\"angleFlowSensitivityValueThreshold\":0.6,\"flowVoltageSensitivityValueThreshold\":0.1}";
 
     @Before
     public void setup() throws IOException {
@@ -463,7 +465,13 @@ public class SensitivityAnalysisTest {
             .dcPowerFactor(1.0)
             .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null);
+        SensitivityAnalysisParametersValues sensitivityAnalysisParametersValues = SensitivityAnalysisParametersValues.builder()
+                .flowFlowSensitivityValueThreshold(0.0)
+                .angleFlowSensitivityValueThreshold(0.0)
+                .flowVoltageSensitivityValueThreshold(0.0)
+                .build();
+        SensitivityAnalysisParametersEntity sensitivityAnalysisParametersEntity = SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, sensitivityAnalysisParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
@@ -484,7 +492,13 @@ public class SensitivityAnalysisTest {
                 .specificParameters(LoadFlowSpecificParameterEntity.toLoadFlowSpecificParameters(specificParams))
                 .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null);
+        SensitivityAnalysisParametersValues sensitivityAnalysisParametersValues = SensitivityAnalysisParametersValues.builder()
+                .flowFlowSensitivityValueThreshold(0.0)
+                .angleFlowSensitivityValueThreshold(0.0)
+                .flowVoltageSensitivityValueThreshold(0.0)
+                .build();
+        SensitivityAnalysisParametersEntity sensitivityAnalysisParametersEntity = SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, sensitivityAnalysisParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
@@ -542,5 +556,35 @@ public class SensitivityAnalysisTest {
         } catch (IOException e) {
             // Ignoring
         }
+    }
+
+    @Test
+    public void testSensitivityAnalysisParameters() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        //get sensitivity analysis parameters
+        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
+                status().isOk(),
+                content().string(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
+
+        //create sensitivity analysis Parameters
+        SensitivityAnalysisParametersValues sensitivityAnalysisParametersValues = SensitivityAnalysisParametersValues.builder()
+                .flowFlowSensitivityValueThreshold(90)
+                .angleFlowSensitivityValueThreshold(0.6)
+                .flowVoltageSensitivityValueThreshold(0.1)
+                .build();
+        String mnBodyJson = objectWriter.writeValueAsString(sensitivityAnalysisParametersValues);
+
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mnBodyJson)).andExpect(
+                status().isOk());
+
+        //getting set values
+        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
+                status().isOk(),
+                content().string(SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON));
     }
 }

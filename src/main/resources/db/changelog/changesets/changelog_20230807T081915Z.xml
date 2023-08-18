@@ -1,0 +1,74 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="marcelinhug" id="create_load_flow_parameters_id_index">
+        <createIndex indexName="load_flow_parameters_id_index" tableName="load_flow_specific_parameters">
+            <column name="load_flow_parameters_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="marcelinhug" id="create_study_load_flow_parameters_entity_id_index">
+        <createIndex indexName="study_load_flow_parameters_entity_id_index" tableName="study">
+            <column name="load_flow_parameters_entity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="marcelinhug" id="create_study_short_circuit_parameters_entity_id_index">
+        <createIndex indexName="short_circuit_parameters_entity_id" tableName="study">
+            <column name="short_circuit_parameters_entity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="marcelinhug" id="create_study_dynamic_simulation_parameters_entity_id_index">
+        <createIndex indexName="study_dynamic_simulation_parameters_entity_id_index" tableName="study">
+            <column name="dynamic_simulation_parameters_entity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="marcelinhug" id="create_study_security_analysis_parameters_entity_id_index">
+        <createIndex indexName="study_security_analysis_parameters_entity_id_index" tableName="study">
+            <column name="security_analysis_parameters_entity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="marcelinhug" id="create_study_voltage_init_parameters_entity_id_index">
+        <createIndex indexName="study_voltage_init_parameters_entity_id_index" tableName="study">
+            <column name="voltage_init_parameters_entity_id"/>
+        </createIndex>
+    </changeSet> 
+    <changeSet author="marcelinhug" id="create_voltage_init_parameters_entity_constantqgenerators_id_index">
+        <createIndex indexName="voltage_init_parameters_entity_constantqgenerators_id_index" tableName="voltage_init_parameters_entity_constantqgenerators">
+            <column name="voltage_init_parameters_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="marcelinhug" id="create_voltage_init_parameters_shunt_compensators_id_index">
+        <createIndex indexName="voltage_init_parameters_shunt_compensators_id_index" tableName="voltage_init_parameters_entity_variable_shunt_compensators">
+            <column name="voltage_init_parameters_id"/>
+        </createIndex>
+    </changeSet>   
+    <changeSet author="marcelinhug" id="create_voltage_init_parameters_variable_two_wt_id_index">
+        <createIndex indexName="voltage_init_parameters_variable_two_wt_id_index" tableName="voltage_init_parameters_entity_variable_two_wt">
+            <column name="voltage_init_parameters_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="marcelinhug" id="create_voltage_init_parameters_voltage_limits_id_index">
+        <createIndex indexName="voltage_init_parameters_voltage_limits_id_index" tableName="voltage_init_parameters_voltage_limits">
+            <column name="voltage_init_parameters_id"/>
+        </createIndex>
+    </changeSet> 
+    <changeSet author="marcelinhug" id="create_voltage_init_parameters_voltage_limits_filters_index">
+        <createIndex indexName="voltage_init_parameters_voltage_limits_filters_index" tableName="voltage_init_parameters_voltage_limits_entity_filters">
+            <column name="voltage_limit_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="marcelinhug" id="rename_FKhv4sw663c5fkfkw42vsrlrbxo">
+        <dropForeignKeyConstraint baseTableName="load_flow_specific_parameters" constraintName="FKhv4sw663c5fkfkw42vsrlrbxo"/>
+        <addForeignKeyConstraint baseTableName="load_flow_specific_parameters" baseColumnNames="load_flow_parameters_id" referencedTableName="load_flow_parameters" referencedColumnNames="id" constraintName="loadflowSpecificParameters_loadflowParameters_id_fk" deferrable="false" initiallyDeferred="false" validate="true" />
+    </changeSet>
+    <changeSet author="marcelinhug" id="rename_FKc40g1mgugxpmbmpr4m1c8w7pv">
+        <dropForeignKeyConstraint baseTableName="network_modification_node_info" constraintName="FKc40g1mgugxpmbmpr4m1c8w7pv"/>
+        <addForeignKeyConstraint baseTableName="network_modification_node_info" baseColumnNames="id_node" referencedTableName="node" referencedColumnNames="id_node" constraintName="networkModificationNodeInfo_node_idNode_fk" deferrable="false" initiallyDeferred="false" validate="true" />
+    </changeSet>    
+    <changeSet author="marcelinhug" id="rename_FK4x41cf843vsqsrl1y9ao1508e">
+        <dropForeignKeyConstraint baseTableName="root_node_info" constraintName="FK4x41cf843vsqsrl1y9ao1508e"/>
+        <addForeignKeyConstraint baseTableName="root_node_info" baseColumnNames="id_node" referencedTableName="node" referencedColumnNames="id_node" constraintName="rootNodeInfo_node_idNode_fk" deferrable="false" initiallyDeferred="false" validate="true" />
+    </changeSet> 
+    <changeSet author="marcelinhug" id="rename_FKhp898n3yyweyjpx3j9wko9ajg">
+        <dropForeignKeyConstraint baseTableName="voltage_init_parameters_voltage_limits" constraintName="FKhp898n3yyweyjpx3j9wko9ajg"/>
+        <addForeignKeyConstraint baseTableName="voltage_init_parameters_voltage_limits" baseColumnNames="voltage_init_parameters_id" referencedTableName="voltage_init_parameters" referencedColumnNames="id" constraintName="voltageInitParametersVoltageLimits_voltageInitParameters_id_fk" deferrable="false" initiallyDeferred="false" validate="true" />
+    </changeSet>      
+</databaseChangeLog>

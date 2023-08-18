@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelVariableDefinitionInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.VariablesSetInfos;
+import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.client.dynamicmapping.impl.DynamicMappingClientImpl;
@@ -28,6 +29,7 @@ import java.util.List;
 
 import static org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -63,12 +65,16 @@ public class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    RemoteServicesProperties remoteServicesProperties;
+
     @Override
     public void setup() {
         super.setup();
 
         // config client
-        dynamicMappingClient = new DynamicMappingClientImpl(initMockWebServer(), restTemplate);
+        remoteServicesProperties.setServiceUri("dynamic-mapping-server", initMockWebServer());
+        dynamicMappingClient = new DynamicMappingClientImpl(remoteServicesProperties, restTemplate);
     }
 
     @Test
@@ -154,7 +160,7 @@ public class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
 
         // --- check result --- //
         // must be null
-        assertEquals(null, modelInfosList);
+        assertNull(modelInfosList);
     }
 
     @Test(expected = StudyException.class)

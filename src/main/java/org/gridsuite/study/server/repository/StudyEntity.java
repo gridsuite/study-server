@@ -7,7 +7,7 @@
 package org.gridsuite.study.server.repository;
 
 import lombok.*;
-import org.gridsuite.study.server.service.ShortCircuitService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 
 import jakarta.persistence.*;
 
@@ -98,6 +98,14 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
                     name = "securityAnalysisParameters_id_fk"
             ))
     private SecurityAnalysisParametersEntity securityAnalysisParameters;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "sensitivityAnalysisParametersEntity_id",
+            referencedColumnName = "id",
+            foreignKey = @ForeignKey(
+                    name = "sensitivityAnalysisParameters_id_fk"
+            ))
+    private SensitivityAnalysisParametersEntity sensitivityAnalysisParameters;
 
     @ElementCollection
     @CollectionTable(name = "importParameters",
