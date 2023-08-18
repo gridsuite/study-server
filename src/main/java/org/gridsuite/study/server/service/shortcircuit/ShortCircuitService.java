@@ -137,8 +137,7 @@ public class ShortCircuitService {
 
     public String getShortCircuitAnalysisFaultResultsPage(UUID nodeUuid, String mode, Pageable pageable) {
         String params = "?mode=" + mode + "&page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize();
-        for (Sort.Order order : pageable.getSort())
-        {
+        for (Sort.Order order : pageable.getSort()) {
             params += "&sort=" + order.getProperty() + "," + order.getDirection();
         }
         String faultResultsPath = getShortCircuitAnalysisFaultResultsResourcePath(nodeUuid);
