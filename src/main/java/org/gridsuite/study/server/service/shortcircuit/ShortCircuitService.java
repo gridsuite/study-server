@@ -136,15 +136,17 @@ public class ShortCircuitService {
     }
 
     public String getShortCircuitAnalysisFaultResultsPage(UUID nodeUuid, String mode, Pageable pageable) {
-        String params = "?mode=" + mode + "&page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize();
+        StringBuilder paramsBuilder = new StringBuilder();
+        paramsBuilder.append("?mode=" + mode + "&page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize());
+
         for (Sort.Order order : pageable.getSort()) {
-            params += "&sort=" + order.getProperty() + "," + order.getDirection();
+            paramsBuilder.append("&sort=" + order.getProperty() + "," + order.getDirection());
         }
         String faultResultsPath = getShortCircuitAnalysisFaultResultsResourcePath(nodeUuid);
         if (faultResultsPath == null) {
             return null;
         }
-        return getShortCircuitAnalysisResource(faultResultsPath + params);
+        return getShortCircuitAnalysisResource(faultResultsPath + paramsBuilder);
     }
 
     public String getShortCircuitAnalysisStatus(UUID nodeUuid, ShortcircuitAnalysisType type) {
