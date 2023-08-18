@@ -9,8 +9,8 @@ package org.gridsuite.study.server.utils.elasticsearch;
 import org.springframework.stereotype.Component;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 
 /**
  * A class to launch an embedded DB elasticsearch
@@ -21,7 +21,7 @@ import javax.annotation.PreDestroy;
 public class EmbeddedElasticsearch {
 
     private static final String ES_DOCKER_IMAGE_NAME = "docker.elastic.co/elasticsearch/elasticsearch";
-    private static final String ES_DOCKER_IMAGE_VERSION = "7.9.3";
+    private static final String ES_DOCKER_IMAGE_VERSION = "8.5.3";
 
     private static ElasticsearchContainer elasticsearchContainer;
 
@@ -32,6 +32,8 @@ public class EmbeddedElasticsearch {
         }
 
         elasticsearchContainer = new ElasticsearchContainer(String.format("%s:%s", ES_DOCKER_IMAGE_NAME, ES_DOCKER_IMAGE_VERSION));
+        //Els 8 has security enabled by default
+        elasticsearchContainer.getEnvMap().put("xpack.security.enabled", Boolean.FALSE.toString());
         elasticsearchContainer.start();
 
         System.setProperty("spring.data.elasticsearch.embedded", Boolean.toString(true));

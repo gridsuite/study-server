@@ -7,20 +7,12 @@
 
 package org.gridsuite.study.server.networkmodificationtree.entities;
 
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import javax.persistence.CollectionTable;
-import javax.persistence.Column;
-import javax.persistence.ElementCollection;
-import javax.persistence.Entity;
-import javax.persistence.ForeignKey;
-import javax.persistence.Index;
-import javax.persistence.Table;
-
-import javax.persistence.*;
 import java.util.Set;
 import java.util.UUID;
 

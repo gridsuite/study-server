@@ -503,8 +503,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/result")
     @Operation(summary = "Get a loadflow result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow result"),
-            @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
-            @ApiResponse(responseCode = "404", description = "The loadflow result has not been found")})
+        @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The loadflow result has not been found")})
     public ResponseEntity<String> getLoadflowResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String result = loadflowService.getLoadFlowResult(nodeUuid);
@@ -515,8 +515,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/status")
     @Operation(summary = "Get the loadflow status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow status"),
-            @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
-            @ApiResponse(responseCode = "404", description = "The loadflow status has not been found")})
+        @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The loadflow status has not been found")})
     public ResponseEntity<String> getLoadFlowStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String result = loadflowService.getLoadFlowStatus(nodeUuid);

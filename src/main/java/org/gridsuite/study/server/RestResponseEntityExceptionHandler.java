@@ -87,7 +87,7 @@ public class RestResponseEntityExceptionHandler {
         if (cause instanceof TypeMismatchException && cause.getCause() != null && cause.getCause() != cause) {
             cause = cause.getCause();
         }
-        return ResponseEntity.status(exception.getStatus()).body(cause.getMessage());
+        return ResponseEntity.status(exception.getStatusCode()).body(cause.getMessage());
     }
 
     @ExceptionHandler(TypeMismatchException.class)
