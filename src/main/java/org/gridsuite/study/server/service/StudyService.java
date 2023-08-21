@@ -274,24 +274,35 @@ public class StudyService {
         return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getImportParameters();
     }
 
-    public BasicStudyInfos reimportStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters) {
-        return reimportStudy(caseUuid, userId, studyUuid, importParameters, false);
+    /**
+     * Recreates study network from <caseUuid> and <importParameters>
+     * @param caseUuid
+     * @param userId
+     * @param studyUuid
+     * @param importParameters
+     */
+    public void recreateStudyRootNetwork(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters) {
+        recreateStudyRootNetwork(caseUuid, userId, studyUuid, importParameters, false);
     }
 
-    public BasicStudyInfos reimportStudy(UUID caseUuid, String userId, UUID studyUuid) {
-        return reimportStudy(caseUuid, userId, studyUuid, null, true);
+    /**
+     * Recreates study network from existing case and import parameters
+     * @param userId
+     * @param studyUuid
+     */
+    public void recreateStudyRootNetwork(String userId, UUID studyUuid) {
+        UUID caseUuid = self.getStudyCaseUuid(studyUuid);
+        recreateStudyRootNetwork(caseUuid, userId, studyUuid, null, true);
     }
 
-    private BasicStudyInfos reimportStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters) {
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+    private void recreateStudyRootNetwork(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters) {
+        caseService.assertCaseExists(caseUuid);
         UUID importReportUuid = UUID.randomUUID();
         Map<String, Object> importParametersToUse = shouldLoadPreviousImportParameters
             ? new HashMap<>(self.getStudyImportParameters(studyUuid))
             : importParameters;
 
-        persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParametersToUse);
-
-        return basicStudyInfos;
+        persistentStoreWithNotificationOnError(caseUuid, studyUuid, userId, importReportUuid, importParametersToUse);
     }
 
     public BasicStudyInfos duplicateStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
@@ -498,9 +509,9 @@ public class StudyService {
             nodesModificationInfos = networkModificationTreeService.getAllNodesModificationInfos(studyUuid);
             studyEntity.ifPresent(s -> {
                 caseUuid.set(studyEntity.get().getCaseUuid());
-                networkModificationTreeService.doDeleteTree(studyUuid);
-                studyRepository.deleteById(studyUuid);
-                studyInfosService.deleteByUuid(studyUuid);
+                //networkModificationTreeService.doDeleteTree(studyUuid);
+                //studyRepository.deleteById(studyUuid);
+                //studyInfosService.deleteByUuid(studyUuid);
             });
             deleteStudyInfos = new DeleteStudyInfos(networkUuid, caseUuid.get(), nodesModificationInfos);
         } else {
@@ -537,7 +548,9 @@ public class StudyService {
                                 .map(NodeModificationInfos::getVoltageInitUuid).filter(Objects::nonNull).forEach(voltageInitService::deleteVoltageInitResult)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
                                 .map(NodeModificationInfos::getDynamicSimulationUuid).filter(Objects::nonNull).forEach(dynamicSimulationService::deleteResult)), // TODO delete all with one request only
+/*
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
+*/
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
                         studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid())),
@@ -1969,24 +1982,6 @@ public class StudyService {
         return studyRepository.findById(studyUuid)
                 .map(studyEntity -> SecurityAnalysisService.toSecurityAnalysisParameters(studyEntity.getSecurityAnalysisParameters()))
                 .orElse(null);
-    }
-
-    public void reimportStudyNetwork(UUID studyUuid, String userId) {
-        // check study existence
-        StudyInfos studyInfos = self.getStudyInfos(studyUuid);
-        if (studyInfos == null) {
-            throw new StudyException(StudyException.Type.STUDY_NOT_FOUND);
-        }
-
-        // if study does exist, we check linked case existence
-        UUID caseUuid = self.getStudyCaseUuid(studyUuid);
-        if (caseUuid == null || !caseService.caseExists(caseUuid)) {
-            // if it does not exist anymore, we send a BROKEN STUDY exception
-            throw new StudyException(StudyException.Type.BROKEN_STUDY);
-        }
-
-        // else, we reimport the study from the existing case
-        self.reimportStudy(caseUuid, userId, studyUuid);
     }
 
     public void copyVoltageInitModifications(UUID studyUuid, UUID nodeUuid, String userId) {

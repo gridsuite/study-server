@@ -73,6 +73,16 @@ public class NetworkService {
         }
     }
 
+    public boolean isNetworkExisting (UUID networkUuid) {
+        try {
+            getNetwork(networkUuid, PreloadingStrategy.NONE, null);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+
+    }
+
     UUID doGetNetworkUuid(UUID studyUuid) {
         return studyRepository.findById(studyUuid).map(StudyEntity::getNetworkUuid).orElse(null);
     }

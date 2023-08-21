@@ -63,7 +63,6 @@ public class RestResponseEntityExceptionHandler {
             case SENSITIVITY_ANALYSIS_ERROR:
             case NODE_BUILD_ERROR:
             case URI_SYNTAX:
-            case BROKEN_STUDY:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
             case SVG_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getMessage());

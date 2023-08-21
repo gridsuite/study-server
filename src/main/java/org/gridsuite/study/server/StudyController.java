@@ -7,8 +7,6 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.iidm.network.Network;
-import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
@@ -42,7 +40,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
@@ -152,20 +149,6 @@ public class StudyController {
         return ResponseEntity.ok().body(createStudy);
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/cases/{caseUuid}")
-    @Operation(summary = "reimport study network of a study from an existing case")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The id of the network imported"),
-        @ApiResponse(responseCode = "424", description = "The case doesn't exist")})
-    public ResponseEntity<BasicStudyInfos> reimportStudyFromCase(@PathVariable("caseUuid") UUID caseUuid,
-                                                       @PathVariable("studyUuid") UUID studyUuid,
-                                                       @RequestBody(required = false) Map<String, Object> importParameters,
-                                                       @RequestHeader(HEADER_USER_ID) String userId) {
-        caseService.assertCaseExists(caseUuid);
-        BasicStudyInfos createStudy = studyService.reimportStudy(caseUuid, userId, studyUuid, importParameters);
-        return ResponseEntity.ok().body(createStudy);
-    }
-
     @PostMapping(value = "/studies")
     @Operation(summary = "create a study from an existing one")
     @ApiResponses(value = {
@@ -229,25 +212,41 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network")
+    @RequestMapping(value = "/studies/{studyUuid}/network", method = RequestMethod.HEAD)
     @Operation(summary = "check study root network existence")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "The network does exists"),
-        @ApiResponse(responseCode = "404", description = "The network doesn't exist - Will try to reimport the network if params is set to true")})
-    public ResponseEntity<Network> getStudyNetwork(@PathVariable("studyUuid") UUID studyUuid,
-                                                   @RequestParam("reimportNetworkIfNotFound") boolean reimportNetworkIfNotFound,
-                                                   @RequestHeader(HEADER_USER_ID) String userId) {
+        @ApiResponse(responseCode = "200", description = "The network does exists"),
+        @ApiResponse(responseCode = "204", description = "The network doesn't exist")})
+    public ResponseEntity<Void> checkNetworkExistence(@PathVariable("studyUuid") UUID studyUuid) {
         UUID networkUUID = networkStoreService.getNetworkUuid(studyUuid);
-        try {
-            networkStoreService.getNetwork(networkUUID, PreloadingStrategy.NONE, null);
+        return networkStoreService.isNetworkExisting(networkUUID)
+            ? ResponseEntity.ok().build()
+            : ResponseEntity.noContent().build();
 
-            return ResponseEntity.noContent().build();
-        } catch (ResponseStatusException e) {
-            if (reimportNetworkIfNotFound) {
-                studyService.reimportStudyNetwork(studyUuid, userId);
-            }
-            throw e;
-        }
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/network", params = {"caseUuid"})
+    @Operation(summary = "recreate study network of a study from an existing case")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Study network import has started"),
+        @ApiResponse(responseCode = "424", description = "The case doesn't exist")})
+    public ResponseEntity<BasicStudyInfos> recreateStudyNetworkFromCase(@PathVariable("studyUuid") UUID studyUuid,
+                                                                 @RequestBody(required = false) Map<String, Object> importParameters,
+                                                                 @RequestParam(value = "caseUuid") UUID caseUuid,
+                                                                 @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.recreateStudyRootNetwork(caseUuid, userId, studyUuid, importParameters);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/network")
+    @Operation(summary = "recreate study network of a study from its case")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Study network import has started"),
+        @ApiResponse(responseCode = "424", description = "The study case doesn't exist")})
+    public ResponseEntity<BasicStudyInfos> recreateStudyNetwork(@PathVariable("studyUuid") UUID studyUuid,
+                                                         @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.recreateStudyRootNetwork(userId, studyUuid);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/subtrees", params = {"subtreeToCutParentNodeUuid", "referenceNodeUuid"})
