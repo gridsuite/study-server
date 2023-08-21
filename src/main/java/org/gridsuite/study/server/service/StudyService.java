@@ -597,7 +597,7 @@ public class StudyService {
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
-        notificationService.emitStudyReimportDone(studyEntity.getId(), userId);
+        notificationService.emitStudyNetworkRecreationDone(studyEntity.getId(), userId);
 
         return createdStudyBasicInfos;
     }

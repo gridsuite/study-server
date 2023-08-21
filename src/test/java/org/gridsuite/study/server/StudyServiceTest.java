@@ -95,7 +95,6 @@ public class StudyServiceTest {
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
-    private static final String REIMPORT_NETWORK_IF_NOT_FOUND_HEADER = "reimportNetworkIfNotFound";
     private static final String USER_ID_HEADER = "userId";
     private static final String HEADER_UPDATE_TYPE = "updateType";
 
@@ -155,7 +154,7 @@ public class StudyServiceTest {
     }
 
     @Test
-    public void testReimportStudyNetworkWithStudyCaseAndImportParameters() throws Exception {
+    public void testRecreateStudyNetworkWithStudyCaseAndImportParameters() throws Exception {
         Map<String, Object> importParameters = new HashMap<>();
         importParameters.put("param1", "changedValue1, changedValue2");
         importParameters.put("param2", "changedValue");
@@ -174,10 +173,10 @@ public class StudyServiceTest {
 
         countDownLatch.await();
 
-        // study reimport done notification
+        // study network recreation done notification
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         MessageHeaders headers = message.getHeaders();
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY_REIMPORT_DONE, headers.get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_NETWORK_RECREATION_DONE, headers.get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
 
@@ -187,7 +186,7 @@ public class StudyServiceTest {
     }
 
     @Test
-    public void testReimportStudyNetworkWithMissingStudyCase() throws Exception {
+    public void testRecreateStudyNetworkWithMissingStudyCase() throws Exception {
         Map<String, Object> importParameters = new HashMap<>();
         String userId = "userId";
 
@@ -203,7 +202,7 @@ public class StudyServiceTest {
     }
 
     @Test
-    public void testReimportStudyNetworkFromExistingCase() throws Exception {
+    public void testRecreateStudyNetworkFromExistingCase() throws Exception {
         String userId = "userId";
         Map<String, Object> importParameters = new HashMap<>();
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
@@ -225,10 +224,10 @@ public class StudyServiceTest {
 
         countDownLatch.await();
 
-        // study reimport done notification
+        // study network recreation done notification
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         MessageHeaders headers = message.getHeaders();
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY_REIMPORT_DONE, headers.get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_NETWORK_RECREATION_DONE, headers.get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
 
@@ -239,7 +238,7 @@ public class StudyServiceTest {
     }
 
     @Test
-    public void testReimportStudyNetworkFromUnexistingCase() throws Exception {
+    public void testRecreateStudyNetworkFromUnexistingCase() throws Exception {
         String userId = "userId";
         Map<String, Object> importParameters = new HashMap<>();
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);

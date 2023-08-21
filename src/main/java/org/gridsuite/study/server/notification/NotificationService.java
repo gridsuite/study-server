@@ -65,7 +65,7 @@ public class NotificationService {
     public static final String UPDATE_TYPE_VOLTAGE_INIT_STATUS = "voltageInit_status";
     public static final String UPDATE_TYPE_VOLTAGE_INIT_FAILED = "voltageInit_failed";
     public static final String UPDATE_TYPE_STUDIES = "studies";
-    public static final String UPDATE_TYPE_STUDY_REIMPORT_DONE = "study_reimport_done";
+    public static final String UPDATE_TYPE_STUDY_NETWORK_RECREATION_DONE = "study_network_recreation_done";
     public static final String UPDATE_TYPE_STUDY = "study";
     public static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
     public static final String UPDATE_TYPE_SWITCH = "switch";
@@ -119,11 +119,11 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyReimportDone(UUID studyUuid, String userId) {
+    public void emitStudyNetworkRecreationDone(UUID studyUuid, String userId) {
         sendUpdateMessage(MessageBuilder.withPayload("")
             .setHeader(HEADER_USER_ID, userId)
             .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_REIMPORT_DONE)
+            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_NETWORK_RECREATION_DONE)
             .build());
     }
 
