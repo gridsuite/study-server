@@ -354,7 +354,7 @@ public class ConsumerService {
                     LOGGER.error(e.toString(), e);
                 } finally {
                     // if studyEntity is already existing, we don't delete anything in the end of the process
-                    if(studyEntity == null) {
+                    if (studyEntity == null) {
                         studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
                     }
                     LOGGER.trace("Create study '{}' : {} seconds", studyUuid,

@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2023, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,7 +57,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringRunner.class)
@@ -212,7 +218,7 @@ public class StudyServiceTest {
         UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(CASE_UUID.toString());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/network", studyUuid)
-                .param(HEADER_IMPORT_PARAMETERS, mapper.writeValueAsString(newImportParameters))
+                .param(HEADER_IMPORT_PARAMETERS, objectWriter.writeValueAsString(newImportParameters))
                 .param("caseUuid", CASE_UUID_STRING)
                 .header(USER_ID_HEADER, userId))
             .andExpectAll(status().isOk());
@@ -245,7 +251,7 @@ public class StudyServiceTest {
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), false);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/network", studyUuid)
-                .param(HEADER_IMPORT_PARAMETERS, mapper.writeValueAsString(newImportParameters))
+                .param(HEADER_IMPORT_PARAMETERS, objectWriter.writeValueAsString(newImportParameters))
                 .param("caseUuid", CASE_UUID_STRING)
                 .header(USER_ID_HEADER, userId))
             .andExpectAll(status().isFailedDependency());

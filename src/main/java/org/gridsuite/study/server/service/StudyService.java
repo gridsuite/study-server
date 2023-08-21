@@ -592,7 +592,7 @@ public class StudyService {
     }
 
     public CreatedStudyBasicInfos updateStudyNetwork(StudyEntity studyEntity, String userId, NetworkInfos networkInfos) {
-        studyEntity = self.updateStudyEntityNetwork(studyEntity, networkInfos);
+        self.updateStudyEntityNetwork(studyEntity, networkInfos);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
