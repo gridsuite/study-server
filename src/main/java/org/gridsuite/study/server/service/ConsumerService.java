@@ -21,6 +21,8 @@ import org.gridsuite.study.server.dto.voltageinit.VoltageInitParametersInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
@@ -60,18 +62,21 @@ public class ConsumerService {
     StudyService studyService;
     CaseService caseService;
     NetworkModificationTreeService networkModificationTreeService;
+    StudyRepository studyRepository;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
                            StudyService studyService,
                            CaseService caseService,
-                           NetworkModificationTreeService networkModificationTreeService) {
+                           NetworkModificationTreeService networkModificationTreeService,
+                           StudyRepository studyRepository) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
         this.caseService = caseService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.studyRepository = studyRepository;
     }
 
     @Bean
@@ -329,17 +334,29 @@ public class ConsumerService {
                 Long startTime = receiver.getStartTime();
                 UUID importReportUuid = receiver.getReportUuid();
 
+                StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
                 try {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                     ShortCircuitParameters shortCircuitParameters = ShortCircuitService.getDefaultShortCircuitParameters();
                     DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
                     VoltageInitParametersInfos voltageInitParametersInfos = VoltageInitService.getDefaultVoltageInitParameters();
-                    studyService.insertOrUpdateStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadFlowService.toEntity(loadFlowParameters, List.of()), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), VoltageInitService.toEntity(voltageInitParametersInfos), importParameters, importReportUuid);
+
+                    if (studyEntity != null) {
+                        // if studyEntity is not null, it means we are importing network for existing study
+                        // we only update network infos sent by network conversion server
+                        studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
+                    } else {
+                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadFlowService.toEntity(loadFlowParameters, List.of()), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), VoltageInitService.toEntity(voltageInitParametersInfos), importParameters, importReportUuid);
+                    }
+
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
                 } finally {
-                    studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+                    // if studyEntity is already existing, we don't delete anything in the end of the process
+                    if(studyEntity == null) {
+                        studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+                    }
                     LOGGER.trace("Create study '{}' : {} seconds", studyUuid,
                             TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
                 }

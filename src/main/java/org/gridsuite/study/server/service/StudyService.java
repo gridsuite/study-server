@@ -579,24 +579,25 @@ public class StudyService {
         LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
-    public CreatedStudyBasicInfos insertOrUpdateStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
+    public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
                                                       UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
                                                       ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, VoltageInitParametersEntity voltageInitParametersEntity, Map<String, String> importParameters, UUID importReportUuid) {
-        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
-        // if studyEntity is not null, it means we are importing network for existing study
-        // we only update network ID and UUID sent by network conversion server
-        if (studyEntity != null) {
-            studyEntity = self.updateStudyEntityNetwork(studyEntity, networkInfos);
-
-            notificationService.emitStudyReimportDone(studyUuid, userId);
-        } else {
-            studyEntity = insertStudyEntity(
-                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersEntity, importParameters);
-
-            notificationService.emitStudiesChanged(studyUuid, userId);
-        }
+        StudyEntity studyEntity = insertStudyEntity(studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersEntity, importParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
+
+        notificationService.emitStudiesChanged(studyUuid, userId);
+
+        return createdStudyBasicInfos;
+    }
+
+    public CreatedStudyBasicInfos updateStudyNetwork(StudyEntity studyEntity, String userId, NetworkInfos networkInfos) {
+        studyEntity = self.updateStudyEntityNetwork(studyEntity, networkInfos);
+
+        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
+        studyInfosService.add(createdStudyBasicInfos);
+
+        notificationService.emitStudyReimportDone(studyEntity.getId(), userId);
 
         return createdStudyBasicInfos;
     }

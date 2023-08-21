@@ -119,7 +119,7 @@ public class StudyServiceTest {
     private final String studyUpdateDestination = "study.update";
 
     @Test
-    public void testReimportStudyOnNetworkFound() throws Exception {
+    public void testCheckNetworkExistenceReturnsOk() throws Exception {
         Map<String, Object> importParameters = new HashMap<>();
         importParameters.put("param1", "changedValue1, changedValue2");
         importParameters.put("param2", "changedValue");
@@ -127,62 +127,50 @@ public class StudyServiceTest {
 
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/network", studyUuid)
-                .param(REIMPORT_NETWORK_IF_NOT_FOUND_HEADER, "true")
+        mockMvc.perform(head("/v1/studies/{studyUuid}/network", studyUuid)
+                .header(USER_ID_HEADER, userId))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    public void testCheckNetworkExistenceReturnsNotContent() throws Exception {
+        Map<String, Object> importParameters = new HashMap<>();
+        importParameters.put("param1", "changedValue1, changedValue2");
+        importParameters.put("param2", "changedValue");
+        String userId = "userId";
+
+        UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
+
+        when(networkStoreService.getNetwork(NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Network '" + NETWORK_UUID + "' not found"));
+
+        mockMvc.perform(head("/v1/studies/{studyUuid}/network", studyUuid)
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isNoContent());
     }
 
     @Test
-    public void testNetworkNotFoundWithoutReimportingStudy() throws Exception {
+    public void testReimportStudyNetworkWithStudyCaseAndImportParameters() throws Exception {
         Map<String, Object> importParameters = new HashMap<>();
         importParameters.put("param1", "changedValue1, changedValue2");
         importParameters.put("param2", "changedValue");
         String userId = "userId";
 
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
-
-        when(networkStoreService.getNetwork(NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Network '" + NETWORK_UUID + "' not found"));
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/network", studyUuid)
-                .param(REIMPORT_NETWORK_IF_NOT_FOUND_HEADER, "false")
-                .header(USER_ID_HEADER, userId))
-            .andExpect(status().isNotFound());
-    }
-
-    @Test
-    public void testReimportStudyOnNetworkNotFoundWithExistingCase() throws Exception {
-        Map<String, Object> importParameters = new HashMap<>();
-        importParameters.put("param1", "changedValue1, changedValue2");
-        importParameters.put("param2", "changedValue");
-        String userId = "userId";
-
-        UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
-
-        when(networkStoreService.getNetwork(NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Network '" + NETWORK_UUID + "' not found"));
 
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
         UUID postNetworkStubId = wireMockUtils.stubImportNetwork(CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(CASE_UUID.toString());
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/network", studyUuid)
-                .param(REIMPORT_NETWORK_IF_NOT_FOUND_HEADER, "true")
+        mockMvc.perform(post("/v1/studies/{studyUuid}/network", studyUuid)
                 .header(USER_ID_HEADER, userId))
-            .andExpect(status().isNotFound());
+            .andExpect(status().isOk());
 
         countDownLatch.await();
 
-        // studies updated
+        // study reimport done notification
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         MessageHeaders headers = message.getHeaders();
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-
-        // study reimport done notification
-        message = output.receive(TIMEOUT, studyUpdateDestination);
-        headers = message.getHeaders();
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_REIMPORT_DONE, headers.get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
@@ -193,26 +181,23 @@ public class StudyServiceTest {
     }
 
     @Test
-    public void testReimportStudyOnNetworkNotFoundWithMissingCase() throws Exception {
+    public void testReimportStudyNetworkWithMissingStudyCase() throws Exception {
         Map<String, Object> importParameters = new HashMap<>();
         String userId = "userId";
 
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
 
-        when(networkStoreService.getNetwork(NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Network '" + NETWORK_UUID + "' not found"));
-
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), false);
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/network", studyUuid)
-                .param(REIMPORT_NETWORK_IF_NOT_FOUND_HEADER, "true")
+        mockMvc.perform(post("/v1/studies/{studyUuid}/network", studyUuid)
                 .header(USER_ID_HEADER, userId))
-            .andExpectAll(status().isInternalServerError(), content().string(StudyException.Type.BROKEN_STUDY.name()));
+            .andExpect(status().isFailedDependency());
 
         wireMockUtils.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
     }
 
     @Test
-    public void testReimportStudyFromExistingCase() throws Exception {
+    public void testReimportStudyNetworkFromExistingCase() throws Exception {
         String userId = "userId";
         Map<String, Object> importParameters = new HashMap<>();
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
@@ -226,23 +211,17 @@ public class StudyServiceTest {
         UUID postNetworkStubId = wireMockUtils.stubImportNetwork(CASE_UUID_STRING, newImportParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(CASE_UUID.toString());
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/cases/{caseUuid}", studyUuid, CASE_UUID)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/network", studyUuid)
                 .param(HEADER_IMPORT_PARAMETERS, mapper.writeValueAsString(newImportParameters))
+                .param("caseUuid", CASE_UUID_STRING)
                 .header(USER_ID_HEADER, userId))
             .andExpectAll(status().isOk());
 
         countDownLatch.await();
 
-        // studies updated
+        // study reimport done notification
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         MessageHeaders headers = message.getHeaders();
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-
-        // study reimport done notification
-        message = output.receive(TIMEOUT, studyUpdateDestination);
-        headers = message.getHeaders();
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_REIMPORT_DONE, headers.get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
@@ -254,7 +233,7 @@ public class StudyServiceTest {
     }
 
     @Test
-    public void testReimportStudyFromUnexistingCase() throws Exception {
+    public void testReimportStudyNetworkFromUnexistingCase() throws Exception {
         String userId = "userId";
         Map<String, Object> importParameters = new HashMap<>();
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
@@ -265,8 +244,9 @@ public class StudyServiceTest {
 
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), false);
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/cases/{caseUuid}", studyUuid, CASE_UUID)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/network", studyUuid)
                 .param(HEADER_IMPORT_PARAMETERS, mapper.writeValueAsString(newImportParameters))
+                .param("caseUuid", CASE_UUID_STRING)
                 .header(USER_ID_HEADER, userId))
             .andExpectAll(status().isFailedDependency());
 
