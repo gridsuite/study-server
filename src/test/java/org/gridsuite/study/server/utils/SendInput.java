@@ -22,7 +22,7 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
 
 /**
  * Class that implements an action we want to execute after mocking an API call
- * See 'Post-serve actions' in <a href="https://wiremock.org/docs/extending-wiremock/">...</a>
+ * See 'Post-serve actions' in <a href="https://wiremock.org/docs/extending-wiremock/">https://wiremock.org/docs/extending-wiremock/</a>
  */
 public class SendInput extends PostServeAction {
 
