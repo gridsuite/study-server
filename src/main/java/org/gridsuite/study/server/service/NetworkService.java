@@ -73,11 +73,11 @@ public class NetworkService {
         }
     }
 
-    public boolean isNetworkExisting(UUID networkUuid) {
+    public boolean doesNetworkExist(UUID networkUuid) {
         try {
-            getNetwork(networkUuid, PreloadingStrategy.NONE, null);
+            networkStoreService.getNetwork(networkUuid, PreloadingStrategy.NONE);
             return true;
-        } catch (Exception e) {
+        } catch (PowsyblException e) {
             return false;
         }
 

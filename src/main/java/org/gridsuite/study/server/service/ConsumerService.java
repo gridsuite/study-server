@@ -342,7 +342,7 @@ public class ConsumerService {
                     VoltageInitParametersInfos voltageInitParametersInfos = VoltageInitService.getDefaultVoltageInitParameters();
 
                     if (studyEntity != null) {
-                        // if studyEntity is not null, it means we are importing network for existing study
+                        // if studyEntity is not null, it means we are recreating network for existing study
                         // we only update network infos sent by network conversion server
                         studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
                     } else {
