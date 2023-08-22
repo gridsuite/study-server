@@ -190,6 +190,22 @@ public class NetworkModificationService {
         }
     }
 
+    public void updateModifications(UUID groupUUid, List<UUID> modificationsUuids) {
+        Objects.requireNonNull(groupUUid);
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
+                .queryParam(UUIDS, modificationsUuids)
+                .queryParam(GROUP_UUID, groupUUid)
+                .buildAndExpand()
+                .toUriString();
+        try {
+            restTemplate.put(path, false);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
+        }
+    }
+
     void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull BuildInfos buildInfos) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String receiver = buildReceiver(nodeUuid);

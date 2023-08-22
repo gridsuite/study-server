@@ -1023,6 +1023,18 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
+    @Operation(summary = "put network modifications for a node in the trash")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Void> putNetworkModificationsInTrash(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
+                                                               @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.putNetworkModificationsIntoTrash(studyUuid, nodeUuid, networkModificationUuids, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Search studies in elasticsearch")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of studies found")})
