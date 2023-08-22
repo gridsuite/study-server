@@ -75,7 +75,7 @@ public class NetworkService {
 
     public boolean doesNetworkExist(UUID networkUuid) {
         try {
-            networkStoreService.getNetwork(networkUuid, PreloadingStrategy.NONE);
+            networkStoreService.getNetwork(networkUuid);
             return true;
         } catch (PowsyblException e) {
             return false;
