@@ -598,8 +598,9 @@ public class StudyController {
     public ResponseEntity<String> getShortCircuitAnalysisFaultResultsPage(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                @Parameter(description = "Full or only those with limit violations or none fault results") @RequestParam(name = "mode", required = false, defaultValue = "WITH_LIMIT_VIOLATIONS") String mode,
+                                                               @Parameter(description = "Fetch all results or paged results") @RequestParam(name = "allResults", required = false, defaultValue = "false") boolean allResults,
                                                                Pageable pageable) {
-        String faultResultsPage = shortCircuitService.getShortCircuitAnalysisFaultResultsPage(nodeUuid, mode, pageable);
+        String faultResultsPage = shortCircuitService.getShortCircuitAnalysisFaultResultsPage(nodeUuid, mode, allResults, pageable);
         return faultResultsPage != null ? ResponseEntity.ok().body(faultResultsPage) :
                 ResponseEntity.noContent().build();
     }
