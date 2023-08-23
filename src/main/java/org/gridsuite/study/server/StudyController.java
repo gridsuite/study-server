@@ -242,7 +242,7 @@ public class StudyController {
     @Operation(summary = "recreate study network of a study from its case")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Study network recreation has started"),
-        @ApiResponse(responseCode = "424", description = "The study case doesn't exist")})
+        @ApiResponse(responseCode = "424", description = "The study's case doesn't exist")})
     public ResponseEntity<BasicStudyInfos> recreateStudyNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.recreateStudyRootNetwork(userId, studyUuid);
