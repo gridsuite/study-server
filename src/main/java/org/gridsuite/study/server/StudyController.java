@@ -211,6 +211,43 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @RequestMapping(value = "/studies/{studyUuid}/network", method = RequestMethod.HEAD)
+    @Operation(summary = "check study root network existence")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The network does exist"),
+        @ApiResponse(responseCode = "204", description = "The network doesn't exist")})
+    public ResponseEntity<Void> checkNetworkExistence(@PathVariable("studyUuid") UUID studyUuid) {
+        UUID networkUUID = networkStoreService.getNetworkUuid(studyUuid);
+        return networkStoreService.doesNetworkExist(networkUUID)
+            ? ResponseEntity.ok().build()
+            : ResponseEntity.noContent().build();
+
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/network", params = {"caseUuid"})
+    @Operation(summary = "recreate study network of a study from an existing case")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Study network recreation has started"),
+        @ApiResponse(responseCode = "424", description = "The case doesn't exist")})
+    public ResponseEntity<BasicStudyInfos> recreateStudyNetworkFromCase(@PathVariable("studyUuid") UUID studyUuid,
+                                                                 @RequestBody(required = false) Map<String, Object> importParameters,
+                                                                 @RequestParam(value = "caseUuid") UUID caseUuid,
+                                                                 @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.recreateStudyRootNetwork(caseUuid, userId, studyUuid, importParameters);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/network")
+    @Operation(summary = "recreate study network of a study from its case")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Study network recreation has started"),
+        @ApiResponse(responseCode = "424", description = "The study's case doesn't exist")})
+    public ResponseEntity<BasicStudyInfos> recreateStudyNetwork(@PathVariable("studyUuid") UUID studyUuid,
+                                                         @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.recreateStudyRootNetwork(userId, studyUuid);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/tree/subtrees", params = {"subtreeToCutParentNodeUuid", "referenceNodeUuid"})
     @Operation(summary = "cut and paste a subtree")
     @ApiResponses(value = {

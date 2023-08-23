@@ -73,6 +73,16 @@ public class NetworkService {
         }
     }
 
+    public boolean doesNetworkExist(UUID networkUuid) {
+        try {
+            networkStoreService.getNetwork(networkUuid);
+            return true;
+        } catch (PowsyblException e) {
+            return false;
+        }
+
+    }
+
     UUID doGetNetworkUuid(UUID studyUuid) {
         return studyRepository.findById(studyUuid).map(StudyEntity::getNetworkUuid).orElse(null);
     }
