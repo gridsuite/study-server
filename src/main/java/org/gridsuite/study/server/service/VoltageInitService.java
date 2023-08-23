@@ -69,8 +69,11 @@ public class VoltageInitService {
                 .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam("reportUuid", reportUuid.toString())
-                .queryParam("reporterId", nodeUuid.toString())
-                .queryParam("settingUuid", settingUuid.toString());
+                .queryParam("reporterId", nodeUuid.toString());
+
+        if (settingUuid != null) {
+            uriComponentsBuilder.queryParam("settingUuid", settingUuid.toString());
+        }
 
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
