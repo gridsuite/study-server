@@ -31,6 +31,7 @@ public class RestResponseEntityExceptionHandler {
             case DYNAMIC_SIMULATION_NOT_FOUND:
             case DYNAMIC_MAPPING_NOT_FOUND:
             case EQUIPMENT_NOT_FOUND:
+            case VOLTAGE_INIT_SETTING_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getType());
             case CASE_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(exception.getMessage());
@@ -63,6 +64,8 @@ public class RestResponseEntityExceptionHandler {
             case SENSITIVITY_ANALYSIS_ERROR:
             case NODE_BUILD_ERROR:
             case URI_SYNTAX:
+            case CREATE_VOLTAGE_INIT_SETTING_FAILED:
+            case UPDATE_VOLTAGE_INIT_SETTING_FAILED:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
             case SVG_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getMessage());
@@ -79,9 +82,6 @@ public class RestResponseEntityExceptionHandler {
             case NO_VOLTAGE_INIT_RESULTS_FOR_NODE:
             case NO_VOLTAGE_INIT_MODIFICATIONS_GROUP_FOR_NODE:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getMessage());
-            case VOLTAGE_INIT_SETTING_NOT_FOUND:
-            case CREATE_VOLTAGE_INIT_SETTING_FAILED:
-            case UPDATE_VOLTAGE_INIT_SETTING_FAILED:
             default:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

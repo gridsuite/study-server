@@ -107,14 +107,14 @@ public class VoltageInitTest {
 
     private static final String VOLTAGE_INIT_SETTING_UUID = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
 
+    private static final String WRONG_VOLTAGE_INIT_SETTING_UUID = "0c0f1efd-bd22-1111-83d3-9e530245c7f4";
+
     private static final String VOLTAGE_INIT_RESULT_JSON = "{\"version\":\"1.0\"}";
 
     private static final String VOLTAGE_INIT_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String VARIANT_ID = "variant_1";
 
     private static final String VARIANT_ID_2 = "variant_2";
-
-    private static final String VARIANT_ID_3 = "variant_3";
 
     private static final long TIMEOUT = 1000;
 
@@ -252,6 +252,8 @@ public class VoltageInitTest {
                         return new MockResponse().setResponseCode(200).setBody(VOLTAGE_INIT_SETTING_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
+                } else if (path.matches("/v1/settings/" + WRONG_VOLTAGE_INIT_SETTING_UUID)) {
+                    return new MockResponse().setResponseCode(404);
                 } else if (path.matches("/v1/settings")) {
                     return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(VOLTAGE_INIT_SETTING_UUID))
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -298,6 +300,25 @@ public class VoltageInitTest {
         JSONAssert.assertEquals(VOLTAGE_INIT_SETTING_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/settings/" + VOLTAGE_INIT_SETTING_UUID)));
+
+        //update voltage init setting
+        mockMvc.perform(
+            post("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)
+                    .header("userId", "userId")
+                    .contentType(MediaType.ALL)
+                    .content(VOLTAGE_INIT_SETTING_JSON)).andExpect(
+            status().isOk());
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/settings/" + VOLTAGE_INIT_SETTING_UUID)));
+
+        // insert a study with a wrong voltage init setting uuid
+        StudyEntity studyEntity2 = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(WRONG_VOLTAGE_INIT_SETTING_UUID));
+
+        // get voltage init setting
+        mockMvc.perform(get("/v1/studies/{studyUuid}/voltage-init/parameters", studyEntity2.getId())).andExpect(
+            status().isNotFound());
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/settings/" + WRONG_VOLTAGE_INIT_SETTING_UUID)));
 
     }
 
