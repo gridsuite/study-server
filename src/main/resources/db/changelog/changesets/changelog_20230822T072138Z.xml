@@ -1,0 +1,29 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="labidiayo (generated)" id="1692688917627-4">
+        <addColumn tableName="study">
+            <column name="voltage_init_setting_uuid" type="uuid"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1692688917627-11">
+        <dropTable cascadeConstraints="true" tableName="VOLTAGE_INIT_PARAMETERS"/>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1692688917627-12">
+        <dropTable cascadeConstraints="true" tableName="VOLTAGE_INIT_PARAMETERS_ENTITY_CONSTANTQGENERATORS"/>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1692688917627-13">
+        <dropTable cascadeConstraints="true" tableName="VOLTAGE_INIT_PARAMETERS_ENTITY_VARIABLE_SHUNT_COMPENSATORS"/>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1692688917627-14">
+        <dropTable cascadeConstraints="true" tableName="VOLTAGE_INIT_PARAMETERS_ENTITY_VARIABLE_TWO_WT"/>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1692688917627-15">
+        <dropTable cascadeConstraints="true" tableName="VOLTAGE_INIT_PARAMETERS_VOLTAGE_LIMITS"/>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1692688917627-16">
+        <dropTable cascadeConstraints="true" tableName="VOLTAGE_INIT_PARAMETERS_VOLTAGE_LIMITS_ENTITY_FILTERS"/>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1692688917627-17">
+        <dropColumn columnName="VOLTAGE_INIT_PARAMETERS_ENTITY_ID" tableName="STUDY"/>
+    </changeSet>
+</databaseChangeLog>

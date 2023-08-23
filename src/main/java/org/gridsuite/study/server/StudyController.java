@@ -24,7 +24,6 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
-import org.gridsuite.study.server.dto.voltageinit.VoltageInitParametersInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -663,22 +662,22 @@ public class StudyController {
     }
 
     @PostMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
-    @Operation(summary = "Set voltage init parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set")})
-    public ResponseEntity<Void> setVoltageInitParameters(
+    @Operation(summary = "Set voltage init setting on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init setting are set")})
+    public ResponseEntity<Void> setVoltageInitSetting(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) VoltageInitParametersInfos voltageInitParameters,
+            @RequestBody(required = false) String voltageInitSetting,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setVoltageInitParameters(studyUuid, voltageInitParameters, userId);
+        studyService.setVoltageInitSetting(studyUuid, voltageInitSetting, userId);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
     @Operation(summary = "Get voltage init parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters")})
-    public ResponseEntity<VoltageInitParametersInfos> getVoltageInitParameters(
+    public ResponseEntity<String> getVoltageInitSetting(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getVoltageInitParameters(studyUuid));
+        return ResponseEntity.ok().body(studyService.getVoltageInitSetting(studyUuid));
     }
 
     @GetMapping(value = "/export-network-formats")
