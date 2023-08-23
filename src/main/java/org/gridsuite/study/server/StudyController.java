@@ -986,6 +986,14 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(nodeUuid));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications-restore", produces = MediaType.TEXT_PLAIN_VALUE)
+    @Operation(summary = "Get network modifications from a node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<String> getNetworkModificationsToRestore(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                          @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModificationsToRestore(nodeUuid));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
     @Operation(summary = "Create a network modification for a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification was created"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
@@ -1032,6 +1040,18 @@ public class StudyController {
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.putNetworkModificationsIntoTrash(studyUuid, nodeUuid, networkModificationUuids, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications-restore")
+    @Operation(summary = "put network modifications for a node in the trash")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Void> restoreNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                            @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
+                                                            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+      //  studyService.restoreNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
         return ResponseEntity.ok().build();
     }
 

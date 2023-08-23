@@ -47,19 +47,16 @@ public class NetworkModificationService {
     private static final String DELIMITER = "/";
     private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String MODIFICATIONS_PATH = "modifications";
+    private static final String MODIFICATIONS_RESTORE_PATH = "modifications-restore";
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
     private static final String NETWORK_UUID = "networkUuid";
     private static final String REPORT_UUID = "reportUuid";
     private static final String REPORTER_ID = "reporterId";
     private static final String VARIANT_ID = "variantId";
-
-    private String networkModificationServerBaseUri;
-
     private final NetworkService networkStoreService;
-
     private final RestTemplate restTemplate = new RestTemplate();
-
     private final ObjectMapper objectMapper;
+    private String networkModificationServerBaseUri;
 
     @Autowired
     NetworkModificationService(RemoteServicesProperties remoteServicesProperties,
@@ -88,9 +85,24 @@ public class NetworkModificationService {
     public String getModifications(UUID groupUUid) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH)
-            .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
-            .buildAndExpand(groupUUid)
-            .toUriString();
+                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+                .buildAndExpand(groupUUid)
+                .toUriString();
+
+        try {
+            return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, GET_MODIFICATIONS_FAILED);
+        }
+    }
+
+    public String getModificationsToRestore(UUID groupUUid) {
+        Objects.requireNonNull(groupUUid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_RESTORE_PATH)
+                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+                .buildAndExpand(groupUUid)
+                .toUriString();
+        System.out.println("============ >>>>>>>> " + getNetworkModificationServerURI(false) + path);
 
         try {
             return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
@@ -102,9 +114,9 @@ public class NetworkModificationService {
     public void deleteModifications(UUID groupUUid) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
-            .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
-            .buildAndExpand(groupUUid)
-            .toUriString();
+                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+                .buildAndExpand(groupUUid)
+                .toUriString();
 
         try {
             restTemplate.delete(getNetworkModificationServerURI(false) + path);
@@ -150,8 +162,8 @@ public class NetworkModificationService {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         var path = uriComponentsBuilder
-            .buildAndExpand()
-            .toUriString();
+                .buildAndExpand()
+                .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -160,7 +172,7 @@ public class NetworkModificationService {
 
         try {
             result = restTemplate.exchange(path, HttpMethod.POST, httpEntity,
-                    new ParameterizedTypeReference<Optional<NetworkModificationResult> >() {
+                    new ParameterizedTypeReference<Optional<NetworkModificationResult>>() {
                     }).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, CREATE_NETWORK_MODIFICATION_FAILED);
@@ -212,9 +224,9 @@ public class NetworkModificationService {
 
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "build");
         var path = uriComponentsBuilder
-            .queryParam(QUERY_PARAM_RECEIVER, receiver)
-            .build()
-            .toUriString();
+                .queryParam(QUERY_PARAM_RECEIVER, receiver)
+                .build()
+                .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -227,9 +239,9 @@ public class NetworkModificationService {
     public void stopBuild(@NonNull UUID nodeUuid) {
         String receiver = buildReceiver(nodeUuid);
         var path = UriComponentsBuilder.fromPath("build/stop")
-            .queryParam(QUERY_PARAM_RECEIVER, receiver)
-            .build()
-            .toUriString();
+                .queryParam(QUERY_PARAM_RECEIVER, receiver)
+                .build()
+                .toUriString();
 
         restTemplate.put(getNetworkModificationServerURI(false) + path, null);
     }
@@ -249,13 +261,13 @@ public class NetworkModificationService {
     public Optional<NetworkModificationResult> moveModifications(UUID originGroupUuid, List<UUID> modificationUuidList, UUID beforeUuid, UUID networkUuid, NodeModificationInfos nodeInfos, boolean buildTargetNode) {
         Objects.requireNonNull(networkUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
-            .queryParam("action", "MOVE")
-            .queryParam(NETWORK_UUID, networkUuid)
-            .queryParam(REPORT_UUID, nodeInfos.getReportUuid())
-            .queryParam(REPORTER_ID, nodeInfos.getId())
-            .queryParam(VARIANT_ID, nodeInfos.getVariantId())
-            .queryParam("originGroupUuid", originGroupUuid)
-            .queryParam("build", buildTargetNode);
+                .queryParam("action", "MOVE")
+                .queryParam(NETWORK_UUID, networkUuid)
+                .queryParam(REPORT_UUID, nodeInfos.getReportUuid())
+                .queryParam(REPORTER_ID, nodeInfos.getId())
+                .queryParam(VARIANT_ID, nodeInfos.getVariantId())
+                .queryParam("originGroupUuid", originGroupUuid)
+                .queryParam("build", buildTargetNode);
         if (beforeUuid != null) {
             path.queryParam("before", beforeUuid);
         }
@@ -272,11 +284,11 @@ public class NetworkModificationService {
 
     public Optional<NetworkModificationResult> duplicateModification(List<UUID> modificationUuidList, UUID networkUuid, NodeModificationInfos nodeInfos) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
-            .queryParam("action", "COPY")
-            .queryParam(NETWORK_UUID, networkUuid)
-            .queryParam(REPORT_UUID, nodeInfos.getReportUuid())
-            .queryParam(REPORTER_ID, nodeInfos.getId())
-            .queryParam(VARIANT_ID, nodeInfos.getVariantId());
+                .queryParam("action", "COPY")
+                .queryParam(NETWORK_UUID, networkUuid)
+                .queryParam(REPORT_UUID, nodeInfos.getReportUuid())
+                .queryParam(REPORTER_ID, nodeInfos.getId())
+                .queryParam(VARIANT_ID, nodeInfos.getVariantId());
 
         HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
         return restTemplate.exchange(
@@ -308,21 +320,21 @@ public class NetworkModificationService {
 
     public Optional<NetworkModificationResult> duplicateModificationsInGroup(UUID originGroupUuid, UUID networkUuid, NodeModificationInfos nodeInfos) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "duplications")
-            .queryParam(NETWORK_UUID, networkUuid)
-            .queryParam(REPORT_UUID, nodeInfos.getReportUuid())
-            .queryParam(REPORTER_ID, nodeInfos.getId())
-            .queryParam(VARIANT_ID, nodeInfos.getVariantId())
-            .queryParam("duplicateFrom", originGroupUuid);
+                .queryParam(NETWORK_UUID, networkUuid)
+                .queryParam(REPORT_UUID, nodeInfos.getReportUuid())
+                .queryParam(REPORTER_ID, nodeInfos.getId())
+                .queryParam(VARIANT_ID, nodeInfos.getVariantId())
+                .queryParam("duplicateFrom", originGroupUuid);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         return restTemplate.exchange(
-            getNetworkModificationServerURI(false) + path.buildAndExpand(nodeInfos.getModificationGroupUuid()).toUriString(),
-            HttpMethod.PUT,
-            new HttpEntity<>(headers),
-            new ParameterizedTypeReference<Optional<NetworkModificationResult>>() {
-            }).getBody();
+                getNetworkModificationServerURI(false) + path.buildAndExpand(nodeInfos.getModificationGroupUuid()).toUriString(),
+                HttpMethod.PUT,
+                new HttpEntity<>(headers),
+                new ParameterizedTypeReference<Optional<NetworkModificationResult>>() {
+                }).getBody();
     }
 
     private String buildReceiver(UUID nodeUuid) {
