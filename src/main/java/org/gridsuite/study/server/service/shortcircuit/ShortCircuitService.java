@@ -135,9 +135,9 @@ public class ShortCircuitService {
         return getShortCircuitAnalysisResource(resultPath + params);
     }
 
-    public String getShortCircuitAnalysisFaultResultsPage(UUID nodeUuid, String mode, Pageable pageable) {
+    public String getShortCircuitAnalysisFaultResultsPage(UUID nodeUuid, String mode, boolean allResults, Pageable pageable) {
         StringBuilder paramsBuilder = new StringBuilder();
-        paramsBuilder.append("?mode=" + mode + "&page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize());
+        paramsBuilder.append("?mode=" + mode + "&allResults=" + allResults + "&page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize());
 
         for (Sort.Order order : pageable.getSort()) {
             paramsBuilder.append("&sort=" + order.getProperty() + "," + order.getDirection());
