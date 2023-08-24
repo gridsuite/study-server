@@ -49,6 +49,7 @@ public class NetworkModificationService {
     private static final String MODIFICATIONS_PATH = "modifications";
     private static final String MODIFICATIONS_RESTORE_PATH = "modifications-restore";
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
+    private static final String RESTORE_NETWORK_MODIFICATIONS_PATH = "restore-network-modifications";
     private static final String NETWORK_UUID = "networkUuid";
     private static final String REPORT_UUID = "reportUuid";
     private static final String REPORTER_ID = "reporterId";
@@ -212,6 +213,25 @@ public class NetworkModificationService {
                 .buildAndExpand()
                 .toUriString();
         try {
+            restTemplate.put(path, false);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
+        }
+    }
+
+    public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids) {
+        Objects.requireNonNull(groupUUid);
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + RESTORE_NETWORK_MODIFICATIONS_PATH)
+                .queryParam(UUIDS, modificationsUuids)
+                .queryParam(GROUP_UUID, groupUUid)
+                .buildAndExpand()
+                .toUriString();
+        try {
+            System.out.println("cccccccccccccccccccccccccccccS");
+            System.out.println(path);
+
             restTemplate.put(path, false);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);

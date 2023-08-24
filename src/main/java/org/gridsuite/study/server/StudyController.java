@@ -983,6 +983,7 @@ public class StudyController {
     public ResponseEntity<String> getNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
         // Return json string because modification dtos are not available here
+        System.out.println("gettinnnnnnnnnnnnnng");
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(nodeUuid));
     }
 
@@ -1051,7 +1052,7 @@ public class StudyController {
                                                             @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
                                                             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-      //  studyService.restoreNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
+        studyService.restoreNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
         return ResponseEntity.ok().build();
     }
 
