@@ -7,8 +7,8 @@
 package org.gridsuite.study.server.repository;
 
 import lombok.*;
-
 import javax.persistence.*;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -23,9 +23,6 @@ import java.util.UUID;
 @Builder
 @Table(name = "sensitivityAnalysisParameters")
 public class SensitivityAnalysisParametersEntity {
-    public SensitivityAnalysisParametersEntity(double flowFlowSensitivityValueThreshold, double angleFlowSensitivityValueThreshold, double flowVoltageSensitivityValueThreshold) {
-        this(null, flowFlowSensitivityValueThreshold, angleFlowSensitivityValueThreshold, flowVoltageSensitivityValueThreshold);
-    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -40,4 +37,24 @@ public class SensitivityAnalysisParametersEntity {
 
     @Column(name = "flowVoltageSensitivityValueThreshold")
     private double flowVoltageSensitivityValueThreshold;
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "sensibility_analysis_parameters_id")
+    private List<SensitivityAnalysisParametersInjectionsSetEntity> sensitivityInjectionsSet;
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "sensibility_analysis_parameters_id")
+    private List<SensitivityAnalysisParametersInjectionsEntity> sensitivityInjections;
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "sensibility_analysis_parameters_id")
+    private List<SensitivityAnalysisParametersHvdcEntity> sensitivityHVDC;
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "sensibility_analysis_parameters_id")
+    private List<SensitivityAnalysisParametersPstEntity> sensitivityPST;
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "sensibility_analysis_parameters_id")
+    private List<SensitivityAnalysisParametersNodesEntity> sensitivityNodes;
 }

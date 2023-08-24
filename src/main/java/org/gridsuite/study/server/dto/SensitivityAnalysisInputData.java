@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import org.gridsuite.study.server.repository.*;
 
 import java.util.List;
 import java.util.Map;
@@ -111,19 +112,19 @@ public class SensitivityAnalysisInputData {
     private double resultsThreshold;
 
     @Schema(description = "Sensitivity relatively to injections set")
-    private List<SensitivityInjectionsSet> sensitivityInjectionsSets;
+    private List<SensitivityAnalysisParametersInjectionsSetEntity> sensitivityInjectionsSets;
 
     @Schema(description = "Sensitivity relatively to each injection")
-    private List<SensitivityInjection> sensitivityInjections;
+    private List<SensitivityAnalysisParametersInjectionsEntity> sensitivityInjections;
 
     @Schema(description = "Sensitivity relatively to each HVDC")
-    private List<SensitivityHVDC> sensitivityHVDCs;
+    private List<SensitivityAnalysisParametersHvdcEntity> sensitivityHVDCs;
 
     @Schema(description = "Sensitivity relatively to each PST")
-    private List<SensitivityPST> sensitivityPSTs;
+    private List<SensitivityAnalysisParametersPstEntity> sensitivityPSTs;
 
     @Schema(description = "Sensitivity relatively to nodes")
-    private List<SensitivityNodes> sensitivityNodes;
+    private List<SensitivityAnalysisParametersNodesEntity> sensitivityNodes;
 
     @Schema(description = "Sensitivity parameters")
     private SensitivityAnalysisParameters parameters;
