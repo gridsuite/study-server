@@ -103,8 +103,6 @@ public class NetworkModificationService {
                 .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
                 .buildAndExpand(groupUUid)
                 .toUriString();
-        System.out.println("============ >>>>>>>> " + getNetworkModificationServerURI(false) + path);
-
         try {
             return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
         } catch (HttpStatusCodeException e) {
@@ -229,9 +227,6 @@ public class NetworkModificationService {
                 .buildAndExpand()
                 .toUriString();
         try {
-            System.out.println("cccccccccccccccccccccccccccccS");
-            System.out.println(path);
-
             restTemplate.put(path, false);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
