@@ -714,8 +714,8 @@ public class NetworkModificationTreeService {
                 getBuildInfos(entity, buildInfos);
             }
         }, () -> {
-            throw new StudyException(ELEMENT_NOT_FOUND);
-        });
+                throw new StudyException(ELEMENT_NOT_FOUND);
+            });
 
         return buildInfos;
     }
