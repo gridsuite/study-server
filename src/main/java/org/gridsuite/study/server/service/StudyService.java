@@ -274,6 +274,42 @@ public class StudyService {
         return basicStudyInfos;
     }
 
+    @Transactional(readOnly = true)
+    public Map<String, String> getStudyImportParameters(UUID studyUuid) {
+        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getImportParameters();
+    }
+
+    /**
+     * Recreates study network from <caseUuid> and <importParameters>
+     * @param caseUuid
+     * @param userId
+     * @param studyUuid
+     * @param importParameters
+     */
+    public void recreateStudyRootNetwork(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters) {
+        recreateStudyRootNetwork(caseUuid, userId, studyUuid, importParameters, false);
+    }
+
+    /**
+     * Recreates study network from existing case and import parameters
+     * @param userId
+     * @param studyUuid
+     */
+    public void recreateStudyRootNetwork(String userId, UUID studyUuid) {
+        UUID caseUuid = self.getStudyCaseUuid(studyUuid);
+        recreateStudyRootNetwork(caseUuid, userId, studyUuid, null, true);
+    }
+
+    private void recreateStudyRootNetwork(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters) {
+        caseService.assertCaseExists(caseUuid);
+        UUID importReportUuid = UUID.randomUUID();
+        Map<String, Object> importParametersToUse = shouldLoadPreviousImportParameters
+            ? new HashMap<>(self.getStudyImportParameters(studyUuid))
+            : importParameters;
+
+        persistentStoreWithNotificationOnError(caseUuid, studyUuid, userId, importReportUuid, importParametersToUse);
+    }
+
     public BasicStudyInfos duplicateStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
         Objects.requireNonNull(sourceStudyUuid);
 
@@ -309,6 +345,11 @@ public class StudyService {
     @Transactional(readOnly = true)
     public StudyInfos getStudyInfos(UUID studyUuid) {
         return StudyService.toStudyInfos(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
+    }
+
+    @Transactional(readOnly = true)
+    public UUID getStudyCaseUuid(UUID studyUuid) {
+        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getCaseUuid();
     }
 
     public List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
@@ -544,11 +585,22 @@ public class StudyService {
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
                                               UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
                                               ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, VoltageInitParametersEntity voltageInitParametersEntity, Map<String, String> importParameters, UUID importReportUuid) {
-        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertStudyEntity(
-                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersEntity, importParameters));
+        StudyEntity studyEntity = insertStudyEntity(studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersEntity, importParameters);
+        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudiesChanged(studyUuid, userId);
+
+        return createdStudyBasicInfos;
+    }
+
+    public CreatedStudyBasicInfos updateStudyNetwork(StudyEntity studyEntity, String userId, NetworkInfos networkInfos) {
+        self.updateStudyEntityNetwork(studyEntity, networkInfos);
+
+        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
+        studyInfosService.add(createdStudyBasicInfos);
+
+        notificationService.emitStudyNetworkRecreationDone(studyEntity.getId(), userId);
 
         return createdStudyBasicInfos;
     }
@@ -1155,11 +1207,23 @@ public class StudyService {
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
                 defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParameters, null, null, importParameters);
-        return self.insertStudy(studyEntity, importReportUuid);
+        return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
     }
 
     @Transactional
-    public StudyEntity insertStudy(StudyEntity studyEntity, UUID importReportUuid) {
+    public StudyEntity updateStudyEntityNetwork(StudyEntity studyEntity, NetworkInfos networkInfos) {
+        if (networkInfos != null) {
+            studyEntity.setNetworkId(networkInfos.getNetworkId());
+            studyEntity.setNetworkUuid(networkInfos.getNetworkUuid());
+
+            studyRepository.save(studyEntity);
+        }
+
+        return studyEntity;
+    }
+
+    @Transactional
+    public StudyEntity saveStudyThenCreateBasicTree(StudyEntity studyEntity, UUID importReportUuid) {
         var study = studyRepository.save(studyEntity);
 
         networkModificationTreeService.createBasicTree(study, importReportUuid);
