@@ -1824,6 +1824,7 @@ public class StudyService {
         return result;
     }
 
+    @Transactional
     public void setVoltageInitParameters(UUID studyUuid, String parameters, String userId) {
         createOrUpdateVoltageInitParameters(studyUuid, parameters);
         notificationService.emitElementUpdated(studyUuid, userId);
