@@ -699,22 +699,22 @@ public class StudyController {
     }
 
     @PostMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
-    @Operation(summary = "Set voltage init setting on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init setting are set")})
-    public ResponseEntity<Void> setVoltageInitSetting(
+    @Operation(summary = "Set voltage init parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set")})
+    public ResponseEntity<Void> setVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String voltageInitSetting,
+            @RequestBody(required = false) String voltageInitParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setVoltageInitSetting(studyUuid, voltageInitSetting, userId);
+        studyService.setVoltageInitParameters(studyUuid, voltageInitParameters, userId);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
     @Operation(summary = "Get voltage init parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters")})
-    public ResponseEntity<String> getVoltageInitSetting(
+    public ResponseEntity<String> getVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getVoltageInitSetting(studyUuid));
+        return ResponseEntity.ok().body(studyService.getVoltageInitParameters(studyUuid));
     }
 
     @GetMapping(value = "/export-network-formats")

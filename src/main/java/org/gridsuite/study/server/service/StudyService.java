@@ -574,8 +574,8 @@ public class StudyService {
 
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
                                               UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
-                                              ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, UUID voltageInitSettingUuid, Map<String, String> importParameters, UUID importReportUuid) {
-        StudyEntity studyEntity = insertStudyEntity(studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitSettingUuid, importParameters);
+                                              ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, UUID voltageInitParametersUuid, Map<String, String> importParameters, UUID importReportUuid) {
+        StudyEntity studyEntity = insertStudyEntity(studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersUuid, importParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
@@ -619,7 +619,7 @@ public class StudyService {
                 SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues() :
                 SensitivityAnalysisService.fromEntity(sourceStudy.getSensitivityAnalysisParameters());
 
-        UUID copiedVoltageInitSettingUuid = sourceStudy.getVoltageInitSettingUuid();
+        UUID copiedVoltageInitParametersUuid = sourceStudy.getVoltageInitParametersUuid();
 
         ShortCircuitParameters shortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
 
@@ -637,7 +637,7 @@ public class StudyService {
                 .dynamicSimulationProvider(sourceStudy.getDynamicSimulationProvider())
                 .dynamicSimulationParameters(DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper))
                 .shortCircuitParameters(ShortCircuitService.toEntity(shortCircuitParameters))
-                .voltageInitSettingUuid(copiedVoltageInitSettingUuid)
+                .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
                 .sensitivityAnalysisParameters(SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues))
                 .importParameters(newImportParameters)
                 .build();
@@ -1184,7 +1184,7 @@ public class StudyService {
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
                                           String caseFormat, UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
-                                          UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, UUID voltageInitSettingUuid, Map<String, String> importParameters) {
+                                          UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, UUID voltageInitParametersUuid, Map<String, String> importParameters) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
@@ -1196,7 +1196,7 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitSettingUuid, null, null, importParameters);
+                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, importParameters);
         return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
     }
 
@@ -1283,14 +1283,14 @@ public class StudyService {
         });
     }
 
-    public void createOrUpdateVoltageInitSetting(UUID studyUuid, String setting) {
+    public void createOrUpdateVoltageInitParameters(UUID studyUuid, String parameters) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID voltageInitSettingUuid = studyEntity.getVoltageInitSettingUuid();
-        if (voltageInitSettingUuid == null) {
-            voltageInitSettingUuid = voltageInitService.createVoltageInitSetting(setting);
-            studyEntity.setVoltageInitSettingUuid(voltageInitSettingUuid);
+        UUID voltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
+        if (voltageInitParametersUuid == null) {
+            voltageInitParametersUuid = voltageInitService.createVoltageInitParameters(parameters);
+            studyEntity.setVoltageInitParametersUuid(voltageInitParametersUuid);
         } else {
-            voltageInitService.updateVoltageInitSetting(voltageInitSettingUuid, setting);
+            voltageInitService.updateVoltageInitParameters(voltageInitParametersUuid, parameters);
         }
     }
 
@@ -1817,27 +1817,25 @@ public class StudyService {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID result = voltageInitService.runVoltageInit(networkUuid, variantId, studyEntity.getVoltageInitSettingUuid(), nodeUuid, userId);
+        UUID result = voltageInitService.runVoltageInit(networkUuid, variantId, studyEntity.getVoltageInitParametersUuid(), nodeUuid, userId);
 
         updateVoltageInitResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         return result;
     }
 
-    @Transactional
-    public void setVoltageInitSetting(UUID studyUuid, String setting, String userId) {
-        createOrUpdateVoltageInitSetting(studyUuid, setting);
+    public void setVoltageInitParameters(UUID studyUuid, String parameters, String userId) {
+        createOrUpdateVoltageInitParameters(studyUuid, parameters);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    @Transactional
-    public String getVoltageInitSetting(UUID studyUuid) {
+    public String getVoltageInitParameters(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID voltageInitSettingUuid = studyEntity.getVoltageInitSettingUuid();
-        if (voltageInitSettingUuid == null) {
+        UUID voltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
+        if (voltageInitParametersUuid == null) {
             return JsonValue.EMPTY_JSON_OBJECT.toString();
         }
-        return voltageInitService.getVoltageInitSetting(studyEntity.getVoltageInitSettingUuid());
+        return voltageInitService.getVoltageInitParameters(studyEntity.getVoltageInitParametersUuid());
     }
 
     public List<MappingInfos> getDynamicSimulationMappings(UUID studyUuid) {

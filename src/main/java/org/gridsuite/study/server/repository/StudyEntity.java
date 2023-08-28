@@ -82,8 +82,8 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             ))
     private DynamicSimulationParametersEntity dynamicSimulationParameters;
 
-    @Column(name = "voltageInitSettingUuid")
-    private UUID voltageInitSettingUuid;
+    @Column(name = "voltageInitParametersUuid")
+    private UUID voltageInitParametersUuid;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "securityAnalysisParametersEntity_id",

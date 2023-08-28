@@ -55,7 +55,7 @@ public class VoltageInitService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runVoltageInit(UUID networkUuid, String variantId, UUID settingUuid, UUID nodeUuid, String userId) {
+    public UUID runVoltageInit(UUID networkUuid, String variantId, UUID parametersUuid, UUID nodeUuid, String userId) {
         UUID reportUuid = getReportUuid(nodeUuid);
 
         String receiver;
@@ -71,8 +71,8 @@ public class VoltageInitService {
                 .queryParam("reportUuid", reportUuid.toString())
                 .queryParam("reporterId", nodeUuid.toString());
 
-        if (settingUuid != null) {
-            uriComponentsBuilder.queryParam("settingUuid", settingUuid.toString());
+        if (parametersUuid != null) {
+            uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
         }
 
         if (!StringUtils.isBlank(variantId)) {
@@ -116,65 +116,65 @@ public class VoltageInitService {
         return result;
     }
 
-    public String getVoltageInitSetting(UUID settingUuid) {
-        String setting;
+    public String getVoltageInitParameters(UUID parametersUuid) {
+        String parameters;
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/settings/{settingUuid}")
-            .buildAndExpand(settingUuid).toUriString();
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters/{parametersUuid}")
+            .buildAndExpand(parametersUuid).toUriString();
         try {
-            setting = restTemplate.getForObject(voltageInitServerBaseUri + path, String.class);
+            parameters = restTemplate.getForObject(voltageInitServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(VOLTAGE_INIT_SETTING_NOT_FOUND);
+                throw new StudyException(VOLTAGE_INIT_PARAMETERS_NOT_FOUND);
             }
             throw e;
         }
-        return setting;
+        return parameters;
     }
 
-    public UUID createVoltageInitSetting(String setting) {
+    public UUID createVoltageInitParameters(String parameters) {
 
-        Objects.requireNonNull(setting);
+        Objects.requireNonNull(parameters);
 
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/settings")
+                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters")
                 .buildAndExpand()
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(setting, headers);
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        UUID settingUuid;
+        UUID parametersUuid;
 
         try {
-            settingUuid = restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+            parametersUuid = restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
         } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_VOLTAGE_INIT_SETTING_FAILED);
+            throw handleHttpError(e, CREATE_VOLTAGE_INIT_PARAMETERS_FAILED);
         }
 
-        return settingUuid;
+        return parametersUuid;
     }
 
-    public void updateVoltageInitSetting(UUID settingUuid, String setting) {
+    public void updateVoltageInitParameters(UUID parametersUuid, String parameters) {
 
-        Objects.requireNonNull(setting);
+        Objects.requireNonNull(parameters);
 
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/settings/{settingUuid}")
-                .buildAndExpand(settingUuid)
+                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters/{parametersUuid}")
+                .buildAndExpand(parametersUuid)
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(setting, headers);
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
         try {
             restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.PUT, httpEntity, UUID.class);
         } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, UPDATE_VOLTAGE_INIT_SETTING_FAILED);
+            throw handleHttpError(e, UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED);
         }
     }
 
