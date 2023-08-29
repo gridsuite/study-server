@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.dto.sensianalysis;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,8 +13,6 @@ import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.dto.voltageinit.FilterEquipments;
 
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import java.util.List;
 
 @Getter
@@ -24,7 +21,7 @@ import java.util.List;
 @NoArgsConstructor
 public class SensibilityAnalysisHvdcParameterInfos {
 
-    private String sensitivityType;
+    private SensitivityAnalysisInputData.SensitivityType sensitivityType;
 
     List<FilterEquipments> monitoredBranches;
 

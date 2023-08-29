@@ -14,7 +14,6 @@ import org.gridsuite.study.server.dto.voltageinit.FilterEquipments;
 
 import java.util.List;
 
-
 @Getter
 @AllArgsConstructor
 @Builder

@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.dto.sensianalysis;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,7 +21,7 @@ import java.util.List;
 @NoArgsConstructor
 public class SensibilityAnalysisInjectionsSetParameterInfos {
 
-    private String distributionType;
+    private SensitivityAnalysisInputData.DistributionType distributionType;
 
     List<FilterEquipments> monitoredBranches;
 

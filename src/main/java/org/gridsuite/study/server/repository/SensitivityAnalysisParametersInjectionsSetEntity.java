@@ -13,7 +13,6 @@ import javax.persistence.*;
 import java.util.List;
 import java.util.UUID;
 
-
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -29,8 +28,8 @@ public class SensitivityAnalysisParametersInjectionsSetEntity {
     private UUID id;
 
     @Column(name = "distributionType")
-    //@Enumerated(EnumType.STRING)
-    private Enum<SensitivityAnalysisInputData.DistributionType> distributionType;
+    @Enumerated(EnumType.STRING)
+    private SensitivityAnalysisInputData.DistributionType distributionType;
 
     @ElementCollection
     @CollectionTable(

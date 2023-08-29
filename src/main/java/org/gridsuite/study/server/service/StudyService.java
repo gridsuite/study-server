@@ -1771,11 +1771,11 @@ public class StudyService {
         sensitivityAnalysisInputData.setLoadFlowSpecificParameters(specificParameters == null ?
                 Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)));
 
-
         List<SensitivityAnalysisParametersInjectionsSetEntity> sensitivityInjectionsSet = new ArrayList<>();
         if (sensitivityAnalysisParametersValues.getSensitivityInjectionsSet() != null) {
             sensitivityAnalysisParametersValues.getSensitivityInjectionsSet().forEach(sensitivityInjectionSet ->
-                    sensitivityInjectionsSet.add(new SensitivityAnalysisParametersInjectionsSetEntity(null, SensitivityAnalysisInputData.DistributionType.valueOf(sensitivityInjectionSet.getDistributionType()),
+                    sensitivityInjectionsSet.add(new SensitivityAnalysisParametersInjectionsSetEntity(null,
+                            (SensitivityAnalysisInputData.DistributionType) sensitivityInjectionSet.getDistributionType(),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjectionSet.getMonitoredBranches()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjectionSet.getInjections()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjectionSet.getContingencies())))
@@ -1796,7 +1796,7 @@ public class StudyService {
         if (sensitivityAnalysisParametersValues.getSensitivityHVDC() != null) {
             sensitivityAnalysisParametersValues.getSensitivityHVDC().forEach(sensitivityHvdc ->
                     sensitivityHvdcs.add(new SensitivityAnalysisParametersHvdcEntity(null,
-                            SensitivityAnalysisInputData.SensitivityType.valueOf(sensitivityHvdc.getSensitivityType()),
+                            (SensitivityAnalysisInputData.SensitivityType) sensitivityHvdc.getSensitivityType(),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getMonitoredBranches()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getHvdcs()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getContingencies())))
@@ -1806,7 +1806,7 @@ public class StudyService {
         if (sensitivityAnalysisParametersValues.getSensitivityPST() != null) {
             sensitivityAnalysisParametersValues.getSensitivityPST().forEach(sensitivityPst ->
                     sensitivityPsts.add(new SensitivityAnalysisParametersPstEntity(null,
-                            SensitivityAnalysisInputData.SensitivityType.valueOf(sensitivityPst.getSensitivityType()),
+                            (SensitivityAnalysisInputData.SensitivityType) sensitivityPst.getSensitivityType(),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityPst.getMonitoredBranches()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityPst.getPsts()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityPst.getContingencies())))
@@ -1828,10 +1828,7 @@ public class StudyService {
         sensitivityAnalysisInputData.setSensitivityPSTs(sensitivityPsts);
         sensitivityAnalysisInputData.setSensitivityNodes(sensitivityNodes);
 
-
         UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider, userId, sensitivityAnalysisInputData);
-
-
 
         updateSensitivityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
