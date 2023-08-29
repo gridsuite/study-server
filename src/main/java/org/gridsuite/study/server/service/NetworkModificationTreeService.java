@@ -524,11 +524,6 @@ public class NetworkModificationTreeService {
         return networkModificationService.getModificationsToRestore(getModificationGroupUuid(nodeUuid));
     }
 
-    @Transactional(readOnly = true)
-    public String getNetworkModificationToRestotr(@NonNull UUID nodeUuid) {
-        return networkModificationService.getModifications(getModificationGroupUuid(nodeUuid));
-    }
-
     @Transactional
     public UUID getReportUuid(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getReportUuid(nodeUuid)).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
