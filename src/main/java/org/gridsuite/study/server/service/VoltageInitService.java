@@ -9,18 +9,11 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.openreac.parameters.input.OpenReacParameters;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
-import org.gridsuite.study.server.dto.voltageinit.FilterEquipments;
-import org.gridsuite.study.server.dto.voltageinit.VoltageInitParametersInfos;
-import org.gridsuite.study.server.dto.voltageinit.VoltageInitVoltageLimitsParameterInfos;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.FilterEquipmentsEmbeddable;
-import org.gridsuite.study.server.repository.VoltageInitParametersEntity;
-import org.gridsuite.study.server.repository.VoltageInitParametersVoltageLimitsEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -35,6 +28,7 @@ import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -61,7 +55,7 @@ public class VoltageInitService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runVoltageInit(UUID networkUuid, String variantId, OpenReacParameters openReacParameters, UUID nodeUuid, String userId) {
+    public UUID runVoltageInit(UUID networkUuid, String variantId, UUID parametersUuid, UUID nodeUuid, String userId) {
         UUID reportUuid = getReportUuid(nodeUuid);
 
         String receiver;
@@ -77,6 +71,10 @@ public class VoltageInitService {
                 .queryParam("reportUuid", reportUuid.toString())
                 .queryParam("reporterId", nodeUuid.toString());
 
+        if (parametersUuid != null) {
+            uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
+        }
+
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -86,8 +84,7 @@ public class VoltageInitService {
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<OpenReacParameters> httpEntity = new HttpEntity<>(openReacParameters, headers);
-        return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
     }
 
     public String getVoltageInitResult(UUID nodeUuid) {
@@ -117,6 +114,68 @@ public class VoltageInitService {
             throw e;
         }
         return result;
+    }
+
+    public String getVoltageInitParameters(UUID parametersUuid) {
+        String parameters;
+
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters/{parametersUuid}")
+            .buildAndExpand(parametersUuid).toUriString();
+        try {
+            parameters = restTemplate.getForObject(voltageInitServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(VOLTAGE_INIT_PARAMETERS_NOT_FOUND);
+            }
+            throw e;
+        }
+        return parameters;
+    }
+
+    public UUID createVoltageInitParameters(String parameters) {
+
+        Objects.requireNonNull(parameters);
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters")
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+
+        UUID parametersUuid;
+
+        try {
+            parametersUuid = restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_VOLTAGE_INIT_PARAMETERS_FAILED);
+        }
+
+        return parametersUuid;
+    }
+
+    public void updateVoltageInitParameters(UUID parametersUuid, String parameters) {
+
+        Objects.requireNonNull(parameters);
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters/{parametersUuid}")
+                .buildAndExpand(parametersUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+
+        try {
+            restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.PUT, httpEntity, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED);
+        }
     }
 
     public void stopVoltageInit(UUID studyUuid, UUID nodeUuid) {
@@ -162,40 +221,6 @@ public class VoltageInitService {
         if (VoltageInitStatus.RUNNING.name().equals(scs)) {
             throw new StudyException(VOLTAGE_INIT_RUNNING);
         }
-    }
-
-    public static VoltageInitParametersEntity toEntity(VoltageInitParametersInfos parameters) {
-        Objects.requireNonNull(parameters);
-        List<VoltageInitParametersVoltageLimitsEntity> voltageLimits = new ArrayList<>();
-        if (parameters.getVoltageLimits() != null) {
-            parameters.getVoltageLimits().forEach(voltageLimit ->
-                    voltageLimits.add(new VoltageInitParametersVoltageLimitsEntity(null, voltageLimit.getLowVoltageLimit(), voltageLimit.getHighVoltageLimit(), voltageLimit.getPriority(), FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(voltageLimit.getFilters())))
-            );
-        }
-        List<FilterEquipmentsEmbeddable> constantQGenerators = FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(parameters.getConstantQGenerators());
-        List<FilterEquipmentsEmbeddable> variableTwoWindingsTransformers = FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(parameters.getVariableTwoWindingsTransformers());
-        List<FilterEquipmentsEmbeddable> variableShuntCompensators = FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(parameters.getVariableShuntCompensators());
-
-        return new VoltageInitParametersEntity(null, voltageLimits, constantQGenerators, variableTwoWindingsTransformers, variableShuntCompensators);
-    }
-
-    public static VoltageInitParametersInfos fromEntity(VoltageInitParametersEntity voltageInitParameters) {
-        Objects.requireNonNull(voltageInitParameters);
-        List<VoltageInitVoltageLimitsParameterInfos> voltageLimits = new ArrayList<>();
-        voltageInitParameters.getVoltageLimits().forEach(voltageLimit ->
-                voltageLimits.add(new VoltageInitVoltageLimitsParameterInfos(voltageLimit.getPriority(),
-                        voltageLimit.getLowVoltageLimit(),
-                        voltageLimit.getHighVoltageLimit(),
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(voltageLimit.getFilters())))
-        );
-        List<FilterEquipments> constantQGenerators = FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(voltageInitParameters.getConstantQGenerators());
-        List<FilterEquipments> variableTwoWindingsTransformers = FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(voltageInitParameters.getVariableTwoWindingsTransformers());
-        List<FilterEquipments> variableShuntCompensators = FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(voltageInitParameters.getVariableShuntCompensators());
-        return new VoltageInitParametersInfos(voltageLimits, constantQGenerators, variableTwoWindingsTransformers, variableShuntCompensators);
-    }
-
-    public static VoltageInitParametersInfos getDefaultVoltageInitParameters() {
-        return new VoltageInitParametersInfos();
     }
 
     public UUID getModificationsGroupUuid(UUID nodeUuid) {
