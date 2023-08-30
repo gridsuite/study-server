@@ -11,8 +11,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.iidm.network.IdentifiableType;
 import com.powsybl.iidm.network.*;
-import com.powsybl.openreac.parameters.input.OpenReacParameters;
-import com.powsybl.openreac.parameters.input.VoltageLimitOverride;
 import com.powsybl.security.LimitViolation;
 import com.powsybl.security.Security;
 import com.powsybl.iidm.network.VariantManagerConstants;
@@ -43,8 +41,6 @@ import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImp
 import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.dto.sensianalysis.SensibilityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
-import org.gridsuite.study.server.dto.voltageinit.FilterEquipments;
-import org.gridsuite.study.server.dto.voltageinit.VoltageInitParametersInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -77,6 +73,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import javax.json.JsonValue;
 
 import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
@@ -140,7 +138,6 @@ public class StudyService {
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final ActionsService actionsService;
     private final CaseService caseService;
-    private final FilterService filterService;
     private final ObjectMapper objectMapper;
 
     enum ComputationUsingLoadFlow {
@@ -176,7 +173,6 @@ public class StudyService {
             SecurityAnalysisService securityAnalysisService,
             ActionsService actionsService,
             CaseService caseService,
-            FilterService filterService,
             SensitivityAnalysisService sensitivityAnalysisService,
             DynamicSimulationService dynamicSimulationService,
             VoltageInitService voltageInitService) {
@@ -205,7 +201,6 @@ public class StudyService {
         this.securityAnalysisService = securityAnalysisService;
         this.actionsService = actionsService;
         this.caseService = caseService;
-        this.filterService = filterService;
         this.dynamicSimulationService = dynamicSimulationService;
         this.voltageInitService = voltageInitService;
     }
@@ -581,8 +576,8 @@ public class StudyService {
 
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
                                               UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
-                                              ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, VoltageInitParametersEntity voltageInitParametersEntity, Map<String, String> importParameters, UUID importReportUuid) {
-        StudyEntity studyEntity = insertStudyEntity(studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersEntity, importParameters);
+                                              ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, UUID voltageInitParametersUuid, Map<String, String> importParameters, UUID importReportUuid) {
+        StudyEntity studyEntity = insertStudyEntity(studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersUuid, importParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
@@ -626,7 +621,7 @@ public class StudyService {
                 SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues() :
                 SensitivityAnalysisService.fromEntity(sourceStudy.getSensitivityAnalysisParameters());
 
-        VoltageInitParametersInfos copiedVoltageInitParameters = VoltageInitService.fromEntity(sourceStudy.getVoltageInitParameters());
+        UUID copiedVoltageInitParametersUuid = sourceStudy.getVoltageInitParametersUuid();
 
         ShortCircuitParameters shortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
 
@@ -644,7 +639,7 @@ public class StudyService {
                 .dynamicSimulationProvider(sourceStudy.getDynamicSimulationProvider())
                 .dynamicSimulationParameters(DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper))
                 .shortCircuitParameters(ShortCircuitService.toEntity(shortCircuitParameters))
-                .voltageInitParameters(VoltageInitService.toEntity(copiedVoltageInitParameters))
+                .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
                 .sensitivityAnalysisParameters(SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues))
                 .importParameters(newImportParameters)
                 .build();
@@ -1191,7 +1186,7 @@ public class StudyService {
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
                                           String caseFormat, UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
-                                          UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, VoltageInitParametersEntity voltageInitParameters, Map<String, String> importParameters) {
+                                          UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, UUID voltageInitParametersUuid, Map<String, String> importParameters) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
@@ -1203,7 +1198,7 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParameters, null, null, importParameters);
+                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, importParameters);
         return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
     }
 
@@ -1290,9 +1285,15 @@ public class StudyService {
         });
     }
 
-    public void updateVoltageInitParameters(UUID studyUuid, VoltageInitParametersEntity voltageInitParametersEntity) {
-        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setVoltageInitParameters(voltageInitParametersEntity));
+    public void createOrUpdateVoltageInitParameters(UUID studyUuid, String parameters) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID voltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
+        if (voltageInitParametersUuid == null) {
+            voltageInitParametersUuid = voltageInitService.createVoltageInitParameters(parameters);
+            studyEntity.setVoltageInitParametersUuid(voltageInitParametersUuid);
+        } else {
+            voltageInitService.updateVoltageInitParameters(voltageInitParametersUuid, parameters);
+        }
     }
 
     public void updateSecurityAnalysisParameters(UUID studyUuid, SecurityAnalysisParametersEntity securityAnalysisParametersEntity) {
@@ -1840,6 +1841,7 @@ public class StudyService {
         prevResultUuidOpt.ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
 
         ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
+        shortCircuitParameters.setWithFortescueResult(false);
         UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, null, shortCircuitParameters, userId);
 
         updateShortCircuitAnalysisResultUuid(nodeUuid, result);
@@ -1853,6 +1855,7 @@ public class StudyService {
         prevResultUuidOpt.ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
 
         ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
+        shortCircuitParameters.setWithFortescueResult(true);
         UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId, shortCircuitParameters, userId);
 
         updateOneBusShortCircuitAnalysisResultUuid(nodeUuid, result);
@@ -1861,61 +1864,14 @@ public class StudyService {
         return result;
     }
 
-    private List<String> toEquipmentIdsList(List<FilterEquipmentsEmbeddable> filters, UUID networkUuid, String variantId) {
-        if (filters == null || filters.isEmpty()) {
-            return List.of();
-        }
-        List<FilterEquipments> equipments = filterService.exportFilters(filters.stream().map(filter -> filter.getFilterId()).collect(Collectors.toList()), networkUuid, variantId);
-        Set<String> ids = new HashSet<>();
-        equipments.forEach(filterEquipment ->
-                filterEquipment.getIdentifiableAttributes().forEach(identifiableAttribute ->
-                        ids.add(identifiableAttribute.getId())
-                )
-        );
-        return ids.stream().collect(Collectors.toList());
-    }
-
-    private OpenReacParameters buildOpenReacParameters(Optional<StudyEntity> studyEntity, UUID networkUuid, String variantId) {
-        OpenReacParameters parameters = new OpenReacParameters();
-        Map<String, VoltageLimitOverride> specificVoltageLimits = new HashMap<>();
-        List<String> constantQGenerators = new ArrayList<>();
-        List<String> variableTwoWindingsTransformers = new ArrayList<>();
-        List<String> variableShuntCompensators = new ArrayList<>();
-        studyEntity.ifPresent(study -> {
-            VoltageInitParametersEntity voltageInitParameters = study.getVoltageInitParameters();
-            if (voltageInitParameters != null && voltageInitParameters.getVoltageLimits() != null) {
-                voltageInitParameters.getVoltageLimits().forEach(voltageLimit -> {
-                    var filterEquipments = filterService.exportFilters(voltageLimit.getFilters().stream().map(filter -> filter.getFilterId()).collect(Collectors.toList()), networkUuid, variantId);
-                    filterEquipments.forEach(filterEquipment ->
-                            filterEquipment.getIdentifiableAttributes().forEach(idenfiableAttribute ->
-                                    specificVoltageLimits.put(idenfiableAttribute.getId(), new VoltageLimitOverride(voltageLimit.getLowVoltageLimit(), voltageLimit.getHighVoltageLimit()))
-                            )
-                    );
-                });
-                constantQGenerators.addAll(toEquipmentIdsList(voltageInitParameters.getConstantQGenerators(), networkUuid, variantId));
-                variableTwoWindingsTransformers.addAll(toEquipmentIdsList(voltageInitParameters.getVariableTwoWindingsTransformers(), networkUuid, variantId));
-                variableShuntCompensators.addAll(toEquipmentIdsList(voltageInitParameters.getVariableShuntCompensators(), networkUuid, variantId));
-            }
-        });
-        parameters.addSpecificVoltageLimits(specificVoltageLimits)
-                .addConstantQGenerators(constantQGenerators)
-                .addVariableTwoWindingsTransformers(variableTwoWindingsTransformers)
-                .addVariableShuntCompensators(variableShuntCompensators);
-
-        return parameters;
-    }
-
     public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, String userId) {
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getVoltageInitResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(voltageInitService::deleteVoltageInitResult);
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-
-        OpenReacParameters parameters = buildOpenReacParameters(studyEntity, networkUuid, variantId);
-
-        UUID result = voltageInitService.runVoltageInit(networkUuid, variantId, parameters, nodeUuid, userId);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID result = voltageInitService.runVoltageInit(networkUuid, variantId, studyEntity.getVoltageInitParametersUuid(), nodeUuid, userId);
 
         updateVoltageInitResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
@@ -1923,16 +1879,18 @@ public class StudyService {
     }
 
     @Transactional
-    public void setVoltageInitParameters(UUID studyUuid, VoltageInitParametersInfos parameters, String userId) {
-        updateVoltageInitParameters(studyUuid, VoltageInitService.toEntity(parameters));
+    public void setVoltageInitParameters(UUID studyUuid, String parameters, String userId) {
+        createOrUpdateVoltageInitParameters(studyUuid, parameters);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    @Transactional
-    public VoltageInitParametersInfos getVoltageInitParameters(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(studyEntity -> VoltageInitService.fromEntity(studyEntity.getVoltageInitParameters()))
-                .orElse(null);
+    public String getVoltageInitParameters(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID voltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
+        if (voltageInitParametersUuid == null) {
+            return JsonValue.EMPTY_JSON_OBJECT.toString();
+        }
+        return voltageInitService.getVoltageInitParameters(studyEntity.getVoltageInitParametersUuid());
     }
 
     public List<MappingInfos> getDynamicSimulationMappings(UUID studyUuid) {

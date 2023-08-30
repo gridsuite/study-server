@@ -44,9 +44,6 @@ gridsuite:
       name: actions-server
       base-uri: http://localhost:5022
     -
-      name: filter-server
-      base-uri: http://localhost:5027
-    -
       name: security-analysis-server
       base-uri: http://localhost:5023
     -
