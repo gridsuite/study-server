@@ -69,7 +69,7 @@ public final class TestUtils {
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider,
                                                LoadFlowParametersEntity loadFlowParametersEntity,
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
-                                               VoltageInitParametersEntity voltageInitParametersEntity,
+                                               UUID voltageInitParametersUuid,
                                                SecurityAnalysisParametersEntity securityAnalysisParametersEntity,
                                                SensitivityAnalysisParametersEntity sensitivityAnalysisParametersEntity
     ) {
@@ -80,7 +80,7 @@ public final class TestUtils {
             .loadFlowProvider(loadflowProvider)
             .loadFlowParameters(loadFlowParametersEntity)
             .shortCircuitParameters(shortCircuitParametersEntity)
-            .voltageInitParameters(voltageInitParametersEntity)
+            .voltageInitParametersUuid(voltageInitParametersUuid)
                 .securityAnalysisParameters(securityAnalysisParametersEntity)
                 .sensitivityAnalysisParameters(sensitivityAnalysisParametersEntity)
             .build();
