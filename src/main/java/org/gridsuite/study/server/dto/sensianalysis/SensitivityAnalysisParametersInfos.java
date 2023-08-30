@@ -15,20 +15,20 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @NoArgsConstructor
-public class SensibilityAnalysisParametersInfos {
+public class SensitivityAnalysisParametersInfos {
     private double flowFlowSensitivityValueThreshold;
 
     private double angleFlowSensitivityValueThreshold;
 
     private double flowVoltageSensitivityValueThreshold;
 
-    List<SensibilityAnalysisInjectionsSetParameterInfos> sensitivityInjectionsSet;
+    List<SensitivityAnalysisInjectionsSetParameterInfos> sensitivityInjectionsSet;
 
-    List<SensibilityAnalysisInjectionsParameterInfos> sensitivityInjection;
+    List<SensitivityAnalysisInjectionsParameterInfos> sensitivityInjection;
 
-    List<SensibilityAnalysisHvdcParameterInfos> sensitivityHVDC;
+    List<SensitivityAnalysisHvdcParameterInfos> sensitivityHVDC;
 
-    List<SensibilityAnalysisPtsParameterInfos> sensitivityPST;
+    List<SensitivityAnalysisPtsParameterInfos> sensitivityPST;
 
-    List<SensibilityAnalysisNodesParameterInfos> sensitivityNodes;
+    List<SensitivityAnalysisNodesParameterInfos> sensitivityNodes;
 }

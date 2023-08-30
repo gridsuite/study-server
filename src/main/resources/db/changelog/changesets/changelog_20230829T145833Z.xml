@@ -15,7 +15,7 @@
                 <constraints nullable="false" primaryKey="true" primaryKeyName="sensi_param_hvdcPK"/>
             </column>
             <column name="sensitivity_type" type="VARCHAR(255)"/>
-            <column name="sensibility_analysis_parameters_id" type="UUID"/>
+            <column name="sensitivity_analysis_parameters_id" type="UUID"/>
         </createTable>
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1693321124411-6">
@@ -32,7 +32,7 @@
             <column name="id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="sensi_param_injectionsPK"/>
             </column>
-            <column name="sensibility_analysis_parameters_id" type="UUID"/>
+            <column name="sensitivity_analysis_parameters_id" type="UUID"/>
         </createTable>
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1693321124411-8">
@@ -50,7 +50,7 @@
                 <constraints nullable="false" primaryKey="true" primaryKeyName="sensi_param_injections_setPK"/>
             </column>
             <column name="distribution_type" type="VARCHAR(255)"/>
-            <column name="sensibility_analysis_parameters_id" type="UUID"/>
+            <column name="sensitivity_analysis_parameters_id" type="UUID"/>
         </createTable>
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1693321124411-10">
@@ -67,7 +67,7 @@
             <column name="id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="sensi_param_nodesPK"/>
             </column>
-            <column name="sensibility_analysis_parameters_id" type="UUID"/>
+            <column name="sensitivity_analysis_parameters_id" type="UUID"/>
         </createTable>
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1693321124411-12">
@@ -76,7 +76,7 @@
                 <constraints nullable="false" primaryKey="true" primaryKeyName="sensi_param_pstPK"/>
             </column>
             <column name="sensitivity_type" type="VARCHAR(255)"/>
-            <column name="sensibility_analysis_parameters_id" type="UUID"/>
+            <column name="sensitivity_analysis_parameters_id" type="UUID"/>
         </createTable>
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1693321124411-13">
@@ -98,19 +98,19 @@
         </createTable>
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1693321124411-15">
-        <addForeignKeyConstraint baseColumnNames="sensibility_analysis_parameters_id" baseTableName="sensi_param_injections_set" constraintName="FK6lcpp0jj470b54epjrdsry69t" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="sensitivity_analysis_parameters_id" baseTableName="sensi_param_injections_set" constraintName="FK6lcpp0jj470b54epjrdsry69t" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1693321124411-16">
-        <addForeignKeyConstraint baseColumnNames="sensibility_analysis_parameters_id" baseTableName="sensi_param_nodes" constraintName="FK9fankpbwmcfm5scj3g5of51g1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="sensitivity_analysis_parameters_id" baseTableName="sensi_param_nodes" constraintName="FK9fankpbwmcfm5scj3g5of51g1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1693321124411-17">
-        <addForeignKeyConstraint baseColumnNames="sensibility_analysis_parameters_id" baseTableName="sensi_param_injections" constraintName="FKmy72e7xi0cwktqgncdhvhm4e3" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="sensitivity_analysis_parameters_id" baseTableName="sensi_param_injections" constraintName="FKmy72e7xi0cwktqgncdhvhm4e3" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1693321124411-18">
-        <addForeignKeyConstraint baseColumnNames="sensibility_analysis_parameters_id" baseTableName="sensi_param_pst" constraintName="FKoxcvss8n4fc5dci50mk77oayn" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="sensitivity_analysis_parameters_id" baseTableName="sensi_param_pst" constraintName="FKoxcvss8n4fc5dci50mk77oayn" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1693321124411-19">
-        <addForeignKeyConstraint baseColumnNames="sensibility_analysis_parameters_id" baseTableName="sensi_param_hvdc" constraintName="FKp3spdw4y3fegdsr0f9y3v4g2b" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="sensitivity_analysis_parameters_id" baseTableName="sensi_param_hvdc" constraintName="FKp3spdw4y3fegdsr0f9y3v4g2b" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1693321124411-20">
         <addForeignKeyConstraint baseColumnNames="contingencies_id" baseTableName="sensi_param_contingencies_entity_filters" constraintName="sensiParamContingenciesEntity_filters_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensi_param_pst" validate="true"/>
@@ -129,14 +129,5 @@
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1693321124411-25">
         <addForeignKeyConstraint baseColumnNames="equipments_voltage_regulation_id" baseTableName="sensi_param_regul_entity_filters" constraintName="sensiParamRegulEntity_filters_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensi_param_nodes" validate="true"/>
-    </changeSet>
-    <changeSet author="rehiligha (generated)" id="1693321124411-1">
-        <addNotNullConstraint columnDataType="varchar(255)" columnName="case_name" tableName="study" validate="true"/>
-    </changeSet>
-    <changeSet author="rehiligha (generated)" id="1693321124411-2">
-        <dropDefaultValue columnDataType="varchar(255)" columnName="connected_component_mode" tableName="load_flow_parameters"/>
-    </changeSet>
-    <changeSet author="rehiligha (generated)" id="1693321124411-3">
-        <dropDefaultValue columnDataType="varchar(255)" columnName="local_build_status" tableName="network_modification_node_info"/>
     </changeSet>
 </databaseChangeLog>

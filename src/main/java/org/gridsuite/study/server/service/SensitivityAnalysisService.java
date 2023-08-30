@@ -191,7 +191,7 @@ public class SensitivityAnalysisService {
         }
     }
 
-    public static SensitivityAnalysisParametersEntity toEntity(SensibilityAnalysisParametersInfos parameters) {
+    public static SensitivityAnalysisParametersEntity toEntity(SensitivityAnalysisParametersInfos parameters) {
         Objects.requireNonNull(parameters);
         List<SensitivityAnalysisParametersInjectionsSetEntity> sensitivityInjectionsSet = new ArrayList<>();
         if (parameters.getSensitivityInjectionsSet() != null) {
@@ -253,51 +253,51 @@ public class SensitivityAnalysisService {
                 );
     }
 
-    public static SensibilityAnalysisParametersInfos fromEntity(SensitivityAnalysisParametersEntity entity) {
+    public static SensitivityAnalysisParametersInfos fromEntity(SensitivityAnalysisParametersEntity entity) {
         Objects.requireNonNull(entity);
 
-        List<SensibilityAnalysisInjectionsSetParameterInfos> sensitivityInjectionsSet = new ArrayList<>();
+        List<SensitivityAnalysisInjectionsSetParameterInfos> sensitivityInjectionsSet = new ArrayList<>();
         entity.getSensitivityInjectionsSet().forEach(sensitivityInjectionSet ->
-                sensitivityInjectionsSet.add(new SensibilityAnalysisInjectionsSetParameterInfos(
+                sensitivityInjectionsSet.add(new SensitivityAnalysisInjectionsSetParameterInfos(
                         sensitivityInjectionSet.getDistributionType(),
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjectionSet.getMonitoredBranches()),
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjectionSet.getInjections()),
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjectionSet.getContingencies()))));
-        List<SensibilityAnalysisInjectionsParameterInfos> sensitivityInjections = new ArrayList<>();
+        List<SensitivityAnalysisInjectionsParameterInfos> sensitivityInjections = new ArrayList<>();
         entity.getSensitivityInjections().forEach(sensitivityInjection ->
-                sensitivityInjections.add(new SensibilityAnalysisInjectionsParameterInfos(
+                sensitivityInjections.add(new SensitivityAnalysisInjectionsParameterInfos(
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjection.getMonitoredBranches()),
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjection.getInjections()),
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjection.getContingencies()))));
 
-        List<SensibilityAnalysisHvdcParameterInfos> sensitivityHvdcs = new ArrayList<>();
+        List<SensitivityAnalysisHvdcParameterInfos> sensitivityHvdcs = new ArrayList<>();
         entity.getSensitivityHVDC().forEach(sensitivityHvdc ->
-                sensitivityHvdcs.add(new SensibilityAnalysisHvdcParameterInfos(
+                sensitivityHvdcs.add(new SensitivityAnalysisHvdcParameterInfos(
                         sensitivityHvdc.getSensitivityType(),
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityHvdc.getMonitoredBranches()),
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityHvdc.getHvdcs()),
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityHvdc.getContingencies()))));
-        List<SensibilityAnalysisPtsParameterInfos> sensitivityPsts = new ArrayList<>();
+        List<SensitivityAnalysisPtsParameterInfos> sensitivityPsts = new ArrayList<>();
         entity.getSensitivityPST().forEach(sensitivityPst ->
-                sensitivityPsts.add(new SensibilityAnalysisPtsParameterInfos(
+                sensitivityPsts.add(new SensitivityAnalysisPtsParameterInfos(
                         sensitivityPst.getSensitivityType(),
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityPst.getMonitoredBranches()),
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityPst.getPsts()),
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityPst.getContingencies()))));
-        List<SensibilityAnalysisNodesParameterInfos> sensitivityNodes = new ArrayList<>();
+        List<SensitivityAnalysisNodesParameterInfos> sensitivityNodes = new ArrayList<>();
         entity.getSensitivityNodes().forEach(sensitivityNode ->
-                sensitivityNodes.add(new SensibilityAnalysisNodesParameterInfos(
+                sensitivityNodes.add(new SensitivityAnalysisNodesParameterInfos(
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityNode.getMonitoredVoltageLevels()),
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityNode.getEquipmentsInVoltageRegulation()),
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityNode.getContingencies()))));
 
-        return new SensibilityAnalysisParametersInfos(entity.getFlowFlowSensitivityValueThreshold(), entity.getAngleFlowSensitivityValueThreshold(),
+        return new SensitivityAnalysisParametersInfos(entity.getFlowFlowSensitivityValueThreshold(), entity.getAngleFlowSensitivityValueThreshold(),
                 entity.getFlowVoltageSensitivityValueThreshold(), sensitivityInjectionsSet, sensitivityInjections, sensitivityHvdcs,
                 sensitivityPsts, sensitivityNodes);
     }
 
-    public static SensibilityAnalysisParametersInfos getDefaultSensitivityAnalysisParametersValues() {
-        return SensibilityAnalysisParametersInfos.builder()
+    public static SensitivityAnalysisParametersInfos getDefaultSensitivityAnalysisParametersValues() {
+        return SensitivityAnalysisParametersInfos.builder()
                 .flowFlowSensitivityValueThreshold(FLOW_FLOW_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE)
                 .angleFlowSensitivityValueThreshold(ANGLE_FLOW_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE)
                 .flowVoltageSensitivityValueThreshold(FLOW_VOLTAGE_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE)

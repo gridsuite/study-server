@@ -18,13 +18,13 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @NoArgsConstructor
-public class SensibilityAnalysisInjectionsSetParameterInfos {
+public class SensitivityAnalysisHvdcParameterInfos {
 
-    private SensitivityAnalysisInputData.DistributionType distributionType;
+    private SensitivityAnalysisInputData.SensitivityType sensitivityType;
 
     List<FilterEquipments> monitoredBranches;
 
-    List<FilterEquipments> injections;
+    List<FilterEquipments> hvdcs;
 
     List<FilterEquipments> contingencies;
 }

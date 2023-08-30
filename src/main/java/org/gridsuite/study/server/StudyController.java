@@ -23,7 +23,7 @@ import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationType;
-import org.gridsuite.study.server.dto.sensianalysis.SensibilityAnalysisParametersInfos;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -1490,7 +1490,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
     @Operation(summary = "Get sensitivity analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters")})
-    public ResponseEntity<SensibilityAnalysisParametersInfos> getSensitivityAnalysisParametersValues(
+    public ResponseEntity<SensitivityAnalysisParametersInfos> getSensitivityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParametersValues(studyUuid));
     }
@@ -1500,7 +1500,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set")})
     public ResponseEntity<Void> setSensitivityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) SensibilityAnalysisParametersInfos sensitivityAnalysisParametersValues,
+            @RequestBody(required = false) SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setSensitivityAnalysisParametersValues(studyUuid, sensitivityAnalysisParametersValues, userId);
         return ResponseEntity.ok().build();

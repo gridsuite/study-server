@@ -74,7 +74,6 @@ public final class TestUtils {
                                                SensitivityAnalysisParametersEntity sensitivityAnalysisParametersEntity
     ) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
-            .caseName("caseName1")
             .networkId("netId")
             .networkUuid(networkUuid)
             .loadFlowProvider(loadflowProvider)
@@ -92,7 +91,6 @@ public final class TestUtils {
                                                SecurityAnalysisParametersEntity securityAnalysisParametersEntity,
                                                SensitivityAnalysisParametersEntity sensitivityAnalysisParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
-                .caseName("caseName1")
                 .networkId("netId")
                 .networkUuid(networkUuid)
                 .loadFlowProvider(loadflowProvider)

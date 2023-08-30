@@ -25,7 +25,7 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
-import org.gridsuite.study.server.dto.sensianalysis.SensibilityAnalysisParametersInfos;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
@@ -464,7 +464,7 @@ public class SensitivityAnalysisTest {
             .dcPowerFactor(1.0)
             .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-        SensibilityAnalysisParametersInfos sensitivityAnalysisParametersValues = SensibilityAnalysisParametersInfos.builder()
+        SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues = SensitivityAnalysisParametersInfos.builder()
                 .flowFlowSensitivityValueThreshold(0.0)
                 .angleFlowSensitivityValueThreshold(0.0)
                 .flowVoltageSensitivityValueThreshold(0.0)
@@ -496,7 +496,7 @@ public class SensitivityAnalysisTest {
                 .specificParameters(LoadFlowSpecificParameterEntity.toLoadFlowSpecificParameters(specificParams))
                 .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-        SensibilityAnalysisParametersInfos sensitivityAnalysisParametersValues = SensibilityAnalysisParametersInfos.builder()
+        SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues = SensitivityAnalysisParametersInfos.builder()
                 .flowFlowSensitivityValueThreshold(0.0)
                 .angleFlowSensitivityValueThreshold(0.0)
                 .flowVoltageSensitivityValueThreshold(0.0)
@@ -577,7 +577,7 @@ public class SensitivityAnalysisTest {
                 content().string(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
 
         //create sensitivity analysis Parameters
-        SensibilityAnalysisParametersInfos sensitivityAnalysisParametersValues = SensibilityAnalysisParametersInfos.builder()
+        SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues = SensitivityAnalysisParametersInfos.builder()
                 .flowFlowSensitivityValueThreshold(90)
                 .angleFlowSensitivityValueThreshold(0.6)
                 .flowVoltageSensitivityValueThreshold(0.1)

@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
 
 import java.util.List;
 
@@ -17,11 +18,13 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @NoArgsConstructor
-public class SensibilityAnalysisNodesParameterInfos {
+public class SensitivityAnalysisPtsParameterInfos {
 
-    List<FilterEquipments> monitoredVoltageLevels;
+    private SensitivityAnalysisInputData.SensitivityType sensitivityType;
 
-    List<FilterEquipments> equipmentsInVoltageRegulation;
+    List<FilterEquipments> monitoredBranches;
+
+    List<FilterEquipments> psts;
 
     List<FilterEquipments> contingencies;
 }

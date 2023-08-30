@@ -10,7 +10,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
 
 import java.util.List;
 
@@ -18,13 +17,11 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @NoArgsConstructor
-public class SensibilityAnalysisHvdcParameterInfos {
-
-    private SensitivityAnalysisInputData.SensitivityType sensitivityType;
+public class SensitivityAnalysisInjectionsParameterInfos {
 
     List<FilterEquipments> monitoredBranches;
 
-    List<FilterEquipments> hvdcs;
+    List<FilterEquipments> injections;
 
     List<FilterEquipments> contingencies;
 }

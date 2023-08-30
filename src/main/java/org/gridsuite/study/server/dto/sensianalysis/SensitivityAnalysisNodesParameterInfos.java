@@ -17,11 +17,11 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @NoArgsConstructor
-public class SensibilityAnalysisInjectionsParameterInfos {
+public class SensitivityAnalysisNodesParameterInfos {
 
-    List<FilterEquipments> monitoredBranches;
+    List<FilterEquipments> monitoredVoltageLevels;
 
-    List<FilterEquipments> injections;
+    List<FilterEquipments> equipmentsInVoltageRegulation;
 
     List<FilterEquipments> contingencies;
 }

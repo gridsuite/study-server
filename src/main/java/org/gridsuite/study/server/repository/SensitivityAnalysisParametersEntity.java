@@ -39,22 +39,22 @@ public class SensitivityAnalysisParametersEntity {
     private double flowVoltageSensitivityValueThreshold;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "sensibility_analysis_parameters_id")
+    @JoinColumn(name = "sensitivity_analysis_parameters_id")
     private List<SensitivityAnalysisParametersInjectionsSetEntity> sensitivityInjectionsSet;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "sensibility_analysis_parameters_id")
+    @JoinColumn(name = "sensitivity_analysis_parameters_id")
     private List<SensitivityAnalysisParametersInjectionsEntity> sensitivityInjections;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "sensibility_analysis_parameters_id")
+    @JoinColumn(name = "sensitivity_analysis_parameters_id")
     private List<SensitivityAnalysisParametersHvdcEntity> sensitivityHVDC;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "sensibility_analysis_parameters_id")
+    @JoinColumn(name = "sensitivity_analysis_parameters_id")
     private List<SensitivityAnalysisParametersPstEntity> sensitivityPST;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "sensibility_analysis_parameters_id")
+    @JoinColumn(name = "sensitivity_analysis_parameters_id")
     private List<SensitivityAnalysisParametersNodesEntity> sensitivityNodes;
 }

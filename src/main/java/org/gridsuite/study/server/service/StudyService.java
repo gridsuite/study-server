@@ -39,7 +39,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
-import org.gridsuite.study.server.dto.sensianalysis.SensibilityAnalysisParametersInfos;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -617,7 +617,7 @@ public class StudyService {
 
         SecurityAnalysisParametersValues securityAnalysisParametersValues = sourceStudy.getSecurityAnalysisParameters() == null ? SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues() : SecurityAnalysisService.fromEntity(sourceStudy.getSecurityAnalysisParameters());
 
-        SensibilityAnalysisParametersInfos sensitivityAnalysisParametersValues = sourceStudy.getSensitivityAnalysisParameters() == null ?
+        SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues = sourceStudy.getSensitivityAnalysisParameters() == null ?
                 SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues() :
                 SensitivityAnalysisService.fromEntity(sourceStudy.getSensitivityAnalysisParameters());
 
@@ -939,7 +939,7 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public SensibilityAnalysisParametersInfos getSensitivityAnalysisParametersValues(UUID studyUuid) {
+    public SensitivityAnalysisParametersInfos getSensitivityAnalysisParametersValues(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(studyEntity -> studyEntity.getSensitivityAnalysisParameters() != null ?
                         SensitivityAnalysisService.fromEntity(studyEntity.getSensitivityAnalysisParameters()) :
@@ -1757,7 +1757,7 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
-        SensibilityAnalysisParametersInfos sensitivityAnalysisParametersValues = getSensitivityAnalysisParametersValues(studyUuid);
+        SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues = getSensitivityAnalysisParametersValues(studyUuid);
         SensitivityAnalysisParameters sensitivityAnalysisParameters = SensitivityAnalysisParameters.load();
         sensitivityAnalysisParameters.setAngleFlowSensitivityValueThreshold(sensitivityAnalysisParametersValues.getAngleFlowSensitivityValueThreshold());
         sensitivityAnalysisParameters.setFlowFlowSensitivityValueThreshold(sensitivityAnalysisParametersValues.getFlowFlowSensitivityValueThreshold());
@@ -2020,7 +2020,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void setSensitivityAnalysisParametersValues(UUID studyUuid, SensibilityAnalysisParametersInfos parameters, String userId) {
+    public void setSensitivityAnalysisParametersValues(UUID studyUuid, SensitivityAnalysisParametersInfos parameters, String userId) {
         updateSensitivityAnalysisParameters(studyUuid,
                 SensitivityAnalysisService.toEntity(parameters != null ? parameters :
                         SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues()));
