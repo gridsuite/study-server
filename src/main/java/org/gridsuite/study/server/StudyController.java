@@ -1018,17 +1018,11 @@ public class StudyController {
     @Operation(summary = "Get network modifications from a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<String> getNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                          @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+                                                          @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                          @Parameter(description = "Stashed Modification")
+                                                           @RequestParam(name = "stashed", required = false, defaultValue = "false") Boolean stashed) {
         // Return json string because modification dtos are not available here
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(nodeUuid));
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications-restore", produces = MediaType.TEXT_PLAIN_VALUE)
-    @Operation(summary = "Get network modifications To Restore from a node")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<String> getNetworkModificationsToRestore(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                          @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModificationsToRestore(nodeUuid));
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(nodeUuid, stashed));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
@@ -1068,7 +1062,7 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/stash")
     @Operation(summary = "Put network modifications for a node in the trash")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> putNetworkModificationsInTrash(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
@@ -1080,7 +1074,7 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications-restore")
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/restore")
     @Operation(summary = "Restore Network modifications for a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was trashed"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> restoreNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,

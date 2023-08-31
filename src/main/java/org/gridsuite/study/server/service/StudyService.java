@@ -1532,7 +1532,7 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.updateModifications(groupId, modificationsUuids);
+            networkModificationService.stashModifications(groupId, modificationsUuids);
             networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {

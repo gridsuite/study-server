@@ -260,8 +260,6 @@ public class NetworkModificationTreeTest {
                 if (path.matches("/v1/results/.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(HttpStatus.OK.value())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/restore-network-modifications.*")) {
-                    return new MockResponse().setResponseCode(HttpStatus.OK.value());
                 } else if (path.matches("/v1/network-modifications.*")) {
                     return new MockResponse().setResponseCode(HttpStatus.OK.value());
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID + "/.*") && request.getMethod().equals("GET")) {
@@ -1001,19 +999,19 @@ public class NetworkModificationTreeTest {
         NetworkModificationNode node = buildNetworkModification("modification node 1", "", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
-        String bodyError = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications-restore", root.getStudyId(), node.getId()))
+        String bodyError = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), true))
             .andExpect(status().isInternalServerError())
             .andReturn().getResponse().getContentAsString();
 
         assertEquals(new StudyException(StudyException.Type.GET_MODIFICATIONS_FAILED, HttpStatus.NOT_FOUND.toString()).getMessage(), bodyError);
 
         // No network modification for a root node
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications-restore", root.getStudyId(), root.getId()))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId(), true))
             .andExpect(status().isNotFound());
 
         node = buildNetworkModification("modification node 3", "", UUID.fromString(MODIFICATION_GROUP_UUID_STRING), VARIANT_ID, null, null, null, null, BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications-restore?uuids={modificationID1}", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/restore?uuids={modificationID1}", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
             .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
 
@@ -1030,25 +1028,25 @@ public class NetworkModificationTreeTest {
     }
 
     @Test
-    public void testGetNetworkModificationsToPutIntoNode() throws Exception {
+    public void testGetNetworkModificationsToPutIntoTrashNode() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         NetworkModificationNode node = buildNetworkModification("modification node 1", "", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
-        String bodyError = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId()))
+        String bodyError = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), false))
                 .andExpect(status().isInternalServerError())
                 .andReturn().getResponse().getContentAsString();
 
         assertEquals(new StudyException(StudyException.Type.GET_MODIFICATIONS_FAILED, HttpStatus.NOT_FOUND.toString()).getMessage(), bodyError);
 
         // No network modification for a root node
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId()))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId(), false))
                 .andExpect(status().isNotFound());
 
         node = buildNetworkModification("modification node 3", "", UUID.fromString(MODIFICATION_GROUP_UUID_STRING), VARIANT_ID, null, null, null, null, BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?uuids={modificationID1}", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/stash?uuids={modificationID1}", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 
