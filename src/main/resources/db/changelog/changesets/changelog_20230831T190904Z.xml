@@ -14,7 +14,7 @@
             <column name="id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="sensi_param_hvdcPK"/>
             </column>
-            <column name="sensitivity_type" type="VARCHAR(255)"/>
+            <column name="sensitivity_type_hvdc" type="VARCHAR(255)"/>
             <column name="sensitivity_analysis_parameters_id" type="UUID"/>
         </createTable>
     </changeSet>
@@ -102,7 +102,7 @@
             <column name="id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="sensi_param_pstPK"/>
             </column>
-            <column name="sensitivity_type" type="VARCHAR(255)"/>
+            <column name="sensitivity_type_pst" type="VARCHAR(255)"/>
             <column name="sensitivity_analysis_parameters_id" type="UUID"/>
         </createTable>
     </changeSet>

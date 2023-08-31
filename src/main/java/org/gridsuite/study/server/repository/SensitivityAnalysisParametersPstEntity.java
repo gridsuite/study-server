@@ -27,7 +27,7 @@ public class SensitivityAnalysisParametersPstEntity {
     @Column(name = "id", nullable = false)
     private UUID id;
 
-    @Column(name = "SensitivityType")
+    @Column(name = "SensitivityTypePst")
     @Enumerated(EnumType.STRING)
     private SensitivityAnalysisInputData.SensitivityType sensitivityType;
 

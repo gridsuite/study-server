@@ -27,7 +27,7 @@ public class SensitivityAnalysisParametersHvdcEntity {
     @Column(name = "id", nullable = false)
     private UUID id;
 
-    @Column(name = "SensitivityType")
+    @Column(name = "SensitivityTypeHvdc")
     @Enumerated(EnumType.STRING)
     private SensitivityAnalysisInputData.SensitivityType sensitivityType;
 
