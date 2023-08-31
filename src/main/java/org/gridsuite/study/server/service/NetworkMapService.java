@@ -45,7 +45,7 @@ public class NetworkMapService {
         this.networkMapServerBaseUri = remoteServicesProperties.getServiceUri("network-map-server");
     }
 
-    public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, String infoType) {
+    public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, String infoType, double dcPowerFactor) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (substationsIds != null) {
@@ -56,11 +56,13 @@ public class NetworkMapService {
         }
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
+        builder = builder.queryParam(QUERY_PARAM_DC_POWERFACTOR, dcPowerFactor);
+
         String url = builder.buildAndExpand(networkUuid).toUriString();
         return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
     }
 
-    public String getElementInfos(UUID networkUuid, String variantId, String elementType, String infoType, String elementId) {
+    public String getElementInfos(UUID networkUuid, String variantId, String elementType, String infoType, double dcPowerFactor, String elementId) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements/{elementId}";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (!StringUtils.isBlank(variantId)) {
@@ -68,6 +70,8 @@ public class NetworkMapService {
         }
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
+        builder = builder.queryParam(QUERY_PARAM_DC_POWERFACTOR, dcPowerFactor);
+
         try {
             return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid, elementId);
         } catch (HttpStatusCodeException e) {
