@@ -29,7 +29,7 @@ public class SensitivityAnalysisParametersNodesEntity {
     @ElementCollection
     @CollectionTable(
             name = "sensiParamMonitoredBranchesEntityFilters",
-            joinColumns = @JoinColumn(name = "monitoredBranchesId", foreignKey = @ForeignKey(name = "sensiParamMonitoredBranchesEntity_filters_fk"))
+            joinColumns = @JoinColumn(name = "monitoredBranchesId", foreignKey = @ForeignKey(name = "sensiParamMoniBrEntity_filters_fk"))
     )
     private List<FilterEquipmentsEmbeddable> monitoredVoltageLevels;
 
@@ -42,8 +42,8 @@ public class SensitivityAnalysisParametersNodesEntity {
 
     @ElementCollection
     @CollectionTable(
-            name = "sensiParamContingenciesEntityFilters",
-            joinColumns = @JoinColumn(name = "contingenciesId", foreignKey = @ForeignKey(name = "sensiParamContingenciesEntity_filters_fk"))
+            name = "sensiParamNodesContingenciesEntityFilters",
+            joinColumns = @JoinColumn(name = "contingenciesId", foreignKey = @ForeignKey(name = "sensiParamNodesContEntity_filters_fk"))
     )
 
     private List<FilterEquipmentsEmbeddable> contingencies;

@@ -29,7 +29,7 @@ public class SensitivityAnalysisParametersInjectionsEntity {
     @ElementCollection
     @CollectionTable(
             name = "sensiParamMonitoredBranchesEntityFilters",
-            joinColumns = @JoinColumn(name = "monitoredBranchesId", foreignKey = @ForeignKey(name = "sensiParamMonitoredBranchesEntity_filters_fk"))
+            joinColumns = @JoinColumn(name = "monitoredBranchesId", foreignKey = @ForeignKey(name = "sensiParamMoniBrEntity_filters_fk"))
     )
     private List<FilterEquipmentsEmbeddable> monitoredBranches;
 
@@ -43,7 +43,7 @@ public class SensitivityAnalysisParametersInjectionsEntity {
     @ElementCollection
     @CollectionTable(
             name = "sensiParamContingenciesEntityFilters",
-            joinColumns = @JoinColumn(name = "contingenciesId", foreignKey = @ForeignKey(name = "sensiParamContingenciesEntity_filters_fk"))
+            joinColumns = @JoinColumn(name = "contingenciesId", foreignKey = @ForeignKey(name = "sensiParamContEntity_filters_fk"))
     )
 
     private List<FilterEquipmentsEmbeddable> contingencies;
