@@ -27,6 +27,10 @@ public class SensitivityAnalysisParametersHvdcEntity {
     @Column(name = "id", nullable = false)
     private UUID id;
 
+    @Column(name = "SensitivityType")
+    @Enumerated(EnumType.STRING)
+    private SensitivityAnalysisInputData.SensitivityType sensitivityType;
+
     @ElementCollection
     @CollectionTable(
             name = "sensiParamMonitoredBranchesEntityFilters",
@@ -48,8 +52,4 @@ public class SensitivityAnalysisParametersHvdcEntity {
     )
 
     private List<FilterEquipmentsEmbeddable> contingencies;
-
-    @Column(name = "SensitivityType")
-    @Enumerated(EnumType.STRING)
-    private SensitivityAnalysisInputData.SensitivityType sensitivityType;
 }
