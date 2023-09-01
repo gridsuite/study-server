@@ -13,8 +13,8 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
-        <version>14</version>
-        <relativePath/>
+        <version>14-SNAPSHOT</version>
+        <relativePath>../../build/powsybl-parent/powsybl-parent/powsybl-parent-ws</relativePath>
     </parent>
 
     <groupId>org.gridsuite</groupId>
@@ -75,8 +75,8 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
             <plugin>
-                <groupId>pl.project13.maven</groupId>
-                <artifactId>git-commit-id-plugin</artifactId>
+                <groupId>io.github.git-commit-id</groupId>
+                <artifactId>git-commit-id-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>
