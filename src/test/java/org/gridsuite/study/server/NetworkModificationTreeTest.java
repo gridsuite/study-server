@@ -993,7 +993,7 @@ public class NetworkModificationTreeTest {
     }
 
     @Test
-    public void testGetNetworkModificationsToRestoreNode() throws Exception {
+    public void testGetNetworkModificationsToRestoreByNode() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         NetworkModificationNode node = buildNetworkModification("modification node 1", "", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
@@ -1028,7 +1028,7 @@ public class NetworkModificationTreeTest {
     }
 
     @Test
-    public void testGetNetworkModificationsToPutIntoTrashNode() throws Exception {
+    public void testGetNetworkModificationsToStashByNode() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         NetworkModificationNode node = buildNetworkModification("modification node 1", "", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);

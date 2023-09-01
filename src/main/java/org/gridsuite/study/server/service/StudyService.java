@@ -1525,7 +1525,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void putNetworkModificationsIntoTrash(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
+    public void stashNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
         try {
