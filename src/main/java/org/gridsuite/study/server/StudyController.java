@@ -24,7 +24,6 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
-import org.gridsuite.study.server.dto.voltageinit.VoltageInitParametersInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -209,6 +208,43 @@ public class StudyController {
                                               @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode,
                                               @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @RequestMapping(value = "/studies/{studyUuid}/network", method = RequestMethod.HEAD)
+    @Operation(summary = "check study root network existence")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The network does exist"),
+        @ApiResponse(responseCode = "204", description = "The network doesn't exist")})
+    public ResponseEntity<Void> checkNetworkExistence(@PathVariable("studyUuid") UUID studyUuid) {
+        UUID networkUUID = networkStoreService.getNetworkUuid(studyUuid);
+        return networkStoreService.doesNetworkExist(networkUUID)
+            ? ResponseEntity.ok().build()
+            : ResponseEntity.noContent().build();
+
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/network", params = {"caseUuid"})
+    @Operation(summary = "recreate study network of a study from an existing case")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Study network recreation has started"),
+        @ApiResponse(responseCode = "424", description = "The case doesn't exist")})
+    public ResponseEntity<BasicStudyInfos> recreateStudyNetworkFromCase(@PathVariable("studyUuid") UUID studyUuid,
+                                                                 @RequestBody(required = false) Map<String, Object> importParameters,
+                                                                 @RequestParam(value = "caseUuid") UUID caseUuid,
+                                                                 @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.recreateStudyRootNetwork(caseUuid, userId, studyUuid, importParameters);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/network")
+    @Operation(summary = "recreate study network of a study from its case")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Study network recreation has started"),
+        @ApiResponse(responseCode = "424", description = "The study's case doesn't exist")})
+    public ResponseEntity<BasicStudyInfos> recreateStudyNetwork(@PathVariable("studyUuid") UUID studyUuid,
+                                                         @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.recreateStudyRootNetwork(userId, studyUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -667,7 +703,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set")})
     public ResponseEntity<Void> setVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) VoltageInitParametersInfos voltageInitParameters,
+            @RequestBody(required = false) String voltageInitParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setVoltageInitParameters(studyUuid, voltageInitParameters, userId);
         return ResponseEntity.ok().build();
@@ -676,7 +712,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
     @Operation(summary = "Get voltage init parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters")})
-    public ResponseEntity<VoltageInitParametersInfos> getVoltageInitParameters(
+    public ResponseEntity<String> getVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getVoltageInitParameters(studyUuid));
     }
