@@ -18,32 +18,32 @@ import java.util.UUID;
 @Setter
 @Entity
 @Builder
-@Table(name = "sensiParamInjections")
-public class SensitivityAnalysisParametersInjectionsEntity {
+@Table(name = "sensitivityParametersInjections")
+public class SensitivityParametersInjectionsEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "id", nullable = false)
+    @Column(name = "id")
     private UUID id;
 
     @ElementCollection
     @CollectionTable(
-            name = "sensiParamMonitoredBranchesEntityFilters",
-            joinColumns = @JoinColumn(name = "monitoredBranchesId", foreignKey = @ForeignKey(name = "sensiParamMoniBrEntity_filters_fk"))
+            name = "sensitivityParametersInjectionsEntityMonitoredBranches",
+            joinColumns = @JoinColumn(name = "injectionsId", foreignKey = @ForeignKey(name = "sensitivityInjectionsEntity_monitoredBranches_fK"))
     )
     private List<FilterEquipmentsEmbeddable> monitoredBranches;
 
     @ElementCollection
     @CollectionTable(
-            name = "sensiParamInjectionsIdEntityFilters",
-            joinColumns = @JoinColumn(name = "injectionsId", foreignKey = @ForeignKey(name = "sensiParamInjectionsEntity_filters_fk"))
+            name = "sensitivityParametersInjectionsEntityInjections",
+            joinColumns = @JoinColumn(name = "injectionsId", foreignKey = @ForeignKey(name = "sensitivityInjectionsEntity_injections_fk"))
     )
     private List<FilterEquipmentsEmbeddable> injections;
 
     @ElementCollection
     @CollectionTable(
-            name = "sensiParamContingenciesEntityFilters",
-            joinColumns = @JoinColumn(name = "contingenciesId", foreignKey = @ForeignKey(name = "sensiParamContEntity_filters_fk"))
+            name = "sensitivityParametersInjectionsEntityContingencies",
+            joinColumns = @JoinColumn(name = "injectionsId", foreignKey = @ForeignKey(name = "sensitivityInjectionsEntity_contingencies_fk"))
     )
 
     private List<FilterEquipmentsEmbeddable> contingencies;

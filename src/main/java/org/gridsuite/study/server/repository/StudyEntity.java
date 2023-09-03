@@ -99,7 +99,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             foreignKey = @ForeignKey(
                     name = "sensitivityAnalysisParameters_id_fk"
             ))
-    private SensitivityAnalysisParametersEntity sensitivityAnalysisParameters;
+    private SensitivityParametersEntity sensitivityAnalysisParameters;
 
     @ElementCollection
     @CollectionTable(name = "importParameters",

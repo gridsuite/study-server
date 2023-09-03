@@ -22,7 +22,7 @@ import java.util.UUID;
 @Entity
 @Builder
 @Table(name = "sensitivityAnalysisParameters")
-public class SensitivityAnalysisParametersEntity {
+public class SensitivityParametersEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -39,22 +39,22 @@ public class SensitivityAnalysisParametersEntity {
     private double flowVoltageSensitivityValueThreshold;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "sensitivity_analysis_parameters_id")
-    private List<SensitivityAnalysisParametersInjectionsSetEntity> sensitivityInjectionsSet;
+    @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
+    private List<SensitivityParametersInjectionsSetEntity> sensitivityInjectionsSet;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "sensitivity_analysis_parameters_id")
-    private List<SensitivityAnalysisParametersInjectionsEntity> sensitivityInjections;
+    @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
+    private List<SensitivityParametersInjectionsEntity> sensitivityInjections;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "sensitivity_analysis_parameters_id")
-    private List<SensitivityAnalysisParametersHvdcEntity> sensitivityHVDC;
+    @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
+    private List<SensitivityParametersHvdcEntity> sensitivityHvdc;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "sensitivity_analysis_parameters_id")
-    private List<SensitivityAnalysisParametersPstEntity> sensitivityPST;
+    @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
+    private List<SensitivityParametersPstEntity> sensitivityPST;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "sensitivity_analysis_parameters_id")
-    private List<SensitivityAnalysisParametersNodesEntity> sensitivityNodes;
+    @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
+    private List<SensitivityParametersNodesEntity> sensitivityNodes;
 }

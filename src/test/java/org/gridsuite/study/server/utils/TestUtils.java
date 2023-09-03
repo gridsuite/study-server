@@ -71,7 +71,7 @@ public final class TestUtils {
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
                                                UUID voltageInitParametersUuid,
                                                SecurityAnalysisParametersEntity securityAnalysisParametersEntity,
-                                               SensitivityAnalysisParametersEntity sensitivityAnalysisParametersEntity
+                                               SensitivityParametersEntity sensitivityParametersEntity
     ) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .networkId("netId")
@@ -81,7 +81,7 @@ public final class TestUtils {
             .shortCircuitParameters(shortCircuitParametersEntity)
             .voltageInitParametersUuid(voltageInitParametersUuid)
                 .securityAnalysisParameters(securityAnalysisParametersEntity)
-                .sensitivityAnalysisParameters(sensitivityAnalysisParametersEntity)
+                .sensitivityAnalysisParameters(sensitivityParametersEntity)
             .build();
     }
 
@@ -89,7 +89,7 @@ public final class TestUtils {
                                                LoadFlowParametersEntity loadFlowParametersEntity,
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
                                                SecurityAnalysisParametersEntity securityAnalysisParametersEntity,
-                                               SensitivityAnalysisParametersEntity sensitivityAnalysisParametersEntity) {
+                                               SensitivityParametersEntity sensitivityParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
                 .networkId("netId")
                 .networkUuid(networkUuid)
@@ -97,7 +97,7 @@ public final class TestUtils {
                 .loadFlowParameters(loadFlowParametersEntity)
                 .shortCircuitParameters(shortCircuitParametersEntity)
                 .securityAnalysisParameters(securityAnalysisParametersEntity)
-                .sensitivityAnalysisParameters(sensitivityAnalysisParametersEntity)
+                .sensitivityAnalysisParameters(sensitivityParametersEntity)
                 .build();
     }
 

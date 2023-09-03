@@ -19,36 +19,36 @@ import java.util.UUID;
 @Setter
 @Entity
 @Builder
-@Table(name = "sensiParamPst")
-public class SensitivityAnalysisParametersPstEntity {
+@Table(name = "sensitivityParametersPst")
+public class SensitivityParametersPstEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "id", nullable = false)
+    @Column(name = "id")
     private UUID id;
 
-    @Column(name = "SensitivityTypePst")
+    @Column(name = "sensitivityParametersPstEntitySensitivityType")
     @Enumerated(EnumType.STRING)
     private SensitivityAnalysisInputData.SensitivityType sensitivityType;
 
     @ElementCollection
     @CollectionTable(
-            name = "sensiParamPstMonitoredBranchesEntityFilters",
-            joinColumns = @JoinColumn(name = "monitoredBranchesId", foreignKey = @ForeignKey(name = "sensiParamPstMoniBrEntity_filters_fk"))
+            name = "sensitivityParametersPstEntityMonitoredBranches",
+            joinColumns = @JoinColumn(name = "PstId", foreignKey = @ForeignKey(name = "sensitivityPstEntity_monitoredBranches_fK"))
     )
     private List<FilterEquipmentsEmbeddable> monitoredBranches;
 
     @ElementCollection
     @CollectionTable(
-            name = "sensiParamPstsIdEntityFilters",
-            joinColumns = @JoinColumn(name = "pstsId", foreignKey = @ForeignKey(name = "sensiParamPstsEntity_filters_fk"))
+            name = "sensitivityParametersPstEntityPst",
+            joinColumns = @JoinColumn(name = "PstId", foreignKey = @ForeignKey(name = "sensitivityPstEntity_psts_fK"))
     )
     private List<FilterEquipmentsEmbeddable> psts;
 
     @ElementCollection
     @CollectionTable(
-            name = "sensiParamPstContingenciesEntityFilters",
-            joinColumns = @JoinColumn(name = "contingenciesId", foreignKey = @ForeignKey(name = "sensiParamPstContEntity_filters_fk"))
+            name = "sensitivityParametersPstEntityContingencies",
+            joinColumns = @JoinColumn(name = "PstId", foreignKey = @ForeignKey(name = "sensitivityPstEntity_contingencies_fK"))
     )
 
     private List<FilterEquipmentsEmbeddable> contingencies;

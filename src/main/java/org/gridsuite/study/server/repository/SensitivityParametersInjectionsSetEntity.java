@@ -19,36 +19,36 @@ import java.util.UUID;
 @Setter
 @Entity
 @Builder
-@Table(name = "sensiParamInjectionsSet")
-public class SensitivityAnalysisParametersInjectionsSetEntity {
+@Table(name = "sensitivityParametersInjectionsSet")
+public class SensitivityParametersInjectionsSetEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "id", nullable = false)
+    @Column(name = "id")
     private UUID id;
 
-    @Column(name = "distributionType")
+    @Column(name = "sensitivityParametersInjectionsSetDistributionType")
     @Enumerated(EnumType.STRING)
     private SensitivityAnalysisInputData.DistributionType distributionType;
 
     @ElementCollection
     @CollectionTable(
-            name = "sensiParamMonitoredBranchesEntityFilters",
-            joinColumns = @JoinColumn(name = "monitoredBranchesId", foreignKey = @ForeignKey(name = "sensiParamMoniBrEntity_filters_fk"))
+            name = "sensitivityParametersInjectionsSetEntityMonitoredBranches",
+            joinColumns = @JoinColumn(name = "injectionsSetId", foreignKey = @ForeignKey(name = "sensitivityInjectionsSetEntity_monitoredBranches_fK"))
     )
     private List<FilterEquipmentsEmbeddable> monitoredBranches;
 
     @ElementCollection
     @CollectionTable(
-            name = "sensiParamInjectionsIdEntityFilters",
-            joinColumns = @JoinColumn(name = "injectionsId", foreignKey = @ForeignKey(name = "sensiParamInjectionsEntity_filters_fk"))
+            name = "sensitivityParametersInjectionsSetEntityInjections",
+            joinColumns = @JoinColumn(name = "injectionsSetId", foreignKey = @ForeignKey(name = "sensitivityInjectionsSetEntity_injections_fk"))
     )
     private List<FilterEquipmentsEmbeddable> injections;
 
     @ElementCollection
     @CollectionTable(
-            name = "sensiParamContingenciesEntityFilters",
-            joinColumns = @JoinColumn(name = "contingenciesId", foreignKey = @ForeignKey(name = "sensiParamContEntity_filters_fk"))
+            name = "sensitivityParametersInjectionsSetEntityContingencies",
+            joinColumns = @JoinColumn(name = "injectionsSetId", foreignKey = @ForeignKey(name = "sensitivityInjectionsSetEntity_contingencies_fk"))
     )
 
     private List<FilterEquipmentsEmbeddable> contingencies;

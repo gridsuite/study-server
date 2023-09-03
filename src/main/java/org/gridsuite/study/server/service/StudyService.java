@@ -1772,10 +1772,10 @@ public class StudyService {
         sensitivityAnalysisInputData.setLoadFlowSpecificParameters(specificParameters == null ?
                 Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)));
 
-        List<SensitivityAnalysisParametersInjectionsSetEntity> sensitivityInjectionsSet = new ArrayList<>();
+        List<SensitivityParametersInjectionsSetEntity> sensitivityInjectionsSet = new ArrayList<>();
         if (sensitivityAnalysisParametersValues.getSensitivityInjectionsSet() != null) {
             sensitivityAnalysisParametersValues.getSensitivityInjectionsSet().forEach(sensitivityInjectionSet ->
-                    sensitivityInjectionsSet.add(new SensitivityAnalysisParametersInjectionsSetEntity(null,
+                    sensitivityInjectionsSet.add(new SensitivityParametersInjectionsSetEntity(null,
                             sensitivityInjectionSet.getDistributionType(),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjectionSet.getMonitoredBranches()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjectionSet.getInjections()),
@@ -1783,40 +1783,40 @@ public class StudyService {
             );
         }
 
-        List<SensitivityAnalysisParametersInjectionsEntity> sensitivityInjections = new ArrayList<>();
+        List<SensitivityParametersInjectionsEntity> sensitivityInjections = new ArrayList<>();
         if (sensitivityAnalysisParametersValues.getSensitivityInjection() != null) {
             sensitivityAnalysisParametersValues.getSensitivityInjection().forEach(sensitivityInjection ->
-                    sensitivityInjections.add(new SensitivityAnalysisParametersInjectionsEntity(null,
+                    sensitivityInjections.add(new SensitivityParametersInjectionsEntity(null,
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjection.getMonitoredBranches()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjection.getInjections()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjection.getContingencies())))
             );
         }
 
-        List<SensitivityAnalysisParametersHvdcEntity> sensitivityHvdcs = new ArrayList<>();
+        List<SensitivityParametersHvdcEntity> sensitivityHvdcs = new ArrayList<>();
         if (sensitivityAnalysisParametersValues.getSensitivityHVDC() != null) {
             sensitivityAnalysisParametersValues.getSensitivityHVDC().forEach(sensitivityHvdc ->
-                    sensitivityHvdcs.add(new SensitivityAnalysisParametersHvdcEntity(null,
+                    sensitivityHvdcs.add(new SensitivityParametersHvdcEntity(null,
                             sensitivityHvdc.getSensitivityType(),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getMonitoredBranches()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getHvdcs()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getContingencies())))
             );
         }
-        List<SensitivityAnalysisParametersPstEntity> sensitivityPsts = new ArrayList<>();
+        List<SensitivityParametersPstEntity> sensitivityPsts = new ArrayList<>();
         if (sensitivityAnalysisParametersValues.getSensitivityPST() != null) {
             sensitivityAnalysisParametersValues.getSensitivityPST().forEach(sensitivityPst ->
-                    sensitivityPsts.add(new SensitivityAnalysisParametersPstEntity(null,
+                    sensitivityPsts.add(new SensitivityParametersPstEntity(null,
                             sensitivityPst.getSensitivityType(),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityPst.getMonitoredBranches()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityPst.getPsts()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityPst.getContingencies())))
             );
         }
-        List<SensitivityAnalysisParametersNodesEntity> sensitivityNodes = new ArrayList<>();
+        List<SensitivityParametersNodesEntity> sensitivityNodes = new ArrayList<>();
         if (sensitivityAnalysisParametersValues.getSensitivityNodes() != null) {
             sensitivityAnalysisParametersValues.getSensitivityNodes().forEach(sensitivityNode ->
-                    sensitivityNodes.add(new SensitivityAnalysisParametersNodesEntity(null,
+                    sensitivityNodes.add(new SensitivityParametersNodesEntity(null,
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityNode.getMonitoredVoltageLevels()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityNode.getEquipmentsInVoltageRegulation()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityNode.getContingencies())))
@@ -2027,8 +2027,8 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public void updateSensitivityAnalysisParameters(UUID studyUuid, SensitivityAnalysisParametersEntity sensitivityAnalysisParametersEntity) {
+    public void updateSensitivityAnalysisParameters(UUID studyUuid, SensitivityParametersEntity sensitivityParametersEntity) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setSensitivityAnalysisParameters(sensitivityAnalysisParametersEntity));
+        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setSensitivityAnalysisParameters(sensitivityParametersEntity));
     }
 }

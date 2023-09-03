@@ -19,36 +19,36 @@ import java.util.UUID;
 @Setter
 @Entity
 @Builder
-@Table(name = "sensiParamHvdc")
-public class SensitivityAnalysisParametersHvdcEntity {
+@Table(name = "sensitivityParametersHvdc")
+public class SensitivityParametersHvdcEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "id", nullable = false)
+    @Column(name = "id")
     private UUID id;
 
-    @Column(name = "SensitivityTypeHvdc")
+    @Column(name = "sensitivityParametersHvdcEntitySensitivityType")
     @Enumerated(EnumType.STRING)
     private SensitivityAnalysisInputData.SensitivityType sensitivityType;
 
     @ElementCollection
     @CollectionTable(
-            name = "sensiParamHvdcMonitoredBranchesEntityFilters",
-            joinColumns = @JoinColumn(name = "monitoredBranchesId", foreignKey = @ForeignKey(name = "sensiParamHvdcMoniBrEntity_filters_fk"))
+            name = "sensitivityParametersHvdcEntityMonitoredBranches",
+            joinColumns = @JoinColumn(name = "HvdcId", foreignKey = @ForeignKey(name = "sensitivityHvdcEntity_monitoredBranches_fK"))
     )
     private List<FilterEquipmentsEmbeddable> monitoredBranches;
 
     @ElementCollection
     @CollectionTable(
-            name = "sensiParamHvdcsEntityFilters",
-            joinColumns = @JoinColumn(name = "hvdcsId", foreignKey = @ForeignKey(name = "sensiParamHvdcsEntity_filters_fk"))
+            name = "sensitivityParametersHvdcEntityHvdcs",
+            joinColumns = @JoinColumn(name = "HvdcId", foreignKey = @ForeignKey(name = "sensitivityHvdcEntity_hvdcs_fk"))
     )
     private List<FilterEquipmentsEmbeddable> hvdcs;
 
     @ElementCollection
     @CollectionTable(
-            name = "sensiParamHvdcContingenciesEntityFilters",
-            joinColumns = @JoinColumn(name = "contingenciesId", foreignKey = @ForeignKey(name = "sensiParamHvdcContEntity_filters_fk"))
+            name = "sensitivityParametersHvdcEntityContingencies",
+            joinColumns = @JoinColumn(name = "HvdcId", foreignKey = @ForeignKey(name = "sensitivityHvdcEntity_contingencies_fk"))
     )
 
     private List<FilterEquipmentsEmbeddable> contingencies;
