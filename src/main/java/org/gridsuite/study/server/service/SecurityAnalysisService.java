@@ -174,6 +174,11 @@ public class SecurityAnalysisService {
         restTemplate.delete(securityAnalysisServerBaseUri + path);
     }
 
+    public void deleteSaResults() {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results").toUriString();
+        restTemplate.delete(securityAnalysisServerBaseUri + path);
+    }
+
     public void invalidateSaStatus(List<UUID> uuids) {
         if (!uuids.isEmpty()) {
             String path = UriComponentsBuilder

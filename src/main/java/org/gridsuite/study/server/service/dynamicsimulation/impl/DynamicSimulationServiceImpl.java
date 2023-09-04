@@ -148,6 +148,11 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
+    public void deleteResults() {
+        dynamicSimulationClient.deleteResults();
+    }
+
+    @Override
     public void assertDynamicSimulationNotRunning(UUID nodeUuid) {
         DynamicSimulationStatus status = getStatus(nodeUuid);
         if (DynamicSimulationStatus.RUNNING == status) {

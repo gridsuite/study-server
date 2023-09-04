@@ -216,6 +216,12 @@ public class VoltageInitService {
         restTemplate.delete(voltageInitServerBaseUri + path);
     }
 
+    public void deleteVoltageInitResults() {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results")
+            .toUriString();
+        restTemplate.delete(voltageInitServerBaseUri + path);
+    }
+
     public void assertVoltageInitNotRunning(UUID nodeUuid) {
         String scs = getVoltageInitStatus(nodeUuid);
         if (VoltageInitStatus.RUNNING.name().equals(scs)) {

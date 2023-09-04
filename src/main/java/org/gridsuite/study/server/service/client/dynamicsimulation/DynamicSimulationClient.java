@@ -36,4 +36,6 @@ public interface DynamicSimulationClient extends RestClient {
     void invalidateStatus(List<UUID> resultUuids);
 
     void deleteResult(UUID resultUuid);
+
+    void deleteResults();
 }

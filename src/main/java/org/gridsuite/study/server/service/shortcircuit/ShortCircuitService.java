@@ -246,6 +246,12 @@ public class ShortCircuitService {
         restTemplate.delete(shortCircuitServerBaseUri + path);
     }
 
+    public void deleteShortCircuitAnalysisResults() {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results")
+            .toUriString();
+        restTemplate.delete(shortCircuitServerBaseUri + path);
+    }
+
     public void assertShortCircuitAnalysisNotRunning(UUID nodeUuid) {
         String scs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.ALL_BUSES);
         String oneBusScs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.ONE_BUS);

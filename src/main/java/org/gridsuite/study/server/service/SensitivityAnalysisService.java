@@ -185,6 +185,12 @@ public class SensitivityAnalysisService {
         restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
     }
 
+    public void deleteSensitivityAnalysisResults() {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results")
+            .toUriString();
+        restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
+    }
+
     public void assertSensitivityAnalysisNotRunning(UUID nodeUuid) {
         String sas = getSensitivityAnalysisStatus(nodeUuid);
         if (SensitivityAnalysisStatus.RUNNING.name().equals(sas)) {

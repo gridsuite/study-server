@@ -120,6 +120,12 @@ public class LoadFlowService {
         }
     }
 
+    public void deleteLoadFlowResults() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/all").toUriString();
+        restTemplate.delete(loadFlowServerBaseUri + path, Void.class);
+    }
+
     public String getLoadFlowResultOrStatus(UUID nodeUuid, String suffix) {
         String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getLoadFlowResultUuid(nodeUuid);
