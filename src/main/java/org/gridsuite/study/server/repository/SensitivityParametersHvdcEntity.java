@@ -27,10 +27,6 @@ public class SensitivityParametersHvdcEntity {
     @Column(name = "id")
     private UUID id;
 
-    @Column(name = "sensitivityParametersHvdcEntitySensitivityType")
-    @Enumerated(EnumType.STRING)
-    private SensitivityAnalysisInputData.SensitivityType sensitivityType;
-
     @ElementCollection
     @CollectionTable(
             name = "sensitivityParametersHvdcEntityMonitoredBranches",
@@ -44,6 +40,10 @@ public class SensitivityParametersHvdcEntity {
             joinColumns = @JoinColumn(name = "HvdcId", foreignKey = @ForeignKey(name = "sensitivityHvdcEntity_hvdcs_fk"))
     )
     private List<FilterEquipmentsEmbeddable> hvdcs;
+
+    @Column(name = "sensitivityParametersHvdcEntitySensitivityType")
+    @Enumerated(EnumType.STRING)
+    private SensitivityAnalysisInputData.SensitivityType sensitivityType;
 
     @ElementCollection
     @CollectionTable(

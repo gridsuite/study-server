@@ -1797,9 +1797,9 @@ public class StudyService {
         if (sensitivityAnalysisParametersValues.getSensitivityHVDC() != null) {
             sensitivityAnalysisParametersValues.getSensitivityHVDC().forEach(sensitivityHvdc ->
                     sensitivityHvdcs.add(new SensitivityParametersHvdcEntity(null,
-                            sensitivityHvdc.getSensitivityType(),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getMonitoredBranches()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getHvdcs()),
+                            sensitivityHvdc.getSensitivityType(),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getContingencies())))
             );
         }

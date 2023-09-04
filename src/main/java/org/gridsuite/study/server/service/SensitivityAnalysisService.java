@@ -216,9 +216,9 @@ public class SensitivityAnalysisService {
         if (parameters.getSensitivityHVDC() != null) {
             parameters.getSensitivityHVDC().forEach(sensitivityHvdc ->
                     sensitivityHvdcs.add(new SensitivityParametersHvdcEntity(null,
-                            sensitivityHvdc.getSensitivityType(),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getMonitoredBranches()),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getHvdcs()),
+                            sensitivityHvdc.getSensitivityType(),
                             FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getContingencies())))
             );
         }
