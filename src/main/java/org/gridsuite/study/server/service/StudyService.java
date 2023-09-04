@@ -1525,6 +1525,42 @@ public class StudyService {
     }
 
     @Transactional
+    public void stashNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
+        try {
+            if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
+                throw new StudyException(NOT_ALLOWED);
+            }
+            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            networkModificationService.stashModifications(groupId, modificationsUuids);
+            networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
+            updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
+        }
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    @Transactional
+    public void restoreNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
+        try {
+            if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
+                throw new StudyException(NOT_ALLOWED);
+            }
+            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            networkModificationService.restoreModifications(groupId, modificationsUuids);
+            networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
+            updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
+        }
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    @Transactional
     public void deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
