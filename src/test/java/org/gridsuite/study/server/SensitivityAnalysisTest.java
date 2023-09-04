@@ -156,6 +156,7 @@ public class SensitivityAnalysisTest {
             "\"sensitivityPST\":[{\"sensitivityType\":\"DELTA_MW\",\"monitoredBranches\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"psts\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
             "\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}],\"sensitivityNodes\":[{\"monitoredVoltageLevels\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
             "\"equipmentsInVoltageRegulation\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}]}";
+
     @Before
     public void setup() throws IOException {
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
