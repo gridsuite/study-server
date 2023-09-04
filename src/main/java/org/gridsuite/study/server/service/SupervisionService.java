@@ -12,7 +12,6 @@ import org.springframework.web.client.HttpStatusCodeException;
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyException.Type.STUDY_CREATION_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.SUPERVSION_ERROR_DELETE_RESULTS;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
@@ -38,7 +37,6 @@ public class SupervisionService {
 
     @Autowired
     private VoltageInitService voltageInitService;
-
 
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
@@ -139,5 +137,4 @@ public class SupervisionService {
             throw handleHttpError(e, SUPERVSION_ERROR_DELETE_RESULTS);
         }
     }
-
 }
