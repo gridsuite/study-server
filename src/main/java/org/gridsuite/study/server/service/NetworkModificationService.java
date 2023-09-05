@@ -48,18 +48,16 @@ public class NetworkModificationService {
     private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String MODIFICATIONS_PATH = "modifications";
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
+    private static final String MODIFICATIONS_RESTORE_PATH = NETWORK_MODIFICATIONS_PATH + "/restore";
+    private static final String MODIFICATIONS_STASH_PATH = NETWORK_MODIFICATIONS_PATH + "/stash";
     private static final String NETWORK_UUID = "networkUuid";
     private static final String REPORT_UUID = "reportUuid";
     private static final String REPORTER_ID = "reporterId";
     private static final String VARIANT_ID = "variantId";
-
-    private String networkModificationServerBaseUri;
-
     private final NetworkService networkStoreService;
-
     private final RestTemplate restTemplate = new RestTemplate();
-
     private final ObjectMapper objectMapper;
+    private String networkModificationServerBaseUri;
 
     @Autowired
     NetworkModificationService(RemoteServicesProperties remoteServicesProperties,
@@ -85,10 +83,11 @@ public class NetworkModificationService {
     }
 
     // Return json string because modification dtos are not available here
-    public String getModifications(UUID groupUUid) {
+    public String getModifications(UUID groupUUid, boolean stashedModifications) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH)
             .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+            .queryParam("stashed", stashedModifications)
             .buildAndExpand(groupUUid)
             .toUriString();
 
@@ -185,6 +184,49 @@ public class NetworkModificationService {
         try {
             restTemplate.exchange(path, HttpMethod.PUT, httpEntity,
                     Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
+        }
+    }
+
+    public void stashModifications(UUID groupUUid, List<UUID> modificationsUuids) {
+        Objects.requireNonNull(groupUUid);
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + MODIFICATIONS_STASH_PATH)
+                .queryParam(UUIDS, modificationsUuids)
+                .queryParam(GROUP_UUID, groupUUid)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
+        try {
+            restTemplate.exchange(path, HttpMethod.POST, httpEntity, Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
+        }
+    }
+
+    public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids) {
+        Objects.requireNonNull(groupUUid);
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + MODIFICATIONS_RESTORE_PATH)
+                .queryParam(UUIDS, modificationsUuids)
+                .queryParam(GROUP_UUID, groupUUid)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
+
+        try {
+            restTemplate.exchange(path, HttpMethod.POST, httpEntity, Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
         }
