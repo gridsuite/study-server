@@ -146,6 +146,9 @@ public class SecurityAnalysisTest {
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
+    @Autowired
+    private ReportService reportService;
+
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String saResultDestination = "sa.result";
@@ -168,6 +171,7 @@ public class SecurityAnalysisTest {
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         actionsService.setActionsServerBaseUri(baseUrl);
+        reportService.setReportServerBaseUri(baseUrl);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -224,6 +228,9 @@ public class SecurityAnalysisTest {
                 } else if ("/v1/results".equals(path)) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/supervision/security-analysis\\?reportsList=.*")) {
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -254,7 +261,7 @@ public class SecurityAnalysisTest {
         testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID), SECURITY_ANALYSIS_PARAMETERS);
         testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID), null);
 
-        // run security analysis
+        // run additional security analysis for deletion test
         MockHttpServletRequestBuilder requestBuilder = post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
             studyNameUserIdUuid, modificationNode1Uuid, CONTINGENCY_LIST_NAME);
 
@@ -285,7 +292,9 @@ public class SecurityAnalysisTest {
         mockMvc.perform(delete("/v1/supervision/security-analysis/results"))
             .andExpect(status().isOk());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results")));
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.contains("/v1/results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/supervision/security-analysis\\?reportsList=.*")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
     }
 

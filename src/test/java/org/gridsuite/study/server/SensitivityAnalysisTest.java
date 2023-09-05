@@ -144,6 +144,9 @@ public class SensitivityAnalysisTest {
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
+    @Autowired
+    private ReportService reportService;
+
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String sensitivityAnalysisResultDestination = "sensitivityanalysis.result";
@@ -171,6 +174,7 @@ public class SensitivityAnalysisTest {
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         actionsService.setActionsServerBaseUri(baseUrl);
+        reportService.setReportServerBaseUri(baseUrl);
 
         SensitivityAnalysisInputData sensitivityAnalysisInputData = SensitivityAnalysisInputData.builder()
             .resultsThreshold(0.20)
@@ -257,6 +261,9 @@ public class SensitivityAnalysisTest {
                 } else if (path.matches("/v1/results")) {
                     return new MockResponse().setResponseCode(200).addHeader("Content-Type",
                         "application/json; charset=utf-8");
+                } else if (path.matches("/v1/supervision/sensitivity-analysis\\?reportsList=.*")) {
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -351,7 +358,7 @@ public class SensitivityAnalysisTest {
                 studyNameUserIdUuid, UUID.randomUUID(), "fakeJsonSelector"))
             .andExpectAll(status().isNoContent());
 
-        // run sensitivity analysis
+        // run additional sensitivity analysis for deletion test
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyNameUserIdUuid, modificationNode2Uuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(SENSITIVITY_INPUT)).andExpect(status().isOk())
@@ -379,7 +386,9 @@ public class SensitivityAnalysisTest {
         mockMvc.perform(delete("/v1/supervision/sensitivity-analysis/results"))
             .andExpect(status().isOk());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results")));
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.contains("/v1/results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/supervision/sensitivity-analysis\\?reportsList=.*")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
 
         String baseUrlWireMock = wireMock.baseUrl();
