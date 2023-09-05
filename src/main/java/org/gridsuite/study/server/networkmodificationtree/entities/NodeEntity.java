@@ -59,4 +59,6 @@ public class NodeEntity {
     @JoinColumn(name = "study_id", foreignKey = @ForeignKey(name = "study_id_fk_constraint"))
     StudyEntity study;
 
+    boolean stashed;
+
 }

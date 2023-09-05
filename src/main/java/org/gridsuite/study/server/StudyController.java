@@ -33,6 +33,7 @@ import org.gridsuite.study.server.service.*;
 import org.springframework.data.domain.Pageable;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
+import org.springframework.data.util.Pair;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -1123,16 +1124,35 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(studyUuid, referenceId, node, insertMode, userId));
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
-    @Operation(summary = "Delete node with given id")
+    @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}/stash")
+    @Operation(summary = "Move to trash the node with given id")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted"),
+        @ApiResponse(responseCode = "200", description = "the nodes have been successfully moved to trash"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public ResponseEntity<Void> deleteNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                 @Parameter(description = "id of child to remove") @PathVariable("id") UUID nodeId,
-                                                 @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
+    public ResponseEntity<Void> stashNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                 @Parameter(description = "id of child to delete (move to trash)") @PathVariable("id") UUID nodeId,
+                                                 @Parameter(description = "stashChildren") @RequestParam(value = "stashChildren", defaultValue = "false") boolean stashChildren,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.deleteNode(studyUuid, nodeId, deleteChildren, userId);
+        studyService.stashNode(studyUuid, nodeId, stashChildren, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/tree/nodes/stash")
+    @Operation(summary = "Get the list of nodes in the trash for a given study")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
+    public ResponseEntity<List<Pair<AbstractNode, Integer>>> getStashedNodes(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getStashedNodes(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{nodeId}/restore")
+    @Operation(summary = "restore node on below the given anchor node")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
+    public ResponseEntity<Void> restoreNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                          @Parameter(description = "id of node to restore") @PathVariable("nodeId") UUID nodeId,
+                                                          @Parameter(description = "id of node below which the node will be restored") @RequestParam("anchorNodeId") UUID anchorNodeId) {
+        studyService.restoreNode(studyUuid, nodeId, anchorNodeId);
         return ResponseEntity.ok().build();
     }
 
