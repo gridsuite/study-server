@@ -9,8 +9,12 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.iidm.network.Generator;
+import com.powsybl.iidm.network.Identifiable;
 import com.powsybl.timeseries.*;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
@@ -22,6 +26,7 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationSer
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +41,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
+import static org.mockito.Mockito.when;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -95,7 +101,7 @@ public class StudyServiceDynamicSimulationTest {
     ObjectMapper objectMapper;
 
     @Autowired
-    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+    SupervisionService supervisionService;
 
     public final Logger getLogger() {
         return LoggerFactory.getLogger(this.getClass());
@@ -208,5 +214,20 @@ public class StudyServiceDynamicSimulationTest {
         getLogger().info("Mapping infos expected in Json = " + objectMapper.writeValueAsString(MAPPINGS));
         getLogger().info("Mapping infos result in Json = " + objectMapper.writeValueAsString(mappingInfos));
         assertEquals(MAPPINGS.size(), mappingInfos.size());
+    }
+
+    @Test
+    public void testDeleteResults() {
+        NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository = Mockito.mock(NetworkModificationNodeInfoRepository.class);
+        NetworkModificationNodeInfoEntity networkModificationNode = new NetworkModificationNodeInfoEntity();
+        networkModificationNode.setDynamicSimulationResultUuid(UUID.randomUUID());
+
+        when(networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull()).thenReturn(Collections.singletonList(networkModificationNode));
+        assertEquals(1, networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull().size());
+        supervisionService.deleteDynamicSimulationResults();
+
+        when(networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull()).thenReturn(List.of());
+        assertEquals(0, networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull().size());
+
     }
 }
