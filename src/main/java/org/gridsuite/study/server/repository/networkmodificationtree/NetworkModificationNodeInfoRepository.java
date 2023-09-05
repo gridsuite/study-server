@@ -17,7 +17,17 @@ import java.util.UUID;
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
 public interface NetworkModificationNodeInfoRepository extends NodeInfoRepository<NetworkModificationNodeInfoEntity> {
-    List<NetworkModificationNodeInfoEntity> findAll();
+    List<NetworkModificationNodeInfoEntity> findAllByLoadFlowResultUuidNotNull();
+
+    List<NetworkModificationNodeInfoEntity> findAllByDynamicSimulationResultUuidNotNull();
+
+    List<NetworkModificationNodeInfoEntity> findAllBySecurityAnalysisResultUuidNotNull();
+
+    List<NetworkModificationNodeInfoEntity> findAllBySensitivityAnalysisResultUuidNotNull();
+
+    List<NetworkModificationNodeInfoEntity> findAllByShortCircuitAnalysisResultUuidNotNull();
+
+    List<NetworkModificationNodeInfoEntity> findAllByVoltageInitResultUuidNotNull();
 
     List<NetworkModificationNodeInfoEntity> findAllByNodeStudyId(UUID studyUuid);
 

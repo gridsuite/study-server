@@ -27,6 +27,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.SendInput;
@@ -140,6 +141,9 @@ public class SensitivityAnalysisTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String sensitivityAnalysisResultDestination = "sensitivityanalysis.result";
@@ -250,6 +254,9 @@ public class SensitivityAnalysisTest {
                            || path.matches("/v1/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID)) {
                     return new MockResponse().setResponseCode(200).addHeader("Content-Type",
                         "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results")) {
+                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
+                        "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -343,6 +350,37 @@ public class SensitivityAnalysisTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
                 studyNameUserIdUuid, UUID.randomUUID(), "fakeJsonSelector"))
             .andExpectAll(status().isNoContent());
+
+        // run sensitivity analysis
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyNameUserIdUuid, modificationNode2Uuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(SENSITIVITY_INPUT)).andExpect(status().isOk())
+            .andReturn();
+
+        Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        String updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+
+        Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, sensitivityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        updateType = (String) sensitivityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT, updateType);
+
+        sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*?receiver=.*nodeUuid.*")));
+
+        //Delete Security analysis results
+        assertEquals(1, networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
+        mockMvc.perform(delete("/v1/supervision/sensitivity-analysis/results"))
+            .andExpect(status().isOk());
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results")));
+        assertEquals(0, networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
 
         String baseUrlWireMock = wireMock.baseUrl();
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrlWireMock);

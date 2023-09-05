@@ -22,6 +22,7 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.SensitivityAnalysisService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -125,6 +126,9 @@ public class ShortCircuitTest {
     @Autowired
     private StudyRepository studyRepository;
 
+    @Autowired
+    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String shortCircuitAnalysisResultDestination = "shortcircuitanalysis.result";
@@ -201,6 +205,9 @@ public class ShortCircuitTest {
                             .build(), shortCircuitAnalysisStoppedDestination);
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results")) {
+                    return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -337,6 +344,14 @@ public class ShortCircuitTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
+
+        //Delete Shortcircuit results
+        assertEquals(1, networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
+        mockMvc.perform(delete("/v1/supervision/shortcircuit/results"))
+            .andExpect(status().isOk());
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results")));
+        assertEquals(0, networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
     }
 
     @Test

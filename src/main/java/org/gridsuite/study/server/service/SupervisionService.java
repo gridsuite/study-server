@@ -46,7 +46,7 @@ public class SupervisionService {
 
     @Transactional
     public void deleteLoadflowResults() {
-        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAll();
+        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         nodes.stream().forEach(node -> {
             node.setLoadFlowResultUuid(null);
             networkModificationNodeInfoRepository.save(node);
@@ -62,7 +62,7 @@ public class SupervisionService {
 
     @Transactional
     public void deleteDynamicSimulationResults() {
-        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAll();
+        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull();
         nodes.stream().forEach(node -> {
             node.setShortCircuitAnalysisResultUuid(null);
             networkModificationNodeInfoRepository.save(node);
@@ -77,7 +77,7 @@ public class SupervisionService {
 
     @Transactional
     public void deleteSecurityAnalysisResults() {
-        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAll();
+        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull();
         nodes.stream().forEach(node -> {
             node.setSecurityAnalysisResultUuid(null);
             networkModificationNodeInfoRepository.save(node);
@@ -93,7 +93,7 @@ public class SupervisionService {
 
     @Transactional
     public void deleteSensitivityAnalysisResults() {
-        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAll();
+        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull();
         nodes.stream().forEach(node -> {
             node.setSensitivityAnalysisResultUuid(null);
             networkModificationNodeInfoRepository.save(node);
@@ -109,7 +109,7 @@ public class SupervisionService {
 
     @Transactional
     public void deleteShortcircuitResults() {
-        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAll();
+        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
         nodes.stream().forEach(node -> {
             node.setShortCircuitAnalysisResultUuid(null);
             networkModificationNodeInfoRepository.save(node);
@@ -125,7 +125,7 @@ public class SupervisionService {
 
     @Transactional
     public void deleteVoltageInitResults() {
-        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAll();
+        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull();
         nodes.stream().forEach(node -> {
             node.setVoltageInitResultUuid(null);
             networkModificationNodeInfoRepository.save(node);

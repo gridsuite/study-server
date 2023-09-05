@@ -22,6 +22,7 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.SensitivityAnalysisService;
@@ -127,6 +128,9 @@ public class LoadFlowTest {
     @Autowired
     private StudyRepository studyRepository;
 
+    @Autowired
+    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String loadflowResultDestination = "loadflow.result";
@@ -187,6 +191,9 @@ public class LoadFlowTest {
                             .setHeader("resultUuid", resultUuid)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), loadflowStoppedDestination);
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/all")) {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
@@ -279,6 +286,14 @@ public class LoadFlowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
+
+        //Test delete all results
+        assertEquals(1, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
+        mockMvc.perform(delete("/v1/supervision/loadflow/results"))
+            .andExpect(status().isOk());
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/all")));
+        assertEquals(0, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
     }
 
     @Test
