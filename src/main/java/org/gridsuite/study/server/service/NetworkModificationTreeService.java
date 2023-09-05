@@ -272,6 +272,11 @@ public class NetworkModificationTreeService {
                 deleteNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
             }
 
+            UUID oneBusShortCircuitAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getOneBusShortCircuitAnalysisResultUuid(id);
+            if (oneBusShortCircuitAnalysisResultUuid != null) {
+                deleteNodeInfos.addOneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid);
+            }
+
             UUID voltageInitResultUuid = repositories.get(nodeToDelete.getType()).getVoltageInitResultUuid(id);
             if (voltageInitResultUuid != null) {
                 deleteNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
@@ -736,6 +741,11 @@ public class NetworkModificationTreeService {
         UUID shortCircuitAnalysisResultUuid = repositories.get(node.getType()).getShortCircuitAnalysisResultUuid(node.getIdNode());
         if (shortCircuitAnalysisResultUuid != null) {
             invalidateNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
+        }
+
+        UUID oneBusShortCircuitAnalysisResultUuid = repositories.get(node.getType()).getOneBusShortCircuitAnalysisResultUuid(node.getIdNode());
+        if (oneBusShortCircuitAnalysisResultUuid != null) {
+            invalidateNodeInfos.addOneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid);
         }
 
         UUID voltageInitResultUuid = repositories.get(node.getType()).getVoltageInitResultUuid(node.getIdNode());
