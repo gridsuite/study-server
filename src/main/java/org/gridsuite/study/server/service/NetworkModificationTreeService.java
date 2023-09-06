@@ -388,6 +388,7 @@ public class NetworkModificationTreeService {
                 model.setSecurityAnalysisResultUuid(null);
                 model.setSensitivityAnalysisResultUuid(null);
                 model.setShortCircuitAnalysisResultUuid(null);
+                model.setOneBusShortCircuitAnalysisResultUuid(null);
                 model.setVoltageInitResultUuid(null);
 
                 nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD, null).getId();
@@ -804,6 +805,7 @@ public class NetworkModificationTreeService {
             nodeRepository.updateSecurityAnalysisResultUuid(childUuid, null);
             nodeRepository.updateSensitivityAnalysisResultUuid(childUuid, null);
             nodeRepository.updateShortCircuitAnalysisResultUuid(childUuid, null);
+            nodeRepository.updateOneBusShortCircuitAnalysisResultUuid(childUuid, null);
             nodeRepository.updateVoltageInitResultUuid(childUuid, null);
         }
     }
