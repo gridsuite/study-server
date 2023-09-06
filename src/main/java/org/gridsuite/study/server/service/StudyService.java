@@ -1994,6 +1994,13 @@ public class StudyService {
 
         // load configured parameters persisted in the study server DB
         DynamicSimulationParametersInfos configuredParameters = getDynamicSimulationParameters(studyUuid);
+
+        // load configured events persisted in the study server DB
+        List<EventInfos> events = dynamicSimulationEventService.getEvents(nodeUuid);
+
+        // attach events to the configured parameters
+        configuredParameters.setEvents(events);
+
         // override configured parameters by provided parameters (only provided fields)
         DynamicSimulationParametersInfos mergeParameters = new DynamicSimulationParametersInfos();
         if (configuredParameters != null) {
