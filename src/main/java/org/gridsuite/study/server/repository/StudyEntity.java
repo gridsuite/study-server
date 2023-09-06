@@ -105,7 +105,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @CollectionTable(name = "importParameters",
             indexes = {@Index(name = "studyEntity_importParameters_idx1", columnList = "study_entity_id")},
             foreignKey = @ForeignKey(name = "studyEntity_importParameters_fk1"))
-    @Column(columnDefinition = "TEXT", name = "import_parameters")
     private Map<String, String> importParameters;
 
     public ShortCircuitParametersEntity getShortCircuitParameters() {
