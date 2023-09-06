@@ -13,6 +13,8 @@ import com.google.common.io.ByteStreams;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.loadflow.LoadFlowParameters;
 import okhttp3.mockwebserver.MockWebServer;
+
+import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
@@ -80,8 +82,9 @@ public final class TestUtils {
             .loadFlowParameters(loadFlowParametersEntity)
             .shortCircuitParameters(shortCircuitParametersEntity)
             .voltageInitParametersUuid(voltageInitParametersUuid)
-                .securityAnalysisParameters(securityAnalysisParametersEntity)
-                .sensitivityAnalysisParameters(sensitivityAnalysisParametersEntity)
+            .securityAnalysisParameters(securityAnalysisParametersEntity)
+            .sensitivityAnalysisParameters(sensitivityAnalysisParametersEntity)
+            .indexationStatus(StudyIndexationStatus.NOT_INDEXED)
             .build();
     }
 
@@ -98,6 +101,7 @@ public final class TestUtils {
                 .shortCircuitParameters(shortCircuitParametersEntity)
                 .securityAnalysisParameters(securityAnalysisParametersEntity)
                 .sensitivityAnalysisParameters(sensitivityAnalysisParametersEntity)
+                .indexationStatus(StudyIndexationStatus.NOT_INDEXED)
                 .build();
     }
 
@@ -120,6 +124,7 @@ public final class TestUtils {
             .loadFlowProvider(loadFlowProvider)
             .loadFlowParameters(loadFlowParametersEntity)
             .shortCircuitParameters(defaultShortCircuitParametersEntity)
+            .indexationStatus(StudyIndexationStatus.NOT_INDEXED)
             .build();
     }
 

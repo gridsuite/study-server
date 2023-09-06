@@ -361,6 +361,8 @@ public class StudyTest {
                     }
                 } else if (path.matches("/v1/networks/.*/reindex-all")) {
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/networks/.*/indexes")) {
+                    return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS, "UCTE");
                     return new MockResponse().setResponseCode(200)
@@ -1282,6 +1284,14 @@ public class StudyTest {
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(DUPLICATED_STUDY_UUID, indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
+        assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageOnGoing.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(StudyIndexationStatus.INDEXING_ONGOING.toString(), indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_INDEXATION_STATUS));
+        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(DUPLICATED_STUDY_UUID, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
+        assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(StudyIndexationStatus.INDEX_DONE.toString(), indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_INDEXATION_STATUS));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
         StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString(DUPLICATED_STUDY_UUID)).orElse(null);
@@ -2106,11 +2116,25 @@ public class StudyTest {
 
         UUID study1Uuid = createStudy("userId", CASE_UUID);
 
+        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", study1Uuid))
+            .andExpectAll(status().isOk(),
+                        content().string("NOT_INDEXED"));
+
         mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", study1Uuid))
             .andExpect(status().isOk());
 
-        var requests = TestUtils.getRequestsWithBodyDone(2, server);
+        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(study1Uuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", study1Uuid))
+            .andExpectAll(status().isOk(),
+                        content().string("INDEX_DONE"));
+
+        var requests = TestUtils.getRequestsWithBodyDone(3, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/indexes")));
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
 
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);

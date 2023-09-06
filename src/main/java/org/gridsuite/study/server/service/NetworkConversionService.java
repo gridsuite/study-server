@@ -118,4 +118,15 @@ public class NetworkConversionService {
     public void setNetworkConversionServerBaseUri(String networkConversionServerBaseUri) {
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;
     }
+
+    public boolean checkStudyIndexation(UUID networkUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/indexes")
+            .buildAndExpand(networkUuid)
+            .toUriString();
+
+        ParameterizedTypeReference<String> typeRef = new ParameterizedTypeReference<>() {
+        };
+
+        return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.HEAD, null, typeRef).getStatusCode() == HttpStatus.OK;
+    }
 }

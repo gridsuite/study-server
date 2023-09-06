@@ -9,11 +9,9 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.iidm.network.IdentifiableType;
 import com.powsybl.iidm.network.*;
 import com.powsybl.security.LimitViolation;
 import com.powsybl.security.Security;
-import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.model.VariantInfos;
@@ -322,7 +320,7 @@ public class StudyService {
 
             StudyEntity duplicatedStudy = insertDuplicatedStudy(basicStudyInfos, sourceStudyUuid, userId);
 
-            reindexStudy(duplicatedStudy);
+            reindexStudy(duplicatedStudy.getId());
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -640,6 +638,7 @@ public class StudyService {
                 .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
                 .sensitivityAnalysisParameters(SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues))
                 .importParameters(newImportParameters)
+                .indexationStatus(StudyIndexationStatus.NOT_INDEXED)
                 .build();
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), UUID.randomUUID()));
 
@@ -1196,7 +1195,7 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, importParameters);
+                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, importParameters, StudyIndexationStatus.NOT_INDEXED);
         return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
     }
 
@@ -1209,6 +1208,13 @@ public class StudyService {
             studyRepository.save(studyEntity);
         }
 
+        return studyEntity;
+    }
+
+    @Transactional
+    public StudyEntity updateStudyEntityIndexation(StudyEntity studyEntity, StudyIndexationStatus indexationStatus) {
+        studyEntity.setIndexationStatus(indexationStatus);
+        notificationService.emitStudyChanged(studyEntity.getId(), null, NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatus);
         return studyEntity;
     }
 
@@ -1608,10 +1614,16 @@ public class StudyService {
         CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study);
         // reindex study in elasticsearch
         studyInfosService.recreateStudyInfos(studyInfos);
+
+        // Reset indexation status
+        self.updateStudyEntityIndexation(study, StudyIndexationStatus.INDEXING_ONGOING);
         try {
             networkConversionService.reindexStudyNetworkEquipments(study.getNetworkUuid());
+            self.updateStudyEntityIndexation(study, StudyIndexationStatus.INDEX_DONE);
         } catch (HttpStatusCodeException e) {
             LOGGER.error(e.toString(), e);
+            // Allow to retry indexation
+            self.updateStudyEntityIndexation(study, StudyIndexationStatus.NOT_INDEXED);
             throw e;
         }
         invalidateBuild(study.getId(), networkModificationTreeService.getStudyRootNodeUuid(study.getId()), false, false);
@@ -1620,6 +1632,34 @@ public class StudyService {
 
     public void reindexStudy(UUID studyUuid) {
         reindexStudy(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
+    }
+
+    private StudyIndexationStatus getStudyIndexationStatus(StudyEntity study) {
+
+        if (study.getIndexationStatus() == StudyIndexationStatus.INDEX_DONE) {
+            // We have to check if it's true
+            checkStudyIndexation(study);
+        }
+        return study.getIndexationStatus();
+    }
+
+    public StudyIndexationStatus getStudyIndexationStatus(UUID studyUuid) {
+        return getStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
+    }
+
+    private void checkStudyIndexation(StudyEntity study) {
+        try {
+            if (!networkConversionService.checkStudyIndexation(study.getNetworkUuid())) {
+                updateStudyEntityIndexation(study, StudyIndexationStatus.NOT_INDEXED);
+            }
+        } catch (HttpStatusCodeException e) {
+            LOGGER.error(e.toString(), e);
+            throw e;
+        }
+    }
+
+    public void checkStudyIndexation(UUID studyUuid) {
+        checkStudyIndexation(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
     }
 
     @Transactional
