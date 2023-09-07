@@ -174,7 +174,9 @@ public class NetworkModificationTreeTest {
     private static final UUID MODIFICATION_GROUP_UUID = UUID.randomUUID();
     private static final UUID MODIFICATION_GROUP_UUID_2 = UUID.randomUUID();
     private static final UUID MODIFICATION_GROUP_UUID_3 = UUID.randomUUID();
-
+    private static final String MODIFICATION1_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final String MODIFICATION2_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef111";
+    private static final String MODIFICATION_GROUP_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef222";
     private static final String USER_ID_HEADER = "userId";
 
     @MockBean
@@ -258,6 +260,8 @@ public class NetworkModificationTreeTest {
                 if (path.matches("/v1/results/.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(HttpStatus.OK.value())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/network-modifications.*")) {
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value());
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID + "/.*") && request.getMethod().equals("GET")) {
                     return new MockResponse().setResponseCode(HttpStatus.OK.value())
                         .addHeader("Content-Type", "application/json; charset=utf-8")
@@ -986,6 +990,77 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId()))
             .andExpect(status().isOk())
             .andReturn().getResponse().getContentAsString();
+    }
+
+    @Test
+    public void testGetNetworkModificationsToRestoreByNode() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        NetworkModificationNode node = buildNetworkModification("modification node 1", "", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), root, node, userId);
+
+        String bodyError = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), true))
+            .andExpect(status().isInternalServerError())
+            .andReturn().getResponse().getContentAsString();
+
+        assertEquals(new StudyException(StudyException.Type.GET_MODIFICATIONS_FAILED, HttpStatus.NOT_FOUND.toString()).getMessage(), bodyError);
+
+        // No network modification for a root node
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId(), true))
+            .andExpect(status().isNotFound());
+
+        node = buildNetworkModification("modification node 3", "", UUID.fromString(MODIFICATION_GROUP_UUID_STRING), VARIANT_ID, null, null, null, null, BuildStatus.BUILT);
+        createNode(root.getStudyId(), root, node, userId);
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/restore?uuids={modificationID1}", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
+            .header(USER_ID_HEADER, userId))
+            .andExpect(status().isOk());
+
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
+    }
+
+    @Test
+    public void testGetNetworkModificationsToStashByNode() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        NetworkModificationNode node = buildNetworkModification("modification node 1", "", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), root, node, userId);
+
+        String bodyError = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), false))
+                .andExpect(status().isInternalServerError())
+                .andReturn().getResponse().getContentAsString();
+
+        assertEquals(new StudyException(StudyException.Type.GET_MODIFICATIONS_FAILED, HttpStatus.NOT_FOUND.toString()).getMessage(), bodyError);
+
+        // No network modification for a root node
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId(), false))
+                .andExpect(status().isNotFound());
+
+        node = buildNetworkModification("modification node 3", "", UUID.fromString(MODIFICATION_GROUP_UUID_STRING), VARIANT_ID, null, null, null, null, BuildStatus.BUILT);
+        createNode(root.getStudyId(), root, node, userId);
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/stash?uuids={modificationID1}", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk());
+
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
+
     }
 
     @Test
