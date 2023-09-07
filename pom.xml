@@ -13,8 +13,8 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
-        <version>14-SNAPSHOT</version>
-        <relativePath>../../build/powsybl-parent/powsybl-parent/powsybl-parent-ws</relativePath>
+        <version>14</version>
+        <relativePath/>
     </parent>
 
     <groupId>org.gridsuite</groupId>
