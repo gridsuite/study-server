@@ -443,6 +443,16 @@ public class NetworkModificationTreeTest {
         assertEquals(n1.getId(), stashedNode3.getParentNode().getIdNode());
         assertNotNull(stashedNode3.getStashDate());
 
+        var result = mockMvc.perform(get("/v1/studies/{studyUuid}/tree/nodes/stash", root.getStudyId())
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        //Only the first level nodes should appear
+        assertTrue(result.getResponse().getContentAsString().contains(n1.getId().toString()));
+        assertFalse(result.getResponse().getContentAsString().contains(n2.getId().toString()));
+        assertFalse(result.getResponse().getContentAsString().contains(n3.getId().toString()));
+
         //And now we restore the tree we just stashed
         restoreNode(studyId, stashedNode1.getIdNode(), root.getId(), Set.of(n1.getId(), n2.getId(), n3.getId()), userId);
 
@@ -460,6 +470,15 @@ public class NetworkModificationTreeTest {
         assertFalse(restoredNode3.isStashed());
         assertEquals(n1.getId(), restoredNode3.getParentNode().getIdNode());
         assertNull(restoredNode3.getStashDate());
+
+        result = mockMvc.perform(get("/v1/studies/{studyUuid}/tree/nodes/stash", root.getStudyId())
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk())
+                .andReturn();
+        //Only the first level nodes should appear
+        assertFalse(result.getResponse().getContentAsString().contains(n1.getId().toString()));
+        assertFalse(result.getResponse().getContentAsString().contains(n2.getId().toString()));
+        assertFalse(result.getResponse().getContentAsString().contains(n3.getId().toString()));
     }
 
     private UUID createNodeTree() throws Exception {
