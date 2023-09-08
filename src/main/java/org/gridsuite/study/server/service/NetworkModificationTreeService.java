@@ -349,6 +349,11 @@ public class NetworkModificationTreeService {
                 deleteNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
             }
 
+            UUID oneBusShortCircuitAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getOneBusShortCircuitAnalysisResultUuid(id);
+            if (oneBusShortCircuitAnalysisResultUuid != null) {
+                deleteNodeInfos.addOneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid);
+            }
+
             UUID voltageInitResultUuid = repositories.get(nodeToDelete.getType()).getVoltageInitResultUuid(id);
             if (voltageInitResultUuid != null) {
                 deleteNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
@@ -460,6 +465,7 @@ public class NetworkModificationTreeService {
                 model.setSecurityAnalysisResultUuid(null);
                 model.setSensitivityAnalysisResultUuid(null);
                 model.setShortCircuitAnalysisResultUuid(null);
+                model.setOneBusShortCircuitAnalysisResultUuid(null);
                 model.setVoltageInitResultUuid(null);
 
                 nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD, null).getId();
@@ -862,6 +868,11 @@ public class NetworkModificationTreeService {
             invalidateNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
         }
 
+        UUID oneBusShortCircuitAnalysisResultUuid = repositories.get(node.getType()).getOneBusShortCircuitAnalysisResultUuid(node.getIdNode());
+        if (oneBusShortCircuitAnalysisResultUuid != null) {
+            invalidateNodeInfos.addOneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid);
+        }
+
         UUID voltageInitResultUuid = repositories.get(node.getType()).getVoltageInitResultUuid(node.getIdNode());
         if (voltageInitResultUuid != null) {
             invalidateNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
@@ -918,6 +929,7 @@ public class NetworkModificationTreeService {
             nodeRepository.updateSecurityAnalysisResultUuid(childUuid, null);
             nodeRepository.updateSensitivityAnalysisResultUuid(childUuid, null);
             nodeRepository.updateShortCircuitAnalysisResultUuid(childUuid, null);
+            nodeRepository.updateOneBusShortCircuitAnalysisResultUuid(childUuid, null);
             nodeRepository.updateVoltageInitResultUuid(childUuid, null);
         }
     }
