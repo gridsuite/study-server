@@ -707,14 +707,16 @@ public class StudyService {
 
     public String getNetworkElementsInfos(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, String elementType, String infoType, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
         return networkMapService.getElementsInfos(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
-                substationsIds, elementType, infoType);
+                substationsIds, elementType, infoType, loadFlowParameters.getDcPowerFactor());
     }
 
     public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, String elementType, String infoType, String elementId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
         return networkMapService.getElementInfos(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
-                elementType, infoType, elementId);
+                elementType, infoType, loadFlowParameters.getDcPowerFactor(), elementId);
     }
 
     public String getVoltageLevelsAndEquipment(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
