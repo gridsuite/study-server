@@ -1609,17 +1609,12 @@ public class StudyService {
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
         deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
         boolean invalidateChildrenBuild = stashChildren || !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeId));
-        List<NodeEntity> childrenNodes = networkModificationTreeService.getChildrenByParentUuid(nodeId);
-        invalidateBuild(studyUuid, nodeId, false, true);
+        invalidateBuild(studyUuid, nodeId, false, !invalidateChildrenBuild);
         networkModificationTreeService.doStashNode(studyUuid, nodeId, stashChildren, deleteNodeInfos);
 
         if (startTime.get() != null) {
             LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId, studyUuid,
                     TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        }
-
-        if (invalidateChildrenBuild) {
-            childrenNodes.forEach(nodeEntity -> updateStatuses(studyUuid, nodeEntity.getIdNode(), false, true));
         }
 
         notificationService.emitElementUpdated(studyUuid, userId);
