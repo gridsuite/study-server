@@ -21,7 +21,7 @@ import jakarta.annotation.PreDestroy;
 public class EmbeddedElasticsearch {
 
     private static final String ES_DOCKER_IMAGE_NAME = "docker.elastic.co/elasticsearch/elasticsearch";
-    private static final String ES_DOCKER_IMAGE_VERSION = "8.5.3";
+    private static final String ES_DOCKER_IMAGE_VERSION = "8.7.1";
 
     private static ElasticsearchContainer elasticsearchContainer;
 
