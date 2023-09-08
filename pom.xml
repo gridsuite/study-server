@@ -48,7 +48,6 @@
         <testcontainers.version>1.18.3</testcontainers.version>
         <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
         <powsybl-open-reac.version>0.2.0</powsybl-open-reac.version>
-        <wiremock.version>3.0.0-beta-10</wiremock.version>
     </properties>
 
     <build>
@@ -293,9 +292,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.github.tomakehurst</groupId>
-            <artifactId>wiremock-standalone</artifactId>
-            <version>${wiremock.version}</version>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
