@@ -1612,11 +1612,9 @@ public class StudyService {
     public void stashNode(UUID studyUuid, UUID nodeId, boolean stashChildren, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
-        DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
-        deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
         boolean invalidateChildrenBuild = stashChildren || !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeId));
         invalidateBuild(studyUuid, nodeId, false, !invalidateChildrenBuild);
-        networkModificationTreeService.doStashNode(studyUuid, nodeId, stashChildren, deleteNodeInfos);
+        networkModificationTreeService.doStashNode(studyUuid, nodeId, stashChildren);
 
         if (startTime.get() != null) {
             LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId, studyUuid,

@@ -231,10 +231,10 @@ public class NetworkModificationTreeService {
 
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
-    public void doStashNode(UUID studyUuid, UUID nodeId, boolean stashChildren, DeleteNodeInfos deleteNodeInfos) {
+    public void doStashNode(UUID studyUuid, UUID nodeId, boolean stashChildren) {
         List<UUID> stashedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeId);
-        stashNodes(nodeId, stashChildren, stashedNodes, deleteNodeInfos, true);
+        stashNodes(nodeId, stashChildren, stashedNodes, true);
         notificationService.emitNodesDeleted(studyId, stashedNodes, stashChildren);
     }
 
@@ -245,57 +245,15 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void stashNodes(UUID id, boolean stashChildren, List<UUID> stashedNodes, DeleteNodeInfos deleteNodeInfos, boolean firstIteration) {
+    public void stashNodes(UUID id, boolean stashChildren, List<UUID> stashedNodes, boolean firstIteration) {
         Optional<NodeEntity> optNodeToStash = nodesRepository.findById(id);
         optNodeToStash.ifPresent(nodeToStash -> {
-            UUID modificationGroupUuid = repositories.get(nodeToStash.getType()).getModificationGroupUuid(id);
-            deleteNodeInfos.addModificationGroupUuid(modificationGroupUuid);
-
-            UUID reportUuid = repositories.get(nodeToStash.getType()).getReportUuid(id);
-            if (reportUuid != null) {
-                deleteNodeInfos.addReportUuid(reportUuid);
-            }
-
-            String variantId = repositories.get(nodeToStash.getType()).getVariantId(id);
-            if (!StringUtils.isBlank(variantId)) {
-                deleteNodeInfos.addVariantId(variantId);
-            }
-
-            UUID loadFlowResultUuid = repositories.get(nodeToStash.getType()).getLoadFlowResultUuid(id);
-            if (loadFlowResultUuid != null) {
-                deleteNodeInfos.addLoadFlowResultUuid(loadFlowResultUuid);
-            }
-
-            UUID securityAnalysisResultUuid = repositories.get(nodeToStash.getType()).getSecurityAnalysisResultUuid(id);
-            if (securityAnalysisResultUuid != null) {
-                deleteNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
-            }
-
-            UUID sensitivityAnalysisResultUuid = repositories.get(nodeToStash.getType()).getSensitivityAnalysisResultUuid(id);
-            if (sensitivityAnalysisResultUuid != null) {
-                deleteNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
-            }
-
-            UUID shortCircuitAnalysisResultUuid = repositories.get(nodeToStash.getType()).getShortCircuitAnalysisResultUuid(id);
-            if (shortCircuitAnalysisResultUuid != null) {
-                deleteNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
-            }
-
-            UUID voltageInitResultUuid = repositories.get(nodeToStash.getType()).getVoltageInitResultUuid(id);
-            if (voltageInitResultUuid != null) {
-                deleteNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
-            }
-
-            UUID dynamicSimulationResultUuid = repositories.get(nodeToStash.getType()).getDynamicSimulationResultUuid(id);
-            if (dynamicSimulationResultUuid != null) {
-                deleteNodeInfos.addDynamicSimulationResultUuid(dynamicSimulationResultUuid);
-            }
 
             if (!stashChildren) {
                 nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> node.setParentNode(nodeToStash.getParentNode()));
             } else {
                 nodesRepository.findAllByParentNodeIdNode(id)
-                    .forEach(child -> stashNodes(child.getIdNode(), true, stashedNodes, deleteNodeInfos, false));
+                    .forEach(child -> stashNodes(child.getIdNode(), true, stashedNodes, false));
             }
             stashedNodes.add(id);
             nodeToStash.setStashed(true);
