@@ -391,7 +391,7 @@ public class NetworkModificationTreeTest {
         RootNode root = createRoot();
         UUID studyId = root.getStudyId();
         // Check build status initialized to NOT_BUILT if null
-        final NetworkModificationNode node1 = buildNetworkModification("not_built", "not built node", MODIFICATION_GROUP_UUID_2, VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        final NetworkModificationNode node1 = buildNetworkModification("not_built", "not built node", MODIFICATION_GROUP_UUID_2, VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
 
         createNode(root.getStudyId(), root, node1, userId);
         root = getRootNode(root.getStudyId());
@@ -416,11 +416,11 @@ public class NetworkModificationTreeTest {
         //      n1
         //     /  \
         //    n2  n3
-        final NetworkModificationNode n1 = buildNetworkModification("n1", "n1", UUID.randomUUID(), "variant1", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        final NetworkModificationNode n1 = buildNetworkModification("n1", "n1", UUID.randomUUID(), "variant1", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
         createNode(studyId, root, n1, userId);
-        final NetworkModificationNode n2 = buildNetworkModification("n2", "n2", UUID.randomUUID(), "variant2", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        final NetworkModificationNode n2 = buildNetworkModification("n2", "n2", UUID.randomUUID(), "variant2", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
         createNode(studyId, n1, n2, userId);
-        final NetworkModificationNode n3 = buildNetworkModification("n3", "n3", UUID.randomUUID(), "variant3", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        final NetworkModificationNode n3 = buildNetworkModification("n3", "n3", UUID.randomUUID(), "variant3", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
         createNode(studyId, n1, n3, userId);
 
         //Try to stash the node n1 so it should stash n1 and its subtree (n2 and n3)
