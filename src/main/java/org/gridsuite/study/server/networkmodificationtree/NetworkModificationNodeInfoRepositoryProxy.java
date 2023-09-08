@@ -236,6 +236,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .securityAnalysisUuid(networkModificationNode.getSecurityAnalysisResultUuid())
             .sensitivityAnalysisUuid(networkModificationNode.getSensitivityAnalysisResultUuid())
             .shortCircuitAnalysisUuid(networkModificationNode.getShortCircuitAnalysisResultUuid())
+            .oneBusShortCircuitAnalysisUuid(networkModificationNode.getOneBusShortCircuitAnalysisResultUuid())
             .voltageInitUuid(networkModificationNode.getVoltageInitResultUuid())
             .dynamicSimulationUuid(networkModificationNode.getDynamicSimulationResultUuid())
             .build();
