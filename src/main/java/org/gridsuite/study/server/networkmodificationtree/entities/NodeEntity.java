@@ -26,6 +26,7 @@ import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -59,6 +60,10 @@ public class NodeEntity {
     @JoinColumn(name = "study_id", foreignKey = @ForeignKey(name = "study_id_fk_constraint"))
     StudyEntity study;
 
+    @Column(name = "stashed")
     boolean stashed;
+
+    @Column(name = "stash_date")
+    private LocalDateTime stashDate;
 
 }

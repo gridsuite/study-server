@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityNotFoundException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -79,7 +80,7 @@ public class NetworkModificationTreeService {
                 throw new StudyException(NOT_ALLOWED);
             }
             NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ? reference.getParentNode() : reference;
-            NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType(), reference.getStudy(), false));
+            NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType(), reference.getStudy(), false, null));
             nodeInfo.setId(node.getIdNode());
             repositories.get(node.getType()).createNodeInfo(nodeInfo);
 
@@ -124,7 +125,7 @@ public class NetworkModificationTreeService {
         NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ?
                 anchorNodeEntity.getParentNode() : anchorNodeEntity;
         //Then we create the node
-        NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeToCopyEntity.getType(), anchorNodeEntity.getStudy(), false));
+        NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeToCopyEntity.getType(), anchorNodeEntity.getStudy(), false, null));
 
         if (insertMode.equals(InsertMode.BEFORE)) {
             anchorNodeEntity.setParentNode(node);
@@ -298,6 +299,7 @@ public class NetworkModificationTreeService {
             }
             stashedNodes.add(id);
             nodeToStash.setStashed(true);
+            nodeToStash.setStashDate(LocalDateTime.now());
             //We only unlink the first deleted node so the rest of the tree is still connected as it was
             if (firstIteration) {
                 nodeToStash.setParentNode(null);
@@ -389,7 +391,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public NodeEntity createRoot(StudyEntity study, UUID importReportUuid) {
-        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false));
+        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null));
         var root = RootNode.builder()
             .studyId(study.getId())
             .id(node.getIdNode())
@@ -613,9 +615,9 @@ public class NetworkModificationTreeService {
     }
 
     public List<Pair<AbstractNode, Integer>> getStashedNodes(UUID studyUuid) {
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid).stream().filter(node -> node.isStashed() && node.getParentNode() == null).toList();
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndStashedAndParentNodeOrderByStashDateDesc(studyUuid, true, null);
         List<Pair<AbstractNode, Integer>> result = new ArrayList<>();
-        repositories.get(NodeType.NETWORK_MODIFICATION).getAll(nodes.stream().map(NodeEntity::getIdNode).toList()).values()
+        repositories.get(NodeType.NETWORK_MODIFICATION).getAllInOrder(nodes.stream().map(NodeEntity::getIdNode).toList())
                 .forEach(abstractNode -> {
                     ArrayList<UUID> children = new ArrayList<>();
                     doGetChildren(abstractNode.getId(), children);
@@ -636,6 +638,7 @@ public class NetworkModificationTreeService {
         }
         nodeToRestore.setParentNode(anchorNode);
         nodeToRestore.setStashed(false);
+        nodeToRestore.setStashDate(null);
         nodesRepository.save(nodeToRestore);
         notificationService.emitNodeInserted(studyId, anchorNodeId, nodeId, InsertMode.AFTER, anchorNodeId);
         self.restoreNodeChildren(studyId, nodeId);
@@ -651,6 +654,7 @@ public class NetworkModificationTreeService {
                 networkModificationNodeInfoRepository.save(modificationNodeToRestore);
             }
             nodeEntity.setStashed(false);
+            nodeEntity.setStashDate(null);
             nodesRepository.save(nodeEntity);
             notificationService.emitNodeInserted(studyId, parentNodeId, nodeEntity.getIdNode(), InsertMode.AFTER, parentNodeId);
             self.restoreNodeChildren(studyId, nodeEntity.getIdNode());

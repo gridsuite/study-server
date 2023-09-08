@@ -5,6 +5,7 @@
     <changeSet author="hediliabd" id="1252713657904-1">
         <addColumn tableName="node">
             <column name="stashed" type="boolean"/>
+            <column name="stash_date" type="TIMESTAMP"/>
         </addColumn>
     </changeSet>
 </databaseChangeLog>

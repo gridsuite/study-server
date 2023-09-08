@@ -155,6 +155,12 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return nodeInfoRepository.findAllById(ids).stream().map(this::toDto).collect(Collectors.toMap(NodeDto::getId, Function.identity()));
     }
 
+    public List<NodeDto> getAllInOrder(List<UUID> ids) {
+        ArrayList<NodeDto> res = new ArrayList<>();
+        ids.forEach(nodeId -> res.add(nodeInfoRepository.findById(nodeId).map(this::toDto).orElseThrow()));
+        return res;
+    }
+
     public void deleteAll(Set<UUID> collect) {
         nodeInfoRepository.deleteByIdNodeIn(collect);
     }
