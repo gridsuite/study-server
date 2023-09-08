@@ -1124,6 +1124,19 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(studyUuid, referenceId, node, insertMode, userId));
     }
 
+    @DeleteMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
+    @Operation(summary = "Delete node with given id")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted"),
+            @ApiResponse(responseCode = "404", description = "The study or the node not found")})
+    public ResponseEntity<Void> deleteNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                           @Parameter(description = "id of child to remove") @PathVariable("id") UUID nodeId,
+                                           @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
+                                           @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.deleteNode(studyUuid, nodeId, deleteChildren, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}/stash")
     @Operation(summary = "Move to trash the node with given id")
     @ApiResponses(value = {

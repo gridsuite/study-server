@@ -221,11 +221,19 @@ public class NetworkModificationTreeService {
 
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
+    public void doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
+        List<UUID> removedNodes = new ArrayList<>();
+        UUID studyId = getStudyUuidForNodeId(nodeId);
+        deleteNodes(nodeId, deleteChildren, false, removedNodes, deleteNodeInfos);
+        notificationService.emitNodesDeleted(studyId, removedNodes, deleteChildren);
+    }
+
+    @Transactional
+    // TODO test if studyUuid exist and have a node <nodeId>
     public void doStashNode(UUID studyUuid, UUID nodeId, boolean stashChildren, DeleteNodeInfos deleteNodeInfos) {
         List<UUID> stashedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeId);
         stashNodes(nodeId, stashChildren, stashedNodes, deleteNodeInfos, true);
-
         notificationService.emitNodesDeleted(studyId, stashedNodes, stashChildren);
     }
 
@@ -294,6 +302,70 @@ public class NetworkModificationTreeService {
             if (firstIteration) {
                 nodeToStash.setParentNode(null);
             }
+        });
+    }
+
+    @Transactional
+    public void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, List<UUID> removedNodes, DeleteNodeInfos deleteNodeInfos) {
+        Optional<NodeEntity> optNodeToDelete = nodesRepository.findById(id);
+        optNodeToDelete.ifPresent(nodeToDelete -> {
+            /* root cannot be deleted by accident */
+            if (!allowDeleteRoot && nodeToDelete.getType() == NodeType.ROOT) {
+                throw new StudyException(CANT_DELETE_ROOT_NODE);
+            }
+
+            UUID modificationGroupUuid = repositories.get(nodeToDelete.getType()).getModificationGroupUuid(id);
+            deleteNodeInfos.addModificationGroupUuid(modificationGroupUuid);
+
+            UUID reportUuid = repositories.get(nodeToDelete.getType()).getReportUuid(id);
+            if (reportUuid != null) {
+                deleteNodeInfos.addReportUuid(reportUuid);
+            }
+
+            String variantId = repositories.get(nodeToDelete.getType()).getVariantId(id);
+            if (!StringUtils.isBlank(variantId)) {
+                deleteNodeInfos.addVariantId(variantId);
+            }
+
+            UUID loadFlowResultUuid = repositories.get(nodeToDelete.getType()).getLoadFlowResultUuid(id);
+            if (loadFlowResultUuid != null) {
+                deleteNodeInfos.addLoadFlowResultUuid(loadFlowResultUuid);
+            }
+
+            UUID securityAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getSecurityAnalysisResultUuid(id);
+            if (securityAnalysisResultUuid != null) {
+                deleteNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
+            }
+
+            UUID sensitivityAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getSensitivityAnalysisResultUuid(id);
+            if (sensitivityAnalysisResultUuid != null) {
+                deleteNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
+            }
+
+            UUID shortCircuitAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getShortCircuitAnalysisResultUuid(id);
+            if (shortCircuitAnalysisResultUuid != null) {
+                deleteNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
+            }
+
+            UUID voltageInitResultUuid = repositories.get(nodeToDelete.getType()).getVoltageInitResultUuid(id);
+            if (voltageInitResultUuid != null) {
+                deleteNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
+            }
+
+            UUID dynamicSimulationResultUuid = repositories.get(nodeToDelete.getType()).getDynamicSimulationResultUuid(id);
+            if (dynamicSimulationResultUuid != null) {
+                deleteNodeInfos.addDynamicSimulationResultUuid(dynamicSimulationResultUuid);
+            }
+
+            if (!deleteChildren) {
+                nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
+            } else {
+                nodesRepository.findAllByParentNodeIdNode(id)
+                        .forEach(child -> deleteNodes(child.getIdNode(), true, false, removedNodes, deleteNodeInfos));
+            }
+            removedNodes.add(id);
+            repositories.get(nodeToDelete.getType()).deleteByNodeId(id);
+            nodesRepository.delete(nodeToDelete);
         });
     }
 
@@ -565,8 +637,8 @@ public class NetworkModificationTreeService {
         nodeToRestore.setParentNode(anchorNode);
         nodeToRestore.setStashed(false);
         nodesRepository.save(nodeToRestore);
-        self.restoreNodeChildren(studyId, nodeId);
         notificationService.emitNodeInserted(studyId, anchorNodeId, nodeId, InsertMode.AFTER, anchorNodeId);
+        self.restoreNodeChildren(studyId, nodeId);
     }
 
     @Transactional
@@ -580,8 +652,8 @@ public class NetworkModificationTreeService {
             }
             nodeEntity.setStashed(false);
             nodesRepository.save(nodeEntity);
-            self.restoreNodeChildren(studyId, nodeEntity.getIdNode());
             notificationService.emitNodeInserted(studyId, parentNodeId, nodeEntity.getIdNode(), InsertMode.AFTER, parentNodeId);
+            self.restoreNodeChildren(studyId, nodeEntity.getIdNode());
         });
     }
 
