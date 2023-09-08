@@ -501,6 +501,7 @@ public class NetworkMapTest {
             .voltageInitMode(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES)
             .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
             .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
+            .dcPowerFactor(LoadFlowParameters.DEFAULT_DC_POWER_FACTOR)
             .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, null);
@@ -539,7 +540,8 @@ public class NetworkMapTest {
         UUID stubUuid = wireMockUtils.stubNetworkElementsInfosGet(NETWORK_UUID_STRING, elementType, infoType, responseBody);
         MockHttpServletRequestBuilder mockHttpServletRequestBuilder = get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
                 .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
-                .queryParam(QUERY_PARAM_INFO_TYPE, infoType);
+                .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
+                .queryParam(QUERY_PARAM_DC_POWERFACTOR, Double.toString(LoadFlowParameters.DEFAULT_DC_POWER_FACTOR));
         if (!substationsIds.isEmpty()) {
             mockHttpServletRequestBuilder.queryParam(QUERY_PARAM_SUBSTATIONS_IDS, substationsIds.stream().toArray(String[]::new));
         }
@@ -557,7 +559,7 @@ public class NetworkMapTest {
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyUuid, rootNodeUuid, elementId)
                         .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
                         .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
-                )
+            )
                 .andExpect(status().isOk())
                 .andReturn();
         wireMockUtils.verifyNetworkElementInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType, elementId);
@@ -571,6 +573,7 @@ public class NetworkMapTest {
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyUuid, rootNodeUuid, elementId)
                         .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
                         .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
+                        .queryParam(QUERY_PARAM_DC_POWERFACTOR, Double.toString(LoadFlowParameters.DEFAULT_DC_POWER_FACTOR))
                 )
                 .andExpect(status().isNotFound())
                 .andReturn();
@@ -585,7 +588,8 @@ public class NetworkMapTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyUuid, rootNodeUuid, elementId)
                         .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
                         .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
-                )
+                        .queryParam(QUERY_PARAM_DC_POWERFACTOR, Double.toString(LoadFlowParameters.DEFAULT_DC_POWER_FACTOR))
+            )
                 .andExpectAll(status().isInternalServerError(), content().string("Internal Server Error"));
         wireMockUtils.verifyNetworkElementInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType, elementId);
     }
