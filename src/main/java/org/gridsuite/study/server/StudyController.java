@@ -1159,7 +1159,7 @@ public class StudyController {
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{nodeId}/restore")
-    @Operation(summary = "restore node on below the given anchor node")
+    @Operation(summary = "restore node below the given anchor node")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
     public ResponseEntity<Void> restoreNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
