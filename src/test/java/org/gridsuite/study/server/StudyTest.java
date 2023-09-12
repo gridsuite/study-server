@@ -1252,6 +1252,7 @@ public class StudyTest {
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         node2.setSensitivityAnalysisResultUuid(UUID.randomUUID());
         node2.setShortCircuitAnalysisResultUuid(UUID.randomUUID());
+        node2.setOneBusShortCircuitAnalysisResultUuid(UUID.randomUUID());
         node2.setDynamicSimulationResultUuid(UUID.randomUUID());
         node2.setVoltageInitResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
