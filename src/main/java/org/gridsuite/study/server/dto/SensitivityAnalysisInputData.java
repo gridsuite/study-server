@@ -13,7 +13,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.repository.SensitivityParametersInjectionsSetEntity;
+import org.gridsuite.study.server.repository.SensitivityParametersHvdcEntity;
+import org.gridsuite.study.server.repository.SensitivityParametersInjectionsEntity;
+import org.gridsuite.study.server.repository.SensitivityParametersPstEntity;
+import org.gridsuite.study.server.repository.SensitivityParametersNodesEntity;
 
 import java.util.List;
 import java.util.Map;

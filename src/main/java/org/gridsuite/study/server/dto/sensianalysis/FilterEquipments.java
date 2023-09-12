@@ -7,10 +7,18 @@
 package org.gridsuite.study.server.dto.sensianalysis;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 
 import java.util.List;
 import java.util.UUID;
+
+/**
+ * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
+ */
 
 @Getter
 @Setter

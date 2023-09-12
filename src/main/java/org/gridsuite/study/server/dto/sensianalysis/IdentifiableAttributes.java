@@ -8,7 +8,12 @@ package org.gridsuite.study.server.dto.sensianalysis;
 
 import com.powsybl.iidm.network.IdentifiableType;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+
 
 @Getter
 @Setter

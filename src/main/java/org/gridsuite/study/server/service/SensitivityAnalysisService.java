@@ -14,7 +14,14 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.dto.sensianalysis.*;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
-import org.gridsuite.study.server.repository.*;
+
+import org.gridsuite.study.server.repository.SensitivityParametersEntity;
+import org.gridsuite.study.server.repository.SensitivityParametersInjectionsSetEntity;
+import org.gridsuite.study.server.repository.FilterEquipmentsEmbeddable;
+import org.gridsuite.study.server.repository.SensitivityParametersHvdcEntity;
+import org.gridsuite.study.server.repository.SensitivityParametersInjectionsEntity;
+import org.gridsuite.study.server.repository.SensitivityParametersPstEntity;
+import org.gridsuite.study.server.repository.SensitivityParametersNodesEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -26,7 +33,11 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.List;
+import java.util.ArrayList;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
