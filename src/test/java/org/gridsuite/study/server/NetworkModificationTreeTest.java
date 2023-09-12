@@ -385,6 +385,102 @@ public class NetworkModificationTreeTest {
         deleteNode(root.getStudyId(), children.get(0), false, Set.of(children.get(0)), userId);
     }
 
+    @Test
+    public void testNodeStashAndRestore() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        UUID studyId = root.getStudyId();
+        // Check build status initialized to NOT_BUILT if null
+        final NetworkModificationNode node1 = buildNetworkModification("not_built", "not built node", MODIFICATION_GROUP_UUID_2, VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+
+        createNode(root.getStudyId(), root, node1, userId);
+        root = getRootNode(root.getStudyId());
+        List<AbstractNode> children = root.getChildren();
+        assertEquals(1, children.size());
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) children.get(0);
+        assertFalse(networkModificationNode.getNodeBuildStatus().isBuilt());
+        assertEquals("not_built", networkModificationNode.getName());
+        assertEquals("not built node", networkModificationNode.getDescription());
+
+        //stash 1 node and do the checks
+        stashNode(root.getStudyId(), children.get(0), false, Set.of(children.get(0)), userId);
+        var stashedNode = nodeRepository.findById(children.get(0).getId()).orElseThrow();
+        assertTrue(stashedNode.isStashed());
+        assertNull(stashedNode.getParentNode());
+        assertNotNull(stashedNode.getStashDate());
+        assertTrue(getNode(studyId, root.getId()).getChildren().isEmpty());
+
+        //create this tree
+        //     root
+        //      |
+        //      n1
+        //     /  \
+        //    n2  n3
+        final NetworkModificationNode n1 = buildNetworkModification("n1", "n1", UUID.randomUUID(), "variant1", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, root, n1, userId);
+        final NetworkModificationNode n2 = buildNetworkModification("n2", "n2", UUID.randomUUID(), "variant2", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, n1, n2, userId);
+        final NetworkModificationNode n3 = buildNetworkModification("n3", "n3", UUID.randomUUID(), "variant3", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, n1, n3, userId);
+
+        //Try to stash the node n1 so it should stash n1 and its subtree (n2 and n3)
+        stashNode(root.getStudyId(), n1, true, Set.of(n1, n2, n3), userId);
+
+        var stashedNode1 = nodeRepository.findById(n1.getId()).orElseThrow();
+        assertTrue(stashedNode1.isStashed());
+        assertNull(stashedNode.getParentNode());
+        assertNotNull(stashedNode.getStashDate());
+
+        var stashedNode2 = nodeRepository.findById(n2.getId()).orElseThrow();
+        assertTrue(stashedNode2.isStashed());
+        //it should still have its parent since we only unlink the first node and keep the rest chained
+        assertEquals(n1.getId(), stashedNode2.getParentNode().getIdNode());
+        assertNotNull(stashedNode2.getStashDate());
+
+        var stashedNode3 = nodeRepository.findById(n3.getId()).orElseThrow();
+        assertTrue(stashedNode3.isStashed());
+        //it should still have its parent since we only unlink the first node and keep the rest chained
+        assertEquals(n1.getId(), stashedNode3.getParentNode().getIdNode());
+        assertNotNull(stashedNode3.getStashDate());
+
+        var result = mockMvc.perform(get("/v1/studies/{studyUuid}/tree/nodes/stash", root.getStudyId())
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        //Only the first level nodes should appear
+        assertTrue(result.getResponse().getContentAsString().contains(n1.getId().toString()));
+        assertFalse(result.getResponse().getContentAsString().contains(n2.getId().toString()));
+        assertFalse(result.getResponse().getContentAsString().contains(n3.getId().toString()));
+
+        //And now we restore the tree we just stashed
+        restoreNode(studyId, stashedNode1.getIdNode(), root.getId(), Set.of(n1.getId(), n2.getId(), n3.getId()), userId);
+
+        var restoredNode1 = nodeRepository.findById(n1.getId()).orElseThrow();
+        assertFalse(restoredNode1.isStashed());
+        assertNotNull(restoredNode1.getParentNode());
+        assertNull(restoredNode1.getStashDate());
+
+        var restoredNode2 = nodeRepository.findById(n2.getId()).orElseThrow();
+        assertFalse(restoredNode2.isStashed());
+        assertEquals(n1.getId(), restoredNode2.getParentNode().getIdNode());
+        assertNull(restoredNode2.getStashDate());
+
+        var restoredNode3 = nodeRepository.findById(n3.getId()).orElseThrow();
+        assertFalse(restoredNode3.isStashed());
+        assertEquals(n1.getId(), restoredNode3.getParentNode().getIdNode());
+        assertNull(restoredNode3.getStashDate());
+
+        result = mockMvc.perform(get("/v1/studies/{studyUuid}/tree/nodes/stash", root.getStudyId())
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk())
+                .andReturn();
+        //Only the first level nodes should appear
+        assertFalse(result.getResponse().getContentAsString().contains(n1.getId().toString()));
+        assertFalse(result.getResponse().getContentAsString().contains(n2.getId().toString()));
+        assertFalse(result.getResponse().getContentAsString().contains(n3.getId().toString()));
+    }
+
     private UUID createNodeTree() throws Exception {
         /*  create following small node tree, and return the root studyId
                 root
@@ -584,6 +680,33 @@ public class NetworkModificationTreeTest {
                 updatedIds.forEach(id -> assertTrue(children.contains(id)));
                 message = output.receive(TIMEOUT, studyUpdateDestination);
             }
+        }
+    }
+
+    private void stashNode(UUID studyUuid, AbstractNode child, boolean stashChildren, Set<AbstractNode> expectedStash, String userId) throws Exception {
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}/stash?stashChildren={stash}", studyUuid, child.getId(), stashChildren).header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+
+        checkElementUpdatedMessageSent(studyUuid, userId);
+
+        //first message is node build status being reset and then is the node deleted
+        var message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(NODE_BUILD_STATUS_UPDATED, message.getHeaders().get(HEADER_UPDATE_TYPE));
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        Collection<UUID> stashedId = (Collection<UUID>) message.getHeaders().get(NotificationService.HEADER_NODES);
+        assertNotNull(stashedId);
+        assertEquals(expectedStash.size(), stashedId.size());
+        stashedId.forEach(id ->
+                assertTrue(expectedStash.stream().anyMatch(node -> node.getId().equals(id))));
+    }
+
+    private void restoreNode(UUID studyUuid, UUID nodeId, UUID anchorNodeId, Set<UUID> expectedIdRestored, String userId) throws Exception {
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{nodeId}/restore?anchorNodeId={anchorNodeId}", studyUuid, nodeId, anchorNodeId).header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+
+        for (int i = 0; i < expectedIdRestored.size(); i++) {
+            var message = output.receive(TIMEOUT, studyUpdateDestination);
+            assertTrue(expectedIdRestored.contains(message.getHeaders().get(HEADER_NEW_NODE)));
         }
     }
 
