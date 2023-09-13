@@ -219,6 +219,9 @@ public class StudyServiceDynamicSimulationTest {
         NetworkModificationNodeInfoEntity networkModificationNode = new NetworkModificationNodeInfoEntity();
         networkModificationNode.setDynamicSimulationResultUuid(UUID.randomUUID());
 
+        when(dynamicSimulationService.getResultsCount()).thenReturn(1);
+        assertEquals(1, (int) dynamicSimulationService.getResultsCount());
+
         when(networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull()).thenReturn(Collections.singletonList(networkModificationNode));
         assertEquals(1, networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull().size());
         supervisionService.deleteDynamicSimulationResults();

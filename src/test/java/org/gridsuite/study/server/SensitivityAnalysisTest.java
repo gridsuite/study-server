@@ -265,6 +265,10 @@ public class SensitivityAnalysisTest {
                 } else if (path.matches("/v1/subreports")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/supervision/results-count")) {
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8")
+                        .setBody("1");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -381,6 +385,13 @@ public class SensitivityAnalysisTest {
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*?receiver=.*nodeUuid.*")));
+
+        //Test result count
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.SENSITIVITY_ANALYSIS))
+                .queryParam("dryRun", String.valueOf(true)))
+            .andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
 
         //Delete Security analysis results
         assertEquals(1, networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
