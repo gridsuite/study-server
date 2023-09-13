@@ -11,17 +11,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.dto.sensianalysis.*;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 
-import org.gridsuite.study.server.repository.SensitivityParametersEntity;
-import org.gridsuite.study.server.repository.SensitivityParametersInjectionsSetEntity;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityFactorEntity;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityFactorWithDistribTypeEntity;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityFactorWithSensiTypeEntity;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityParametersEntity;
 import org.gridsuite.study.server.repository.FilterEquipmentsEmbeddable;
-import org.gridsuite.study.server.repository.SensitivityParametersHvdcEntity;
-import org.gridsuite.study.server.repository.SensitivityParametersInjectionsEntity;
-import org.gridsuite.study.server.repository.SensitivityParametersPstEntity;
-import org.gridsuite.study.server.repository.SensitivityParametersNodesEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -41,6 +39,7 @@ import java.util.ArrayList;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData.*;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -80,7 +79,6 @@ public class SensitivityAnalysisService {
                                        String variantId,
                                        UUID reportUuid,
                                        String provider,
-                                       String userId,
                                        SensitivityAnalysisInputData sensitivityAnalysisParameters) {
         String receiver;
         try {
@@ -103,7 +101,6 @@ public class SensitivityAnalysisService {
             .buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<SensitivityAnalysisInputData> httpEntity = new HttpEntity<>(sensitivityAnalysisParameters, headers);
@@ -204,53 +201,69 @@ public class SensitivityAnalysisService {
 
     public static SensitivityParametersEntity toEntity(SensitivityAnalysisParametersInfos parameters) {
         Objects.requireNonNull(parameters);
-        List<SensitivityParametersInjectionsSetEntity> sensitivityInjectionsSet = new ArrayList<>();
+        List<SensitivityFactorWithDistribTypeEntity> sensitivityInjectionsSet = new ArrayList<>();
+
         if (parameters.getSensitivityInjectionsSet() != null) {
-            parameters.getSensitivityInjectionsSet().forEach(sensitivityInjectionSet ->
-                    sensitivityInjectionsSet.add(new SensitivityParametersInjectionsSetEntity(null,
-                            sensitivityInjectionSet.getDistributionType(),
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjectionSet.getMonitoredBranches()),
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjectionSet.getInjections()),
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjectionSet.getContingencies())))
-            );
+            for (SensitivityInjectionsSet sensitivityInjectionSet : parameters.getSensitivityInjectionsSet()) {
+                SensitivityFactorWithDistribTypeEntity entity = new SensitivityFactorWithDistribTypeEntity();
+                entity.setDistributionType(sensitivityInjectionSet.getDistributionType());
+                entity.setMonitoredBranch(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjectionSet.getMonitoredBranches()));
+                entity.setInjections(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjectionSet.getInjections()));
+                entity.setContingencies(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjectionSet.getContingencies()));
+
+                sensitivityInjectionsSet.add(entity);
+            }
         }
-        List<SensitivityParametersInjectionsEntity> sensitivityInjections = new ArrayList<>();
+        List<SensitivityFactorEntity> sensitivityInjections = new ArrayList<>();
+
         if (parameters.getSensitivityInjection() != null) {
-            parameters.getSensitivityInjection().forEach(sensitivityInjection ->
-                    sensitivityInjections.add(new SensitivityParametersInjectionsEntity(null,
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjection.getMonitoredBranches()),
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjection.getInjections()),
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjection.getContingencies())))
-            );
+            for (SensitivityAnalysisInputData.SensitivityInjection sensitivityInjection : parameters.getSensitivityInjection()) {
+                SensitivityFactorEntity entity = new SensitivityFactorEntity();
+                entity.setMonitoredBranch(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjection.getMonitoredBranches()));
+                entity.setInjections(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjection.getInjections()));
+                entity.setContingencies(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityInjection.getContingencies()));
+
+                sensitivityInjections.add(entity);
+            }
         }
-        List<SensitivityParametersHvdcEntity> sensitivityHvdcs = new ArrayList<>();
+        List<SensitivityFactorWithSensiTypeEntity> sensitivityHvdcs = new ArrayList<>();
+
         if (parameters.getSensitivityHVDC() != null) {
-            parameters.getSensitivityHVDC().forEach(sensitivityHvdc ->
-                    sensitivityHvdcs.add(new SensitivityParametersHvdcEntity(null,
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getMonitoredBranches()),
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getHvdcs()),
-                            sensitivityHvdc.getSensitivityType(),
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getContingencies())))
-            );
+            for (SensitivityAnalysisInputData.SensitivityHVDC sensitivityHvdc : parameters.getSensitivityHVDC()) {
+                SensitivityFactorWithSensiTypeEntity entity = new SensitivityFactorWithSensiTypeEntity();
+                entity.setMonitoredBranch(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getMonitoredBranches()));
+                entity.setInjections(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getHvdcs()));
+                entity.setSensitivityType(sensitivityHvdc.getSensitivityType());
+                entity.setContingencies(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityHvdc.getContingencies()));
+
+                sensitivityHvdcs.add(entity);
+            }
         }
-        List<SensitivityParametersPstEntity> sensitivityPsts = new ArrayList<>();
+        List<SensitivityFactorWithSensiTypeEntity> sensitivityPsts = new ArrayList<>();
+
         if (parameters.getSensitivityPST() != null) {
-            parameters.getSensitivityPST().forEach(sensitivityPst ->
-                    sensitivityPsts.add(new SensitivityParametersPstEntity(null,
-                            sensitivityPst.getSensitivityType(),
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityPst.getMonitoredBranches()),
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityPst.getPsts()),
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityPst.getContingencies())))
-            );
+            for (SensitivityAnalysisInputData.SensitivityPST sensitivityPst : parameters.getSensitivityPST()) {
+                SensitivityFactorWithSensiTypeEntity entity = new SensitivityFactorWithSensiTypeEntity();
+                entity.setSensitivityType(sensitivityPst.getSensitivityType());
+                entity.setMonitoredBranch(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityPst.getMonitoredBranches()));
+                entity.setInjections(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityPst.getPsts()));
+                entity.setContingencies(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityPst.getContingencies()));
+
+                sensitivityPsts.add(entity);
+            }
         }
-        List<SensitivityParametersNodesEntity> sensitivityNodes = new ArrayList<>();
+
+        List<SensitivityFactorEntity> sensitivityNodes = new ArrayList<>();
+
         if (parameters.getSensitivityNodes() != null) {
-            parameters.getSensitivityNodes().forEach(sensitivityNode ->
-                    sensitivityNodes.add(new SensitivityParametersNodesEntity(null,
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityNode.getMonitoredVoltageLevels()),
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityNode.getEquipmentsInVoltageRegulation()),
-                            FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityNode.getContingencies())))
-            );
+            for (SensitivityAnalysisInputData.SensitivityNodes sensitivityNode : parameters.getSensitivityNodes()) {
+                SensitivityFactorEntity entity = new SensitivityFactorEntity();
+                entity.setMonitoredBranch(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityNode.getMonitoredVoltageLevels()));
+                entity.setInjections(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityNode.getEquipmentsInVoltageRegulation()));
+                entity.setContingencies(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(sensitivityNode.getContingencies()));
+
+                sensitivityNodes.add(entity);
+            }
         }
 
         return new SensitivityParametersEntity(null, parameters.getFlowFlowSensitivityValueThreshold(),
@@ -267,40 +280,43 @@ public class SensitivityAnalysisService {
     public static SensitivityAnalysisParametersInfos fromEntity(SensitivityParametersEntity entity) {
         Objects.requireNonNull(entity);
 
-        List<SensitivityAnalysisInjectionsSetParameterInfos> sensitivityInjectionsSet = new ArrayList<>();
-        entity.getSensitivityInjectionsSet().forEach(sensitivityInjectionSet ->
-                sensitivityInjectionsSet.add(new SensitivityAnalysisInjectionsSetParameterInfos(
-                        sensitivityInjectionSet.getDistributionType(),
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjectionSet.getMonitoredBranches()),
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjectionSet.getInjections()),
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjectionSet.getContingencies()))));
-        List<SensitivityAnalysisInjectionsParameterInfos> sensitivityInjections = new ArrayList<>();
-        entity.getSensitivityInjections().forEach(sensitivityInjection ->
-                sensitivityInjections.add(new SensitivityAnalysisInjectionsParameterInfos(
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjection.getMonitoredBranches()),
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjection.getInjections()),
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjection.getContingencies()))));
+        List<SensitivityInjectionsSet> sensitivityInjectionsSet = new ArrayList<>();
+        entity.getSensitivityInjectionsSet().stream().map(sensitivityInjectionSet -> new SensitivityInjectionsSet(
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjectionSet.getMonitoredBranch()),
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjectionSet.getInjections()),
+                sensitivityInjectionSet.getDistributionType(),
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjectionSet.getContingencies())
+        )).forEach(injectionsSet -> sensitivityInjectionsSet.add(injectionsSet));
 
-        List<SensitivityAnalysisHvdcParameterInfos> sensitivityHvdcs = new ArrayList<>();
-        entity.getSensitivityHvdc().forEach(sensitivityHvdc ->
-                sensitivityHvdcs.add(new SensitivityAnalysisHvdcParameterInfos(
-                        sensitivityHvdc.getSensitivityType(),
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityHvdc.getMonitoredBranches()),
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityHvdc.getHvdcs()),
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityHvdc.getContingencies()))));
-        List<SensitivityAnalysisPtsParameterInfos> sensitivityPsts = new ArrayList<>();
-        entity.getSensitivityPST().forEach(sensitivityPst ->
-                sensitivityPsts.add(new SensitivityAnalysisPtsParameterInfos(
-                        sensitivityPst.getSensitivityType(),
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityPst.getMonitoredBranches()),
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityPst.getPsts()),
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityPst.getContingencies()))));
-        List<SensitivityAnalysisNodesParameterInfos> sensitivityNodes = new ArrayList<>();
-        entity.getSensitivityNodes().forEach(sensitivityNode ->
-                sensitivityNodes.add(new SensitivityAnalysisNodesParameterInfos(
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityNode.getMonitVoltLevels()),
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityNode.getEqInVoltRegul()),
-                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityNode.getContingencies()))));
+        List<SensitivityAnalysisInputData.SensitivityInjection> sensitivityInjections = new ArrayList<>();
+        entity.getSensitivityInjections().stream().map(sensitivityInjection -> new SensitivityInjection(
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjection.getMonitoredBranch()),
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjection.getInjections()),
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjection.getContingencies())
+        )).forEach(injections -> sensitivityInjections.add(injections));
+
+        List<SensitivityAnalysisInputData.SensitivityHVDC> sensitivityHvdcs = new ArrayList<>();
+        entity.getSensitivityHvdc().stream().map(sensitivityHvdc -> new SensitivityHVDC(
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityHvdc.getMonitoredBranch()),
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityHvdc.getInjections()),
+                sensitivityHvdc.getSensitivityType(),
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityHvdc.getContingencies())
+        )).forEach(sensitivityHVDC -> sensitivityHvdcs.add(sensitivityHVDC));
+
+        List<SensitivityAnalysisInputData.SensitivityPST> sensitivityPsts = new ArrayList<>();
+        entity.getSensitivityPST().stream().map(sensitivityPst -> new SensitivityPST(
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityPst.getMonitoredBranch()),
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityPst.getInjections()),
+                sensitivityPst.getSensitivityType(),
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityPst.getContingencies())
+        )).forEach(sensitivityPST -> sensitivityPsts.add(sensitivityPST));
+
+        List<SensitivityAnalysisInputData.SensitivityNodes> sensitivityNodes = new ArrayList<>();
+        entity.getSensitivityNodes().stream().map(sensitivityNode -> new SensitivityNodes(
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityNode.getMonitoredBranch()),
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityNode.getInjections()),
+                FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityNode.getContingencies())
+        )).forEach(sensitivityNod -> sensitivityNodes.add(sensitivityNod));
 
         return new SensitivityAnalysisParametersInfos(entity.getFlowFlowSensitivityValueThreshold(), entity.getAngleFlowSensitivityValueThreshold(),
                 entity.getFlowVoltageSensitivityValueThreshold(), sensitivityInjectionsSet, sensitivityInjections, sensitivityHvdcs,

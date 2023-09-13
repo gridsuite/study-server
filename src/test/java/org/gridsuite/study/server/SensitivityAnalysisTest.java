@@ -24,11 +24,12 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.dto.sensianalysis.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.repository.sensianalysis.*;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.SendInput;
@@ -150,16 +151,7 @@ public class SensitivityAnalysisTest {
 
     public static final String SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":0.0,\"angleFlowSensitivityValueThreshold\":0.0,\"flowVoltageSensitivityValueThreshold\":0.0," +
             "\"sensitivityInjectionsSet\":[],\"sensitivityInjection\":[],\"sensitivityHVDC\":[],\"sensitivityPST\":[],\"sensitivityNodes\":[]}";
-    public static final String SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":90.0,\"angleFlowSensitivityValueThreshold\":0.6,\"flowVoltageSensitivityValueThreshold\":0.1," +
-            "\"sensitivityInjectionsSet\":[{\"distributionType\":\"PROPORTIONAL\",\"monitoredBranches\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"injections\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}]," +
-            "\"sensitivityInjection\":[{\"monitoredBranches\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"injections\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}]," +
-            "\"sensitivityHVDC\":[{\"sensitivityType\":\"DELTA_MW\",\"monitoredBranches\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"hvdcs\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}]," +
-            "\"sensitivityPST\":[{\"sensitivityType\":\"DELTA_MW\",\"monitoredBranches\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"psts\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}],\"sensitivityNodes\":[{\"monitoredVoltageLevels\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"equipmentsInVoltageRegulation\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}]}";
+    public static final String SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":90.0,\"angleFlowSensitivityValueThreshold\":0.6,\"flowVoltageSensitivityValueThreshold\":0.1,\"sensitivityInjectionsSet\":[{\"monitoredBranches\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"injections\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"distributionType\":\"PROPORTIONAL\",\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}],\"sensitivityInjection\":[{\"monitoredBranches\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"injections\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]},{\"monitoredBranches\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"injections\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}],\"sensitivityHVDC\":[{\"monitoredBranches\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"sensitivityType\":\"DELTA_MW\",\"hvdcs\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]},{\"monitoredBranches\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"sensitivityType\":\"DELTA_MW\",\"hvdcs\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}],\"sensitivityPST\":[{\"monitoredBranches\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"sensitivityType\":\"DELTA_MW\",\"psts\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]},{\"monitoredBranches\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"sensitivityType\":\"DELTA_MW\",\"psts\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}],\"sensitivityNodes\":[{\"monitoredVoltageLevels\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"equipmentsInVoltageRegulation\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]},{\"monitoredVoltageLevels\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"filterName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"equipmentsInVoltageRegulation\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"filterName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"contingencies\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"filterName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}]}";
 
     @Before
     public void setup() throws IOException {
@@ -182,29 +174,29 @@ public class SensitivityAnalysisTest {
 
         SensitivityAnalysisInputData sensitivityAnalysisInputData = SensitivityAnalysisInputData.builder()
             .resultsThreshold(0.20)
-            .sensitivityInjectionsSets(List.of(SensitivityParametersInjectionsSetEntity.builder()
-                .monitoredBranches(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name1")))
-                .injections(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name2"), new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name3")))
-                .distributionType(SensitivityAnalysisInputData.DistributionType.REGULAR)
-                .contingencies(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name4"))).build()))
-            .sensitivityInjections(List.of(SensitivityParametersInjectionsEntity.builder()
-                .monitoredBranches(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name5")))
-                .injections(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name6")))
-                .contingencies(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name7"), new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name8"))).build()))
-            .sensitivityHVDCs(List.of(SensitivityParametersHvdcEntity.builder()
-                .monitoredBranches(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name9")))
+            .sensitivityInjectionsSets(List.of(SensitivityAnalysisInputData.SensitivityInjectionsSet.builder()
+                .monitoredBranches(List.of(new FilterEquipments(UUID.randomUUID(), "name1", null, null)))
+                .injections(List.of(new FilterEquipments(UUID.randomUUID(), "name2", null, null)))
+                .distributionType(SensitivityAnalysisInputData.DistributionType.PROPORTIONAL)
+                .contingencies(List.of(new FilterEquipments(UUID.randomUUID(), "name3", null, null))).build()))
+            .sensitivityInjections(List.of(SensitivityAnalysisInputData.SensitivityInjection.builder()
+                .monitoredBranches(List.of(new FilterEquipments(UUID.randomUUID(), "name4", null, null)))
+                .injections(List.of(new FilterEquipments(UUID.randomUUID(), "name5", null, null)))
+                .contingencies(List.of(new FilterEquipments(UUID.randomUUID(), "name6", null, null))).build()))
+            .sensitivityHVDCs(List.of(SensitivityAnalysisInputData.SensitivityHVDC.builder()
+                .monitoredBranches(List.of(new FilterEquipments(UUID.randomUUID(), "name7", null, null)))
                 .sensitivityType(SensitivityAnalysisInputData.SensitivityType.DELTA_MW)
-                .hvdcs(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name10")))
-                .contingencies(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name11"))).build()))
-            .sensitivityPSTs(List.of(SensitivityParametersPstEntity.builder()
-                .monitoredBranches(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name12")))
+                .hvdcs(List.of(new FilterEquipments(UUID.randomUUID(), "name8", null, null)))
+                .contingencies(List.of(new FilterEquipments(UUID.randomUUID(), "name9", null, null))).build()))
+            .sensitivityPSTs(List.of(SensitivityAnalysisInputData.SensitivityPST.builder()
+                .monitoredBranches(List.of(new FilterEquipments(UUID.randomUUID(), "name10", null, null)))
                 .sensitivityType(SensitivityAnalysisInputData.SensitivityType.DELTA_A)
-                .psts(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name13"), new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name14")))
-                .contingencies(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name15"))).build()))
-            .sensitivityNodes(List.of(SensitivityParametersNodesEntity.builder()
-                .monitVoltLevels(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name16")))
-                .eqInVoltRegul(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name17")))
-                .contingencies(List.of(new FilterEquipmentsEmbeddable(UUID.randomUUID(), "name18"))).build()))
+                .psts(List.of(new FilterEquipments(UUID.randomUUID(), "name11", null, null)))
+                    .contingencies(List.of(new FilterEquipments(UUID.randomUUID(), "name12", null, null))).build()))
+            .sensitivityNodes(List.of(SensitivityAnalysisInputData.SensitivityNodes.builder()
+                .monitoredVoltageLevels(List.of(new FilterEquipments(UUID.randomUUID(), "name13", null, null)))
+                .equipmentsInVoltageRegulation(List.of(new FilterEquipments(UUID.randomUUID(), "name14", null, null)))
+                .contingencies(List.of(new FilterEquipments(UUID.randomUUID(), "name15", null, null))).build()))
             .build();
         SENSITIVITY_INPUT = objectWriter.writeValueAsString(sensitivityAnalysisInputData);
 
@@ -396,8 +388,8 @@ public class SensitivityAnalysisTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), sensitivityAnalysisFailedDestination);
             return resultUuid;
-        }).when(studyService).runSensitivityAnalysis(any(), any(), any());
-        studyService.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId(), "");
+        }).when(studyService).runSensitivityAnalysis(any(), any());
+        studyService.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId());
 
         // Test reset uuid result in the database
         assertTrue(networkModificationTreeService.getSensitivityAnalysisResultUuid(modificationNode.getId()).isEmpty());
@@ -593,11 +585,11 @@ public class SensitivityAnalysisTest {
         FilterEquipments equipments1 = new FilterEquipments(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da321"), "identifiable1", null, null);
         FilterEquipments equipments2 = new FilterEquipments(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da322"), "identifiable2", null, null);
         FilterEquipments equipments3 = new FilterEquipments(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da323"), "identifiable3", null, null);
-        SensitivityAnalysisInjectionsSetParameterInfos injectionsSet = new SensitivityAnalysisInjectionsSetParameterInfos(SensitivityAnalysisInputData.DistributionType.PROPORTIONAL, List.of(equipments1), List.of(equipments2), List.of(equipments3));
-        SensitivityAnalysisInjectionsParameterInfos injections = new SensitivityAnalysisInjectionsParameterInfos(List.of(equipments1), List.of(equipments2), List.of(equipments3));
-        SensitivityAnalysisHvdcParameterInfos hvdc = new SensitivityAnalysisHvdcParameterInfos(SensitivityAnalysisInputData.SensitivityType.DELTA_MW, List.of(equipments1), List.of(equipments2), List.of(equipments3));
-        SensitivityAnalysisPtsParameterInfos pst = new SensitivityAnalysisPtsParameterInfos(SensitivityAnalysisInputData.SensitivityType.DELTA_MW, List.of(equipments1), List.of(equipments2), List.of(equipments3));
-        SensitivityAnalysisNodesParameterInfos nodes = new SensitivityAnalysisNodesParameterInfos(List.of(equipments1), List.of(equipments2), List.of(equipments3));
+        SensitivityAnalysisInputData.SensitivityInjectionsSet injectionsSet = new SensitivityAnalysisInputData.SensitivityInjectionsSet(List.of(equipments2), List.of(equipments1), SensitivityAnalysisInputData.DistributionType.PROPORTIONAL, List.of(equipments3));
+        SensitivityAnalysisInputData.SensitivityInjection injections = new SensitivityAnalysisInputData.SensitivityInjection(List.of(equipments1), List.of(equipments2), List.of(equipments3));
+        SensitivityAnalysisInputData.SensitivityHVDC hvdc = new SensitivityAnalysisInputData.SensitivityHVDC(List.of(equipments1), List.of(equipments2), SensitivityAnalysisInputData.SensitivityType.DELTA_MW, List.of(equipments3));
+        SensitivityAnalysisInputData.SensitivityPST pst = new SensitivityAnalysisInputData.SensitivityPST(List.of(equipments2), List.of(equipments1), SensitivityAnalysisInputData.SensitivityType.DELTA_MW, List.of(equipments3));
+        SensitivityAnalysisInputData.SensitivityNodes nodes = new SensitivityAnalysisInputData.SensitivityNodes(List.of(equipments1), List.of(equipments2), List.of(equipments3));
 
         //create sensitivity analysis Parameters
         SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues = SensitivityAnalysisParametersInfos.builder()

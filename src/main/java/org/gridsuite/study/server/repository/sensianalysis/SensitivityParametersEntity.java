@@ -4,9 +4,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.repository;
+package org.gridsuite.study.server.repository.sensianalysis;
 
 import lombok.*;
+
 import javax.persistence.*;
 import java.util.List;
 import java.util.UUID;
@@ -40,21 +41,21 @@ public class SensitivityParametersEntity {
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
-    private List<SensitivityParametersInjectionsSetEntity> sensitivityInjectionsSet;
+    private List<SensitivityFactorWithDistribTypeEntity> sensitivityInjectionsSet;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
-    private List<SensitivityParametersInjectionsEntity> sensitivityInjections;
+    private List<SensitivityFactorEntity> sensitivityInjections;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
-    private List<SensitivityParametersHvdcEntity> sensitivityHvdc;
+    private List<SensitivityFactorWithSensiTypeEntity> sensitivityHvdc;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
-    private List<SensitivityParametersPstEntity> sensitivityPST;
+    private List<SensitivityFactorWithSensiTypeEntity> sensitivityPST;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
-    private List<SensitivityParametersNodesEntity> sensitivityNodes;
+    private List<SensitivityFactorEntity> sensitivityNodes;
 }

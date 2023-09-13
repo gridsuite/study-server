@@ -26,13 +26,13 @@ public class SensitivityAnalysisParametersInfos {
 
     private double flowVoltageSensitivityValueThreshold;
 
-    List<SensitivityAnalysisInjectionsSetParameterInfos> sensitivityInjectionsSet;
+    List<SensitivityAnalysisInputData.SensitivityInjectionsSet> sensitivityInjectionsSet;
 
-    List<SensitivityAnalysisInjectionsParameterInfos> sensitivityInjection;
+    List<SensitivityAnalysisInputData.SensitivityInjection> sensitivityInjection;
 
-    List<SensitivityAnalysisHvdcParameterInfos> sensitivityHVDC;
+    List<SensitivityAnalysisInputData.SensitivityHVDC> sensitivityHVDC;
 
-    List<SensitivityAnalysisPtsParameterInfos> sensitivityPST;
+    List<SensitivityAnalysisInputData.SensitivityPST> sensitivityPST;
 
-    List<SensitivityAnalysisNodesParameterInfos> sensitivityNodes;
+    List<SensitivityAnalysisInputData.SensitivityNodes> sensitivityNodes;
 }
