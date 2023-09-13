@@ -186,9 +186,19 @@ public class SensitivityAnalysisService {
     }
 
     public void deleteSensitivityAnalysisResults() {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results")
-            .toUriString();
-        restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
+        try {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results")
+                .toUriString();
+            restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, DELETE_RESULTS_FAILED);
+        }
+    }
+
+    public Integer getSensitivityAnalysisResultsCount() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/supervision/results-count").toUriString();
+        return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, Integer.class);
     }
 
     public void assertSensitivityAnalysisNotRunning(UUID nodeUuid) {

@@ -31,6 +31,7 @@ import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.utils.ComputationType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -228,7 +229,7 @@ public class SecurityAnalysisTest {
                 } else if ("/v1/results".equals(path)) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/supervision/security-analysis\\?reportsList=.*")) {
+                } else if (path.matches("/v1/subreports")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
@@ -289,12 +290,14 @@ public class SecurityAnalysisTest {
 
         //Delete Security analysis results
         assertEquals(1, networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
-        mockMvc.perform(delete("/v1/supervision/security-analysis/results"))
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.SECURITY_ANALYSIS))
+                .queryParam("dryRun", String.valueOf(false)))
             .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/supervision/security-analysis\\?reportsList=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/subreports")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
     }
 

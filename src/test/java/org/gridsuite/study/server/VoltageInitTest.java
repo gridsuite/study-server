@@ -32,6 +32,7 @@ import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.utils.ComputationType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -264,7 +265,7 @@ public class VoltageInitTest {
                 } else if (path.matches("/v1/results")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/supervision/voltage-init\\?reportsList=.*")) {
+                } else if (path.matches("/v1/subreports")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
@@ -413,7 +414,9 @@ public class VoltageInitTest {
 
         //Delete Voltage init results
         assertEquals(1, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
-        mockMvc.perform(delete("/v1/supervision/voltage-init/results"))
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.VOLTAGE_INITIALIZATION))
+                .queryParam("dryRun", String.valueOf(false)))
             .andExpect(status().isOk());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results")));

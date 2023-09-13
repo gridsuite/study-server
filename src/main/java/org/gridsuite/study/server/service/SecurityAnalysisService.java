@@ -37,8 +37,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_RUNNING;
+import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
 public class SecurityAnalysisService {
@@ -174,9 +174,19 @@ public class SecurityAnalysisService {
         restTemplate.delete(securityAnalysisServerBaseUri + path);
     }
 
-    public void deleteSaResults() {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results").toUriString();
-        restTemplate.delete(securityAnalysisServerBaseUri + path);
+    public void deleteSecurityAnalysisResults() {
+        try {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results").toUriString();
+            restTemplate.delete(securityAnalysisServerBaseUri + path);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, DELETE_RESULTS_FAILED);
+        }
+    }
+
+    public Integer getSecurityAnalysisResultsCount() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/supervision/results-count").toUriString();
+        return restTemplate.getForObject(securityAnalysisServerBaseUri + path, Integer.class);
     }
 
     public void invalidateSaStatus(List<UUID> uuids) {

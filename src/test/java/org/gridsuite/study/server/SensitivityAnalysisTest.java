@@ -30,6 +30,7 @@ import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.utils.ComputationType;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -261,7 +262,7 @@ public class SensitivityAnalysisTest {
                 } else if (path.matches("/v1/results")) {
                     return new MockResponse().setResponseCode(200).addHeader("Content-Type",
                         "application/json; charset=utf-8");
-                } else if (path.matches("/v1/supervision/sensitivity-analysis\\?reportsList=.*")) {
+                } else if (path.matches("/v1/subreports")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
@@ -383,12 +384,14 @@ public class SensitivityAnalysisTest {
 
         //Delete Security analysis results
         assertEquals(1, networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
-        mockMvc.perform(delete("/v1/supervision/sensitivity-analysis/results"))
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.SENSITIVITY_ANALYSIS))
+                .queryParam("dryRun", String.valueOf(false)))
             .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/supervision/sensitivity-analysis\\?reportsList=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/subreports")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
 
         String baseUrlWireMock = wireMock.baseUrl();

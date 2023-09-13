@@ -217,9 +217,19 @@ public class VoltageInitService {
     }
 
     public void deleteVoltageInitResults() {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results")
-            .toUriString();
-        restTemplate.delete(voltageInitServerBaseUri + path);
+        try {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results")
+                .toUriString();
+            restTemplate.delete(voltageInitServerBaseUri + path);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, DELETE_RESULTS_FAILED);
+        }
+    }
+
+    public Integer getVoltageInitResultsCount() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/supervision/results-count").toUriString();
+        return restTemplate.getForObject(voltageInitServerBaseUri + path, Integer.class);
     }
 
     public void assertVoltageInitNotRunning(UUID nodeUuid) {

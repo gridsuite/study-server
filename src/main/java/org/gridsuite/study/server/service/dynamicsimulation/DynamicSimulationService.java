@@ -200,6 +200,11 @@ public interface DynamicSimulationService {
     void deleteResults();
 
     /**
+     * Get results count
+     */
+    Integer getResultsCount();
+
+    /**
      * @param nodeUuid a given node UUID
      * @return StudyException(DYNAMIC_SIMULATION_RUNNING) if ce node in RUNNING status
      */

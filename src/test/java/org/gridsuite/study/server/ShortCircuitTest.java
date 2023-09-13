@@ -29,6 +29,7 @@ import org.gridsuite.study.server.service.SensitivityAnalysisService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
+import org.gridsuite.study.server.utils.ComputationType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -210,7 +211,7 @@ public class ShortCircuitTest {
                 } else if (path.matches("/v1/results")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/supervision/shortcircuit\\?reportsList=.*")) {
+                } else if (path.matches("/v1/subreports")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
@@ -352,12 +353,14 @@ public class ShortCircuitTest {
 
         //Delete Shortcircuit results
         assertEquals(1, networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
-        mockMvc.perform(delete("/v1/supervision/shortcircuit/results"))
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
+                .queryParam("dryRun", String.valueOf(false)))
             .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/supervision/shortcircuit\\?reportsList=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/subreports")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
     }
 

@@ -4,137 +4,121 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModifi
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.gridsuite.study.server.utils.ComputationType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.HttpStatusCodeException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyException.Type.SUPERVSION_ERROR_DELETE_RESULTS;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
+import java.util.stream.Collectors;
 
 @Service
 public class SupervisionService {
-    @Autowired
     private ReportService reportService;
 
-    @Autowired
     private LoadFlowService loadFlowService;
 
-    @Autowired
     private DynamicSimulationService dynamicSimulationService;
 
-    @Autowired
     private SecurityAnalysisService securityAnalysisService;
 
-    @Autowired
     private SensitivityAnalysisService sensitivityAnalysisService;
 
-    @Autowired
     private ShortCircuitService shortCircuitService;
 
-    @Autowired
     private VoltageInitService voltageInitService;
 
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    public SupervisionService(NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository) {
+    public SupervisionService(NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService) {
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
+        this.reportService = reportService;
+        this.loadFlowService = loadFlowService;
+        this.dynamicSimulationService = dynamicSimulationService;
+        this.securityAnalysisService = securityAnalysisService;
+        this.sensitivityAnalysisService = sensitivityAnalysisService;
+        this.shortCircuitService = shortCircuitService;
+        this.voltageInitService = voltageInitService;
     }
 
     @Transactional
-    public void deleteLoadflowResults() {
+    public Integer deleteComputationResults(ComputationType computationType, boolean dryRun) {
+        switch (computationType) {
+            case LOAD_FLOW:
+                return dryRun ? loadFlowService.getLoadFlowResultsCount() : deleteLoadflowResults();
+            case DYNAMIC_SIMULATION:
+                return dryRun ? dynamicSimulationService.getResultsCount() : deleteDynamicSimulationResults();
+            case SECURITY_ANALYSIS:
+                return dryRun ? securityAnalysisService.getSecurityAnalysisResultsCount() : deleteSecurityAnalysisResults();
+            case SENSITIVITY_ANALYSIS:
+                return dryRun ? sensitivityAnalysisService.getSensitivityAnalysisResultsCount() : deleteSensitivityAnalysisResults();
+            case SHORT_CIRCUIT:
+                return dryRun ? shortCircuitService.getShortCircuitResultsCount() : deleteShortcircuitResults();
+            case VOLTAGE_INITIALIZATION:
+                return dryRun ? voltageInitService.getVoltageInitResultsCount() : deleteVoltageInitResults();
+
+        }
+        return null;
+    }
+
+    public Integer deleteLoadflowResults() {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
-        nodes.stream().forEach(node -> {
-            node.setLoadFlowResultUuid(null);
-            networkModificationNodeInfoRepository.save(node);
-        });
-        List<UUID> reportsIds = nodes.stream().map(NetworkModificationNodeInfoEntity::getReportUuid).toList();
-        try {
-            reportService.deleteSubreport(reportsIds, "loadflow");
-            loadFlowService.deleteLoadFlowResults();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, SUPERVSION_ERROR_DELETE_RESULTS);
-        }
+        nodes.stream().forEach(node -> node.setLoadFlowResultUuid(null));
+        Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.LOAD_FLOW.subReporterKey, nodes);
+        reportService.deleteSubreporters(subreportToDelete);
+        loadFlowService.deleteLoadFlowResults();
+        return nodes.size();
     }
 
-    @Transactional
-    public void deleteDynamicSimulationResults() {
+    public Integer deleteDynamicSimulationResults() {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull();
-        nodes.stream().forEach(node -> {
-            node.setShortCircuitAnalysisResultUuid(null);
-            networkModificationNodeInfoRepository.save(node);
-        });
-        try {
-            //TODO Add logs deletion once they are added
-            dynamicSimulationService.deleteResults();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, SUPERVSION_ERROR_DELETE_RESULTS);
-        }
+        nodes.stream().forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
+        //TODO Add logs deletion once they are added
+        dynamicSimulationService.deleteResults();
+        return nodes.size();
     }
 
-    @Transactional
-    public void deleteSecurityAnalysisResults() {
+    public Integer deleteSecurityAnalysisResults() {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull();
-        nodes.stream().forEach(node -> {
-            node.setSecurityAnalysisResultUuid(null);
-            networkModificationNodeInfoRepository.save(node);
-        });
-        List<UUID> reportsIds = nodes.stream().map(NetworkModificationNodeInfoEntity::getReportUuid).toList();
-        try {
-            reportService.deleteSubreport(reportsIds, "security-analysis");
-            securityAnalysisService.deleteSaResults();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, SUPERVSION_ERROR_DELETE_RESULTS);
-        }
+        nodes.stream().forEach(node -> node.setSecurityAnalysisResultUuid(null));
+        Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SECURITY_ANALYSIS.subReporterKey, nodes);
+        reportService.deleteSubreporters(subreportToDelete);
+        securityAnalysisService.deleteSecurityAnalysisResults();
+        return nodes.size();
     }
 
-    @Transactional
-    public void deleteSensitivityAnalysisResults() {
+    public Integer deleteSensitivityAnalysisResults() {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull();
-        nodes.stream().forEach(node -> {
-            node.setSensitivityAnalysisResultUuid(null);
-            networkModificationNodeInfoRepository.save(node);
-        });
-        List<UUID> reportsIds = nodes.stream().map(NetworkModificationNodeInfoEntity::getReportUuid).toList();
-        try {
-            reportService.deleteSubreport(reportsIds, "sensitivity-analysis");
-            sensitivityAnalysisService.deleteSensitivityAnalysisResults();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, SUPERVSION_ERROR_DELETE_RESULTS);
-        }
+        nodes.stream().forEach(node -> node.setSensitivityAnalysisResultUuid(null));
+        Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SENSITIVITY_ANALYSIS.subReporterKey, nodes);
+        reportService.deleteSubreporters(subreportToDelete);
+        sensitivityAnalysisService.deleteSensitivityAnalysisResults();
+        return nodes.size();
     }
 
-    @Transactional
-    public void deleteShortcircuitResults() {
+    public Integer deleteShortcircuitResults() {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
-        nodes.stream().forEach(node -> {
-            node.setShortCircuitAnalysisResultUuid(null);
-            networkModificationNodeInfoRepository.save(node);
-        });
-        List<UUID> reportsIds = nodes.stream().map(NetworkModificationNodeInfoEntity::getReportUuid).toList();
-        try {
-            reportService.deleteSubreport(reportsIds, "shortcircuit");
-            shortCircuitService.deleteShortCircuitAnalysisResults();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, SUPERVSION_ERROR_DELETE_RESULTS);
-        }
+        nodes.stream().forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
+        Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SHORT_CIRCUIT.subReporterKey, nodes);
+        reportService.deleteSubreporters(subreportToDelete);
+        shortCircuitService.deleteShortCircuitAnalysisResults();
+        return nodes.size();
     }
 
-    @Transactional
-    public void deleteVoltageInitResults() {
+    public Integer deleteVoltageInitResults() {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull();
-        nodes.stream().forEach(node -> {
-            node.setVoltageInitResultUuid(null);
-            networkModificationNodeInfoRepository.save(node);
-        });
-        try {
-            //TODO Add logs deletion once they are added
-            voltageInitService.deleteVoltageInitResults();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, SUPERVSION_ERROR_DELETE_RESULTS);
-        }
+        nodes.stream().forEach(node -> node.setVoltageInitResultUuid(null));
+        //TODO Add logs deletion once they are added
+        voltageInitService.deleteVoltageInitResults();
+        return nodes.size();
+    }
+
+    private Map<UUID, String> formatSubreportMap(String subReporterKey, List<NetworkModificationNodeInfoEntity> nodes) {
+        return nodes.stream().map(node -> {
+            String reportKey = node.getId() + "@" + subReporterKey;
+            return Map.entry(node.getReportUuid(), reportKey);
+        }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 }
+

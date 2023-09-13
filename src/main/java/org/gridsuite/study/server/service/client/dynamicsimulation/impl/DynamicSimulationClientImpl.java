@@ -167,4 +167,12 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         // call dynamic-simulation REST API
         getRestTemplate().delete(uriComponents.toUriString());
     }
+
+    @Override
+    public Integer getResultsCount() {
+        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT);
+        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl);
+        // call dynamic-simulation REST API
+        return getRestTemplate().getForObject(uriComponents.toUriString(), Integer.class);
+    }
 }

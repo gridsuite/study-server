@@ -23,8 +23,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 
@@ -60,10 +60,6 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "reports" + DELIMITER;
     }
 
-    private String getReportServerSupervisionURI() {
-        return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "supervision" + DELIMITER;
-    }
-
     public ReporterModel getReport(@NonNull UUID reportUuid, @NonNull String defaultName) {
         var path = UriComponentsBuilder.fromPath("{reportUuid}")
             .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
@@ -90,12 +86,12 @@ public class ReportService {
         restTemplate.delete(this.getReportServerURI() + path);
     }
 
-    public void deleteSubreport(@NonNull List<UUID> reportsUuids, String subreportType) {
-        var path = UriComponentsBuilder.fromPath(subreportType)
-            .queryParam(QUERY_PARAM_REPORT_LIST, reportsUuids.stream().map(UUID::toString).collect(Collectors.joining(",")))
-            .toUriString();
+    public void deleteSubreporters(@NonNull Map<UUID, String> subreportsKeys) {
+        var path = UriComponentsBuilder.fromPath("subreports").toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        restTemplate.exchange(this.getReportServerSupervisionURI() + path, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
+        HttpEntity<Map<UUID, String>> httpEntity = new HttpEntity<>(subreportsKeys, headers);
+
+        restTemplate.exchange(this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + path, HttpMethod.DELETE, httpEntity, Void.class);
     }
 }

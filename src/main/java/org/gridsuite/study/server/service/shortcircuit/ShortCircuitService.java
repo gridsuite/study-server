@@ -37,8 +37,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.SHORT_CIRCUIT_ANALYSIS_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.SHORT_CIRCUIT_ANALYSIS_RUNNING;
+import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -247,9 +247,19 @@ public class ShortCircuitService {
     }
 
     public void deleteShortCircuitAnalysisResults() {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results")
-            .toUriString();
-        restTemplate.delete(shortCircuitServerBaseUri + path);
+        try {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results")
+                .toUriString();
+            restTemplate.delete(shortCircuitServerBaseUri + path);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, DELETE_RESULTS_FAILED);
+        }
+    }
+
+    public Integer getShortCircuitResultsCount() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/supervision/results-count").toUriString();
+        return restTemplate.getForObject(shortCircuitServerBaseUri + path, Integer.class);
     }
 
     public void assertShortCircuitAnalysisNotRunning(UUID nodeUuid) {

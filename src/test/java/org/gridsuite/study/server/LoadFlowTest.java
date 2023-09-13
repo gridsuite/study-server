@@ -25,6 +25,7 @@ import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.utils.ComputationType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -194,7 +195,7 @@ public class LoadFlowTest {
                 } else if (path.matches("/v1/results/all")) {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/supervision/loadflow\\?reportsList=.*")) {
+                } else if (path.matches("/v1/subreports")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
@@ -290,12 +291,14 @@ public class LoadFlowTest {
 
         //Test delete all results
         assertEquals(1, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
-        mockMvc.perform(delete("/v1/supervision/loadflow/results"))
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.LOAD_FLOW))
+                .queryParam("dryRun", String.valueOf(false)))
             .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results/all"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/supervision/loadflow\\?reportsList=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/subreports")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
     }
 
