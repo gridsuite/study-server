@@ -124,7 +124,7 @@ public class LoadFlowService {
     public void deleteLoadFlowResults() {
         try {
             String path = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/all").toUriString();
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results").toUriString();
             restTemplate.delete(loadFlowServerBaseUri + path, Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, DELETE_RESULTS_FAILED);

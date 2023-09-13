@@ -192,7 +192,7 @@ public class LoadFlowTest {
                             .build(), loadflowStoppedDestination);
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/all")) {
+                } else if (path.matches("/v1/results")) {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/subreports")) {
@@ -307,7 +307,7 @@ public class LoadFlowTest {
             .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.contains("/v1/results/all"));
+        assertTrue(requests.contains("/v1/results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/subreports")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
     }
