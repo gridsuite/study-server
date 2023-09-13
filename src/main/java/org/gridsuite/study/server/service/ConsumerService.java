@@ -638,21 +638,18 @@ public class ConsumerService {
 
                     LOGGER.info("Short circuit analysis failed for node '{}'", receiverObj.getNodeUuid());
 
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     if (analysisType == ShortcircuitAnalysisType.ALL_BUSES) {
                         // delete Short circuit analysis result in database
                         updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
 
                         // send notification for failed computation
-                        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
                         notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED, errorMessage, userId);
                     } else {
                         // delete one bus Short circuit analysis result in database
                         updateOneBusShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
 
                         // send notification for failed computation
-                        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
                         notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_FAILED, errorMessage, userId);
                     }
                 } catch (JsonProcessingException e) {
