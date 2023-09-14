@@ -17,7 +17,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.repository.*;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityParametersEntity;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.junit.platform.commons.util.StringUtils;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
@@ -72,7 +72,7 @@ public final class TestUtils {
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
                                                UUID voltageInitParametersUuid,
                                                SecurityAnalysisParametersEntity securityAnalysisParametersEntity,
-                                               SensitivityParametersEntity sensitivityParametersEntity
+                                               SensitivityAnalysisParametersEntity sensitivityParametersEntity
     ) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .networkId("netId")
@@ -90,7 +90,7 @@ public final class TestUtils {
                                                LoadFlowParametersEntity loadFlowParametersEntity,
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
                                                SecurityAnalysisParametersEntity securityAnalysisParametersEntity,
-                                               SensitivityParametersEntity sensitivityParametersEntity) {
+                                               SensitivityAnalysisParametersEntity sensitivityParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
                 .networkId("netId")
                 .networkUuid(networkUuid)

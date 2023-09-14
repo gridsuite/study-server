@@ -14,6 +14,9 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
+/**
+ * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
+ */
 @Getter
 @Setter
 @NoArgsConstructor

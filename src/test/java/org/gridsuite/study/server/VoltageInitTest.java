@@ -29,7 +29,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityParametersEntity;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -572,7 +572,7 @@ public class VoltageInitTest {
                 .hvdcAcEmulation(true)
                 .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-        SensitivityParametersEntity defaultSensitivityParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
+        SensitivityAnalysisParametersEntity defaultSensitivityParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
 
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", "defaultLoadflowProvider",
                 defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, voltageInitParametersUuid, null, defaultSensitivityParametersEntity);

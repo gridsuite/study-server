@@ -11,6 +11,9 @@ import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData
 
 import javax.persistence.*;
 
+/**
+ * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
+ */
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter

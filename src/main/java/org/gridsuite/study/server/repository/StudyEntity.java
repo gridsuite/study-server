@@ -7,7 +7,7 @@
 package org.gridsuite.study.server.repository;
 
 import lombok.*;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityParametersEntity;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 
 import javax.persistence.*;
@@ -100,7 +100,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             foreignKey = @ForeignKey(
                     name = "sensitivityAnalysisParameters_id_fk"
             ))
-    private SensitivityParametersEntity sensitivityAnalysisParameters;
+    private SensitivityAnalysisParametersEntity sensitivityAnalysisParameters;
 
     @ElementCollection
     @CollectionTable(name = "importParameters",

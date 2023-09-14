@@ -14,6 +14,9 @@ import lombok.Builder;
 
 import java.util.List;
 
+/**
+ * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
+ */
 @Getter
 @Setter
 @AllArgsConstructor

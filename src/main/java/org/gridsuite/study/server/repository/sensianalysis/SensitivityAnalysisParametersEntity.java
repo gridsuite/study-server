@@ -15,7 +15,6 @@ import java.util.UUID;
 /**
  * @author SAHNOUN Walid <walid.sahnoun@rte-france.com>
  */
-
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -23,7 +22,7 @@ import java.util.UUID;
 @Entity
 @Builder
 @Table(name = "sensitivityAnalysisParameters")
-public class SensitivityParametersEntity {
+public class SensitivityAnalysisParametersEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

@@ -18,7 +18,7 @@ import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityFactorEntity;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityFactorWithDistribTypeEntity;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityFactorWithSensiTypeEntity;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityParametersEntity;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.repository.FilterEquipmentsEmbeddable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -199,7 +199,7 @@ public class SensitivityAnalysisService {
         }
     }
 
-    public static SensitivityParametersEntity toEntity(SensitivityAnalysisParametersInfos parameters) {
+    public static SensitivityAnalysisParametersEntity toEntity(SensitivityAnalysisParametersInfos parameters) {
         Objects.requireNonNull(parameters);
         List<SensitivityFactorWithDistribTypeEntity> sensitivityInjectionsSet = new ArrayList<>();
 
@@ -266,7 +266,7 @@ public class SensitivityAnalysisService {
             }
         }
 
-        return new SensitivityParametersEntity(null, parameters.getFlowFlowSensitivityValueThreshold(),
+        return new SensitivityAnalysisParametersEntity(null, parameters.getFlowFlowSensitivityValueThreshold(),
                 parameters.getAngleFlowSensitivityValueThreshold(),
                 parameters.getFlowVoltageSensitivityValueThreshold(),
                 sensitivityInjectionsSet,
@@ -277,7 +277,7 @@ public class SensitivityAnalysisService {
                 );
     }
 
-    public static SensitivityAnalysisParametersInfos fromEntity(SensitivityParametersEntity entity) {
+    public static SensitivityAnalysisParametersInfos fromEntity(SensitivityAnalysisParametersEntity entity) {
         Objects.requireNonNull(entity);
 
         List<SensitivityInjectionsSet> sensitivityInjectionsSet = new ArrayList<>();

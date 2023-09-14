@@ -2041,7 +2041,7 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public void updateSensitivityAnalysisParameters(UUID studyUuid, SensitivityParametersEntity sensitivityParametersEntity) {
+    public void updateSensitivityAnalysisParameters(UUID studyUuid, SensitivityAnalysisParametersEntity sensitivityParametersEntity) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setSensitivityAnalysisParameters(sensitivityParametersEntity));
     }

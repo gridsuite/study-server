@@ -19,7 +19,6 @@ import java.util.UUID;
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
-
 @Getter
 @Setter
 @NoArgsConstructor

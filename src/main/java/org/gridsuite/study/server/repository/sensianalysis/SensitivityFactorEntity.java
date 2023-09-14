@@ -13,6 +13,9 @@ import javax.persistence.*;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
+ */
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter

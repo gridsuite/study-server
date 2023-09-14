@@ -479,7 +479,7 @@ public class SensitivityAnalysisTest {
                 .sensitivityPST(new ArrayList<>())
                 .sensitivityNodes(new ArrayList<>())
                 .build();
-        SensitivityParametersEntity sensitivityParametersEntity = SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues);
+        SensitivityAnalysisParametersEntity sensitivityParametersEntity = SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues);
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, sensitivityParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
@@ -511,7 +511,7 @@ public class SensitivityAnalysisTest {
                 .sensitivityPST(new ArrayList<>())
                 .sensitivityNodes(new ArrayList<>())
                 .build();
-        SensitivityParametersEntity sensitivityParametersEntity = SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues);
+        SensitivityAnalysisParametersEntity sensitivityParametersEntity = SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues);
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, sensitivityParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
