@@ -1973,17 +1973,6 @@ public class StudyService {
     }
 
     @Transactional
-    public void moveDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, UUID eventUuid, UUID beforeUuid) {
-        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
-        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_UPDATING_IN_PROGRESS);
-        try {
-            dynamicSimulationEventService.moveEvent(nodeUuid, eventUuid, beforeUuid);
-        } finally {
-            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
-        }
-    }
-
-    @Transactional
     public void deleteDynamicSimulationEvents(UUID studyUuid, UUID nodeUuid, String userId, List<UUID> eventUuids) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_DELETING_IN_PROGRESS);

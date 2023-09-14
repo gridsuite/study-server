@@ -44,9 +44,6 @@ public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "event_type")
     private String eventType;
 
-    @Column(name = "event_order")
-    private Integer eventOrder;
-
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<EventPropertyEntity> properties = new HashSet<>();
 
@@ -69,7 +66,6 @@ public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
         this.equipmentId = event.getEquipmentId();
         this.equipmentType = event.getEquipmentType();
         this.eventType = event.getEventType();
-        this.eventOrder = event.getEventOrder();
         this.properties = event.getProperties() != null ? event.getProperties().stream()
                 .map(eventProperty -> new EventPropertyEntity(this, eventProperty))
                 .collect(Collectors.toSet()) : null;

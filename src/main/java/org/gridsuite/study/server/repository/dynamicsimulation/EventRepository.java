@@ -9,7 +9,6 @@ package org.gridsuite.study.server.repository.dynamicsimulation;
 
 import org.gridsuite.study.server.repository.dynamicsimulation.entity.EventEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,7 +21,4 @@ public interface EventRepository extends JpaRepository<EventEntity, UUID> {
     List<EventEntity> findAllByNodeId(UUID nodeId);
 
     EventEntity findByNodeIdAndEquipmentId(UUID nodeId, String equipmentId);
-
-    @Query(value = "SELECT max(event.eventOrder) FROM EventEntity event WHERE event.nodeId = ?1")
-    Integer maxEventOrder(UUID nodeId);
 }

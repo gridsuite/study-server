@@ -8,7 +8,6 @@
             <column name="created_date" type="TIMESTAMP"/>
             <column name="equipment_id" type="VARCHAR(255)"/>
             <column name="equipment_type" type="VARCHAR(255)"/>
-            <column name="event_order" type="INT"/>
             <column name="event_type" type="VARCHAR(255)"/>
             <column name="node_id" type="UUID"/>
             <column name="updated_date" type="TIMESTAMP"/>

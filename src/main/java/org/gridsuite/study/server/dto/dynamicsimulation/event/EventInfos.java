@@ -39,8 +39,6 @@ public class EventInfos {
 
     private String eventType;
 
-    private int eventOrder;
-
     private List<EventPropertyInfos> properties = new ArrayList<>();
 
     public EventInfos(EventEntity eventEntity) {
@@ -49,7 +47,6 @@ public class EventInfos {
         this.equipmentId = eventEntity.getEquipmentId();
         this.equipmentType = eventEntity.getEquipmentType();
         this.eventType = eventEntity.getEventType();
-        this.eventOrder = eventEntity.getEventOrder();
         this.properties = eventEntity.getProperties().stream()
                 .map(eventPropertyEntity -> new EventPropertyInfos(eventPropertyEntity.getName(), eventPropertyEntity.getValue(), eventPropertyEntity.getType()))
                 .collect(Collectors.toList());

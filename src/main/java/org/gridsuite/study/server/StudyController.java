@@ -1422,7 +1422,6 @@ public class StudyController {
     public ResponseEntity<List<EventInfos>> getDynamicSimulationEvents(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
         List<EventInfos> dynamicSimulationEvents = studyService.getDynamicSimulationEvents(nodeUuid);
-        dynamicSimulationEvents.sort(Comparator.comparing(EventInfos::getEventOrder));
         return ResponseEntity.ok().body(dynamicSimulationEvents);
     }
 
@@ -1464,21 +1463,6 @@ public class StudyController {
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events/move/{eventUuid}")
-    @Operation(summary = "Move a dynamic simulation event in the list")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The dynamic simulation event was moved"),
-            @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<Void> moveDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                             @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @Parameter(description = "Event UUID") @PathVariable("eventUuid") UUID eventUuid,
-                                                             @Parameter(description = "UUID  of the before event at the new position") @RequestParam(value = "beforeUuid", required = false) UUID beforeUuid,
-                                                             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.moveDynamicSimulationEvent(studyUuid, nodeUuid, userId, eventUuid, beforeUuid);
         return ResponseEntity.ok().build();
     }
 

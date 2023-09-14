@@ -15,12 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -55,10 +53,6 @@ public class DynamicSimulationEventServiceImpl implements DynamicSimulationEvent
     @Transactional
     @Override
     public void createEvent(UUID nodeUuid, EventInfos event) {
-        // set event order = maxEventOrder(existing event orders) + 1
-        Integer maxEventOrder = eventRepository.maxEventOrder(nodeUuid);
-        event.setEventOrder(maxEventOrder == null ? 0 : maxEventOrder + 1);
-
         EventEntity eventEntity = new EventEntity(event);
         eventRepository.save(eventEntity);
     }
@@ -91,44 +85,7 @@ public class DynamicSimulationEventServiceImpl implements DynamicSimulationEvent
 
     @Transactional
     @Override
-    public void moveEvent(UUID nodeUuid, UUID eventUuid, UUID beforeUuid) {
-        List<EventEntity> eventEntities = eventRepository.findAllByNodeId(nodeUuid);
-        eventEntities.sort(Comparator.comparingInt(EventEntity::getEventOrder));
-
-        Optional<EventEntity> beforeEntityOpt = beforeUuid != null ?
-                eventEntities.stream().filter(elem -> elem.getId().equals(beforeUuid)).findFirst()
-                : eventEntities.isEmpty() ? Optional.empty()
-                : Optional.of(eventEntities.get(eventEntities.size() - 1)) /* get last elem if beforeUuid not provided */;
-
-        Optional<EventEntity> eventEntityOpt = eventEntities.stream().filter(elem -> elem.getId().equals(eventUuid)).findFirst();
-
-        beforeEntityOpt.ifPresent(beforeEntity ->
-            eventEntityOpt.ifPresent(eventEntity -> {
-                int insertIndex = eventEntities.indexOf(beforeEntity);
-                if (insertIndex != -1) {
-                    eventEntities.remove(eventEntity);
-                    eventEntities.add(insertIndex, eventEntity);
-
-                    // reset order event
-                    IntStream.range(0, eventEntities.size()).forEach(order -> eventEntities.get(order).setEventOrder(order));
-
-                    eventRepository.saveAll(eventEntities);
-                }
-            })
-        );
-    }
-
-    @Transactional
-    @Override
     public void deleteEvents(UUID nodeUuid, List<UUID> eventUuids) {
         eventRepository.deleteAllById(eventUuids);
-
-        List<EventEntity> remainingEntities = eventRepository.findAllByNodeId(nodeUuid);
-        remainingEntities.sort(Comparator.comparingInt(EventEntity::getEventOrder));
-
-        // reset order event
-        IntStream.range(0, remainingEntities.size()).forEach(order -> remainingEntities.get(order).setEventOrder(order));
-
-        eventRepository.saveAll(remainingEntities);
     }
 }

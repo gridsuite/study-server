@@ -25,7 +25,5 @@ public interface DynamicSimulationEventService {
 
     void updateEvent(UUID nodeUuid, EventInfos event);
 
-    void moveEvent(UUID nodeUuid, UUID eventUuid, UUID beforeUuid);
-
     void deleteEvents(UUID nodeUuid, List<UUID> eventUuids);
 }
