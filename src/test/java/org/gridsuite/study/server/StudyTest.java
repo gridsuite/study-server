@@ -93,7 +93,6 @@ import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.cre
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
@@ -2118,7 +2117,7 @@ public class StudyTest {
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", study1Uuid))
             .andExpectAll(status().isOk(),
-                        content().string("NOT_INDEXED"));
+                        content().string("INDEX_DONE"));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", study1Uuid))
             .andExpect(status().isOk());
@@ -2132,9 +2131,9 @@ public class StudyTest {
             .andExpectAll(status().isOk(),
                         content().string("INDEX_DONE"));
 
-        var requests = TestUtils.getRequestsWithBodyDone(3, server);
+        var requests = TestUtils.getRequestsWithBodyDone(4, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/indexes")));
+        assertEquals(2, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/indexes")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
 
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
