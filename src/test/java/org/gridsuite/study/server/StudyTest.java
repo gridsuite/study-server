@@ -1138,6 +1138,7 @@ public class StudyTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
@@ -1252,6 +1253,7 @@ public class StudyTest {
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         node2.setSensitivityAnalysisResultUuid(UUID.randomUUID());
         node2.setShortCircuitAnalysisResultUuid(UUID.randomUUID());
+        node2.setOneBusShortCircuitAnalysisResultUuid(UUID.randomUUID());
         node2.setDynamicSimulationResultUuid(UUID.randomUUID());
         node2.setVoltageInitResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
@@ -1606,6 +1608,8 @@ public class StudyTest {
         //sensitivityAnalysis_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //shortCircuitAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //oneBusShortCircuitAnalysis_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //dynamicSimulation_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
@@ -1985,6 +1989,8 @@ public class StudyTest {
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
                 //shortCircuitAnalysis_status
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                //oneBusShortCircuitAnalysis_status
+                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
                 //dynamicSimulation_status
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
                 //voltageInit_status
@@ -2003,6 +2009,8 @@ public class StudyTest {
             //sensitivityAnalysis_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //shortCircuitAnalysis_status
+            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            //oneBusShortCircuitAnalysis_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //dynamicSimulation_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));

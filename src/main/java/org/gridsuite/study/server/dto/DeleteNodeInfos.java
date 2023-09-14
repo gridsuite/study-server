@@ -37,6 +37,7 @@ public class DeleteNodeInfos {
     private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
 
     private List<UUID> shortCircuitAnalysisResultUuids = new ArrayList<>();
+    private List<UUID> oneBusShortCircuitAnalysisResultUuids = new ArrayList<>();
 
     private List<UUID> voltageInitResultUuids = new ArrayList<>();
     private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
@@ -71,6 +72,10 @@ public class DeleteNodeInfos {
 
     public void addShortCircuitAnalysisResultUuid(UUID shortCircuitAnalysisResultUuid) {
         shortCircuitAnalysisResultUuids.add(shortCircuitAnalysisResultUuid);
+    }
+
+    public void addOneBusShortCircuitAnalysisResultUuid(UUID oneBusShortCircuitAnalysisResultUuid) {
+        oneBusShortCircuitAnalysisResultUuids.add(oneBusShortCircuitAnalysisResultUuid);
     }
 
     public void addVoltageInitResultUuid(UUID voltageInitResultUuid) {
