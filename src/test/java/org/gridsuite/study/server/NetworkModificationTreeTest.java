@@ -1149,6 +1149,7 @@ public class NetworkModificationTreeTest {
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
     }
 
@@ -1175,6 +1176,7 @@ public class NetworkModificationTreeTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
