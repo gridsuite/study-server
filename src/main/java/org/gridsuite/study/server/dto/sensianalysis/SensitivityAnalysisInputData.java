@@ -13,7 +13,6 @@ import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -37,121 +36,67 @@ public class SensitivityAnalysisInputData {
     }
 
     @SuperBuilder
-    @NoArgsConstructor
     @AllArgsConstructor
-    @Getter
-    @Setter
-    public static class Ident {
-        UUID id;
-        String name;
-    }
-
-    @SuperBuilder
-    @NoArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to injections set")
     public static class SensitivityInjectionsSet {
-        List<FilterEquipments> monitoredBranches;
-        List<FilterEquipments> injections;
+        List<EquipmentsContainer> monitoredBranches;
+        List<EquipmentsContainer> injections;
         DistributionType distributionType;
-        List<FilterEquipments> contingencies;
+        List<EquipmentsContainer> contingencies;
 
-        public SensitivityInjectionsSet(List<FilterEquipments> monitoredBranches,
-                                        List<FilterEquipments> injections,
-                                        DistributionType distributionType,
-                                        List<FilterEquipments> contingencies) {
-            this.monitoredBranches = monitoredBranches;
-            this.injections = injections;
-            this.distributionType = distributionType;
-            this.contingencies = contingencies;
-        }
     }
 
     @SuperBuilder
-    @NoArgsConstructor
+    @AllArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to each injection")
     public static class SensitivityInjection {
-        List<FilterEquipments> monitoredBranches;
-        List<FilterEquipments> injections;
-        List<FilterEquipments> contingencies;
+        List<EquipmentsContainer> monitoredBranches;
+        List<EquipmentsContainer> injections;
+        List<EquipmentsContainer> contingencies;
 
-        public SensitivityInjection(List<FilterEquipments> monitoredBranches,
-                                        List<FilterEquipments> injections,
-                                        List<FilterEquipments> contingencies) {
-            this.monitoredBranches = monitoredBranches;
-            this.injections = injections;
-            this.contingencies = contingencies;
-        }
     }
 
     @SuperBuilder
-    @NoArgsConstructor
+    @AllArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to each HVDC")
     public static class SensitivityHVDC {
-        List<FilterEquipments> monitoredBranches;
+        List<EquipmentsContainer> monitoredBranches;
         SensitivityType sensitivityType;
-        List<FilterEquipments> hvdcs;
-        List<FilterEquipments> contingencies;
+        List<EquipmentsContainer> hvdcs;
+        List<EquipmentsContainer> contingencies;
 
-        public SensitivityHVDC(List<FilterEquipments> monitoredBranches,
-                                        List<FilterEquipments> hvdcs,
-                                        SensitivityType sensitivityType,
-                                        List<FilterEquipments> contingencies) {
-            this.monitoredBranches = monitoredBranches;
-            this.hvdcs = hvdcs;
-            this.sensitivityType = sensitivityType;
-            this.contingencies = contingencies;
-        }
     }
 
     @SuperBuilder
-    @NoArgsConstructor
+    @AllArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to each PST")
     public static class SensitivityPST {
-        List<FilterEquipments> monitoredBranches;
+        List<EquipmentsContainer> monitoredBranches;
         SensitivityType sensitivityType;
-        List<FilterEquipments> psts;
-        List<FilterEquipments> contingencies;
+        List<EquipmentsContainer> psts;
+        List<EquipmentsContainer> contingencies;
 
-        public SensitivityPST(List<FilterEquipments> monitoredBranches,
-                               List<FilterEquipments> psts,
-                               SensitivityType sensitivityType,
-                               List<FilterEquipments> contingencies) {
-            this.monitoredBranches = monitoredBranches;
-            this.psts = psts;
-            this.sensitivityType = sensitivityType;
-            this.contingencies = contingencies;
-        }
     }
 
     @SuperBuilder
-    @NoArgsConstructor
+    @AllArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to nodes")
     public static class SensitivityNodes {
-        List<FilterEquipments> monitoredVoltageLevels;
-        List<FilterEquipments> equipmentsInVoltageRegulation;
-        List<FilterEquipments> contingencies;
+        List<EquipmentsContainer> monitoredVoltageLevels;
+        List<EquipmentsContainer> equipmentsInVoltageRegulation;
+        List<EquipmentsContainer> contingencies;
 
-        public SensitivityNodes(List<FilterEquipments> monitoredVoltageLevels,
-                                    List<FilterEquipments> equipmentsInVoltageRegulation,
-                                    List<FilterEquipments> contingencies) {
-            this.monitoredVoltageLevels = monitoredVoltageLevels;
-            this.equipmentsInVoltageRegulation = equipmentsInVoltageRegulation;
-            this.contingencies = contingencies;
-        }
     }
-
-    @Schema(description = "Results threshold")
-    private double resultsThreshold;
 
     @Schema(description = "Sensitivity relatively to injections set")
     private List<SensitivityInjectionsSet> sensitivityInjectionsSets;

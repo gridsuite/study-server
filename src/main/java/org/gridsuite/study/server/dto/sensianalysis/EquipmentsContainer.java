@@ -24,15 +24,15 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class FilterEquipments {
+public class EquipmentsContainer {
 
-    @Schema(description = "filter id")
-    private UUID filterId;
+    @Schema(description = "container id")
+    private UUID containerId;
 
-    @Schema(description = "filter name")
-    private String filterName;
+    @Schema(description = "container name")
+    private String containerName;
 
-    @Schema(description = "equipments of filter")
+    @Schema(description = "equipments in container")
     private List<IdentifiableAttributes> identifiableAttributes;
 
     @Schema(description = "equipments not found in network")
