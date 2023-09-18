@@ -253,7 +253,8 @@ public class StudyController {
     @Operation(summary = "check study indexation")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The study indexation status"),
-        @ApiResponse(responseCode = "204", description = "The study indexation status doesn't exist")})
+        @ApiResponse(responseCode = "204", description = "The study indexation status doesn't exist"),
+        @ApiResponse(responseCode = "404", description = "The study doesn't exist")})
     public ResponseEntity<String> checkStudyIndexation(@PathVariable("studyUuid") UUID studyUuid) {
         String result = studyService.getStudyIndexationStatus(studyUuid).toString();
         return result != null ? ResponseEntity.ok().body(result) :

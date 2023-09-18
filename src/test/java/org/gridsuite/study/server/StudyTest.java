@@ -2124,6 +2124,9 @@ public class StudyTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", UUID.randomUUID()))
             .andExpect(status().isNotFound());
 
+        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", UUID.randomUUID()))
+            .andExpectAll(status().isNotFound());
+
         UUID study1Uuid = createStudy("userId", CASE_UUID);
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", study1Uuid))
