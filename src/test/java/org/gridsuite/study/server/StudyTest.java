@@ -240,6 +240,8 @@ public class StudyTest {
     private final String studyUpdateDestination = "study.update";
     private final String elementUpdateDestination = "element.update";
 
+    private boolean indexed = false;
+
     private static EquipmentInfos toEquipmentInfos(Line line) {
         return EquipmentInfos.builder()
             .networkUuid(NETWORK_UUID)
@@ -359,9 +361,10 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
                     }
                 } else if (path.matches("/v1/networks/.*/reindex-all")) {
+                    indexed = true;
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/networks/.*/indexes")) {
-                    return new MockResponse().setResponseCode(200);
+                    return new MockResponse().setResponseCode(indexed ? 200 : 204);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS, "UCTE");
                     return new MockResponse().setResponseCode(200)
@@ -2125,7 +2128,8 @@ public class StudyTest {
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", study1Uuid))
             .andExpectAll(status().isOk(),
-                        content().string("INDEXED"));
+                        content().string("NOT_INDEXED"));
+        Message<byte[]> indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", study1Uuid))
             .andExpect(status().isOk());
