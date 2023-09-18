@@ -229,7 +229,7 @@ public class SecurityAnalysisTest {
                 } else if ("/v1/results".equals(path)) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/subreports")) {
+                } else if (path.matches("/v1/treereports")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/supervision/results-count")) {
@@ -308,7 +308,7 @@ public class SecurityAnalysisTest {
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/subreports")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
     }
 

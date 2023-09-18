@@ -86,11 +86,11 @@ public class ReportService {
         restTemplate.delete(this.getReportServerURI() + path);
     }
 
-    public void deleteSubreporters(@NonNull Map<UUID, String> subreportsKeys) {
-        var path = UriComponentsBuilder.fromPath("subreports").toUriString();
+    public void deleteTreereports(@NonNull Map<UUID, String> treeReportsKeys) {
+        var path = UriComponentsBuilder.fromPath("treereports").toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<UUID, String>> httpEntity = new HttpEntity<>(subreportsKeys, headers);
+        HttpEntity<Map<UUID, String>> httpEntity = new HttpEntity<>(treeReportsKeys, headers);
 
         restTemplate.exchange(this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + path, HttpMethod.DELETE, httpEntity, Void.class);
     }

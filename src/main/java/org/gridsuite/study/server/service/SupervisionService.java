@@ -75,7 +75,7 @@ public class SupervisionService {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         nodes.stream().forEach(node -> node.setLoadFlowResultUuid(null));
         Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.LOAD_FLOW.subReporterKey, nodes);
-        reportService.deleteSubreporters(subreportToDelete);
+        reportService.deleteTreereports(subreportToDelete);
         loadFlowService.deleteLoadFlowResults();
         return nodes.size();
     }
@@ -92,7 +92,7 @@ public class SupervisionService {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull();
         nodes.stream().forEach(node -> node.setSecurityAnalysisResultUuid(null));
         Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SECURITY_ANALYSIS.subReporterKey, nodes);
-        reportService.deleteSubreporters(subreportToDelete);
+        reportService.deleteTreereports(subreportToDelete);
         securityAnalysisService.deleteSecurityAnalysisResults();
         return nodes.size();
     }
@@ -101,7 +101,7 @@ public class SupervisionService {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull();
         nodes.stream().forEach(node -> node.setSensitivityAnalysisResultUuid(null));
         Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SENSITIVITY_ANALYSIS.subReporterKey, nodes);
-        reportService.deleteSubreporters(subreportToDelete);
+        reportService.deleteTreereports(subreportToDelete);
         sensitivityAnalysisService.deleteSensitivityAnalysisResults();
         return nodes.size();
     }
@@ -110,7 +110,7 @@ public class SupervisionService {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
         nodes.stream().forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
         Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SHORT_CIRCUIT.subReporterKey, nodes);
-        reportService.deleteSubreporters(subreportToDelete);
+        reportService.deleteTreereports(subreportToDelete);
         shortCircuitService.deleteShortCircuitAnalysisResults();
         return nodes.size();
     }

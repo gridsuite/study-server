@@ -265,9 +265,6 @@ public class VoltageInitTest {
                 } else if (path.matches("/v1/results")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/subreports")) {
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/supervision/results-count")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
