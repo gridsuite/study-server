@@ -1216,7 +1216,7 @@ public class StudyService {
     @Transactional
     public StudyEntity updateStudyEntityIndexation(StudyEntity studyEntity, StudyIndexationStatus indexationStatus) {
         studyEntity.setIndexationStatus(indexationStatus);
-        notificationService.emitStudyChanged(studyEntity.getId(), null, NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatus);
+        notificationService.emitStudyChanged(studyEntity.getId(), NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatus);
         return studyEntity;
     }
 
