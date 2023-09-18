@@ -37,6 +37,7 @@ public class SensitivityAnalysisInputData {
 
     @SuperBuilder
     @AllArgsConstructor
+    @NoArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to injections set")
@@ -50,6 +51,7 @@ public class SensitivityAnalysisInputData {
 
     @SuperBuilder
     @AllArgsConstructor
+    @NoArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to each injection")
@@ -62,6 +64,7 @@ public class SensitivityAnalysisInputData {
 
     @SuperBuilder
     @AllArgsConstructor
+    @NoArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to each HVDC")
@@ -75,6 +78,7 @@ public class SensitivityAnalysisInputData {
 
     @SuperBuilder
     @AllArgsConstructor
+    @NoArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to each PST")
@@ -88,6 +92,7 @@ public class SensitivityAnalysisInputData {
 
     @SuperBuilder
     @AllArgsConstructor
+    @NoArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to nodes")

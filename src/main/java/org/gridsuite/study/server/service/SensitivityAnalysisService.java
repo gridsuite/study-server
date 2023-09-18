@@ -286,14 +286,14 @@ public class SensitivityAnalysisService {
                 ContainerEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjectionSet.getInjections()),
                 sensitivityInjectionSet.getDistributionType(),
                 ContainerEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjectionSet.getContingencies())
-        )).forEach(injectionsSet -> sensitivityInjectionsSet.add(injectionsSet));
+        )).forEach(sensitivityInjectionsSet::add);
 
         List<SensitivityAnalysisInputData.SensitivityInjection> sensitivityInjections = new ArrayList<>();
         entity.getSensitivityInjections().stream().map(sensitivityInjection -> new SensitivityInjection(
                 ContainerEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjection.getMonitoredBranch()),
                 ContainerEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjection.getInjections()),
                 ContainerEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityInjection.getContingencies())
-        )).forEach(injections -> sensitivityInjections.add(injections));
+        )).forEach(sensitivityInjections::add);
 
         List<SensitivityAnalysisInputData.SensitivityHVDC> sensitivityHvdcs = new ArrayList<>();
         entity.getSensitivityHvdc().stream().map(sensitivityHvdc -> new SensitivityHVDC(
@@ -301,7 +301,7 @@ public class SensitivityAnalysisService {
                 sensitivityHvdc.getSensitivityType(),
                 ContainerEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityHvdc.getInjections()),
                 ContainerEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityHvdc.getContingencies())
-        )).forEach(sensitivityHVDC -> sensitivityHvdcs.add(sensitivityHVDC));
+        )).forEach(sensitivityHvdcs::add);
 
         List<SensitivityAnalysisInputData.SensitivityPST> sensitivityPsts = new ArrayList<>();
         entity.getSensitivityPST().stream().map(sensitivityPst -> new SensitivityPST(
@@ -309,14 +309,14 @@ public class SensitivityAnalysisService {
                 sensitivityPst.getSensitivityType(),
                 ContainerEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityPst.getInjections()),
                 ContainerEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityPst.getContingencies())
-        )).forEach(sensitivityPST -> sensitivityPsts.add(sensitivityPST));
+        )).forEach(sensitivityPsts::add);
 
         List<SensitivityAnalysisInputData.SensitivityNodes> sensitivityNodes = new ArrayList<>();
         entity.getSensitivityNodes().stream().map(sensitivityNode -> new SensitivityNodes(
                 ContainerEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityNode.getMonitoredBranch()),
                 ContainerEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityNode.getInjections()),
                 ContainerEquipmentsEmbeddable.fromEmbeddableFilterEquipments(sensitivityNode.getContingencies())
-        )).forEach(sensitivityNod -> sensitivityNodes.add(sensitivityNod));
+        )).forEach(sensitivityNodes::add);
 
         return new SensitivityAnalysisParametersInfos(entity.getFlowFlowSensitivityValueThreshold(), entity.getAngleFlowSensitivityValueThreshold(),
                 entity.getFlowVoltageSensitivityValueThreshold(), sensitivityInjectionsSet, sensitivityInjections, sensitivityHvdcs,
