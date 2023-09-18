@@ -411,7 +411,6 @@ public class StudyControllerDynamicSimulationTest {
                 return 1;
             }
         }).when(dynamicSimulationService).getResultsCount();
-
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", String.valueOf(ComputationType.DYNAMIC_SIMULATION))
                 .queryParam("dryRun", String.valueOf(true)))
@@ -420,6 +419,7 @@ public class StudyControllerDynamicSimulationTest {
         assertEquals("1", result.getResponse().getContentAsString());
 
         //Delete Dynamic result init results
+        Mockito.doNothing().when(dynamicSimulationService).deleteResults();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", String.valueOf(ComputationType.DYNAMIC_SIMULATION))
                 .queryParam("dryRun", String.valueOf(false)))
