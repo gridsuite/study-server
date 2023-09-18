@@ -13,6 +13,7 @@ import com.powsybl.timeseries.*;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.utils.ComputationType;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -224,7 +225,7 @@ public class StudyServiceDynamicSimulationTest {
 
         when(networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull()).thenReturn(Collections.singletonList(networkModificationNode));
         assertEquals(1, networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull().size());
-        supervisionService.deleteDynamicSimulationResults();
+        supervisionService.deleteComputationResults(ComputationType.DYNAMIC_SIMULATION, false);
 
         when(networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull()).thenReturn(List.of());
         assertEquals(0, networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull().size());

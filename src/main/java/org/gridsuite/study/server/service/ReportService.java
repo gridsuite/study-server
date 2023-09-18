@@ -86,7 +86,7 @@ public class ReportService {
         restTemplate.delete(this.getReportServerURI() + path);
     }
 
-    public void deleteTreereports(@NonNull Map<UUID, String> treeReportsKeys) {
+    public void deleteTreeReports(@NonNull Map<UUID, String> treeReportsKeys) {
         var path = UriComponentsBuilder.fromPath("treereports").toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

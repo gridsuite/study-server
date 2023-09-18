@@ -127,7 +127,7 @@ public class LoadFlowService {
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results").toUriString();
             restTemplate.delete(loadFlowServerBaseUri + path, Void.class);
         } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_RESULTS_FAILED);
+            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
         }
 
     }

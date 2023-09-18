@@ -27,7 +27,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.StudyException.Type.DELETE_RESULTS_FAILED;
+import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_RUNNING;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
@@ -155,7 +155,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         try {
             dynamicSimulationClient.deleteResults();
         } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_RESULTS_FAILED);
+            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
         }
     }
 

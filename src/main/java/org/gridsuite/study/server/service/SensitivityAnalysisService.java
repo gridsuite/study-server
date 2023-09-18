@@ -191,7 +191,7 @@ public class SensitivityAnalysisService {
                 .toUriString();
             restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
         } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_RESULTS_FAILED);
+            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
         }
     }
 

@@ -179,7 +179,7 @@ public class SecurityAnalysisService {
             String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results").toUriString();
             restTemplate.delete(securityAnalysisServerBaseUri + path);
         } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_RESULTS_FAILED);
+            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
         }
     }
 

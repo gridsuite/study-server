@@ -73,16 +73,16 @@ public class SupervisionService {
         }
     }
 
-    public Integer deleteLoadflowResults() {
+    private Integer deleteLoadflowResults() {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         nodes.stream().forEach(node -> node.setLoadFlowResultUuid(null));
         Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.LOAD_FLOW.subReporterKey, nodes);
-        reportService.deleteTreereports(subreportToDelete);
+        reportService.deleteTreeReports(subreportToDelete);
         loadFlowService.deleteLoadFlowResults();
         return nodes.size();
     }
 
-    public Integer deleteDynamicSimulationResults() {
+    private Integer deleteDynamicSimulationResults() {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull();
         nodes.stream().forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
         //TODO Add logs deletion once they are added
@@ -90,34 +90,34 @@ public class SupervisionService {
         return nodes.size();
     }
 
-    public Integer deleteSecurityAnalysisResults() {
+    private Integer deleteSecurityAnalysisResults() {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull();
         nodes.stream().forEach(node -> node.setSecurityAnalysisResultUuid(null));
         Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SECURITY_ANALYSIS.subReporterKey, nodes);
-        reportService.deleteTreereports(subreportToDelete);
+        reportService.deleteTreeReports(subreportToDelete);
         securityAnalysisService.deleteSecurityAnalysisResults();
         return nodes.size();
     }
 
-    public Integer deleteSensitivityAnalysisResults() {
+    private Integer deleteSensitivityAnalysisResults() {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull();
         nodes.stream().forEach(node -> node.setSensitivityAnalysisResultUuid(null));
         Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SENSITIVITY_ANALYSIS.subReporterKey, nodes);
-        reportService.deleteTreereports(subreportToDelete);
+        reportService.deleteTreeReports(subreportToDelete);
         sensitivityAnalysisService.deleteSensitivityAnalysisResults();
         return nodes.size();
     }
 
-    public Integer deleteShortcircuitResults() {
+    private Integer deleteShortcircuitResults() {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
         nodes.stream().forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
         Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SHORT_CIRCUIT.subReporterKey, nodes);
-        reportService.deleteTreereports(subreportToDelete);
+        reportService.deleteTreeReports(subreportToDelete);
         shortCircuitService.deleteShortCircuitAnalysisResults();
         return nodes.size();
     }
 
-    public Integer deleteVoltageInitResults() {
+    private Integer deleteVoltageInitResults() {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull();
         nodes.stream().forEach(node -> node.setVoltageInitResultUuid(null));
         //TODO Add logs deletion once they are added
@@ -126,10 +126,10 @@ public class SupervisionService {
     }
 
     private Map<UUID, String> formatSubreportMap(String subReporterKey, List<NetworkModificationNodeInfoEntity> nodes) {
-        return nodes.stream().map(node -> {
-            String reportKey = node.getId() + "@" + subReporterKey;
-            return Map.entry(node.getReportUuid(), reportKey);
-        }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        return nodes.stream().collect(Collectors.toMap(
+            node -> node.getReportUuid(),
+            node -> node.getId() + "@" + subReporterKey)
+        );
     }
 }
 

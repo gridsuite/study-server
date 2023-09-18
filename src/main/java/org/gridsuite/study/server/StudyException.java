@@ -73,7 +73,7 @@ public class StudyException extends RuntimeException {
         VOLTAGE_INIT_PARAMETERS_NOT_FOUND,
         CREATE_VOLTAGE_INIT_PARAMETERS_FAILED,
         UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED,
-        DELETE_RESULTS_FAILED,
+        DELETE_COMPUTATION_RESULTS_FAILED,
     }
 
     private final Type type;

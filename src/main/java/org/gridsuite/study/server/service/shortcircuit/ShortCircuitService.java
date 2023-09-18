@@ -252,7 +252,7 @@ public class ShortCircuitService {
                 .toUriString();
             restTemplate.delete(shortCircuitServerBaseUri + path);
         } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_RESULTS_FAILED);
+            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
         }
     }
 
