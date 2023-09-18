@@ -30,6 +30,7 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.utils.ComputationType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.json.JSONObject;
@@ -65,8 +66,8 @@ import static org.junit.Assert.*;
 import static org.mockito.BDDMockito.any;
 import static org.mockito.BDDMockito.eq;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -402,6 +403,29 @@ public class StudyControllerDynamicSimulationTest {
         Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, dynamicSimulationResultMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT, dynamicSimulationResultMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        //Test result count
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public Integer answer(InvocationOnMock invocation) {
+                return 1;
+            }
+        }).when(dynamicSimulationService).getResultsCount();
+
+        result = studyClient.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.DYNAMIC_SIMULATION))
+                .queryParam("dryRun", String.valueOf(true)))
+            .andExpect(status().isOk())
+            .andReturn();
+        assertEquals("1", result.getResponse().getContentAsString());
+
+        //Delete Dynamic result init results
+        result = studyClient.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.DYNAMIC_SIMULATION))
+                .queryParam("dryRun", String.valueOf(false)))
+            .andExpect(status().isOk())
+            .andReturn();
+        assertEquals("1", result.getResponse().getContentAsString());
     }
 
     @Test
