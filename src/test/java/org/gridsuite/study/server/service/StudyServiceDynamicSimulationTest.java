@@ -205,5 +205,4 @@ public class StudyServiceDynamicSimulationTest {
         getLogger().info("Mapping infos result in Json = " + objectMapper.writeValueAsString(mappingInfos));
         assertEquals(MAPPINGS.size(), mappingInfos.size());
     }
-
 }
