@@ -19,10 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import static org.gridsuite.study.server.StudyException.Type.DELETE_RESULTS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
