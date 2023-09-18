@@ -1197,7 +1197,7 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, importParameters, StudyIndexationStatus.INDEX_DONE);
+                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, importParameters, StudyIndexationStatus.INDEXED);
         return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
     }
 
@@ -1648,7 +1648,7 @@ public class StudyService {
         self.updateStudyEntityIndexation(study, StudyIndexationStatus.INDEXING_ONGOING);
         try {
             networkConversionService.reindexStudyNetworkEquipments(study.getNetworkUuid());
-            self.updateStudyEntityIndexation(study, StudyIndexationStatus.INDEX_DONE);
+            self.updateStudyEntityIndexation(study, StudyIndexationStatus.INDEXED);
         } catch (HttpStatusCodeException e) {
             LOGGER.error(e.toString(), e);
             // Allow to retry indexation
@@ -1665,7 +1665,7 @@ public class StudyService {
 
     private StudyIndexationStatus getStudyIndexationStatus(StudyEntity study) {
 
-        if (study.getIndexationStatus() == StudyIndexationStatus.INDEX_DONE) {
+        if (study.getIndexationStatus() == StudyIndexationStatus.INDEXED) {
             // We have to check if it's true
             checkStudyIndexation(study);
         }

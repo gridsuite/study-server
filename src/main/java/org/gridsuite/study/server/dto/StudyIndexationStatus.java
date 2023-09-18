@@ -12,5 +12,5 @@ package org.gridsuite.study.server.dto;
 public enum StudyIndexationStatus {
     NOT_INDEXED,
     INDEXING_ONGOING,
-    INDEX_DONE
+    INDEXED
 }
