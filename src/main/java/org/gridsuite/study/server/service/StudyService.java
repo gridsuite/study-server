@@ -1650,7 +1650,6 @@ public class StudyService {
             networkConversionService.reindexStudyNetworkEquipments(study.getNetworkUuid());
             self.updateStudyEntityIndexation(study, StudyIndexationStatus.INDEXED);
         } catch (HttpStatusCodeException e) {
-            LOGGER.error(e.toString(), e);
             // Allow to retry indexation
             self.updateStudyEntityIndexation(study, StudyIndexationStatus.NOT_INDEXED);
             throw handleHttpError(e, STUDY_INDEXATION_FAILED);
@@ -1682,7 +1681,6 @@ public class StudyService {
                 updateStudyEntityIndexation(study, StudyIndexationStatus.NOT_INDEXED);
             }
         } catch (HttpStatusCodeException e) {
-            LOGGER.error(e.toString(), e);
             throw handleHttpError(e, STUDY_CHECK_INDEXATION_FAILED);
         }
     }
