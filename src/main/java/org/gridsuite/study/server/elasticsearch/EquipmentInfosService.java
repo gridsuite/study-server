@@ -94,6 +94,19 @@ public class EquipmentInfosService {
         });
     }
 
+    public long getEquipmentInfosCount() {
+        return equipmentInfosRepository.count();
+    }
+
+    public long getTombstonedEquipmentInfosCount() {
+        return tombstonedEquipmentInfosRepository.count();
+    }
+
+    public void deleteAll() {
+        equipmentInfosRepository.deleteAll();
+        tombstonedEquipmentInfosRepository.deleteAll();
+    }
+
     public void deleteAll(@NonNull UUID networkUuid) {
         equipmentInfosRepository.deleteAllByNetworkUuid(networkUuid);
         tombstonedEquipmentInfosRepository.deleteAllByNetworkUuid(networkUuid);

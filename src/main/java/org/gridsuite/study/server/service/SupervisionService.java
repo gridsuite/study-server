@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -40,9 +41,11 @@ public class SupervisionService {
 
     private VoltageInitService voltageInitService;
 
+    private final EquipmentInfosService equipmentInfosService;
+
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    public SupervisionService(NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService) {
+    public SupervisionService(NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService) {
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.reportService = reportService;
         this.loadFlowService = loadFlowService;
@@ -51,6 +54,7 @@ public class SupervisionService {
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
+        this.equipmentInfosService = equipmentInfosService;
     }
 
     @Transactional
@@ -71,6 +75,15 @@ public class SupervisionService {
             default:
                 throw new StudyException(ELEMENT_NOT_FOUND);
         }
+    }
+
+    @Transactional
+    public Long deleteAllStudyEquipmentsIndexes(boolean dryRun) {
+        Long nbIndexesToDelete = equipmentInfosService.getEquipmentInfosCount() + equipmentInfosService.getTombstonedEquipmentInfosCount();
+        if (!dryRun) {
+            equipmentInfosService.deleteAll();
+        }
+        return nbIndexesToDelete;
     }
 
     private Integer deleteLoadflowResults() {
