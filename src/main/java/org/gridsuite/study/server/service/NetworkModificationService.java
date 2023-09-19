@@ -361,4 +361,18 @@ public class NetworkModificationService {
         }
         return receiver;
     }
+
+    public void deleteStashedModifications(UUID groupUUid) {
+        Objects.requireNonNull(groupUUid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/stashed-modifications")
+                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+                .buildAndExpand(groupUUid)
+                .toUriString();
+
+        try {
+            restTemplate.delete(getNetworkModificationServerURI(false) + path);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, DELETE_NETWORK_MODIFICATION_FAILED);
+        }
+    }
 }
