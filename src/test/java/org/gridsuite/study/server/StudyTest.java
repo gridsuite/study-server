@@ -361,6 +361,10 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
                     }
                 } else if (path.matches("/v1/networks/.*/reindex-all")) {
+                    // simulate a server error
+                    if (indexed) {
+                        return new MockResponse().setResponseCode(500);
+                    }
                     indexed = true;
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/networks/.*/indexes")) {
@@ -2154,6 +2158,14 @@ public class StudyTest {
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(study1Uuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", study1Uuid))
+            .andExpect(status().is5xxServerError());
+        indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
+        indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
+
+        var requests2 = TestUtils.getRequestsWithBodyDone(1, server);
+        assertTrue(requests2.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
     }
 
     @Test

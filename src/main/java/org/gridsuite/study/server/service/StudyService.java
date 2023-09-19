@@ -1653,7 +1653,7 @@ public class StudyService {
             LOGGER.error(e.toString(), e);
             // Allow to retry indexation
             self.updateStudyEntityIndexation(study, StudyIndexationStatus.NOT_INDEXED);
-            throw e;
+            throw handleHttpError(e, STUDY_INDEXATION_FAILED);
         }
         invalidateBuild(study.getId(), networkModificationTreeService.getStudyRootNodeUuid(study.getId()), false, false);
         LOGGER.info("Study with id = '{}' has been reindexed", study.getId());
@@ -1683,12 +1683,8 @@ public class StudyService {
             }
         } catch (HttpStatusCodeException e) {
             LOGGER.error(e.toString(), e);
-            throw e;
+            throw handleHttpError(e, STUDY_CHECK_INDEXATION_FAILED);
         }
-    }
-
-    public void checkStudyIndexation(UUID studyUuid) {
-        checkStudyIndexation(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
     }
 
     @Transactional
