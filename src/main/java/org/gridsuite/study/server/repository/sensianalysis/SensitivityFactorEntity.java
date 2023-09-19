@@ -36,7 +36,6 @@ public class SensitivityFactorEntity {
             name = "monitoredBranchEntity",
             joinColumns = @JoinColumn(name = "MonitoredBranchId", foreignKey = @ForeignKey(name = "sensitivityFactorEntity_monitoredBranchId_fk"))
     )
-
     private List<ContainerEquipmentsEmbeddable> monitoredBranch;
 
     @ElementCollection
@@ -44,7 +43,6 @@ public class SensitivityFactorEntity {
             name = "injectionsEntity",
             joinColumns = @JoinColumn(name = "InjectionsId", foreignKey = @ForeignKey(name = "sensitivityFactorEntity_injections_fk"))
     )
-
     private List<ContainerEquipmentsEmbeddable> injections;
 
     @ElementCollection
@@ -52,6 +50,5 @@ public class SensitivityFactorEntity {
             name = "contingenciesEntity",
             joinColumns = @JoinColumn(name = "ContingenciesId", foreignKey = @ForeignKey(name = "sensitivityFactorEntity_contingencies_fk"))
     )
-
     private List<ContainerEquipmentsEmbeddable> contingencies;
 }

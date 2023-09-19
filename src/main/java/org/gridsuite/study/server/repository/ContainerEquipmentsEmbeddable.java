@@ -32,14 +32,14 @@ public class ContainerEquipmentsEmbeddable {
     @Column(name = "containerName")
     private String containerName;
 
-    public static List<ContainerEquipmentsEmbeddable> toEmbeddableFilterEquipments(List<EquipmentsContainer> containers) {
+    public static List<ContainerEquipmentsEmbeddable> toEmbeddableContainerEquipments(List<EquipmentsContainer> containers) {
         return containers == null ? null :
                 containers.stream()
                         .map(container -> new ContainerEquipmentsEmbeddable(container.getContainerId(), container.getContainerName()))
                         .collect(Collectors.toList());
     }
 
-    public static List<EquipmentsContainer> fromEmbeddableFilterEquipments(List<ContainerEquipmentsEmbeddable> containers) {
+    public static List<EquipmentsContainer> fromEmbeddableContainerEquipments(List<ContainerEquipmentsEmbeddable> containers) {
         return containers == null ? null :
                 containers.stream()
                         .map(container -> new EquipmentsContainer(container.getContainerId(), container.getContainerName(), null, null))
