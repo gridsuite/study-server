@@ -14,6 +14,9 @@ import org.springframework.beans.BeanWrapperImpl;
 import java.beans.FeatureDescriptor;
 import java.beans.PropertyDescriptor;
 import java.util.Arrays;
+import java.util.List;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -35,5 +38,10 @@ public final class PropertyUtils {
         return Arrays.stream(propertyDescriptors).map(FeatureDescriptor::getName).filter(name -> beanSource.getPropertyValue(name) == null)
                 .filter(name -> Arrays.stream(authorizedNullProperties).noneMatch(n -> name.equals(n)))
                 .toArray(String[]::new);
+    }
+
+    public static <T> void filterAndSetData(List<T> data, List<T> source, Predicate<T> predicate) {
+        data.clear();
+        data.addAll(source.stream().filter(predicate).collect(Collectors.toList()));
     }
 }

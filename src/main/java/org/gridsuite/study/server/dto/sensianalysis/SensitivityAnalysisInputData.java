@@ -46,6 +46,7 @@ public class SensitivityAnalysisInputData {
         List<EquipmentsContainer> injections;
         DistributionType distributionType;
         List<EquipmentsContainer> contingencies;
+        boolean activated;
 
     }
 
@@ -59,6 +60,7 @@ public class SensitivityAnalysisInputData {
         List<EquipmentsContainer> monitoredBranches;
         List<EquipmentsContainer> injections;
         List<EquipmentsContainer> contingencies;
+        boolean activated;
 
     }
 
@@ -73,6 +75,7 @@ public class SensitivityAnalysisInputData {
         SensitivityType sensitivityType;
         List<EquipmentsContainer> hvdcs;
         List<EquipmentsContainer> contingencies;
+        boolean activated;
 
     }
 
@@ -87,6 +90,7 @@ public class SensitivityAnalysisInputData {
         SensitivityType sensitivityType;
         List<EquipmentsContainer> psts;
         List<EquipmentsContainer> contingencies;
+        boolean activated;
 
     }
 
@@ -100,6 +104,7 @@ public class SensitivityAnalysisInputData {
         List<EquipmentsContainer> monitoredVoltageLevels;
         List<EquipmentsContainer> equipmentsInVoltageRegulation;
         List<EquipmentsContainer> contingencies;
+        boolean activated;
 
     }
 

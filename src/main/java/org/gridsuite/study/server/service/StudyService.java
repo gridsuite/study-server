@@ -80,6 +80,7 @@ import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.elasticsearch.EquipmentInfosService.EQUIPMENT_TYPE_SCORES;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
+import static org.gridsuite.study.server.utils.PropertyUtils.filterAndSetData;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -1838,11 +1839,12 @@ public class StudyService {
         sensitivityAnalysisInputData.setLoadFlowSpecificParameters(specificParameters == null ?
                 Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)));
 
-        sensitivityAnalysisInputData.setSensitivityInjectionsSets(sensitivityAnalysisParametersValues.getSensitivityInjectionsSet());
-        sensitivityAnalysisInputData.setSensitivityInjections(sensitivityAnalysisParametersValues.getSensitivityInjection());
-        sensitivityAnalysisInputData.setSensitivityHVDCs(sensitivityAnalysisParametersValues.getSensitivityHVDC());
-        sensitivityAnalysisInputData.setSensitivityPSTs(sensitivityAnalysisParametersValues.getSensitivityPST());
-        sensitivityAnalysisInputData.setSensitivityNodes(sensitivityAnalysisParametersValues.getSensitivityNodes());
+        filterAndSetData(sensitivityAnalysisInputData.getSensitivityInjectionsSets(), sensitivityAnalysisParametersValues.getSensitivityInjectionsSet(), SensitivityAnalysisInputData.SensitivityInjectionsSet::isActivated);
+        filterAndSetData(sensitivityAnalysisInputData.getSensitivityInjections(), sensitivityAnalysisParametersValues.getSensitivityInjection(), SensitivityAnalysisInputData.SensitivityInjection::isActivated);
+        filterAndSetData(sensitivityAnalysisInputData.getSensitivityHVDCs(), sensitivityAnalysisParametersValues.getSensitivityHVDC(), SensitivityAnalysisInputData.SensitivityHVDC::isActivated);
+        filterAndSetData(sensitivityAnalysisInputData.getSensitivityPSTs(), sensitivityAnalysisParametersValues.getSensitivityPST(), SensitivityAnalysisInputData.SensitivityPST::isActivated);
+        filterAndSetData(sensitivityAnalysisInputData.getSensitivityNodes(), sensitivityAnalysisParametersValues.getSensitivityNodes(), SensitivityAnalysisInputData.SensitivityNodes::isActivated);
+
 
         UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider, sensitivityAnalysisInputData);
 

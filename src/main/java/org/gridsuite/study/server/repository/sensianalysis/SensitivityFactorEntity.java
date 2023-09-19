@@ -51,4 +51,7 @@ public class SensitivityFactorEntity {
             joinColumns = @JoinColumn(name = "ContingenciesId", foreignKey = @ForeignKey(name = "sensitivityFactorEntity_contingencies_fk"))
     )
     private List<ContainerEquipmentsEmbeddable> contingencies;
+
+    @Column(name = "activatedEntity", columnDefinition = "boolean default true")
+    private boolean activated;
 }
