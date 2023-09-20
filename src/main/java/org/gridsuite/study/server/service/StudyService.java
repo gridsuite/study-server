@@ -1951,6 +1951,15 @@ public class StudyService {
         return dynamicSimulationEventService.getEvent(nodeUuid, equipmentId);
     }
 
+    private void postProcessEventCrud(UUID studyUuid, UUID nodeUuid, List<UUID> childrenUuids) {
+        // for delete ancien result and refresh dynamic simulation run button in UI
+        invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+
+        // for refresh event list in UI
+        notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+    }
+
     @Transactional
     public void createDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, EventInfos event) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
@@ -1958,7 +1967,7 @@ public class StudyService {
         try {
             dynamicSimulationEventService.createEvent(nodeUuid, event);
         } finally {
-            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+            postProcessEventCrud(studyUuid, nodeUuid, childrenUuids);
         }
     }
 
@@ -1969,7 +1978,7 @@ public class StudyService {
         try {
             dynamicSimulationEventService.updateEvent(nodeUuid, event);
         } finally {
-            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+            postProcessEventCrud(studyUuid, nodeUuid, childrenUuids);
         }
     }
 
@@ -1980,7 +1989,7 @@ public class StudyService {
         try {
             dynamicSimulationEventService.deleteEvents(eventUuids);
         } finally {
-            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+            postProcessEventCrud(studyUuid, nodeUuid, childrenUuids);
         }
     }
 
