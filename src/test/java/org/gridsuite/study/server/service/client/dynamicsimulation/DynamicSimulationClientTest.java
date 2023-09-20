@@ -284,8 +284,8 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
     public void testResultCount() throws JsonProcessingException {
 
         // configure mock server response for test result count - supervision/results-count
-        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl))
+        String resultCountEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT);
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultCountEndPointUrl))
             .willReturn(WireMock.ok()
                     .withBody(objectMapper.writeValueAsString(1))
                     .withHeader("Content-Type", "application/json; charset=utf-8")
