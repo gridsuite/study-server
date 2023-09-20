@@ -42,7 +42,7 @@ public class EquipmentsContainerEmbeddable {
     public static List<EquipmentsContainer> fromEmbeddableContainerEquipments(List<EquipmentsContainerEmbeddable> containers) {
         return containers == null ? null :
                 containers.stream()
-                        .map(container -> new EquipmentsContainer(container.getContainerId(), container.getContainerName(), null, null))
+                        .map(container -> new EquipmentsContainer(container.getContainerId(), container.getContainerName()))
                         .collect(Collectors.toList());
     }
 }

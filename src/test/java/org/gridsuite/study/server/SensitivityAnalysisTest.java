@@ -152,33 +152,26 @@ public class SensitivityAnalysisTest {
     public static final String SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":0.0,\"angleFlowSensitivityValueThreshold\":0.0,\"flowVoltageSensitivityValueThreshold\":0.0," +
             "\"sensitivityInjectionsSet\":[],\"sensitivityInjection\":[],\"sensitivityHVDC\":[],\"sensitivityPST\":[],\"sensitivityNodes\":[]}";
     public static final String SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":90.0,\"angleFlowSensitivityValueThreshold\":0.6,\"flowVoltageSensitivityValueThreshold\":0.1," +
-            "\"sensitivityInjectionsSet\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"injections\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"distributionType\":\"PROPORTIONAL\",\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\",\"identifiableAttributes\":null," +
-            "\"notFoundEquipments\":null}],\"activated\":true}],\"sensitivityInjection\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"," +
-            "\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"injections\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"," +
-            "\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\",\"identifiableAttributes\":null," +
-            "\"notFoundEquipments\":null}],\"activated\":true},{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\",\"identifiableAttributes\":null," +
-            "\"notFoundEquipments\":null}],\"injections\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"activated\":true}]," +
-            "\"sensitivityHVDC\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"sensitivityType\":\"DELTA_MW\",\"hvdcs\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"activated\":true}," +
-            "{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"sensitivityType\":\"DELTA_MW\",\"hvdcs\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"activated\":true}]," +
-            "\"sensitivityPST\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"sensitivityType\":\"DELTA_MW\",\"psts\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"activated\":true}," +
-            "{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"sensitivityType\":\"DELTA_MW\",\"psts\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"activated\":true}]," +
-            "\"sensitivityNodes\":[{\"monitoredVoltageLevels\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"equipmentsInVoltageRegulation\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"activated\":true}," +
-            "{\"monitoredVoltageLevels\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"equipmentsInVoltageRegulation\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]," +
-            "\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"activated\":true}]}";
+            "\"sensitivityInjectionsSet\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}]," +
+            "\"injections\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"distributionType\":\"PROPORTIONAL\"," +
+            "\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}]," +
+            "\"sensitivityInjection\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}]," +
+            "\"injections\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\"," +
+            "\"containerName\":\"identifiable3\"}],\"activated\":true},{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}]," +
+            "\"injections\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\"," +
+            "\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityHVDC\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}]," +
+            "\"sensitivityType\":\"DELTA_MW\",\"hvdcs\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\"," +
+            "\"containerName\":\"identifiable3\"}],\"activated\":true},{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}]," +
+            "\"sensitivityType\":\"DELTA_MW\",\"hvdcs\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\"," +
+            "\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityPST\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}]," +
+            "\"sensitivityType\":\"DELTA_MW\",\"psts\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\"," +
+            "\"containerName\":\"identifiable3\"}],\"activated\":true},{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"sensitivityType\":\"DELTA_MW\"," +
+            "\"psts\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}]," +
+            "\"activated\":true}],\"sensitivityNodes\":[{\"monitoredVoltageLevels\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}]," +
+            "\"equipmentsInVoltageRegulation\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\"," +
+            "\"containerName\":\"identifiable3\"}],\"activated\":true},{\"monitoredVoltageLevels\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}]," +
+            "\"equipmentsInVoltageRegulation\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\"," +
+            "\"containerName\":\"identifiable3\"}],\"activated\":true}]}";
 
     @Before
     public void setup() throws IOException {
@@ -201,28 +194,28 @@ public class SensitivityAnalysisTest {
 
         SensitivityAnalysisInputData sensitivityAnalysisInputData = SensitivityAnalysisInputData.builder()
             .sensitivityInjectionsSets(List.of(SensitivityAnalysisInputData.SensitivityInjectionsSet.builder()
-                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name1", null, null)))
-                .injections(List.of(new EquipmentsContainer(UUID.randomUUID(), "name2", null, null)))
+                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name1")))
+                .injections(List.of(new EquipmentsContainer(UUID.randomUUID(), "name2")))
                 .distributionType(SensitivityAnalysisInputData.DistributionType.PROPORTIONAL)
-                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name3", null, null))).build()))
+                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name3"))).build()))
             .sensitivityInjections(List.of(SensitivityAnalysisInputData.SensitivityInjection.builder()
-                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name4", null, null)))
-                .injections(List.of(new EquipmentsContainer(UUID.randomUUID(), "name5", null, null)))
-                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name6", null, null))).build()))
+                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name4")))
+                .injections(List.of(new EquipmentsContainer(UUID.randomUUID(), "name5")))
+                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name6"))).build()))
             .sensitivityHVDCs(List.of(SensitivityAnalysisInputData.SensitivityHVDC.builder()
-                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name7", null, null)))
+                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name7")))
                 .sensitivityType(SensitivityAnalysisInputData.SensitivityType.DELTA_MW)
-                .hvdcs(List.of(new EquipmentsContainer(UUID.randomUUID(), "name8", null, null)))
-                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name9", null, null))).build()))
+                .hvdcs(List.of(new EquipmentsContainer(UUID.randomUUID(), "name8")))
+                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name9"))).build()))
             .sensitivityPSTs(List.of(SensitivityAnalysisInputData.SensitivityPST.builder()
-                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name10", null, null)))
+                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name10")))
                 .sensitivityType(SensitivityAnalysisInputData.SensitivityType.DELTA_A)
-                .psts(List.of(new EquipmentsContainer(UUID.randomUUID(), "name11", null, null)))
-                    .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name12", null, null))).build()))
+                .psts(List.of(new EquipmentsContainer(UUID.randomUUID(), "name11")))
+                    .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name12"))).build()))
             .sensitivityNodes(List.of(SensitivityAnalysisInputData.SensitivityNodes.builder()
-                .monitoredVoltageLevels(List.of(new EquipmentsContainer(UUID.randomUUID(), "name13", null, null)))
-                .equipmentsInVoltageRegulation(List.of(new EquipmentsContainer(UUID.randomUUID(), "name14", null, null)))
-                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name15", null, null))).build()))
+                .monitoredVoltageLevels(List.of(new EquipmentsContainer(UUID.randomUUID(), "name13")))
+                .equipmentsInVoltageRegulation(List.of(new EquipmentsContainer(UUID.randomUUID(), "name14")))
+                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name15"))).build()))
             .build();
         SENSITIVITY_INPUT = objectWriter.writeValueAsString(sensitivityAnalysisInputData);
 
@@ -608,9 +601,9 @@ public class SensitivityAnalysisTest {
                 content().string(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
 
         //create sensitivity analysis Parameters
-        EquipmentsContainer equipments1 = new EquipmentsContainer(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da321"), "identifiable1", null, null);
-        EquipmentsContainer equipments2 = new EquipmentsContainer(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da322"), "identifiable2", null, null);
-        EquipmentsContainer equipments3 = new EquipmentsContainer(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da323"), "identifiable3", null, null);
+        EquipmentsContainer equipments1 = new EquipmentsContainer(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da321"), "identifiable1");
+        EquipmentsContainer equipments2 = new EquipmentsContainer(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da322"), "identifiable2");
+        EquipmentsContainer equipments3 = new EquipmentsContainer(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da323"), "identifiable3");
         SensitivityAnalysisInputData.SensitivityInjectionsSet injectionsSet = new SensitivityAnalysisInputData.SensitivityInjectionsSet(List.of(equipments2), List.of(equipments1), SensitivityAnalysisInputData.DistributionType.PROPORTIONAL, List.of(equipments3), true);
         SensitivityAnalysisInputData.SensitivityInjection injections = new SensitivityAnalysisInputData.SensitivityInjection(List.of(equipments1), List.of(equipments2), List.of(equipments3), true);
         SensitivityAnalysisInputData.SensitivityHVDC hvdc = new SensitivityAnalysisInputData.SensitivityHVDC(List.of(equipments1), SensitivityAnalysisInputData.SensitivityType.DELTA_MW, List.of(equipments2), List.of(equipments3), true);

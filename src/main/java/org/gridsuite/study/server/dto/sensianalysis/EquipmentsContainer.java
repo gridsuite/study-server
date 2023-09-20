@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -31,11 +30,5 @@ public class EquipmentsContainer {
 
     @Schema(description = "container name")
     private String containerName;
-
-    @Schema(description = "equipments in container")
-    private List<IdentifiableAttributes> identifiableAttributes;
-
-    @Schema(description = "equipments not found in network")
-    private List<String> notFoundEquipments;
 }
 
