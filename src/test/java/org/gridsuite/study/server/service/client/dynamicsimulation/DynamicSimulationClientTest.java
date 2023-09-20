@@ -279,4 +279,34 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertTrue(true);
     }
+
+    @Test
+    public void testResultCount() throws JsonProcessingException {
+
+        // configure mock server response for test result count - supervision/results-count
+        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT);
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl))
+            .willReturn(WireMock.ok()
+                    .withBody(objectMapper.writeValueAsString(1))
+                    .withHeader("Content-Type", "application/json; charset=utf-8")
+            ));
+        Integer resultCount = dynamicSimulationClient.getResultsCount();
+
+        // check result
+        assertEquals("1", resultCount.toString());
+    }
+
+    @Test
+    public void testDeleteResults() {
+
+        // configure mock server response for test delete all results - results/
+        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlMatching(resultEndPointUrl))
+            .willReturn(WireMock.ok()
+                .withHeader("Content-Type", "application/json; charset=utf-8")
+            ));
+        dynamicSimulationClient.deleteResults();
+
+        assertTrue(true);
+    }
 }
