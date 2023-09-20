@@ -85,7 +85,13 @@ public class DynamicSimulationEventServiceImpl implements DynamicSimulationEvent
 
     @Transactional
     @Override
-    public void deleteEvents(UUID nodeUuid, List<UUID> eventUuids) {
+    public void deleteEvents(List<UUID> eventUuids) {
         eventRepository.deleteAllById(eventUuids);
+    }
+
+    @Transactional
+    @Override
+    public void deleteEventsByNodeId(UUID nodeUuid) {
+        eventRepository.deleteByNodeId(nodeUuid);
     }
 }

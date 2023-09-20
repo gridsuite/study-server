@@ -21,4 +21,6 @@ public interface EventRepository extends JpaRepository<EventEntity, UUID> {
     List<EventEntity> findAllByNodeId(UUID nodeId);
 
     EventEntity findByNodeIdAndEquipmentId(UUID nodeId, String equipmentId);
+
+    Long deleteByNodeId(UUID nodeId);
 }

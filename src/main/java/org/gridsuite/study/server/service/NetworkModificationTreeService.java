@@ -223,10 +223,9 @@ public class NetworkModificationTreeService {
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
     public void doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
-        List<UUID> removedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeId);
-        deleteNodes(nodeId, deleteChildren, false, removedNodes, deleteNodeInfos);
-        notificationService.emitNodesDeleted(studyId, removedNodes, deleteChildren);
+        deleteNodes(nodeId, deleteChildren, false, deleteNodeInfos);
+        notificationService.emitNodesDeleted(studyId, deleteNodeInfos.getRemovedNodeUuids(), deleteChildren);
     }
 
     @Transactional
@@ -266,7 +265,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, List<UUID> removedNodes, DeleteNodeInfos deleteNodeInfos) {
+    public void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, DeleteNodeInfos deleteNodeInfos) {
         Optional<NodeEntity> optNodeToDelete = nodesRepository.findById(id);
         optNodeToDelete.ifPresent(nodeToDelete -> {
             /* root cannot be deleted by accident */
@@ -326,9 +325,11 @@ public class NetworkModificationTreeService {
                 nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
             } else {
                 nodesRepository.findAllByParentNodeIdNode(id)
-                        .forEach(child -> deleteNodes(child.getIdNode(), true, false, removedNodes, deleteNodeInfos));
+                        .forEach(child -> deleteNodes(child.getIdNode(), true, false, deleteNodeInfos));
             }
-            removedNodes.add(id);
+
+            deleteNodeInfos.addRemovedNodeUuid(id);
+
             repositories.get(nodeToDelete.getType()).deleteByNodeId(id);
             nodesRepository.delete(nodeToDelete);
         });
