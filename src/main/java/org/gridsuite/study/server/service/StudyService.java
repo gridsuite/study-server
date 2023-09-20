@@ -1845,7 +1845,6 @@ public class StudyService {
         filterAndSetData(sensitivityAnalysisInputData.getSensitivityPSTs(), sensitivityAnalysisParametersValues.getSensitivityPST(), SensitivityAnalysisInputData.SensitivityPST::isActivated);
         filterAndSetData(sensitivityAnalysisInputData.getSensitivityNodes(), sensitivityAnalysisParametersValues.getSensitivityNodes(), SensitivityAnalysisInputData.SensitivityNodes::isActivated);
 
-
         UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider, sensitivityAnalysisInputData);
 
         updateSensitivityAnalysisResultUuid(nodeUuid, result);
