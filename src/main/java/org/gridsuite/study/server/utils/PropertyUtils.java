@@ -39,9 +39,4 @@ public final class PropertyUtils {
                 .filter(name -> Arrays.stream(authorizedNullProperties).noneMatch(n -> name.equals(n)))
                 .toArray(String[]::new);
     }
-
-    public static <T> void filterAndSetData(List<T> data, List<T> source, Predicate<T> predicate) {
-        data.clear();
-        data.addAll(source.stream().filter(predicate).collect(Collectors.toList()));
-    }
 }

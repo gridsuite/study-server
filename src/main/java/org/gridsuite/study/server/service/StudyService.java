@@ -1839,11 +1839,26 @@ public class StudyService {
         sensitivityAnalysisInputData.setLoadFlowSpecificParameters(specificParameters == null ?
                 Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)));
 
-        filterAndSetData(sensitivityAnalysisInputData.getSensitivityInjectionsSets(), sensitivityAnalysisParametersValues.getSensitivityInjectionsSet(), SensitivityAnalysisInputData.SensitivityInjectionsSet::isActivated);
-        filterAndSetData(sensitivityAnalysisInputData.getSensitivityInjections(), sensitivityAnalysisParametersValues.getSensitivityInjection(), SensitivityAnalysisInputData.SensitivityInjection::isActivated);
-        filterAndSetData(sensitivityAnalysisInputData.getSensitivityHVDCs(), sensitivityAnalysisParametersValues.getSensitivityHVDC(), SensitivityAnalysisInputData.SensitivityHVDC::isActivated);
-        filterAndSetData(sensitivityAnalysisInputData.getSensitivityPSTs(), sensitivityAnalysisParametersValues.getSensitivityPST(), SensitivityAnalysisInputData.SensitivityPST::isActivated);
-        filterAndSetData(sensitivityAnalysisInputData.getSensitivityNodes(), sensitivityAnalysisParametersValues.getSensitivityNodes(), SensitivityAnalysisInputData.SensitivityNodes::isActivated);
+        sensitivityAnalysisInputData.setSensitivityInjectionsSets(sensitivityAnalysisParametersValues.getSensitivityInjectionsSet()
+                .stream()
+                .filter(SensitivityAnalysisInputData.SensitivityInjectionsSet::isActivated)
+                .collect(Collectors.toList()));
+        sensitivityAnalysisInputData.setSensitivityInjections(sensitivityAnalysisParametersValues.getSensitivityInjection()
+                .stream()
+                .filter(SensitivityAnalysisInputData.SensitivityInjection::isActivated)
+                .collect(Collectors.toList()));
+        sensitivityAnalysisInputData.setSensitivityHVDCs(sensitivityAnalysisParametersValues.getSensitivityHVDC()
+                .stream()
+                .filter(SensitivityAnalysisInputData.SensitivityHVDC::isActivated)
+                .collect(Collectors.toList()));
+        sensitivityAnalysisInputData.setSensitivityPSTs(sensitivityAnalysisParametersValues.getSensitivityPST()
+                .stream()
+                .filter(SensitivityAnalysisInputData.SensitivityPST::isActivated)
+                .collect(Collectors.toList()));
+        sensitivityAnalysisInputData.setSensitivityNodes(sensitivityAnalysisParametersValues.getSensitivityNodes()
+                .stream()
+                .filter(SensitivityAnalysisInputData.SensitivityNodes::isActivated)
+                .collect(Collectors.toList()));
 
         UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider, sensitivityAnalysisInputData);
 
