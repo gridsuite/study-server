@@ -80,7 +80,6 @@ import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.elasticsearch.EquipmentInfosService.EQUIPMENT_TYPE_SCORES;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
-import static org.gridsuite.study.server.utils.PropertyUtils.filterAndSetData;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
