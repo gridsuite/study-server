@@ -7,7 +7,7 @@
 package org.gridsuite.study.server.repository.sensianalysis;
 
 import lombok.*;
-import org.gridsuite.study.server.repository.ContainerEquipmentsEmbeddable;
+import org.gridsuite.study.server.repository.EquipmentsContainerEmbeddable;
 
 import javax.persistence.*;
 import java.util.List;
@@ -36,21 +36,21 @@ public class SensitivityFactorEntity {
             name = "monitoredBranchEntity",
             joinColumns = @JoinColumn(name = "MonitoredBranchId", foreignKey = @ForeignKey(name = "sensitivityFactorEntity_monitoredBranchId_fk"))
     )
-    private List<ContainerEquipmentsEmbeddable> monitoredBranch;
+    private List<EquipmentsContainerEmbeddable> monitoredBranch;
 
     @ElementCollection
     @CollectionTable(
             name = "injectionsEntity",
             joinColumns = @JoinColumn(name = "InjectionsId", foreignKey = @ForeignKey(name = "sensitivityFactorEntity_injections_fk"))
     )
-    private List<ContainerEquipmentsEmbeddable> injections;
+    private List<EquipmentsContainerEmbeddable> injections;
 
     @ElementCollection
     @CollectionTable(
             name = "contingenciesEntity",
             joinColumns = @JoinColumn(name = "ContingenciesId", foreignKey = @ForeignKey(name = "sensitivityFactorEntity_contingencies_fk"))
     )
-    private List<ContainerEquipmentsEmbeddable> contingencies;
+    private List<EquipmentsContainerEmbeddable> contingencies;
 
     @Column(name = "activatedEntity", columnDefinition = "boolean default true")
     private boolean activated;

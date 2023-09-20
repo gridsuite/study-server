@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 @NoArgsConstructor
 @Embeddable
-public class ContainerEquipmentsEmbeddable {
+public class EquipmentsContainerEmbeddable {
 
     @Column(name = "containerId")
     private UUID containerId;
@@ -32,14 +32,14 @@ public class ContainerEquipmentsEmbeddable {
     @Column(name = "containerName")
     private String containerName;
 
-    public static List<ContainerEquipmentsEmbeddable> toEmbeddableContainerEquipments(List<EquipmentsContainer> containers) {
+    public static List<EquipmentsContainerEmbeddable> toEmbeddableContainerEquipments(List<EquipmentsContainer> containers) {
         return containers == null ? null :
                 containers.stream()
-                        .map(container -> new ContainerEquipmentsEmbeddable(container.getContainerId(), container.getContainerName()))
+                        .map(container -> new EquipmentsContainerEmbeddable(container.getContainerId(), container.getContainerName()))
                         .collect(Collectors.toList());
     }
 
-    public static List<EquipmentsContainer> fromEmbeddableContainerEquipments(List<ContainerEquipmentsEmbeddable> containers) {
+    public static List<EquipmentsContainer> fromEmbeddableContainerEquipments(List<EquipmentsContainerEmbeddable> containers) {
         return containers == null ? null :
                 containers.stream()
                         .map(container -> new EquipmentsContainer(container.getContainerId(), container.getContainerName(), null, null))
