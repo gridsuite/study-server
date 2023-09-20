@@ -1,4 +1,4 @@
-package org.gridsuite.study.server.utils;
+package org.gridsuite.study.server.dto;
 
 public enum ComputationType {
     LOAD_FLOW("LoadFlow"),

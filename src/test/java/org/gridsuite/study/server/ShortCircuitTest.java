@@ -29,7 +29,7 @@ import org.gridsuite.study.server.service.SensitivityAnalysisService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
-import org.gridsuite.study.server.utils.ComputationType;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;

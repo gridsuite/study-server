@@ -30,7 +30,7 @@ import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-import org.gridsuite.study.server.utils.ComputationType;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
