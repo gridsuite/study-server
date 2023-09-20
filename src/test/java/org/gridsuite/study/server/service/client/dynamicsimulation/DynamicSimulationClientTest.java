@@ -293,7 +293,7 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
         Integer resultCount = dynamicSimulationClient.getResultsCount();
 
         // check result
-        assertEquals("1", resultCount.toString());
+        assertEquals(1, resultCount.intValue());
     }
 
     @Test
