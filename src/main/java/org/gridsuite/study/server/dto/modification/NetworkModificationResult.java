@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.dto.modification;
 
-import com.powsybl.iidm.network.IdentifiableType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
@@ -46,7 +45,7 @@ public class NetworkModificationResult {
 
     public Set<String> getImpactedSubstationsIds() {
         return networkImpacts.stream()
-            .filter(impact -> impact.getImpactType() != SimpleElementImpact.SimpleImpactType.DELETION && impact.getElementType() != IdentifiableType.SUBSTATION)
+            .filter(impact -> impact.getImpactType() != SimpleElementImpact.SimpleImpactType.DELETION)
             .flatMap(impact -> impact.getSubstationIds().stream())
             .collect(Collectors.toCollection(TreeSet::new));
     }
