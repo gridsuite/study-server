@@ -22,11 +22,14 @@ import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimula
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_RUNNING;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -145,6 +148,20 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     public void deleteResult(UUID resultUuid) {
         Objects.requireNonNull(resultUuid);
         dynamicSimulationClient.deleteResult(resultUuid);
+    }
+
+    @Override
+    public void deleteResults() {
+        try {
+            dynamicSimulationClient.deleteResults();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
+        }
+    }
+
+    @Override
+    public Integer getResultsCount() {
+        return dynamicSimulationClient.getResultsCount();
     }
 
     @Override
