@@ -638,7 +638,6 @@ public class StudyService {
                 .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
                 .sensitivityAnalysisParameters(SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues))
                 .importParameters(newImportParameters)
-                .indexationStatus(StudyIndexationStatus.NOT_INDEXED)
                 .build();
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), UUID.randomUUID()));
 
@@ -1214,9 +1213,9 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity updateStudyEntityIndexation(StudyEntity studyEntity, StudyIndexationStatus indexationStatus) {
+    public StudyEntity updateStudyIndexationStatus(StudyEntity studyEntity, StudyIndexationStatus indexationStatus) {
         studyEntity.setIndexationStatus(indexationStatus);
-        notificationService.emitStudyChanged(studyEntity.getId(), NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatus);
+        notificationService.emitStudyIndexationStatusChanged(studyEntity.getId(), indexationStatus);
         return studyEntity;
     }
 
@@ -1645,14 +1644,14 @@ public class StudyService {
         studyInfosService.recreateStudyInfos(studyInfos);
 
         // Reset indexation status
-        self.updateStudyEntityIndexation(study, StudyIndexationStatus.INDEXING_ONGOING);
+        self.updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXING_ONGOING);
         try {
             networkConversionService.reindexStudyNetworkEquipments(study.getNetworkUuid());
-            self.updateStudyEntityIndexation(study, StudyIndexationStatus.INDEXED);
-        } catch (HttpStatusCodeException e) {
+            self.updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXED);
+        } catch (Exception e) {
             // Allow to retry indexation
-            self.updateStudyEntityIndexation(study, StudyIndexationStatus.NOT_INDEXED);
-            throw handleHttpError(e, STUDY_INDEXATION_FAILED);
+            self.updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
+            throw e;
         }
         invalidateBuild(study.getId(), networkModificationTreeService.getStudyRootNodeUuid(study.getId()), false, false);
         LOGGER.info("Study with id = '{}' has been reindexed", study.getId());
@@ -1676,12 +1675,8 @@ public class StudyService {
     }
 
     private void checkStudyIndexation(StudyEntity study) {
-        try {
-            if (!networkConversionService.checkStudyIndexation(study.getNetworkUuid())) {
-                updateStudyEntityIndexation(study, StudyIndexationStatus.NOT_INDEXED);
-            }
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, STUDY_CHECK_INDEXATION_FAILED);
+        if (!networkConversionService.checkStudyIndexation(study.getNetworkUuid())) {
+            updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
         }
     }
 

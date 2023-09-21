@@ -108,9 +108,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             foreignKey = @ForeignKey(name = "studyEntity_importParameters_fk1"))
     private Map<String, String> importParameters;
 
-    @Column(name = "indexationStatus", length = 32, columnDefinition = "varchar(32) default 'NOT_INDEXED'")
     @Enumerated(EnumType.STRING)
-    private StudyIndexationStatus indexationStatus;
+    @Builder.Default
+    private StudyIndexationStatus indexationStatus = StudyIndexationStatus.NOT_INDEXED;
 
     public ShortCircuitParametersEntity getShortCircuitParameters() {
         if (this.shortCircuitParameters == null) {

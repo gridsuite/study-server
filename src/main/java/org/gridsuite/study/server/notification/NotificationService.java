@@ -178,11 +178,11 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyChanged(UUID studyUuid, String updateType, StudyIndexationStatus status) {
+    public void emitStudyIndexationStatusChanged(UUID studyUuid, StudyIndexationStatus status) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, updateType)
-                .setHeader(HEADER_INDEXATION_STATUS, status.toString())
+                .setHeader(HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_INDEXATION_STATUS)
+                .setHeader(HEADER_INDEXATION_STATUS, status.name())
                 .build());
     }
 
