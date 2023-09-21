@@ -248,7 +248,8 @@ public class NetworkModificationTreeService {
     public void stashNodes(UUID id, boolean stashChildren, List<UUID> stashedNodes, boolean firstIteration) {
         Optional<NodeEntity> optNodeToStash = nodesRepository.findById(id);
         optNodeToStash.ifPresent(nodeToStash -> {
-
+            UUID modificationGroupUuid = getModificationGroupUuid(nodeToStash.getIdNode());
+            networkModificationService.deleteStashedModifications(modificationGroupUuid);
             if (!stashChildren) {
                 nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> node.setParentNode(nodeToStash.getParentNode()));
             } else {
