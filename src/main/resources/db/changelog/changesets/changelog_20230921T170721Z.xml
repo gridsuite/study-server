@@ -1,0 +1,34 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="homereti (generated)" id="1695316066777-5">
+        <createTable tableName="sensitivity_factor_entity1">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="sensitivity_factor_entity1PK"/>
+            </column>
+            <column name="sensitivity_analysis_parameters_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="homereti (generated)" id="1695316066777-6">
+        <createTable tableName="sensitivity_factor_entity2">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="sensitivity_factor_entity2PK"/>
+            </column>
+            <column name="sensitivity_analysis_parameters_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="homereti (generated)" id="1695316066777-7">
+        <addForeignKeyConstraint baseColumnNames="sensitivity_analysis_parameters_id" baseTableName="sensitivity_factor_entity2" constraintName="FK3326hqqwa7iwosquawa21bhkr" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="homereti (generated)" id="1695316066777-8">
+        <addForeignKeyConstraint baseColumnNames="sensitivity_analysis_parameters_id" baseTableName="sensitivity_factor_entity1" constraintName="FK6u7lv05twtm2khimi3pw03egg" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="homereti (generated)" id="1695316066777-9">
+        <addForeignKeyConstraint baseColumnNames="id" baseTableName="sensitivity_factor_entity2" constraintName="FKli7rcneyr4jvo7n8omum6cr9n" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_factor_entity" validate="true"/>
+    </changeSet>
+    <changeSet author="homereti (generated)" id="1695316066777-10">
+        <addForeignKeyConstraint baseColumnNames="id" baseTableName="sensitivity_factor_entity1" constraintName="FKsuwfnchou6c17wp5fyb7sf3q8" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_factor_entity" validate="true"/>
+    </changeSet>
+    <changeSet author="homereti (generated)" id="1695316066777-12">
+        <dropColumn columnName="SENSITIVITY_ANALYSIS_PARAMETERS_ID" tableName="SENSITIVITY_FACTOR_ENTITY"/>
+    </changeSet>
+</databaseChangeLog>

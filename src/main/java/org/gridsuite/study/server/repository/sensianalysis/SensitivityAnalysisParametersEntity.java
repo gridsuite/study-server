@@ -44,7 +44,7 @@ public class SensitivityAnalysisParametersEntity {
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
-    private List<SensitivityFactorEntity> sensitivityInjections;
+    private List<SensitivityFactorEntity1> sensitivityInjections;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
@@ -56,5 +56,5 @@ public class SensitivityAnalysisParametersEntity {
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
-    private List<SensitivityFactorEntity> sensitivityNodes;
+    private List<SensitivityFactorEntity2> sensitivityNodes;
 }

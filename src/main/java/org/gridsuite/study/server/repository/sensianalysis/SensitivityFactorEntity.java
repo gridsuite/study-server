@@ -23,7 +23,6 @@ import java.util.UUID;
 @Entity
 @Builder
 @Inheritance(strategy = InheritanceType.JOINED)
-@Table(name = "sensitivityFactorEntity")
 public class SensitivityFactorEntity {
 
     @Id

@@ -15,10 +15,7 @@ import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData
 import org.gridsuite.study.server.dto.sensianalysis.*;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityFactorEntity;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityFactorWithDistribTypeEntity;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityFactorWithSensiTypeEntity;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
+import org.gridsuite.study.server.repository.sensianalysis.*;
 import org.gridsuite.study.server.repository.EquipmentsContainerEmbeddable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -214,11 +211,11 @@ public class SensitivityAnalysisService {
                 sensitivityInjectionsSet.add(entity);
             }
         }
-        List<SensitivityFactorEntity> sensitivityInjections = new ArrayList<>();
+        List<SensitivityFactorEntity1> sensitivityInjections = new ArrayList<>();
 
         if (parameters.getSensitivityInjection() != null) {
             for (SensitivityAnalysisInputData.SensitivityInjection sensitivityInjection : parameters.getSensitivityInjection()) {
-                SensitivityFactorEntity entity = new SensitivityFactorEntity();
+                SensitivityFactorEntity1 entity = new SensitivityFactorEntity1();
                 entity.setMonitoredBranch(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityInjection.getMonitoredBranches()));
                 entity.setInjections(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityInjection.getInjections()));
                 entity.setContingencies(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityInjection.getContingencies()));
@@ -253,11 +250,11 @@ public class SensitivityAnalysisService {
             }
         }
 
-        List<SensitivityFactorEntity> sensitivityNodes = new ArrayList<>();
+        List<SensitivityFactorEntity2> sensitivityNodes = new ArrayList<>();
 
         if (parameters.getSensitivityNodes() != null) {
             for (SensitivityAnalysisInputData.SensitivityNodes sensitivityNode : parameters.getSensitivityNodes()) {
-                SensitivityFactorEntity entity = new SensitivityFactorEntity();
+                SensitivityFactorEntity2 entity = new SensitivityFactorEntity2();
                 entity.setMonitoredBranch(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityNode.getMonitoredVoltageLevels()));
                 entity.setInjections(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityNode.getEquipmentsInVoltageRegulation()));
                 entity.setContingencies(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityNode.getContingencies()));
