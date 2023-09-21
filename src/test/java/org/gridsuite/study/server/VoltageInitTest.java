@@ -414,21 +414,9 @@ public class VoltageInitTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
 
         //Test result count
-        mockMvc.perform(delete("/v1/supervision/computation/results")
-            .queryParam("type", String.valueOf(ComputationType.VOLTAGE_INITIALIZATION))
-            .queryParam("dryRun", String.valueOf(true)))
-            .andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
-
+        testResultCount();
         //Delete Voltage init results
-        assertEquals(1, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
-        mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(ComputationType.VOLTAGE_INITIALIZATION))
-                .queryParam("dryRun", String.valueOf(false)))
-            .andExpect(status().isOk());
-
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results")));
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
+        testDeleteResults(1);
     }
 
     @Test
@@ -565,6 +553,25 @@ public class VoltageInitTest {
         } else {
             assertTrue(updateType.equals(updateTypeToCheck) || updateType.equals(otherUpdateTypeToCheck));
         }
+    }
+
+    private void testResultCount() throws Exception {
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.VOLTAGE_INITIALIZATION))
+                .queryParam("dryRun", String.valueOf(true)))
+            .andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
+    }
+
+    private void testDeleteResults(int expectedInitialResultCount) throws Exception {
+        assertEquals(expectedInitialResultCount, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.VOLTAGE_INITIALIZATION))
+                .queryParam("dryRun", String.valueOf(false)))
+            .andExpect(status().isOk());
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results")));
+        assertEquals(0, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
     }
 
     @Test
