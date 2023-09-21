@@ -26,6 +26,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -58,5 +59,11 @@ public class NodeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "study_id", foreignKey = @ForeignKey(name = "study_id_fk_constraint"))
     StudyEntity study;
+
+    @Column(name = "stashed")
+    boolean stashed;
+
+    @Column(name = "stash_date")
+    private LocalDateTime stashDate;
 
 }
