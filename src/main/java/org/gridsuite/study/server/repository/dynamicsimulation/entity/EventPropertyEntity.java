@@ -25,14 +25,15 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "event_property", indexes = {@Index(name = "property_event_id_index", columnList = "event_id")})
-@IdClass(EventPropertyId.class)
+@Table(name = "event_property",
+    indexes = {@Index(name = "property_event_id_index", columnList = "event_id")},
+    uniqueConstraints = @UniqueConstraint(columnNames = {"event_id", "name"}))
 public class EventPropertyEntity implements Serializable {
-    @Id
-    @Column(name = "event_id")
-    private UUID eventId;
 
     @Id
+    @Column(name = "id")
+    private UUID id;
+
     @Column(name = "name")
     private String name;
 
@@ -45,11 +46,10 @@ public class EventPropertyEntity implements Serializable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", foreignKey = @ForeignKey(name = "event_property_fk"))
-    @MapsId("eventId")
     private EventEntity event;
 
     public EventPropertyEntity(EventEntity event, EventPropertyInfos eventProperty) {
-        this.eventId = event.getId();
+        this.id = UUID.randomUUID();
         this.event = event;
         this.name = eventProperty.getName();
         this.value = eventProperty.getValue();

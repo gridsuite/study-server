@@ -14,6 +14,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.repository.AbstractManuallyAssignedIdentifierEntity;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -31,6 +32,7 @@ import static javax.persistence.TemporalType.TIMESTAMP;
 @Setter
 @Entity
 @Table(name = "event", indexes = {@Index(name = "event_node_id_index", columnList = "node_id")})
+@EntityListeners(AuditingEntityListener.class)
 public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements Serializable {
     @Id
     @Column(name = "id")
@@ -62,7 +64,7 @@ public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private Date updatedDate;
 
     public EventEntity(EventInfos event) {
-        this.id = event.getId() == null ? UUID.randomUUID() : event.getId();
+        this.id = UUID.randomUUID();
         this.nodeId = event.getNodeId();
         this.equipmentId = event.getEquipmentId();
         this.equipmentType = event.getEquipmentType();

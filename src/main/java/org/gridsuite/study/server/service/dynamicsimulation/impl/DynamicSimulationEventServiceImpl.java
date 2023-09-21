@@ -10,15 +10,16 @@ package org.gridsuite.study.server.service.dynamicsimulation.impl;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.repository.dynamicsimulation.EventRepository;
 import org.gridsuite.study.server.repository.dynamicsimulation.entity.EventEntity;
+import org.gridsuite.study.server.repository.dynamicsimulation.entity.EventPropertyEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -35,7 +36,7 @@ public class DynamicSimulationEventServiceImpl implements DynamicSimulationEvent
     @Transactional(readOnly = true)
     @Override
     public List<EventInfos> getEventsByNodeId(UUID nodeUuid) {
-        return eventRepository.findAllByNodeId(nodeUuid).stream().map(EventInfos::new).collect(Collectors.toList());
+        return eventRepository.findAllByNodeId(nodeUuid).stream().map(EventInfos::new).toList();
     }
 
     @Transactional(readOnly = true)
@@ -57,23 +58,30 @@ public class DynamicSimulationEventServiceImpl implements DynamicSimulationEvent
     @Override
     public void updateEvent(UUID nodeUuid, EventInfos event) {
 
+        // update event => do only merge properties, other fields are immutables
+        if (CollectionUtils.isEmpty(event.getProperties())) {
+            return;
+        }
+
         Optional<EventEntity> eventEntityOpt = eventRepository.findById(event.getId());
 
         eventEntityOpt.ifPresent(eventEntityToUpdate -> {
             // merge entity's values with ones in the dto
             EventEntity eventEntityFromDto = new EventEntity(event);
 
-            // replace completely by all new properties for the simplicity
-            if (!CollectionUtils.isEmpty(eventEntityFromDto.getProperties())) {
-                if (eventEntityToUpdate.getProperties() != null) {
-                    eventEntityToUpdate.getProperties().clear();
-                    eventEntityToUpdate.getProperties().addAll(eventEntityFromDto.getProperties());
-                } else {
-                    eventEntityToUpdate.setProperties(eventEntityFromDto.getProperties());
-                }
-            }
+            // 1 - remove properties which do not exist from the dto
+            List<String> propertyNamesFromDto = eventEntityFromDto.getProperties().stream().map(EventPropertyEntity::getName).toList();
+            eventEntityToUpdate.getProperties().removeIf(property -> !propertyNamesFromDto.contains(property.getName()));
 
-            // other fields actually immutable => nothing to reassign for the entity
+            // 2 - set value from dto for remaining properties
+            eventEntityToUpdate.getProperties().forEach(property -> eventEntityFromDto.getProperties().stream()
+                .filter(elem -> Objects.equals(elem.getName(), property.getName()))
+                .findFirst().ifPresent(elem -> property.setValue(elem.getValue())));
+
+            // 3 - add new properties from dto
+            List<String> propertyNamesFromUpdate = eventEntityToUpdate.getProperties().stream().map(EventPropertyEntity::getName).toList();
+            eventEntityFromDto.getProperties().removeIf(property -> propertyNamesFromUpdate.contains(property.getName()));
+            eventEntityToUpdate.getProperties().addAll(eventEntityFromDto.getProperties());
 
             eventRepository.save(eventEntityToUpdate);
         });

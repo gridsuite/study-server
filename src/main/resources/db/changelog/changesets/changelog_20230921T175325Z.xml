@@ -1,0 +1,43 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="phamquy (generated)" id="1695318816725-5">
+        <createTable tableName="event">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="eventPK"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP"/>
+            <column name="equipment_id" type="VARCHAR(255)"/>
+            <column name="equipment_type" type="VARCHAR(255)"/>
+            <column name="event_type" type="VARCHAR(255)"/>
+            <column name="node_id" type="UUID"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="phamquy (generated)" id="1695318816725-6">
+        <createTable tableName="event_property">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="event_propertyPK"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="type" type="VARCHAR(255)"/>
+            <column name="value_" type="VARCHAR(255)"/>
+            <column name="event_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="phamquy (generated)" id="1695318816725-7">
+        <addUniqueConstraint columnNames="event_id, name" constraintName="UKgt0u30iwtpnc451hls7aq3366" tableName="event_property"/>
+    </changeSet>
+    <changeSet author="phamquy (generated)" id="1695318816725-8">
+        <createIndex indexName="event_node_id_index" tableName="event">
+            <column name="node_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="phamquy (generated)" id="1695318816725-9">
+        <createIndex indexName="property_event_id_index" tableName="event_property">
+            <column name="event_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="phamquy (generated)" id="1695318816725-10">
+        <addForeignKeyConstraint baseColumnNames="event_id" baseTableName="event_property" constraintName="event_property_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="event" validate="true"/>
+    </changeSet>
+</databaseChangeLog>
