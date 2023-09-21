@@ -306,7 +306,5 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
                 .withHeader("Content-Type", "application/json; charset=utf-8")
             ));
         dynamicSimulationClient.deleteResults();
-
-        assertTrue(true);
     }
 }
