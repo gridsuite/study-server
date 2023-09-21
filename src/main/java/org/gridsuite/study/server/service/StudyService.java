@@ -1644,13 +1644,13 @@ public class StudyService {
         studyInfosService.recreateStudyInfos(studyInfos);
 
         // Reset indexation status
-        self.updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXING_ONGOING);
+        updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXING_ONGOING);
         try {
             networkConversionService.reindexStudyNetworkEquipments(study.getNetworkUuid());
-            self.updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXED);
+            updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXED);
         } catch (Exception e) {
             // Allow to retry indexation
-            self.updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
+            updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
             throw e;
         }
         invalidateBuild(study.getId(), networkModificationTreeService.getStudyRootNodeUuid(study.getId()), false, false);
