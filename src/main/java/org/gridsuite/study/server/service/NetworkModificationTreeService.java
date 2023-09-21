@@ -580,7 +580,7 @@ public class NetworkModificationTreeService {
     }
 
     public List<Pair<AbstractNode, Integer>> getStashedNodes(UUID studyUuid) {
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndStashedAndParentNodeOrderByStashDateDesc(studyUuid, true, null);
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndStashedAndParentNodeIdNodeOrderByStashDateDesc(studyUuid, true, null);
         List<Pair<AbstractNode, Integer>> result = new ArrayList<>();
         repositories.get(NodeType.NETWORK_MODIFICATION).getAllInOrder(nodes.stream().map(NodeEntity::getIdNode).toList())
                 .forEach(abstractNode -> {
