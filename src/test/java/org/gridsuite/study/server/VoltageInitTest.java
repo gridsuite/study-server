@@ -113,6 +113,8 @@ public class VoltageInitTest {
 
     private static final String VOLTAGE_INIT_RESULT_JSON = "{\"version\":\"1.0\"}";
 
+    private static final String VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST = "[{\"type\": \"VOLTAGE_INIT_MODIFICATION\",\"uuid\": \"254a3b85-14ad-4436-bf62-3e60af831dd1\",\"date\": \"2023-09-18T10:58:32.582239Z\",\"stashed\": false,\"generators\": [],\"transformers\": [],\"staticVarCompensators\": [],\"vscConverterStations\": [],\"shuntCompensators\": []}]";
+
     private static final String VOLTAGE_INIT_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String VARIANT_ID = "variant_1";
 
@@ -237,10 +239,13 @@ public class VoltageInitTest {
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/groups/.*/duplications.*")) {
                     Optional<NetworkModificationResult> networkModificationResult =
-                        createModificationResultWithElementImpact(SimpleElementImpact.SimpleImpactType.MODIFICATION,
-                            IdentifiableType.GENERATOR, "genId", Set.of("s1"));
+                            createModificationResultWithElementImpact(SimpleElementImpact.SimpleImpactType.MODIFICATION,
+                                    IdentifiableType.GENERATOR, "genId", Set.of("s1"));
                     return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(networkModificationResult))
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/modifications\\?errorOnGroupNotFound=false&stashed=false")) {
+                    return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST))
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/stop.*")
                         || path.matches("/v1/results/" + VOLTAGE_INIT_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? VOLTAGE_INIT_OTHER_NODE_RESULT_UUID : VOLTAGE_INIT_RESULT_UUID;
@@ -441,6 +446,14 @@ public class VoltageInitTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+
+        // just retrieve modifications list from modificationNode3Uuid
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", studyNameUserIdUuid, modificationNode3Uuid)
+                .header("userId", "userId")).andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(2, server).stream().allMatch(r ->
+                r.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/modifications\\?errorOnGroupNotFound=false&stashed=false") ||
+                r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")
+        ));
 
         // clone and copy modifications to modificationNode3Uuid
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", studyNameUserIdUuid, modificationNode3Uuid)

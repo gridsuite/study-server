@@ -2011,6 +2011,13 @@ public class StudyService {
                 .orElse(null);
     }
 
+    @Transactional(readOnly = true)
+    public String getVoltageInitModifications(@NonNull UUID nodeUuid) {
+        // get modifications group uuid associated to voltage init results
+        UUID voltageInitModificationsGroupUuid = voltageInitService.getModificationsGroupUuid(nodeUuid);
+        return networkModificationService.getModifications(voltageInitModificationsGroupUuid, false);
+    }
+
     public void copyVoltageInitModifications(UUID studyUuid, UUID nodeUuid, String userId) {
         // get modifications group uuid associated to voltage init results
         UUID voltageInitModificationsGroupUuid = voltageInitService.getModificationsGroupUuid(nodeUuid);
