@@ -16,6 +16,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
 import javax.persistence.*;
+import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,7 +31,7 @@ import static javax.persistence.TemporalType.TIMESTAMP;
 @Setter
 @Entity
 @Table(name = "event", indexes = {@Index(name = "event_node_id_index", columnList = "node_id")})
-public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> {
+public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements Serializable {
     @Id
     @Column(name = "id")
     private UUID id;

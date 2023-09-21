@@ -6,19 +6,16 @@
  */
 package org.gridsuite.study.server.repository.dynamicsimulation.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.Embeddable;
 import java.io.Serializable;
-import java.util.Objects;
 import java.util.UUID;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -26,24 +23,10 @@ import java.util.UUID;
 @Embeddable
 public class EventPropertyId implements Serializable {
 
+    @EqualsAndHashCode.Include
     private UUID eventId;
 
+    @EqualsAndHashCode.Include
     private String name;
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        EventPropertyId that = (EventPropertyId) o;
-        return Objects.equals(eventId, that.eventId) && Objects.equals(name, that.name);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(eventId, name);
-    }
 }

@@ -34,20 +34,16 @@ public class DynamicSimulationEventServiceImpl implements DynamicSimulationEvent
 
     @Transactional(readOnly = true)
     @Override
-    public List<EventInfos> getEvents(UUID nodeUuid) {
+    public List<EventInfos> getEventsByNodeId(UUID nodeUuid) {
         return eventRepository.findAllByNodeId(nodeUuid).stream().map(EventInfos::new).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     @Override
-    public EventInfos getEvent(UUID nodeUuid, String equipmentId) {
+    public EventInfos getEventByNodeIdAndEquipmentId(UUID nodeUuid, String equipmentId) {
         EventEntity eventEntity = eventRepository.findByNodeIdAndEquipmentId(nodeUuid, equipmentId);
 
-        if (eventEntity == null) {
-            return null;
-        } else {
-            return new EventInfos(eventEntity);
-        }
+        return eventEntity != null ? new EventInfos(eventEntity) : null;
     }
 
     @Transactional

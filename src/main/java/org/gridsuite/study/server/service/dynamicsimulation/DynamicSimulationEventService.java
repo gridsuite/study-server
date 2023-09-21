@@ -17,9 +17,9 @@ import java.util.UUID;
  */
 public interface DynamicSimulationEventService {
 
-    List<EventInfos> getEvents(UUID nodeUuid);
+    List<EventInfos> getEventsByNodeId(UUID nodeUuid);
 
-    EventInfos getEvent(UUID nodeUuid, String equipmentId);
+    EventInfos getEventByNodeIdAndEquipmentId(UUID nodeUuid, String equipmentId);
 
     void createEvent(UUID nodeUuid, EventInfos event);
 

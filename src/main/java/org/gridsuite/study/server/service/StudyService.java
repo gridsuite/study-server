@@ -1577,11 +1577,10 @@ public class StudyService {
         deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
         boolean invalidateChildrenBuild = !deleteChildren && !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeId));
         List<NodeEntity> childrenNodes = networkModificationTreeService.getChildrenByParentUuid(nodeId);
-        networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
+        List<UUID> removedNodes = networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
-                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
@@ -1590,8 +1589,9 @@ public class StudyService {
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
-                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds()))
-        );
+                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds())),
+                studyServerExecutionService.runAsync(() -> removedNodes.forEach(dynamicSimulationEventService::deleteEventsByNodeId))
+                );
 
         try {
             executeInParallel.get();
@@ -1943,12 +1943,12 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public List<EventInfos> getDynamicSimulationEvents(UUID nodeUuid) {
-        return dynamicSimulationEventService.getEvents(nodeUuid);
+        return dynamicSimulationEventService.getEventsByNodeId(nodeUuid);
     }
 
     @Transactional(readOnly = true)
     public EventInfos getDynamicSimulationEvent(UUID nodeUuid, String equipmentId) {
-        return dynamicSimulationEventService.getEvent(nodeUuid, equipmentId);
+        return dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(nodeUuid, equipmentId);
     }
 
     private void postProcessEventCrud(UUID studyUuid, UUID nodeUuid, List<UUID> childrenUuids) {
@@ -2024,12 +2024,13 @@ public class StudyService {
         DynamicSimulationParametersInfos configuredParameters = getDynamicSimulationParameters(studyUuid);
 
         // load configured events persisted in the study server DB
-        List<EventInfos> events = dynamicSimulationEventService.getEvents(nodeUuid);
+        List<EventInfos> events = dynamicSimulationEventService.getEventsByNodeId(nodeUuid);
 
         // override configured parameters by provided parameters (only provided fields)
         DynamicSimulationParametersInfos mergeParameters = new DynamicSimulationParametersInfos();
         // attach events to the merged parameters
         mergeParameters.setEvents(events);
+
         if (configuredParameters != null) {
             PropertyUtils.copyNonNullProperties(configuredParameters, mergeParameters);
         }
