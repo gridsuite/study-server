@@ -788,6 +788,32 @@ public class StudyTest {
     }
 
     @Test
+    public void testDeleteStudyWithNonExistingCase() throws Exception {
+        UUID studyUuid = createStudy("userId", CASE_UUID);
+
+        UUID stubUuid = wireMockUtils.stubNetworkModificationDeleteGroup();
+
+        // Changing the study case uuid with a non existing case
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
+        assertNotNull(studyEntity);
+        UUID nonExistingCaseUuid = UUID.randomUUID();
+        studyEntity.setCaseUuid(nonExistingCaseUuid);
+        studyRepository.save(studyEntity);
+
+        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isOk());
+
+        assertTrue(studyRepository.findById(studyUuid).isEmpty());
+
+        wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + nonExistingCaseUuid)));
+    }
+
+    @Test
     public void testMetadata() throws Exception {
         UUID studyUuid = createStudy("userId", CASE_UUID);
         UUID oldStudyUuid = studyUuid;
