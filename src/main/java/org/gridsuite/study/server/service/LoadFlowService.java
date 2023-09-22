@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -118,6 +119,23 @@ public class LoadFlowService {
                     .queryParam(RESULTS_UUIDS, uuids).build().toUriString();
             restTemplate.delete(loadFlowServerBaseUri + path, Void.class);
         }
+    }
+
+    public void deleteLoadFlowResults() {
+        try {
+            String path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results").toUriString();
+            restTemplate.delete(loadFlowServerBaseUri + path, Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
+        }
+
+    }
+
+    public Integer getLoadFlowResultsCount() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/supervision/results-count").toUriString();
+        return restTemplate.getForObject(loadFlowServerBaseUri + path, Integer.class);
     }
 
     public String getLoadFlowResultOrStatus(UUID nodeUuid, String suffix) {
