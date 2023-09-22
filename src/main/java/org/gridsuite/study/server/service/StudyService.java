@@ -1665,7 +1665,7 @@ public class StudyService {
 
         if (study.getIndexationStatus() == StudyIndexationStatus.INDEXED) {
             // We have to check if it's true
-            checkStudyIndexation(study);
+            checkStudyIndexationStatus(study);
         }
         return study.getIndexationStatus();
     }
@@ -1674,8 +1674,8 @@ public class StudyService {
         return getStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
     }
 
-    private void checkStudyIndexation(StudyEntity study) {
-        if (!networkConversionService.checkStudyIndexation(study.getNetworkUuid())) {
+    private void checkStudyIndexationStatus(StudyEntity study) {
+        if (!networkConversionService.checkStudyIndexationStatus(study.getNetworkUuid())) {
             updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
         }
     }

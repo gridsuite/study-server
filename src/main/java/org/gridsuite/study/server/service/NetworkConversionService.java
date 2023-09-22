@@ -130,7 +130,7 @@ public class NetworkConversionService {
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;
     }
 
-    public boolean checkStudyIndexation(UUID networkUuid) {
+    public boolean checkStudyIndexationStatus(UUID networkUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/indexed-equipments")
             .buildAndExpand(networkUuid)
             .toUriString();
