@@ -6,24 +6,14 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
-import org.elasticsearch.client.RestHighLevelClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.convert.converter.Converter;
-import org.springframework.data.convert.ReadingConverter;
-import org.springframework.data.convert.WritingConverter;
 import org.springframework.data.elasticsearch.client.ClientConfiguration;
-import org.springframework.data.elasticsearch.client.ClientConfiguration.TerminalClientConfigurationBuilder;
-import org.springframework.data.elasticsearch.client.RestClients;
-import org.springframework.data.elasticsearch.config.AbstractElasticsearchConfiguration;
-import org.springframework.data.elasticsearch.core.convert.ElasticsearchCustomConversions;
+import org.springframework.data.elasticsearch.client.elc.ElasticsearchConfiguration;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 
-import java.net.InetSocketAddress;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
+import javax.annotation.Nonnull;
 import java.util.Optional;
 
 /**
@@ -34,7 +24,7 @@ import java.util.Optional;
 
 @Configuration
 @EnableElasticsearchRepositories
-public class ESConfig extends AbstractElasticsearchConfiguration {
+public class ESConfig extends ElasticsearchConfiguration {
 
     @Value("#{'${spring.data.elasticsearch.embedded:false}' ? 'localhost' : '${spring.data.elasticsearch.host}'}")
     private String esHost;
@@ -51,43 +41,20 @@ public class ESConfig extends AbstractElasticsearchConfiguration {
     @Value("${spring.data.elasticsearch.password:#{null}}")
     private Optional<String> password;
 
-    @Bean
+    //It should work without having to specify the bean name but it doesn't. To investigate.
+    @Bean(name = "elasticsearchClientConfiguration")
     @Override
     @SuppressWarnings("squid:S2095")
-    public RestHighLevelClient elasticsearchClient() {
-        TerminalClientConfigurationBuilder clientConfiguration = ClientConfiguration.builder()
-            .connectedTo(InetSocketAddress.createUnresolved(esHost, esPort))
-            .withConnectTimeout(timeout * 1000L).withSocketTimeout(timeout * 1000L);
+    @Nonnull
+    public ClientConfiguration clientConfiguration() {
+        var clientConfiguration = ClientConfiguration.builder()
+                .connectedTo(esHost + ":" + esPort)
+                .withConnectTimeout(timeout * 1000L).withSocketTimeout(timeout * 1000L);
 
         if (username.isPresent() && password.isPresent()) {
-            clientConfiguration = clientConfiguration.withBasicAuth(username.get(), password.get());
+            clientConfiguration.withBasicAuth(username.get(), password.get());
         }
 
-        return RestClients.create(clientConfiguration.build()).rest();
-    }
-
-    @Override
-    public ElasticsearchCustomConversions elasticsearchCustomConversions() {
-        return new ElasticsearchCustomConversions(Arrays.asList(DateToStringConverter.INSTANCE, StringToDateConverter.INSTANCE));
-    }
-
-    @WritingConverter
-    enum DateToStringConverter implements Converter<ZonedDateTime, String> {
-        INSTANCE;
-
-        @Override
-        public String convert(ZonedDateTime date) {
-            return date.format(DateTimeFormatter.ISO_DATE_TIME);
-        }
-    }
-
-    @ReadingConverter
-    enum StringToDateConverter implements Converter<String, ZonedDateTime> {
-        INSTANCE;
-
-        @Override
-        public ZonedDateTime convert(String s) {
-            return ZonedDateTime.parse(s, DateTimeFormatter.ISO_DATE_TIME);
-        }
+        return clientConfiguration.build();
     }
 }

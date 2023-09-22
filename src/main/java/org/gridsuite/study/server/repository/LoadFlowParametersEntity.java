@@ -10,7 +10,7 @@ package org.gridsuite.study.server.repository;
 import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.*;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
