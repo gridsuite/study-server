@@ -10,7 +10,7 @@ import java.util.UUID;
 
 import lombok.*;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>

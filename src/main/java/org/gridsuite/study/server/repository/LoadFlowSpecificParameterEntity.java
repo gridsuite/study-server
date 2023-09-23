@@ -12,7 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.LoadFlowSpecificParameterInfos;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;

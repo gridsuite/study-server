@@ -6,22 +6,21 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.QueryStringQuery;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static java.util.Map.entry;
 
@@ -101,38 +100,37 @@ public class EquipmentInfosService {
     }
 
     public List<EquipmentInfos> searchEquipments(@NonNull final String query) {
-        NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
-                .withQuery(QueryBuilders.queryStringQuery(query))
+        NativeQuery nativeSearchQuery = new NativeQueryBuilder()
+                .withQuery(QueryStringQuery.of(qs -> qs.query(query))._toQuery())
                 .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
                 .build();
         return elasticsearchOperations.search(nativeSearchQuery, EquipmentInfos.class)
                 .stream()
                 .map(SearchHit::getContent)
-                .collect(Collectors.toList());
+                .toList();
     }
 
-    public List<EquipmentInfos> searchEquipments(@NonNull final BoolQueryBuilder query) {
-        NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
-                .withQuery(query)
+    public List<EquipmentInfos> searchEquipments(@NonNull final BoolQuery query) {
+        NativeQuery nativeQuery = new NativeQueryBuilder()
+                .withQuery(query._toQuery())
                 .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
-                .withSorts()
                 .build();
 
-        return elasticsearchOperations.search(nativeSearchQuery, EquipmentInfos.class)
+        return elasticsearchOperations.search(nativeQuery, EquipmentInfos.class)
                 .stream()
                 .map(SearchHit::getContent)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<TombstonedEquipmentInfos> searchTombstonedEquipments(@NonNull final String query) {
-        NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
-                .withQuery(QueryBuilders.queryStringQuery(query))
+        NativeQuery nativeSearchQuery = new NativeQueryBuilder()
+                .withQuery(QueryStringQuery.of(qs -> qs.query(query))._toQuery())
                 .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
                 .build();
 
         return elasticsearchOperations.search(nativeSearchQuery, TombstonedEquipmentInfos.class)
                 .stream()
                 .map(SearchHit::getContent)
-                .collect(Collectors.toList());
+                .toList();
     }
 }
