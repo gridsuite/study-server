@@ -11,17 +11,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
-import org.gridsuite.study.server.repository.AbstractManuallyAssignedIdentifierEntity;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.*;
-import java.util.stream.Collectors;
-
-import static javax.persistence.TemporalType.TIMESTAMP;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -33,7 +27,8 @@ import static javax.persistence.TemporalType.TIMESTAMP;
 @Entity
 @Table(name = "event", indexes = {@Index(name = "event_node_id_index", columnList = "node_id")})
 @EntityListeners(AuditingEntityListener.class)
-public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements Serializable {
+public class EventEntity extends AbstractAuditableEntity<UUID> implements Serializable {
+
     @Id
     @Column(name = "id")
     private UUID id;
@@ -53,24 +48,19 @@ public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "node_id")
     private UUID nodeId; // weak reference to node id of NodeEntity
 
-    @CreatedDate
-    @Temporal(TIMESTAMP)
-    @Column(name = "created_date", updatable = false)
-    private Date createdDate;
-
-    @LastModifiedDate
-    @Temporal(TIMESTAMP)
-    @Column(name = "updated_date")
-    private Date updatedDate;
-
     public EventEntity(EventInfos event) {
-        this.id = UUID.randomUUID();
+        if (event.getId() == null) {
+            this.id = UUID.randomUUID();
+        } else {
+            this.id =  event.getId();
+            this.markNotNew();
+        }
         this.nodeId = event.getNodeId();
         this.equipmentId = event.getEquipmentId();
         this.equipmentType = event.getEquipmentType();
         this.eventType = event.getEventType();
-        this.properties = event.getProperties() != null ? event.getProperties().stream()
+        this.properties.addAll(event.getProperties().stream()
                 .map(eventProperty -> new EventPropertyEntity(this, eventProperty))
-                .collect(Collectors.toSet()) : null;
+                .toList());
     }
 }

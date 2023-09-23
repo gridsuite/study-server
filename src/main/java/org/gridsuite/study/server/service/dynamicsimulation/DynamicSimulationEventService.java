@@ -21,9 +21,7 @@ public interface DynamicSimulationEventService {
 
     EventInfos getEventByNodeIdAndEquipmentId(UUID nodeUuid, String equipmentId);
 
-    void createEvent(UUID nodeUuid, EventInfos event);
-
-    void updateEvent(UUID nodeUuid, EventInfos event);
+    void saveEvent(UUID nodeUuid, EventInfos event);
 
     void deleteEvents(List<UUID> eventUuids);
 

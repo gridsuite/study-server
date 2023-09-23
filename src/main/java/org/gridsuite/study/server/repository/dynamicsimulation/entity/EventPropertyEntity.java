@@ -6,10 +6,7 @@
  */
 package org.gridsuite.study.server.repository.dynamicsimulation.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventPropertyInfos;
 import org.gridsuite.study.server.utils.PropertyType;
 
@@ -20,6 +17,7 @@ import java.util.UUID;
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -28,12 +26,13 @@ import java.util.UUID;
 @Table(name = "event_property",
     indexes = {@Index(name = "property_event_id_index", columnList = "event_id")},
     uniqueConstraints = @UniqueConstraint(columnNames = {"event_id", "name"}))
-public class EventPropertyEntity implements Serializable {
+public class EventPropertyEntity extends AbstractAuditableEntity<UUID> implements Serializable {
 
     @Id
     @Column(name = "id")
     private UUID id;
 
+    @EqualsAndHashCode.Include
     @Column(name = "name")
     private String name;
 
@@ -49,7 +48,12 @@ public class EventPropertyEntity implements Serializable {
     private EventEntity event;
 
     public EventPropertyEntity(EventEntity event, EventPropertyInfos eventProperty) {
-        this.id = UUID.randomUUID();
+        if (eventProperty.getId() == null) {
+            this.id = UUID.randomUUID();
+        } else {
+            this.id =  eventProperty.getId();
+            this.markNotNew();
+        }
         this.event = event;
         this.name = eventProperty.getName();
         this.value = eventProperty.getValue();

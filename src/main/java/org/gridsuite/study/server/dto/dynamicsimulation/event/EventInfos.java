@@ -17,7 +17,6 @@ import org.gridsuite.study.server.repository.dynamicsimulation.entity.EventEntit
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -47,9 +46,13 @@ public class EventInfos {
         this.equipmentId = eventEntity.getEquipmentId();
         this.equipmentType = eventEntity.getEquipmentType();
         this.eventType = eventEntity.getEventType();
-        this.properties = eventEntity.getProperties().stream()
-                .map(eventPropertyEntity -> new EventPropertyInfos(eventPropertyEntity.getName(), eventPropertyEntity.getValue(), eventPropertyEntity.getType()))
-                .collect(Collectors.toList());
+        this.properties.addAll(eventEntity.getProperties().stream()
+                .map(eventPropertyEntity -> new EventPropertyInfos(
+                        eventPropertyEntity.getId(),
+                        eventPropertyEntity.getName(),
+                        eventPropertyEntity.getValue(),
+                        eventPropertyEntity.getType()))
+                .toList());
     }
 
 }
