@@ -10,7 +10,7 @@ import lombok.*;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventPropertyInfos;
 import org.gridsuite.study.server.utils.PropertyType;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -51,7 +51,7 @@ public class EventPropertyEntity extends AbstractAuditableEntity<UUID> implement
         if (eventProperty.getId() == null) {
             this.id = UUID.randomUUID();
         } else {
-            this.id =  eventProperty.getId();
+            this.id = eventProperty.getId();
             this.markNotNew();
         }
         this.event = event;

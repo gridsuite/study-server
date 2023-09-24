@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.repository.dynamicsimulation.entity;
 
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,7 +14,6 @@ import lombok.Setter;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import javax.persistence.*;
 import java.io.Serializable;
 import java.util.*;
 
@@ -52,7 +52,7 @@ public class EventEntity extends AbstractAuditableEntity<UUID> implements Serial
         if (event.getId() == null) {
             this.id = UUID.randomUUID();
         } else {
-            this.id =  event.getId();
+            this.id = event.getId();
             this.markNotNew();
         }
         this.nodeId = event.getNodeId();

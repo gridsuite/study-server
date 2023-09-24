@@ -1428,8 +1428,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events", params = {"equipmentId"})
     @Operation(summary = "Get dynamic simulation event from a node with a given equipment id")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The dynamic simulation event was returned"),
-            @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+        @ApiResponse(responseCode = "200", description = "The dynamic simulation event was returned"),
+        @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<EventInfos> getDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                        @Parameter(description = "Equipment id") @RequestParam(value = "equipmentId") String equipmentId) {

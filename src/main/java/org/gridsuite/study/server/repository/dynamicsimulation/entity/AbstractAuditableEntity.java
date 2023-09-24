@@ -17,10 +17,10 @@ import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.util.Date;
 
-import static javax.persistence.TemporalType.TIMESTAMP;
+import static jakarta.persistence.TemporalType.TIMESTAMP;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
