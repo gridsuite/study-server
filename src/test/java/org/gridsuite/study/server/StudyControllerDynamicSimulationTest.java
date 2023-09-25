@@ -96,7 +96,7 @@ public class StudyControllerDynamicSimulationTest {
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/models";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS = "{studyUuid}/dynamic-simulation/mappings";
 
-    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS= "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events";
+    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events";
 
     private static final String HEADER_USER_ID_NAME = "userId";
     private static final String HEADER_USER_ID_VALUE = "userId";
@@ -951,8 +951,6 @@ public class StudyControllerDynamicSimulationTest {
         // check result
         eventInfosList = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<List<EventInfos>>() { });
         assertEquals(0, eventInfosList.size());
-
-
     }
 
     // --- END Test event CRUD methods--- //
