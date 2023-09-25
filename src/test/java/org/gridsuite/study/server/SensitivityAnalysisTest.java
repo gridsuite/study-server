@@ -441,6 +441,49 @@ public class SensitivityAnalysisTest {
 
     @Test
     @SneakyThrows
+    public void testGetSensitivityResultWithWrongId() {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID notFoundSensitivityUuid = UUID.randomUUID();
+        UUID studyUuid = studyEntity.getId();
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(SENSITIVITY_INPUT))
+                .andExpect(status().isNoContent()).andReturn();
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter_options?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(SENSITIVITY_INPUT))
+                .andExpect(status().isNoContent()).andReturn();
+
+        String baseUrlWireMock = wireMock.baseUrl();
+        sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrlWireMock);
+
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNodeUuid = modificationNode1.getId();
+        networkModificationTreeService.updateSensitivityAnalysisResultUuid(modificationNodeUuid, notFoundSensitivityUuid);
+        assertTrue(networkModificationTreeService.getSensitivityAnalysisResultUuid(modificationNodeUuid).isPresent());
+        assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getSensitivityAnalysisResultUuid(modificationNodeUuid).get());
+
+        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid))
+                .willReturn(WireMock.notFound()));
+
+        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid + "/filter_options" + ".*"))
+                .willReturn(WireMock.notFound()));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(SENSITIVITY_INPUT))
+                .andExpect(status().isNotFound()).andReturn();
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter_options?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(SENSITIVITY_INPUT))
+                .andExpect(status().isNotFound()).andReturn();
+    }
+
+    @Test
+    @SneakyThrows
     public void testResetUuidResultWhenSAFailed() {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
