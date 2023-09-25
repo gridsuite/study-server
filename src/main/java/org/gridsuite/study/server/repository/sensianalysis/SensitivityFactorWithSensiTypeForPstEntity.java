@@ -19,8 +19,8 @@ import javax.persistence.*;
 @Getter
 @Setter
 @Entity
-@Table(name = "sensitivityFactorWithSensiTypeEntity")
-public class SensitivityFactorWithSensiTypeEntity extends SensitivityFactorEntity {
+@Table(name = "sensitivityFactorWithSensiTypeForPstEntity")
+public class SensitivityFactorWithSensiTypeForPstEntity extends SensitivityFactorEntity {
 
     @Column(name = "sensitivityType")
     @Enumerated(EnumType.STRING)

@@ -10,7 +10,17 @@ spring:
       ## to fill if authentication is needed
       # user:
       # password:
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
 
+logging:
+  level:
+    org:
+      hibernate:
+        SQL: debug
 powsybl-ws:
   database:
     host: localhost

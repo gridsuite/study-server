@@ -44,17 +44,17 @@ public class SensitivityAnalysisParametersEntity {
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
-    private List<SensitivityFactorEntity> sensitivityInjections;
+    private List<SensitivityFactorForInjectionEntity> sensitivityInjections;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
-    private List<SensitivityFactorWithSensiTypeEntity> sensitivityHvdc;
+    private List<SensitivityFactorWithSensiTypeForHvdcEntity> sensitivityHvdc;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
-    private List<SensitivityFactorWithSensiTypeEntity> sensitivityPST;
+    private List<SensitivityFactorWithSensiTypeForPstEntity> sensitivityPST;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "sensitivity_Analysis_Parameters_id")
-    private List<SensitivityFactorEntity> sensitivityNodes;
+    private List<SensitivityFactorForNodeEntity> sensitivityNodes;
 }
