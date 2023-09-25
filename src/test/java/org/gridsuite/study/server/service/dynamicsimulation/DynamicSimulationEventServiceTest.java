@@ -110,8 +110,6 @@ public class DynamicSimulationEventServiceTest {
         assertEquals(EVENT.getEventType(), eventInfosResult.getEventType());
         // same number of properties
         assertEquals(EVENT.getProperties().size(), eventInfosResult.getProperties().size());
-
-
     }
 
     @Test
@@ -137,8 +135,6 @@ public class DynamicSimulationEventServiceTest {
         // check start time property
         Optional<EventPropertyInfos> startTimePropertyResultOpt = eventResult.getProperties().stream().filter(elem -> elem.getName().equals("startTime")).findFirst();
         assertEquals("20", startTimePropertyResultOpt.get().getValue());
-
-
     }
 
     @Test
