@@ -46,6 +46,7 @@ public class DynamicSimulationEventServiceImpl implements DynamicSimulationEvent
     @Transactional
     @Override
     public void saveEvent(UUID nodeUuid, EventInfos event) {
+        event.setNodeId(nodeUuid);
         EventEntity eventEntity = new EventEntity(event);
         eventRepository.save(eventEntity);
     }

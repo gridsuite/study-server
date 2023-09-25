@@ -19,6 +19,8 @@ import org.gridsuite.study.server.dto.dynamicmapping.ModelVariableDefinitionInfo
 import org.gridsuite.study.server.dto.dynamicmapping.VariablesSetInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.event.EventPropertyInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -31,6 +33,7 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.utils.PropertyType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.json.JSONObject;
@@ -92,6 +95,8 @@ public class StudyControllerDynamicSimulationTest {
 
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/models";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS = "{studyUuid}/dynamic-simulation/mappings";
+
+    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS= "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events";
 
     private static final String HEADER_USER_ID_NAME = "userId";
     private static final String HEADER_USER_ID_VALUE = "userId";
@@ -158,6 +163,15 @@ public class StudyControllerDynamicSimulationTest {
     public static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
     public static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
     public static final String TIME_LINE_NAME = "TimeLine";
+
+    // event data
+    public static final String EQUIPMENT_ID = "_BUS____1-BUS____5-1_AC";
+    public static final EventInfos EVENT = new EventInfos(null, NODE_UUID, EQUIPMENT_ID, "LINE", "Disconnect", List.of(
+            new EventPropertyInfos(null, "staticId", EQUIPMENT_ID, PropertyType.STRING),
+            new EventPropertyInfos(null, "startTime", "10", PropertyType.FLOAT),
+            new EventPropertyInfos(null, "disconnectOnly", "Branch.Side.ONE", PropertyType.ENUM)
+
+    ));
 
     private static final long TIMEOUT = 1000;
 
@@ -831,4 +845,115 @@ public class StudyControllerDynamicSimulationTest {
         assertEquals(studyUuid, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
         assertEquals(HEADER_USER_ID_VALUE, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
     }
+
+    // --- BEGIN Test event CRUD methods--- //
+
+    private void checkNotificationsAfterInjectingDynamicSimulationEvent(UUID studyUuid, String crudType) {
+        // must have message crudType from channel : studyUpdateDestination
+        Message<byte[]> studyUpdateMessageBegin = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, studyUpdateMessageBegin.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(crudType, studyUpdateMessageBegin.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
+        Message<byte[]> studyUpdateMessageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, studyUpdateMessageStatus.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, studyUpdateMessageStatus.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        // must have message EVENTS_CRUD_FINISHED from channel : studyUpdateDestination
+        Message<byte[]> elementUpdateMessageFinished = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, elementUpdateMessageFinished.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.EVENTS_CRUD_FINISHED, elementUpdateMessageFinished.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+    }
+
+    @Test
+    public void testCrudDynamicSimulationEvents() throws Exception {
+
+        // create a node in the db
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        MvcResult result;
+
+        // --- call endpoint to be tested --- //
+        // --- Post an event --- //
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(EVENT)))
+                .andExpect(status().isOk()).andReturn();
+
+        checkNotificationsAfterInjectingDynamicSimulationEvent(studyUuid, NotificationService.EVENTS_CRUD_CREATING_IN_PROGRESS);
+
+        // --- Get the event --- //
+        result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk()).andReturn();
+
+        // check result
+        List<EventInfos> eventInfosList = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<List<EventInfos>>() { });
+        assertEquals(1, eventInfosList.size());
+        EventInfos eventInfosResult = eventInfosList.get(0);
+        assertEquals(EVENT.getEventType(), eventInfosResult.getEventType());
+
+        // --- Get event by node id and equipment id --- //
+        result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
+                        .param("equipmentId", EQUIPMENT_ID)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk()).andReturn();
+
+        // check result
+        eventInfosResult = objectMapper.readValue(result.getResponse().getContentAsString(), EventInfos.class);
+        assertEquals(EVENT.getEventType(), eventInfosResult.getEventType());
+
+        // --- Update an event --- //
+        Optional<EventPropertyInfos> startTimePropertyOpt = eventInfosResult.getProperties().stream().filter(elem -> elem.getName().equals("startTime")).findFirst();
+        startTimePropertyOpt.ifPresent(elem -> elem.setValue("20"));
+
+        // call update API
+        studyClient.perform(put(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(eventInfosResult)))
+                .andExpect(status().isOk()).andReturn();
+
+        checkNotificationsAfterInjectingDynamicSimulationEvent(studyUuid, NotificationService.EVENTS_CRUD_UPDATING_IN_PROGRESS);
+
+        // check updated event
+        result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
+                        .param("equipmentId", EQUIPMENT_ID)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk()).andReturn();
+        EventInfos eventInfosUpdatedResult = objectMapper.readValue(result.getResponse().getContentAsString(), EventInfos.class);
+        Optional<EventPropertyInfos> startTimePropertyUpdatedOpt = eventInfosUpdatedResult.getProperties().stream().filter(elem -> elem.getName().equals("startTime")).findFirst();
+        assertEquals("20", startTimePropertyUpdatedOpt.get().getValue());
+
+        // --- Delete an event --- //
+        studyClient.perform(delete(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
+                        .param("eventUuids", eventInfosUpdatedResult.getId().toString())
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk()).andReturn();
+
+        checkNotificationsAfterInjectingDynamicSimulationEvent(studyUuid, NotificationService.EVENTS_CRUD_DELETING_IN_PROGRESS);
+
+        // check result => must empty
+        result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk()).andReturn();
+
+        // check result
+        eventInfosList = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<List<EventInfos>>() { });
+        assertEquals(0, eventInfosList.size());
+
+
+    }
+
+    // --- END Test event CRUD methods--- //
 }
