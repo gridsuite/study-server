@@ -129,7 +129,7 @@ public class DynamicSimulationEventServiceTest {
     }
 
     @Test
-    public void testDeleteEventsByNodeId(){
+    public void testDeleteEventsByNodeId() {
         // UUID nodeUuid
         // call method to be tested
         dynamicSimulationEventService.deleteEventsByNodeId(NODE_UUID);
