@@ -21,6 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static junit.framework.TestCase.assertEquals;
@@ -35,8 +36,6 @@ public class DynamicSimulationEventServiceTest {
 
     private static final String NODE_UUID_STRING = "00000000-0000-0000-0000-000000000000";
     public static final UUID NODE_UUID = UUID.fromString(NODE_UUID_STRING);
-    private static final String EVENT_UUID_STRING = "11111111-0000-0000-0000-000000000000";
-    private static final UUID EVENT_UUID = UUID.fromString(EVENT_UUID_STRING);
     public static final String EQUIPMENT_ID = "_BUS____1-BUS____5-1_AC";
     public static final EventInfos EVENT = new EventInfos(null, NODE_UUID, EQUIPMENT_ID, "LINE", "Disconnect", List.of(
             new EventPropertyInfos(null, "staticId", EQUIPMENT_ID, PropertyType.STRING),
@@ -44,8 +43,6 @@ public class DynamicSimulationEventServiceTest {
             new EventPropertyInfos(null, "disconnectOnly", "Branch.Side.ONE", PropertyType.ENUM)
 
     ));
-    private static final String EVENT_2_UUID_STRING = "22222222-0000-0000-0000-000000000000";
-    private static final UUID EVENT_2_UUID = UUID.fromString(EVENT_2_UUID_STRING);
 
     @Autowired
     EventRepository eventRepository;
@@ -95,7 +92,7 @@ public class DynamicSimulationEventServiceTest {
     }
 
     @Test
-    public void testSaveEvent() {
+    public void testCreateEvent() {
         cleanDB();
         // UUID nodeUuid, EventInfos event
         // call method to be tested
@@ -113,6 +110,35 @@ public class DynamicSimulationEventServiceTest {
         assertEquals(EVENT.getEventType(), eventInfosResult.getEventType());
         // same number of properties
         assertEquals(EVENT.getProperties().size(), eventInfosResult.getProperties().size());
+
+
+    }
+
+    @Test
+    public void testUpdateEvent() {
+        // UUID nodeUuid, EventInfos event
+        EventInfos eventToUpdate = dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(NODE_UUID, EQUIPMENT_ID);
+
+        // modify the event then save the change
+        Optional<EventPropertyInfos> startTimePropertyOpt = eventToUpdate.getProperties().stream().filter(elem -> elem.getName().equals("startTime")).findFirst();
+        startTimePropertyOpt.ifPresent(elem -> elem.setValue("20"));
+
+        // call method to be tested
+        dynamicSimulationEventService.saveEvent(NODE_UUID, eventToUpdate);
+
+        // retrieve the saved event
+        EventInfos eventResult = dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(NODE_UUID, EQUIPMENT_ID);
+
+        // check result
+        // same event type
+        assertEquals(EVENT.getEventType(), eventResult.getEventType());
+        // same number of properties
+        assertEquals(EVENT.getProperties().size(), eventResult.getProperties().size());
+        // check start time property
+        Optional<EventPropertyInfos> startTimePropertyResultOpt = eventResult.getProperties().stream().filter(elem -> elem.getName().equals("startTime")).findFirst();
+        assertEquals("20", startTimePropertyResultOpt.get().getValue());
+
+
     }
 
     @Test
