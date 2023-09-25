@@ -23,12 +23,17 @@ public class AuditorAwareImpl implements AuditorAware<String> {
 
     @Override
     public Optional<String> getCurrentAuditor() {
-        return Optional.of(getRequest().getHeader(StudyConstants.HEADER_USER_ID));
+        return Optional.ofNullable(getRequest())
+                .map(request -> request.getHeader(StudyConstants.HEADER_USER_ID));
     }
 
     private HttpServletRequest getRequest() {
         RequestAttributes attribs = RequestContextHolder.getRequestAttributes();
-        HttpServletRequest request = ((ServletRequestAttributes) attribs).getRequest();
-        return request;
+
+        if (attribs instanceof ServletRequestAttributes servletAttribs) {
+            return servletAttribs.getRequest();
+        }
+
+        return null;
     }
 }
