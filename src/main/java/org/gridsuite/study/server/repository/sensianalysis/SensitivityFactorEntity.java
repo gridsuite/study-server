@@ -33,25 +33,25 @@ public class SensitivityFactorEntity {
 
     @ElementCollection
     @CollectionTable(
-            name = "monitoredBranchEntity",
+            name = "monitoredBranch",
             joinColumns = @JoinColumn(name = "MonitoredBranchId", foreignKey = @ForeignKey(name = "sensitivityFactorEntity_monitoredBranchId_fk"))
     )
     private List<EquipmentsContainerEmbeddable> monitoredBranch;
 
     @ElementCollection
     @CollectionTable(
-            name = "injectionsEntity",
+            name = "injections",
             joinColumns = @JoinColumn(name = "InjectionsId", foreignKey = @ForeignKey(name = "sensitivityFactorEntity_injections_fk"))
     )
     private List<EquipmentsContainerEmbeddable> injections;
 
     @ElementCollection
     @CollectionTable(
-            name = "contingenciesEntity",
+            name = "contingencies",
             joinColumns = @JoinColumn(name = "ContingenciesId", foreignKey = @ForeignKey(name = "sensitivityFactorEntity_contingencies_fk"))
     )
     private List<EquipmentsContainerEmbeddable> contingencies;
 
-    @Column(name = "activatedEntity", columnDefinition = "boolean default true")
+    @Column(name = "activated", columnDefinition = "boolean default true")
     private boolean activated;
 }
