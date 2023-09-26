@@ -6,6 +6,8 @@
  */
 package org.gridsuite.study.server.service;
 
+import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
@@ -23,12 +25,6 @@ import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import lombok.NonNull;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.TermsQueryBuilder;
-import org.elasticsearch.index.query.WildcardQueryBuilder;
-import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
-import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
@@ -57,6 +53,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.elasticsearch.client.elc.QueryBuilders;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,10 +70,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.json.JsonValue;
-
-import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
-import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.elasticsearch.EquipmentInfosService.EQUIPMENT_TYPE_SCORES;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
@@ -406,7 +399,7 @@ public class StudyService {
         }
 
         if (equipmentType == null) {
-            BoolQueryBuilder query = buildSearchAllEquipmentsQuery(userInput, fieldSelector, networkUuid,
+            BoolQuery query = buildSearchAllEquipmentsQuery(userInput, fieldSelector, networkUuid,
                     VariantManagerConstants.INITIAL_VARIANT_ID, variantId);
             List<EquipmentInfos> equipmentInfos = equipmentInfosService.searchEquipments(query);
 
@@ -460,33 +453,42 @@ public class StudyService {
                 escapeLucene(userInput), equipmentType);
     }
 
-    private BoolQueryBuilder buildSearchAllEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId) {
-        WildcardQueryBuilder equipmentSearchQuery = QueryBuilders.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
-        TermsQueryBuilder networkUuidSearchQuery = termsQuery(NETWORK_UUID, networkUuid.toString());
-        TermsQueryBuilder variantIdSearchQuery = variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ?
-                termsQuery(VARIANT_ID, initialVariantId)
-                : termsQuery(VARIANT_ID, initialVariantId, variantId);
+    private BoolQuery buildSearchAllEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId) {
+        WildcardQuery equipmentSearchQuery = QueryBuilders.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
+        TermQuery networkUuidSearchQuery = QueryBuilders.termQuery(NETWORK_UUID, networkUuid.toString());
+        TermsQuery variantIdSearchQuery = variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ?
+                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(initialVariantId))).build()).build() :
+                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(initialVariantId), FieldValue.of(variantId))).build()).build();
 
-        FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionsForScoreQueries = new FunctionScoreQueryBuilder.FilterFunctionBuilder[EQUIPMENT_TYPE_SCORES.size() + 1];
-
-        int i = 0;
-        filterFunctionsForScoreQueries[i++] = new FunctionScoreQueryBuilder.FilterFunctionBuilder(
-                matchQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, escapeLucene(userInput)),
-                ScoreFunctionBuilders.weightFactorFunction(EQUIPMENT_TYPE_SCORES.size()));
+        List<FunctionScore> functionScores = new ArrayList<>();
+        FunctionScore functionScore = new FunctionScore.Builder()
+                .filter(builder ->
+                        builder.match(
+                                matchBuilder -> matchBuilder
+                                        .field(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID)
+                                        .query(FieldValue.of(escapeLucene(userInput))))
+                                )
+                .weight((double) EQUIPMENT_TYPE_SCORES.size())
+                .build();
+        functionScores.add(functionScore);
 
         for (Map.Entry<String, Integer> equipmentTypeScore : EQUIPMENT_TYPE_SCORES.entrySet()) {
-            filterFunctionsForScoreQueries[i++] =
-                    new FunctionScoreQueryBuilder.FilterFunctionBuilder(
-                            matchQuery("equipmentType", equipmentTypeScore.getKey()),
-                            ScoreFunctionBuilders.weightFactorFunction(equipmentTypeScore.getValue())
-                    );
+            functionScore = new FunctionScore.Builder()
+                    .filter(builder ->
+                            builder.match(
+                                    matchBuilder -> matchBuilder
+                                            .field("equipmentType")
+                                            .query(FieldValue.of(equipmentTypeScore.getKey())))
+                    )
+                    .weight((double) equipmentTypeScore.getValue())
+                    .build();
+            functionScores.add(functionScore);
         }
 
-        FunctionScoreQueryBuilder functionScoreBoostQuery = QueryBuilders.functionScoreQuery(filterFunctionsForScoreQueries);
+        FunctionScoreQuery functionScoreQuery = new FunctionScoreQuery.Builder().functions(functionScores).build();
 
-        BoolQueryBuilder esQuery = QueryBuilders.boolQuery();
-        esQuery.filter(equipmentSearchQuery).filter(networkUuidSearchQuery).filter(variantIdSearchQuery).must(functionScoreBoostQuery);
-        return esQuery;
+        return new BoolQuery.Builder()
+                .filter(equipmentSearchQuery._toQuery(), networkUuidSearchQuery._toQuery(), variantIdSearchQuery._toQuery()).must(functionScoreQuery._toQuery()).build();
     }
 
     private String buildTombstonedEquipmentSearchQuery(UUID networkUuid, String variantId) {
@@ -1918,7 +1920,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID voltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
         if (voltageInitParametersUuid == null) {
-            return JsonValue.EMPTY_JSON_OBJECT.toString();
+            return "{}";
         }
         return voltageInitService.getVoltageInitParameters(studyEntity.getVoltageInitParametersUuid());
     }
@@ -2026,6 +2028,13 @@ public class StudyService {
         return studyRepository.findById(studyUuid)
                 .map(studyEntity -> SecurityAnalysisService.toSecurityAnalysisParameters(studyEntity.getSecurityAnalysisParameters()))
                 .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public String getVoltageInitModifications(@NonNull UUID nodeUuid) {
+        // get modifications group uuid associated to voltage init results
+        UUID voltageInitModificationsGroupUuid = voltageInitService.getModificationsGroupUuid(nodeUuid);
+        return networkModificationService.getModifications(voltageInitModificationsGroupUuid, false);
     }
 
     public void copyVoltageInitModifications(UUID studyUuid, UUID nodeUuid, String userId) {

@@ -23,6 +23,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -83,5 +84,14 @@ public class ReportService {
             .buildAndExpand(reportUuid)
             .toUriString();
         restTemplate.delete(this.getReportServerURI() + path);
+    }
+
+    public void deleteTreeReports(@NonNull Map<UUID, String> treeReportsKeys) {
+        var path = UriComponentsBuilder.fromPath("treereports").toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<UUID, String>> httpEntity = new HttpEntity<>(treeReportsKeys, headers);
+
+        restTemplate.exchange(this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + path, HttpMethod.DELETE, httpEntity, Void.class);
     }
 }

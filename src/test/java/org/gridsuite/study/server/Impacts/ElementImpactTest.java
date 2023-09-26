@@ -60,7 +60,7 @@ public class ElementImpactTest {
         result.setLastGroupApplicationStatus(ApplicationStatus.WITH_ERRORS);
         assertEquals(TestUtils.resourceToString("/network-modification-result-with-with-errors.json"), mapper.writeValueAsString(result));
 
-        assertEquals("[s1, s2, s3]", result.getImpactedSubstationsIds().toString());
+        assertEquals("[s1, s2, s3, substationId1]", result.getImpactedSubstationsIds().toString());
 
         impacts = new HashSet<>(List.of(creationImpact, creationImpact, creationImpact));
 

@@ -6,12 +6,12 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
-import org.elasticsearch.index.query.QueryBuilders;
+import co.elastic.clients.elasticsearch._types.query_dsl.QueryStringQuery;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
@@ -46,7 +46,7 @@ public class StudyInfosService {
     }
 
     public List<CreatedStudyBasicInfos> search(@NonNull final String query) {
-        SearchHits<CreatedStudyBasicInfos> searchHits = elasticsearchOperations.search(new NativeSearchQuery(QueryBuilders.queryStringQuery(query)), CreatedStudyBasicInfos.class);
+        SearchHits<CreatedStudyBasicInfos> searchHits = elasticsearchOperations.search(new NativeQuery(QueryStringQuery.of(qs -> qs.query(query))._toQuery()), CreatedStudyBasicInfos.class);
         return searchHits.stream().map(SearchHit::getContent).collect(Collectors.toList());
     }
 

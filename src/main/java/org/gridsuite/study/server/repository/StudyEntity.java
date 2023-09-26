@@ -10,7 +10,8 @@ import lombok.*;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
+
 import java.util.Map;
 import java.util.UUID;
 
