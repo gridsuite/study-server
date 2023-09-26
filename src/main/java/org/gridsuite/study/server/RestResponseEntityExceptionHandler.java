@@ -37,13 +37,7 @@ public class RestResponseEntityExceptionHandler {
                 return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(exception.getMessage());
             case STUDY_ALREADY_EXISTS:
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(type);
-            case LOADFLOW_NOT_RUNNABLE:
-            case LOADFLOW_RUNNING:
-            case SECURITY_ANALYSIS_RUNNING:
-            case SENSITIVITY_ANALYSIS_RUNNING:
-            case DYNAMIC_SIMULATION_RUNNING:
-            case SHORT_CIRCUIT_ANALYSIS_RUNNING:
-            case VOLTAGE_INIT_RUNNING:
+            case LOADFLOW_NOT_RUNNABLE, LOADFLOW_RUNNING, SECURITY_ANALYSIS_RUNNING, SENSITIVITY_ANALYSIS_RUNNING, DYNAMIC_SIMULATION_RUNNING, SHORT_CIRCUIT_ANALYSIS_RUNNING, VOLTAGE_INIT_RUNNING:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(type);
             case NOT_ALLOWED:
             case BAD_NODE_TYPE:
