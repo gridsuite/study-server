@@ -42,6 +42,8 @@ public class RestResponseEntityExceptionHandler {
             case SECURITY_ANALYSIS_RUNNING:
             case SENSITIVITY_ANALYSIS_RUNNING:
             case DYNAMIC_SIMULATION_RUNNING:
+            case SHORT_CIRCUIT_ANALYSIS_RUNNING:
+            case VOLTAGE_INIT_RUNNING:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(type);
             case NOT_ALLOWED:
             case BAD_NODE_TYPE:
