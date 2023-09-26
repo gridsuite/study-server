@@ -9,7 +9,7 @@ package org.gridsuite.study.server.repository;
 
 import lombok.*;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.util.UUID;
 
 /**

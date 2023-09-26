@@ -1127,8 +1127,8 @@ public class StudyController {
     @DeleteMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
     @Operation(summary = "Delete node with given id")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted"),
-            @ApiResponse(responseCode = "404", description = "The study or the node not found")})
+        @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted"),
+        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<Void> deleteNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                            @Parameter(description = "id of child to remove") @PathVariable("id") UUID nodeId,
                                            @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
@@ -1153,7 +1153,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/tree/nodes/stash")
     @Operation(summary = "Get the list of nodes in the trash for a given study")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
+        @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
     public ResponseEntity<List<Pair<AbstractNode, Integer>>> getStashedNodes(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getStashedNodes(studyUuid));
     }
@@ -1161,7 +1161,7 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{nodeId}/restore")
     @Operation(summary = "restore node below the given anchor node")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
+        @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
     public ResponseEntity<Void> restoreNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "id of node to restore") @PathVariable("nodeId") UUID nodeId,
                                                           @Parameter(description = "id of node below which the node will be restored") @RequestParam("anchorNodeId") UUID anchorNodeId) {

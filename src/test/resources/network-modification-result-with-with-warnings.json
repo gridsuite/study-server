@@ -47,6 +47,7 @@
   "impactedSubstationsIds": [
     "s1",
     "s2",
-    "s3"
+    "s3",
+    "substationId1"
   ]
 }
