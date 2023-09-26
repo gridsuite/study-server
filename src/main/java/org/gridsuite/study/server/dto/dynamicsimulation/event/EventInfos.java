@@ -47,11 +47,7 @@ public class EventInfos {
         this.equipmentType = eventEntity.getEquipmentType();
         this.eventType = eventEntity.getEventType();
         this.properties.addAll(eventEntity.getProperties().stream()
-                .map(eventPropertyEntity -> new EventPropertyInfos(
-                        eventPropertyEntity.getId(),
-                        eventPropertyEntity.getName(),
-                        eventPropertyEntity.getValue(),
-                        eventPropertyEntity.getType()))
+                .map(EventPropertyInfos::new)
                 .toList());
     }
 

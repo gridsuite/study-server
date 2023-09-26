@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.gridsuite.study.server.repository.dynamicsimulation.entity.EventPropertyEntity;
 import org.gridsuite.study.server.utils.PropertyType;
 
 import java.util.UUID;
@@ -33,4 +34,11 @@ public class EventPropertyInfos {
     private String value;
 
     private PropertyType type;
+
+    public EventPropertyInfos(EventPropertyEntity eventPropertyEntity) {
+        this.id = eventPropertyEntity.getId();
+        this.name = eventPropertyEntity.getName();
+        this.value = eventPropertyEntity.getValue();
+        this.type = eventPropertyEntity.getType();
+    }
 }

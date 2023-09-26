@@ -41,7 +41,6 @@ public class DynamicSimulationEventServiceTest {
             new EventPropertyInfos(null, "staticId", EQUIPMENT_ID, PropertyType.STRING),
             new EventPropertyInfos(null, "startTime", "10", PropertyType.FLOAT),
             new EventPropertyInfos(null, "disconnectOnly", "Branch.Side.ONE", PropertyType.ENUM)
-
     ));
 
     @Autowired
@@ -80,7 +79,6 @@ public class DynamicSimulationEventServiceTest {
 
     @Test
     public void testGetEventByNodeIdAndEquipmentId() {
-        // UUID nodeUuid, String equipmentId
         // call method to be tested
         EventInfos eventResult = dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(NODE_UUID, EQUIPMENT_ID);
 
@@ -94,7 +92,6 @@ public class DynamicSimulationEventServiceTest {
     @Test
     public void testCreateEvent() {
         cleanDB();
-        // UUID nodeUuid, EventInfos event
         // call method to be tested
         dynamicSimulationEventService.saveEvent(NODE_UUID, EVENT);
 
@@ -114,7 +111,6 @@ public class DynamicSimulationEventServiceTest {
 
     @Test
     public void testUpdateEvent() {
-        // UUID nodeUuid, EventInfos event
         EventInfos eventToUpdate = dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(NODE_UUID, EQUIPMENT_ID);
 
         // modify the event then save the change
@@ -139,7 +135,6 @@ public class DynamicSimulationEventServiceTest {
 
     @Test
     public void testDeleteEvents() {
-        // List<UUID> eventUuids
         EventInfos eventResult = dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(NODE_UUID, EQUIPMENT_ID);
         // call method to be tested
         dynamicSimulationEventService.deleteEvents(List.of(eventResult.getId()));
@@ -152,7 +147,6 @@ public class DynamicSimulationEventServiceTest {
 
     @Test
     public void testDeleteEventsByNodeId() {
-        // UUID nodeUuid
         // call method to be tested
         dynamicSimulationEventService.deleteEventsByNodeId(NODE_UUID);
 

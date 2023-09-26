@@ -12,7 +12,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.io.Serializable;
 import java.util.*;
@@ -26,7 +25,6 @@ import java.util.*;
 @Setter
 @Entity
 @Table(name = "event", indexes = {@Index(name = "event_node_id_index", columnList = "node_id")})
-@EntityListeners(AuditingEntityListener.class)
 public class EventEntity extends AbstractAuditableEntity<UUID> implements Serializable {
 
     @Id

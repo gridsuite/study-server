@@ -1431,8 +1431,8 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "The dynamic simulation event was returned"),
         @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<EventInfos> getDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                       @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                       @Parameter(description = "Equipment id") @RequestParam(value = "equipmentId") String equipmentId) {
+                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @Parameter(description = "Equipment id") @RequestParam(value = "equipmentId") String equipmentId) {
         EventInfos dynamicSimulationEvent = studyService.getDynamicSimulationEvent(nodeUuid, equipmentId);
         return dynamicSimulationEvent != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(dynamicSimulationEvent) :
                 ResponseEntity.noContent().build();
@@ -1453,7 +1453,7 @@ public class StudyController {
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events")
-    @Operation(summary = "Update a dynamic simulation event in the study network")
+    @Operation(summary = "Update a dynamic simulation event for a node")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The dynamic simulation event was updated"),
         @ApiResponse(responseCode = "404", description = "The study/node is not found")})

@@ -170,7 +170,6 @@ public class StudyControllerDynamicSimulationTest {
             new EventPropertyInfos(null, "staticId", EQUIPMENT_ID, PropertyType.STRING),
             new EventPropertyInfos(null, "startTime", "10", PropertyType.FLOAT),
             new EventPropertyInfos(null, "disconnectOnly", "Branch.Side.ONE", PropertyType.ENUM)
-
     ));
 
     private static final long TIMEOUT = 1000;
