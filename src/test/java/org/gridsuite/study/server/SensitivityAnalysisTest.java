@@ -252,8 +252,8 @@ public class SensitivityAnalysisTest {
                     || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "\\?.*")) {
                     return new MockResponse().setResponseCode(200).setBody(FAKE_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/filter_options" + "\\?.*")
-                        || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/filter_options" + "\\?.*")) {
+                } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/filter-options" + "\\?.*")
+                        || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/filter-options" + "\\?.*")) {
                     return new MockResponse().setResponseCode(200).setBody(FAKE_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID) && request.getMethod().equals("DELETE")) {
@@ -323,9 +323,9 @@ public class SensitivityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/results/" + resultUuid)));
 
         // get sensitivity analysis result filter options
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter_options?selector={selector}", studyUuid, nodeUuid, "fakeJsonSelector"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, nodeUuid, "fakeJsonSelector"))
                 .andExpectAll(status().isOk(), content().string(FAKE_RESULT_JSON));
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/results/" + resultUuid + "/filter_options")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/results/" + resultUuid + "/filter-options")));
 
         // get sensitivity analysis status
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/status", studyUuid, nodeUuid)).andExpectAll(
@@ -371,7 +371,7 @@ public class SensitivityAnalysisTest {
                 studyNameUserIdUuid, UUID.randomUUID(), "fakeJsonSelector"))
             .andExpectAll(status().isNoContent());
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter_options?selector={selector}",
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}",
                         studyNameUserIdUuid, UUID.randomUUID(), "fakeJsonSelector"))
                 .andExpectAll(status().isNoContent());
 
@@ -450,7 +450,7 @@ public class SensitivityAnalysisTest {
                         .content(SENSITIVITY_INPUT))
                 .andExpect(status().isNoContent()).andReturn();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter_options?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON)
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(SENSITIVITY_INPUT))
                 .andExpect(status().isNoContent()).andReturn();
@@ -468,7 +468,7 @@ public class SensitivityAnalysisTest {
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid))
                 .willReturn(WireMock.notFound()));
 
-        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid + "/filter_options" + ".*"))
+        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid + "/filter-options" + ".*"))
                 .willReturn(WireMock.notFound()));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON)
@@ -476,7 +476,7 @@ public class SensitivityAnalysisTest {
                         .content(SENSITIVITY_INPUT))
                 .andExpect(status().isNotFound()).andReturn();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter_options?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON)
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(SENSITIVITY_INPUT))
                 .andExpect(status().isNotFound()).andReturn();

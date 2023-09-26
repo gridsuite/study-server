@@ -133,7 +133,7 @@ public class SensitivityAnalysisService {
 
         // initializing from uri string (not from path string) allows build() to escape selector content
         URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
-                .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, "results", resultUuidOpt.get().toString(), "filter_options")
+                .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, "results", resultUuidOpt.get().toString(), "filter-options")
                 .queryParam("selector", selector).build().encode().toUri();
         try {
             options = restTemplate.getForObject(uri, String.class);
