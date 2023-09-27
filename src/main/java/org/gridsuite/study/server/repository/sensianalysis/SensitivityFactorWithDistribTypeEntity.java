@@ -20,7 +20,7 @@ import jakarta.persistence.*;
 @Setter
 @Entity
 @Table(name = "sensitivityFactorWithDistribTypeEntity")
-public class SensitivityFactorWithDistribTypeEntity extends SensitivityFactorEntity {
+public class SensitivityFactorWithDistribTypeEntity extends AbstractSensitivityFactorEntity {
 
     @Column(name = "distributionType")
     @Enumerated(EnumType.STRING)

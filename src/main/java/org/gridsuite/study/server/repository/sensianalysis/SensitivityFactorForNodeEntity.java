@@ -19,5 +19,5 @@ import jakarta.persistence.*;
 @Setter
 @Entity
 @Table(name = "sensitivityFactorForNodeEntity")
-public class SensitivityFactorForNodeEntity extends SensitivityFactorEntity {
+public class SensitivityFactorForNodeEntity extends AbstractSensitivityFactorEntity {
 }

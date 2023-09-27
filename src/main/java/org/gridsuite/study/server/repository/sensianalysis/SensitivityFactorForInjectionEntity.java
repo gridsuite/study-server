@@ -19,5 +19,5 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "sensitivityFactorForInjectionEntity")
-public class SensitivityFactorForInjectionEntity extends SensitivityFactorEntity {
+public class SensitivityFactorForInjectionEntity extends AbstractSensitivityFactorEntity {
 }

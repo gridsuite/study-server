@@ -17,14 +17,10 @@ import java.util.UUID;
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
 @NoArgsConstructor
-@AllArgsConstructor
 @Getter
 @Setter
-@Entity
-@Builder
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
-@Table(name = "sensitivityFactorEntity")
-public class SensitivityFactorEntity {
+@MappedSuperclass
+public abstract class AbstractSensitivityFactorEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -34,7 +30,7 @@ public class SensitivityFactorEntity {
     @ElementCollection
     @CollectionTable(
             name = "monitoredBranch",
-            joinColumns = @JoinColumn(name = "SensitivityFactorId", foreignKey = @ForeignKey(name = "sensitivityFactorEntity_monitoredBranchId_fk"))
+            joinColumns = @JoinColumn(name = "SensitivityFactorId", foreignKey = @ForeignKey(name = "sensitivityFactorEntity_monitoredBranch_fk"))
     )
     private List<EquipmentsContainerEmbeddable> monitoredBranch;
 
