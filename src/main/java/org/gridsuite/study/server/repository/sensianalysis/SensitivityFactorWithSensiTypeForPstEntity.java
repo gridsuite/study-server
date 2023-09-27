@@ -9,7 +9,7 @@ package org.gridsuite.study.server.repository.sensianalysis;
 import lombok.*;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>

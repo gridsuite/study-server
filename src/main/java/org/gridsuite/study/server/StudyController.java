@@ -1327,8 +1327,7 @@ public class StudyController {
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run")
     @Operation(summary = "run sensitivity analysis on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has started"),
-            @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
+        @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has started"), @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
     public ResponseEntity<UUID> runSensitivityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);

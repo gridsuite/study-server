@@ -11,8 +11,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.sensianalysis.EquipmentsContainer;
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;

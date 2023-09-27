@@ -6,12 +6,10 @@
  */
 package org.gridsuite.study.server.repository.sensianalysis;
 
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-
-import javax.persistence.Entity;
-import javax.persistence.Table;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>

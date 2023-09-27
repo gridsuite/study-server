@@ -6,10 +6,10 @@
  */
 package org.gridsuite.study.server.repository.sensianalysis;
 
+import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.repository.EquipmentsContainerEmbeddable;
 
-import javax.persistence.*;
 import java.util.List;
 import java.util.UUID;
 

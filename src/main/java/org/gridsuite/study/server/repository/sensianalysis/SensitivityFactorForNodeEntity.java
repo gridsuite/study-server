@@ -9,7 +9,7 @@ package org.gridsuite.study.server.repository.sensianalysis;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
