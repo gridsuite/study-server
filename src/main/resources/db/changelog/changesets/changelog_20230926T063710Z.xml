@@ -2,7 +2,7 @@
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
     <changeSet author="rehiligha (generated)" id="1695710241049-5">
         <createTable tableName="contingencies">
-            <column name="contingencies_id" type="UUID">
+            <column name="sensitivity_factor_id" type="UUID">
                 <constraints nullable="false"/>
             </column>
             <column name="container_id" type="UUID"/>
@@ -11,7 +11,7 @@
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1695710241049-6">
         <createTable tableName="injections">
-            <column name="injections_id" type="UUID">
+            <column name="sensitivity_factor_id" type="UUID">
                 <constraints nullable="false"/>
             </column>
             <column name="container_id" type="UUID"/>
@@ -20,7 +20,7 @@
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1695710241049-7">
         <createTable tableName="monitored_branch">
-            <column name="monitored_branch_id" type="UUID">
+            <column name="sensitivity_factor_id" type="UUID">
                 <constraints nullable="false"/>
             </column>
             <column name="container_id" type="UUID"/>

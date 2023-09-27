@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * @author SAHNOUN Walid <walid.sahnoun@rte-france.com>
+ * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
 @NoArgsConstructor
 @AllArgsConstructor
