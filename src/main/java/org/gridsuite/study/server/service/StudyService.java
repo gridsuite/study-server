@@ -1663,23 +1663,13 @@ public class StudyService {
         reindexStudy(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
     }
 
-    private StudyIndexationStatus getStudyIndexationStatus(StudyEntity study) {
-
-        if (study.getIndexationStatus() == StudyIndexationStatus.INDEXED) {
-            // We have to check if it's true
-            checkStudyIndexationStatus(study);
-        }
-        return study.getIndexationStatus();
-    }
-
     public StudyIndexationStatus getStudyIndexationStatus(UUID studyUuid) {
-        return getStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
-    }
-
-    private void checkStudyIndexationStatus(StudyEntity study) {
-        if (!networkConversionService.checkStudyIndexationStatus(study.getNetworkUuid())) {
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        if (study.getIndexationStatus() == StudyIndexationStatus.INDEXED
+            && !networkConversionService.checkStudyIndexationStatus(study.getNetworkUuid())) {
             updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
         }
+        return study.getIndexationStatus();
     }
 
     @Transactional
