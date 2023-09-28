@@ -252,6 +252,10 @@ public class SensitivityAnalysisTest {
                     || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "\\?.*")) {
                     return new MockResponse().setResponseCode(200).setBody(FAKE_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/filter-options" + "\\?.*")
+                        || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/filter-options" + "\\?.*")) {
+                    return new MockResponse().setResponseCode(200).setBody(FAKE_RESULT_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID) && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_STATUS_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -317,7 +321,11 @@ public class SensitivityAnalysisTest {
             .andExpectAll(status().isOk(), content().string(FAKE_RESULT_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/results/" + resultUuid)));
-        //assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s/status", resultUuid)));
+
+        // get sensitivity analysis result filter options
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, nodeUuid, "fakeJsonSelector"))
+                .andExpectAll(status().isOk(), content().string(FAKE_RESULT_JSON));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/results/" + resultUuid + "/filter-options")));
 
         // get sensitivity analysis status
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/status", studyUuid, nodeUuid)).andExpectAll(
@@ -362,6 +370,10 @@ public class SensitivityAnalysisTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
                 studyNameUserIdUuid, UUID.randomUUID(), "fakeJsonSelector"))
             .andExpectAll(status().isNoContent());
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}",
+                        studyNameUserIdUuid, UUID.randomUUID(), "fakeJsonSelector"))
+                .andExpectAll(status().isNoContent());
 
         // run additional sensitivity analysis for deletion test
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyNameUserIdUuid, modificationNode2Uuid)
@@ -425,6 +437,49 @@ public class SensitivityAnalysisTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
                 studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
             .andExpectAll(status().isNoContent());
+    }
+
+    @Test
+    @SneakyThrows
+    public void testGetSensitivityResultWithWrongId() {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID notFoundSensitivityUuid = UUID.randomUUID();
+        UUID studyUuid = studyEntity.getId();
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(SENSITIVITY_INPUT))
+                .andExpect(status().isNoContent()).andReturn();
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(SENSITIVITY_INPUT))
+                .andExpect(status().isNoContent()).andReturn();
+
+        String baseUrlWireMock = wireMock.baseUrl();
+        sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrlWireMock);
+
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNodeUuid = modificationNode1.getId();
+        networkModificationTreeService.updateSensitivityAnalysisResultUuid(modificationNodeUuid, notFoundSensitivityUuid);
+        assertTrue(networkModificationTreeService.getSensitivityAnalysisResultUuid(modificationNodeUuid).isPresent());
+        assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getSensitivityAnalysisResultUuid(modificationNodeUuid).get());
+
+        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid))
+                .willReturn(WireMock.notFound()));
+
+        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid + "/filter-options" + ".*"))
+                .willReturn(WireMock.notFound()));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(SENSITIVITY_INPUT))
+                .andExpect(status().isNotFound()).andReturn();
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(SENSITIVITY_INPUT))
+                .andExpect(status().isNotFound()).andReturn();
     }
 
     @Test

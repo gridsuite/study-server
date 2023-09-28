@@ -1348,6 +1348,20 @@ public class StudyController {
             ResponseEntity.noContent().build();
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options")
+    @Operation(summary = "Get sensitivity analysis filter options on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis filter options"),
+        @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
+    public ResponseEntity<String> getSensitivityAnalysisFilterOptions(
+        @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+        @Parameter(description = "results selector") @RequestParam("selector") String selector) {
+        String result = sensitivityAnalysisService.getSensitivityResultsFilterOptions(nodeUuid, selector);
+        return result != null ? ResponseEntity.ok().body(result) :
+            ResponseEntity.noContent().build();
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/status")
     @Operation(summary = "Get the sensitivity analysis status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis status"),
