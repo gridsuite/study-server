@@ -1214,7 +1214,6 @@ public class StudyService {
         return studyEntity;
     }
 
-    @Transactional
     public StudyEntity updateStudyIndexationStatus(StudyEntity studyEntity, StudyIndexationStatus indexationStatus) {
         studyEntity.setIndexationStatus(indexationStatus);
         notificationService.emitStudyIndexationStatusChanged(studyEntity.getId(), indexationStatus);
@@ -1659,6 +1658,7 @@ public class StudyService {
         LOGGER.info("Study with id = '{}' has been reindexed", study.getId());
     }
 
+    @Transactional
     public void reindexStudy(UUID studyUuid) {
         reindexStudy(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
     }
