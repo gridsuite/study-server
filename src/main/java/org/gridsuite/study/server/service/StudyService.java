@@ -1754,12 +1754,12 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReporterModel> getNodeReport(UUID nodeUuid, boolean nodeOnlyReport) {
-        return getSubReportersByNodeFrom(nodeUuid, nodeOnlyReport);
+    public List<ReporterModel> getNodeReport(UUID nodeUuid, boolean nodeOnlyReport, Set<String> severityLevels) {
+        return getSubReportersByNodeFrom(nodeUuid, nodeOnlyReport, severityLevels);
     }
 
-    private List<ReporterModel> getSubReportersByNodeFrom(UUID nodeUuid, boolean nodeOnlyReport) {
-        List<ReporterModel> subReporters = getSubReportersByNodeFrom(nodeUuid);
+    private List<ReporterModel> getSubReportersByNodeFrom(UUID nodeUuid, boolean nodeOnlyReport, Set<String> severityLevels) {
+        List<ReporterModel> subReporters = getSubReportersByNodeFrom(nodeUuid, severityLevels);
         if (subReporters.isEmpty()) {
             return subReporters;
         } else if (nodeOnlyReport) {
@@ -1769,13 +1769,13 @@ public class StudyService {
                 return subReporters;
             }
             Optional<UUID> parentUuid = networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporters.get(0).getTaskKey()));
-            return parentUuid.isEmpty() ? subReporters : Stream.concat(getSubReportersByNodeFrom(parentUuid.get(), false).stream(), subReporters.stream()).collect(Collectors.toList());
+            return parentUuid.isEmpty() ? subReporters : Stream.concat(getSubReportersByNodeFrom(parentUuid.get(), false, severityLevels).stream(), subReporters.stream()).collect(Collectors.toList());
         }
     }
 
-    private List<ReporterModel> getSubReportersByNodeFrom(UUID nodeUuid) {
+    private List<ReporterModel> getSubReportersByNodeFrom(UUID nodeUuid, Set<String> severityLevels) {
         AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
-        ReporterModel reporter = reportService.getReport(nodeInfos.getReportUuid(), nodeInfos.getId().toString());
+        ReporterModel reporter = reportService.getReport(nodeInfos.getReportUuid(), nodeInfos.getId().toString(), severityLevels);
         Map<String, List<ReporterModel>> subReportersByNode = new LinkedHashMap<>();
         reporter.getSubReporters().forEach(subReporter -> subReportersByNode.putIfAbsent(getNodeIdFromReportKey(subReporter), new ArrayList<>()));
         reporter.getSubReporters().forEach(subReporter ->

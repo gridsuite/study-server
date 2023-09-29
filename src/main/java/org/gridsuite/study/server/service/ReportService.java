@@ -24,6 +24,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -60,12 +61,14 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "reports" + DELIMITER;
     }
 
-    public ReporterModel getReport(@NonNull UUID reportUuid, @NonNull String defaultName) {
-        var path = UriComponentsBuilder.fromPath("{reportUuid}")
-            .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
-            .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false)
-            .buildAndExpand(reportUuid)
-            .toUriString();
+    public ReporterModel getReport(@NonNull UUID reportUuid, @NonNull String defaultName, Set<String> severityLevels) {
+        var uriBuilder = UriComponentsBuilder.fromPath("{reportUuid}")
+                .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
+                .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false);
+        if (severityLevels != null) {
+            severityLevels.forEach(level -> uriBuilder.queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, level));
+        }
+        var path = uriBuilder.buildAndExpand(reportUuid).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         List<ReporterModel> reporters = restTemplate.exchange(this.getReportServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReporterModel>>() {
