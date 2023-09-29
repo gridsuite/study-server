@@ -1,0 +1,93 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="rehiligha (generated)" id="1695825525015-82">
+        <createTable tableName="contingencies">
+            <column name="sensitivity_factor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="container_id" type="UUID"/>
+            <column name="container_name" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1695825525015-83">
+        <createTable tableName="injections">
+            <column name="sensitivity_factor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="container_id" type="UUID"/>
+            <column name="container_name" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1695825525015-84">
+        <createTable tableName="monitored_branch">
+            <column name="sensitivity_factor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="container_id" type="UUID"/>
+            <column name="container_name" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1695825525015-85">
+        <createTable tableName="sensitivity_factor_for_injection_entity">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="sensitivity_factor_for_injection_entityPK"/>
+            </column>
+            <column defaultValueBoolean="true" name="activated" type="BOOLEAN"/>
+            <column name="sensitivity_analysis_parameters_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1695825525015-86">
+        <createTable tableName="sensitivity_factor_for_node_entity">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="sensitivity_factor_for_node_entityPK"/>
+            </column>
+            <column defaultValueBoolean="true" name="activated" type="BOOLEAN"/>
+            <column name="sensitivity_analysis_parameters_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1695825525015-87">
+        <createTable tableName="sensitivity_factor_with_distrib_type_entity">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="sensitivity_factor_with_distrib_type_entityPK"/>
+            </column>
+            <column defaultValueBoolean="true" name="activated" type="BOOLEAN"/>
+            <column name="distribution_type" type="VARCHAR(255)"/>
+            <column name="sensitivity_analysis_parameters_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1695825525015-88">
+        <createTable tableName="sensitivity_factor_with_sensi_type_for_hvdc_entity">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="sensitivity_factor_with_sensi_type_for_hvdc_entityPK"/>
+            </column>
+            <column defaultValueBoolean="true" name="activated" type="BOOLEAN"/>
+            <column name="sensitivity_type" type="VARCHAR(255)"/>
+            <column name="sensitivity_analysis_parameters_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1695825525015-89">
+        <createTable tableName="sensitivity_factor_with_sensi_type_for_pst_entity">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="sensitivity_factor_with_sensi_type_for_pst_entityPK"/>
+            </column>
+            <column defaultValueBoolean="true" name="activated" type="BOOLEAN"/>
+            <column name="sensitivity_type" type="VARCHAR(255)"/>
+            <column name="sensitivity_analysis_parameters_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1695825525015-90">
+        <addForeignKeyConstraint baseColumnNames="sensitivity_analysis_parameters_id" baseTableName="sensitivity_factor_with_sensi_type_for_hvdc_entity" constraintName="FKir2dvsia00k9aat5v61ykg62h" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1695825525015-91">
+        <addForeignKeyConstraint baseColumnNames="sensitivity_analysis_parameters_id" baseTableName="sensitivity_factor_for_node_entity" constraintName="FKl1s72h20hkyb9nv9qxdoiiwnk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1695825525015-92">
+        <addForeignKeyConstraint baseColumnNames="sensitivity_analysis_parameters_id" baseTableName="sensitivity_factor_for_injection_entity" constraintName="FKppur9qqhcmiipm36b0kfwac9m" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1695825525015-93">
+        <addForeignKeyConstraint baseColumnNames="sensitivity_analysis_parameters_id" baseTableName="sensitivity_factor_with_sensi_type_for_pst_entity" constraintName="FKptn2gbg3o1e03giwx4s732jxl" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1695825525015-94">
+        <addForeignKeyConstraint baseColumnNames="sensitivity_analysis_parameters_id" baseTableName="sensitivity_factor_with_distrib_type_entity" constraintName="FKtl5e2vnbank4a0cps8mkhxb35" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="sensitivity_analysis_parameters" validate="true"/>
+    </changeSet>
+</databaseChangeLog>
