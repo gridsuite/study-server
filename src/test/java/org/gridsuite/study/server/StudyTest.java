@@ -6,10 +6,12 @@
  */
 package org.gridsuite.study.server;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
@@ -30,7 +32,6 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
-import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
@@ -132,12 +133,16 @@ public class StudyTest {
     private static final String NEW_STUDY_CASE_UUID = "11888888-0000-0000-0000-000000000000";
     private static final String DUPLICATED_STUDY_UUID = "11888888-0000-0000-0000-111111111111";
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
+    private static final String NOT_EXISTING_NETWORK_CASE_UUID_STRING = "00000000-0000-0000-0000-000000000001";
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final String USER_ID_HEADER = "userId";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
+    private static final UUID NOT_EXISTING_NETWORK_UUID = UUID.randomUUID();
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
+    private static final UUID NOT_EXISTING_NETWORK_CASE_UUID = UUID.fromString(NOT_EXISTING_NETWORK_CASE_UUID_STRING);
     private static final UUID CLONED_CASE_UUID = UUID.fromString(CLONED_CASE_UUID_STRING);
     private static final NetworkInfos NETWORK_INFOS = new NetworkInfos(NETWORK_UUID, "20140116_0830_2D4_UX1_pst");
+    private static final NetworkInfos NOT_EXISTING_NETWORK_INFOS = new NetworkInfos(NOT_EXISTING_NETWORK_UUID, "not_existing_network_id");
     private static final UUID REPORT_UUID = UUID.randomUUID();
     private static final ReporterModel ROOT_REPORT_TEST = new ReporterModel(REPORT_UUID.toString(), REPORT_UUID.toString());
     private static final ReporterModel REPORT_TEST = new ReporterModel("test", "test");
@@ -240,6 +245,8 @@ public class StudyTest {
     private final String studyUpdateDestination = "study.update";
     private final String elementUpdateDestination = "element.update";
 
+    private boolean indexed = false;
+
     private static EquipmentInfos toEquipmentInfos(Line line) {
         return EquipmentInfos.builder()
             .networkUuid(NETWORK_UUID)
@@ -261,7 +268,7 @@ public class StudyTest {
         when(studyInfosService.search(String.format("userId:%s", "userId")))
                 .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
-        when(equipmentInfosService.searchEquipments(any(BoolQueryBuilder.class))).then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
+        when(equipmentInfosService.searchEquipments(any(BoolQuery.class))).then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
         when(equipmentInfosService.getEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("16"));
         when(equipmentInfosService.getTombstonedEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("4"));
 
@@ -270,6 +277,16 @@ public class StudyTest {
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
 
         doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
+    }
+
+    private void initMockBeansNetworkNotExisting(Network notExistingNetwork) {
+
+        when(networkStoreService.cloneNetwork(NOT_EXISTING_NETWORK_UUID, Collections.emptyList())).thenThrow(new PowsyblException("Network " + NOT_EXISTING_NETWORK_UUID + " not found"));
+        when(networkStoreService.getNetwork(NOT_EXISTING_NETWORK_UUID)).thenThrow(new PowsyblException("Network " + NOT_EXISTING_NETWORK_UUID + " not found"));
+        when(networkStoreService.getNetwork(NOT_EXISTING_NETWORK_UUID, PreloadingStrategy.COLLECTION)).thenThrow(new PowsyblException("Network " + NOT_EXISTING_NETWORK_UUID + " not found"));
+        when(networkStoreService.getNetwork(NOT_EXISTING_NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new PowsyblException("Network " + NOT_EXISTING_NETWORK_UUID + " not found"));
+
+        doNothing().when(networkStoreService).deleteNetwork(NOT_EXISTING_NETWORK_UUID);
     }
 
     private void cleanDB() {
@@ -286,6 +303,11 @@ public class StudyTest {
         network.getVariantManager().cloneVariant(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID);
         network.getVariantManager().setWorkingVariant(VariantManagerConstants.INITIAL_VARIANT_ID);
         initMockBeans(network);
+
+        Network notExistingNetwork = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
+        notExistingNetwork.getVariantManager().cloneVariant(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID);
+        notExistingNetwork.getVariantManager().setWorkingVariant(VariantManagerConstants.INITIAL_VARIANT_ID);
+        initMockBeansNetworkNotExisting(notExistingNetwork);
 
         server = new MockWebServer();
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
@@ -318,6 +340,7 @@ public class StudyTest {
         });
 
         String networkInfosAsString = mapper.writeValueAsString(NETWORK_INFOS);
+        String notExistingNetworkInfosAsString = mapper.writeValueAsString(NOT_EXISTING_NETWORK_INFOS);
         String networkInfos2AsString = mapper.writeValueAsString(NETWORK_INFOS_2);
         String networkInfos3AsString = mapper.writeValueAsString(NETWORK_INFOS_3);
         String clonedCaseUuidAsString = mapper.writeValueAsString(CLONED_CASE_UUID);
@@ -360,10 +383,25 @@ public class StudyTest {
                     } else {
                         return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
                     }
+                } else if (path.matches("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/reindex-all")) {
+                    return new MockResponse().setResponseCode(404);
                 } else if (path.matches("/v1/networks/.*/reindex-all")) {
+                    // simulate a server error
+                    if (indexed) {
+                        return new MockResponse().setResponseCode(500);
+                    }
+                    indexed = true;
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/indexed-equipments")) {
+                    return new MockResponse().setResponseCode(404);
+                } else if (path.matches("/v1/networks/.*/indexed-equipments")) {
+                    return new MockResponse().setResponseCode(indexed ? 200 : 204);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS, "UCTE");
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks\\?caseUuid=" + NOT_EXISTING_NETWORK_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
+                    sendCaseImportSucceededMessage(path, NOT_EXISTING_NETWORK_INFOS, "UCTE");
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_2_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
@@ -425,6 +463,7 @@ public class StudyTest {
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/cases/" + CASE_UUID_STRING + "/exists":
+                    case "/v1/cases/" + NOT_EXISTING_NETWORK_CASE_UUID_STRING + "/exists":
                     case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/exists":
                     case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/exists":
                     case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/exists":
@@ -437,6 +476,10 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_UUID_STRING + "/infos":
                         return new MockResponse().setResponseCode(200)
                                 .setBody("{\"uuid\":\"" + CASE_UUID_STRING + "\",\"name\":\"" + TEST_FILE_UCTE + "\",\"format\":\"UCTE\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + NOT_EXISTING_NETWORK_CASE_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + NOT_EXISTING_NETWORK_CASE_UUID_STRING + "\",\"name\":\"" + TEST_FILE_UCTE + "\",\"format\":\"UCTE\"}")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/infos":
                         return new MockResponse().setResponseCode(200)
@@ -463,6 +506,7 @@ public class StudyTest {
                                 .setBody("{\"uuid\":\"" + CASE_3_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/cases/" + CASE_UUID_STRING + "/format":
+                    case "/v1/cases/" + NOT_EXISTING_NETWORK_CASE_UUID_STRING + "/format":
                         return new MockResponse().setResponseCode(200).setBody("UCTE")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/format":
@@ -472,7 +516,7 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_2_UUID_STRING + "/format":
                     case "/v1/cases/" + CASE_3_UUID_STRING + "/format":
                         return new MockResponse().setResponseCode(200).setBody("XIIDM")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/exists":
                         return new MockResponse().setResponseCode(200).setBody("false")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -501,6 +545,9 @@ public class StudyTest {
                     case "/v1/networks?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks?caseUuid=" + NOT_EXISTING_NETWORK_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
+                        return new MockResponse().setBody(String.valueOf(notExistingNetworkInfosAsString)).setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks?caseUuid=" + CASE_2_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfos2AsString)).setResponseCode(200)
@@ -778,6 +825,32 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + CASE_UUID)));
+    }
+
+    @Test
+    public void testDeleteStudyWithNonExistingCase() throws Exception {
+        UUID studyUuid = createStudy("userId", CASE_UUID);
+
+        UUID stubUuid = wireMockUtils.stubNetworkModificationDeleteGroup();
+
+        // Changing the study case uuid with a non existing case
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
+        assertNotNull(studyEntity);
+        UUID nonExistingCaseUuid = UUID.randomUUID();
+        studyEntity.setCaseUuid(nonExistingCaseUuid);
+        studyRepository.save(studyEntity);
+
+        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isOk());
+
+        assertTrue(studyRepository.findById(studyUuid).isEmpty());
+
+        wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + nonExistingCaseUuid)));
     }
 
     @Test
@@ -1285,6 +1358,14 @@ public class StudyTest {
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(DUPLICATED_STUDY_UUID, indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
+        assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageOnGoing.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(StudyIndexationStatus.INDEXING_ONGOING.name(), indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_INDEXATION_STATUS));
+        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(DUPLICATED_STUDY_UUID, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
+        assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(StudyIndexationStatus.INDEXED.name(), indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_INDEXATION_STATUS));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
         StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString(DUPLICATED_STUDY_UUID)).orElse(null);
@@ -2113,18 +2194,60 @@ public class StudyTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", UUID.randomUUID()))
             .andExpect(status().isNotFound());
 
+        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", UUID.randomUUID()))
+            .andExpectAll(status().isNotFound());
+
+        UUID notExistingNetworkStudyUuid = createStudy("userId", NOT_EXISTING_NETWORK_CASE_UUID);
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", notExistingNetworkStudyUuid))
+            .andExpect(status().isInternalServerError());
+        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
+
+        var requests = TestUtils.getRequestsWithBodyDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/reindex-all")));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", notExistingNetworkStudyUuid))
+            .andExpectAll(status().isInternalServerError());
+
+        requests = TestUtils.getRequestsWithBodyDone(1, server);
+        assertEquals(1, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/indexed-equipments")).count());
+
         UUID study1Uuid = createStudy("userId", CASE_UUID);
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", study1Uuid))
+            .andExpectAll(status().isOk(),
+                        content().string("NOT_INDEXED"));
+        indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", study1Uuid))
             .andExpect(status().isOk());
 
-        var requests = TestUtils.getRequestsWithBodyDone(2, server);
+        indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(study1Uuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", study1Uuid))
+            .andExpectAll(status().isOk(),
+                        content().string("INDEXED"));
+
+        requests = TestUtils.getRequestsWithBodyDone(4, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
+        assertEquals(2, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/indexed-equipments")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
 
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(study1Uuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", study1Uuid))
+            .andExpect(status().is5xxServerError());
+        indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
+        indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
+
+        requests = TestUtils.getRequestsWithBodyDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
     }
 
     @Test

@@ -30,9 +30,10 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-import org.gridsuite.study.server.utils.ComputationType;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -103,7 +104,7 @@ public class VoltageInitTest {
 
     private static final String VOLTAGE_INIT_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
 
-    private static final String VOLTAGE_INIT_PARAMETERS_JSON = "{\"uuid\":\"0c0f1efd-bd22-4a75-83d3-9e530245c7f4\",\"date\":\"2023-08-22T12:43:37.596944+02:00\",\"name\":null,\"voltageLimits\":[{\"priority\":0,\"lowVoltageLimit\":24,\"highVoltageLimit\":552,\"filters\":[{\"filterId\":\"6754396b-3791-4b80-9971-defbf5968fb7\",\"filterName\":\"testfp\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}],\"constantQGenerators\":[{\"filterId\":\"ff915f2f-578c-4d8c-a267-0135a4323462\",\"filterName\":\"testf1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"variableTwoWindingsTransformers\":[],\"variableShuntCompensators\":[]}]";
+    private static final String VOLTAGE_INIT_PARAMETERS_JSON = "{\"uuid\":\"0c0f1efd-bd22-4a75-83d3-9e530245c7f4\",\"date\":\"2023-08-22T12:43:37.596944+02:00\",\"name\":null,\"voltageLimits\":[{\"priority\":0,\"lowVoltageLimit\":24,\"highVoltageLimit\":552,\"filters\":[{\"containerId\":\"6754396b-3791-4b80-9971-defbf5968fb7\",\"containerName\":\"testfp\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}],\"constantQGenerators\":[{\"containerId\":\"ff915f2f-578c-4d8c-a267-0135a4323462\",\"containerName\":\"testf1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"variableTwoWindingsTransformers\":[],\"variableShuntCompensators\":[]}]";
 
     private static final String VOLTAGE_INIT_EMPTY_PARAMETERS = "{}";
 
@@ -112,6 +113,8 @@ public class VoltageInitTest {
     private static final String WRONG_VOLTAGE_INIT_PARAMETERS_UUID = "0c0f1efd-bd22-1111-83d3-9e530245c7f4";
 
     private static final String VOLTAGE_INIT_RESULT_JSON = "{\"version\":\"1.0\"}";
+
+    private static final String VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST = "[{\"type\": \"VOLTAGE_INIT_MODIFICATION\",\"uuid\": \"254a3b85-14ad-4436-bf62-3e60af831dd1\",\"date\": \"2023-09-18T10:58:32.582239Z\",\"stashed\": false,\"generators\": [],\"transformers\": [],\"staticVarCompensators\": [],\"vscConverterStations\": [],\"shuntCompensators\": []}]";
 
     private static final String VOLTAGE_INIT_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String VARIANT_ID = "variant_1";
@@ -237,10 +240,13 @@ public class VoltageInitTest {
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/groups/.*/duplications.*")) {
                     Optional<NetworkModificationResult> networkModificationResult =
-                        createModificationResultWithElementImpact(SimpleElementImpact.SimpleImpactType.MODIFICATION,
-                            IdentifiableType.GENERATOR, "genId", Set.of("s1"));
+                            createModificationResultWithElementImpact(SimpleElementImpact.SimpleImpactType.MODIFICATION,
+                                    IdentifiableType.GENERATOR, "genId", Set.of("s1"));
                     return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(networkModificationResult))
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/modifications\\?errorOnGroupNotFound=false&stashed=false")) {
+                    return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST))
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/stop.*")
                         || path.matches("/v1/results/" + VOLTAGE_INIT_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? VOLTAGE_INIT_OTHER_NODE_RESULT_UUID : VOLTAGE_INIT_RESULT_UUID;
@@ -414,21 +420,9 @@ public class VoltageInitTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
 
         //Test result count
-        mockMvc.perform(delete("/v1/supervision/computation/results")
-            .queryParam("type", String.valueOf(ComputationType.VOLTAGE_INITIALIZATION))
-            .queryParam("dryRun", String.valueOf(true)))
-            .andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
-
+        testResultCount();
         //Delete Voltage init results
-        assertEquals(1, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
-        mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(ComputationType.VOLTAGE_INITIALIZATION))
-                .queryParam("dryRun", String.valueOf(false)))
-            .andExpect(status().isOk());
-
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results")));
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
+        testDeleteResults(1);
     }
 
     @Test
@@ -453,6 +447,14 @@ public class VoltageInitTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+
+        // just retrieve modifications list from modificationNode3Uuid
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", studyNameUserIdUuid, modificationNode3Uuid)
+                .header("userId", "userId")).andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(2, server).stream().allMatch(r ->
+                r.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/modifications\\?errorOnGroupNotFound=false&stashed=false") ||
+                r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")
+        ));
 
         // clone and copy modifications to modificationNode3Uuid
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", studyNameUserIdUuid, modificationNode3Uuid)
@@ -567,6 +569,25 @@ public class VoltageInitTest {
         }
     }
 
+    private void testResultCount() throws Exception {
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.VOLTAGE_INITIALIZATION))
+                .queryParam("dryRun", String.valueOf(true)))
+            .andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
+    }
+
+    private void testDeleteResults(int expectedInitialResultCount) throws Exception {
+        assertEquals(expectedInitialResultCount, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.VOLTAGE_INITIALIZATION))
+                .queryParam("dryRun", String.valueOf(false)))
+            .andExpect(status().isOk());
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results")));
+        assertEquals(0, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
+    }
+
     @Test
     public void testNoResult() throws Exception {
         //insert a study
@@ -600,10 +621,10 @@ public class VoltageInitTest {
                 .hvdcAcEmulation(true)
                 .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-        SensitivityAnalysisParametersEntity defaultSensitivityAnalysisParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
+        SensitivityAnalysisParametersEntity defaultSensitivityParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
 
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", "defaultLoadflowProvider",
-                defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, voltageInitParametersUuid, null, defaultSensitivityAnalysisParametersEntity);
+                defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, voltageInitParametersUuid, null, defaultSensitivityParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

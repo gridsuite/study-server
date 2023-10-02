@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.notification;
 
+import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
@@ -69,6 +70,7 @@ public class NotificationService {
     public static final String UPDATE_TYPE_STUDY = "study";
     public static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
     public static final String UPDATE_TYPE_SWITCH = "switch";
+    public static final String UPDATE_TYPE_INDEXATION_STATUS = "indexation_status_updated";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
     public static final String MODIFICATIONS_DELETING_IN_PROGRESS = "deletingInProgress";
@@ -81,6 +83,7 @@ public class NotificationService {
     public static final String HEADER_MOVED_NODE = "movedNode";
     public static final String HEADER_PARENT_NODE = "parentNode";
     public static final String HEADER_REMOVE_CHILDREN = "removeChildren";
+    public static final String HEADER_INDEXATION_STATUS = "indexation_status";
 
     public static final String NODE_UPDATED = "nodeUpdated";
     public static final String NODE_DELETED = "nodeDeleted";
@@ -171,6 +174,15 @@ public class NotificationService {
         sendUpdateMessage(MessageBuilder.withPayload(networkImpactsInfos).setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
+                .build());
+    }
+
+    @PostCompletion
+    public void emitStudyIndexationStatusChanged(UUID studyUuid, StudyIndexationStatus status) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_INDEXATION_STATUS)
+                .setHeader(HEADER_INDEXATION_STATUS, status.name())
                 .build());
     }
 

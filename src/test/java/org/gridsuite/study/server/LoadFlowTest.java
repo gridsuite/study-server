@@ -23,9 +23,10 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-import org.gridsuite.study.server.utils.ComputationType;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -313,6 +314,47 @@ public class LoadFlowTest {
     }
 
     @Test
+    public void testDeleteLoadFlowResults() throws Exception {
+        MvcResult mvcResult;
+        String resultAsString;
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+            UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
+            modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
+        UUID modificationNode2Uuid = modificationNode2.getId();
+
+        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid,
+            modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
+        UUID modificationNode3Uuid = modificationNode3.getId();
+
+        //run a loadflow
+        mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNode3Uuid)
+                .header("userId", "userId"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        UUID uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
+        assertEquals(uuidResponse, UUID.fromString(LOADFLOW_RESULT_UUID));
+
+        //Test result count
+        testResultCount();
+        //Delete Voltage init results
+        testDeleteResults(1);
+    }
+
+    @Test
     @SneakyThrows
     public void testResetUuidResultWhenLFFailed() {
         UUID resultUuid = UUID.randomUUID();
@@ -357,6 +399,27 @@ public class LoadFlowTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, updateTypeToCheck, null);
     }
 
+    private void testResultCount() throws Exception {
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.LOAD_FLOW))
+                .queryParam("dryRun", String.valueOf(true)))
+            .andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
+    }
+
+    private void testDeleteResults(int expectedInitialResultCount) throws Exception {
+        assertEquals(expectedInitialResultCount, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.LOAD_FLOW))
+                .queryParam("dryRun", String.valueOf(false)))
+            .andExpect(status().isOk());
+
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.contains("/v1/results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
+        assertEquals(0, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
+    }
+
     @Test
     public void testNoResult() throws Exception {
         //insert a study
@@ -392,9 +455,9 @@ public class LoadFlowTest {
                 .useReactiveLimits(true)
                 .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-        SensitivityAnalysisParametersEntity defaultSensitivityAnalysisParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
+        SensitivityAnalysisParametersEntity defaultSensitivityParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider,
-                defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, defaultSensitivityAnalysisParametersEntity);
+                defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, defaultSensitivityParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

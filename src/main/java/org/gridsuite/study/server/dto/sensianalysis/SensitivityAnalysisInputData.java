@@ -4,19 +4,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.dto;
+package org.gridsuite.study.server.dto.sensianalysis;
 
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -40,75 +36,77 @@ public class SensitivityAnalysisInputData {
     }
 
     @SuperBuilder
-    @NoArgsConstructor
     @AllArgsConstructor
-    @Getter
-    @Setter
-    public static class Ident {
-        UUID id;
-        String name;
-    }
-
-    @SuperBuilder
     @NoArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to injections set")
     public static class SensitivityInjectionsSet {
-        List<Ident> monitoredBranches;
-        List<Ident> injections;
+        List<EquipmentsContainer> monitoredBranches;
+        List<EquipmentsContainer> injections;
         DistributionType distributionType;
-        List<Ident> contingencies;
+        List<EquipmentsContainer> contingencies;
+        boolean activated;
+
     }
 
     @SuperBuilder
+    @AllArgsConstructor
     @NoArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to each injection")
     public static class SensitivityInjection {
-        List<Ident> monitoredBranches;
-        List<Ident> injections;
-        List<Ident> contingencies;
+        List<EquipmentsContainer> monitoredBranches;
+        List<EquipmentsContainer> injections;
+        List<EquipmentsContainer> contingencies;
+        boolean activated;
+
     }
 
     @SuperBuilder
+    @AllArgsConstructor
     @NoArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to each HVDC")
     public static class SensitivityHVDC {
-        List<Ident> monitoredBranches;
+        List<EquipmentsContainer> monitoredBranches;
         SensitivityType sensitivityType;
-        List<Ident> hvdcs;
-        List<Ident> contingencies;
+        List<EquipmentsContainer> hvdcs;
+        List<EquipmentsContainer> contingencies;
+        boolean activated;
+
     }
 
     @SuperBuilder
+    @AllArgsConstructor
     @NoArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to each PST")
     public static class SensitivityPST {
-        List<Ident> monitoredBranches;
+        List<EquipmentsContainer> monitoredBranches;
         SensitivityType sensitivityType;
-        List<Ident> psts;
-        List<Ident> contingencies;
+        List<EquipmentsContainer> psts;
+        List<EquipmentsContainer> contingencies;
+        boolean activated;
+
     }
 
     @SuperBuilder
+    @AllArgsConstructor
     @NoArgsConstructor
     @Getter
     @Setter
     @Schema(description = "Sensitivity relatively to nodes")
     public static class SensitivityNodes {
-        List<Ident> monitoredVoltageLevels;
-        List<Ident> equipmentsInVoltageRegulation;
-        List<Ident> contingencies;
-    }
+        List<EquipmentsContainer> monitoredVoltageLevels;
+        List<EquipmentsContainer> equipmentsInVoltageRegulation;
+        List<EquipmentsContainer> contingencies;
+        boolean activated;
 
-    @Schema(description = "Results threshold")
-    private double resultsThreshold;
+    }
 
     @Schema(description = "Sensitivity relatively to injections set")
     private List<SensitivityInjectionsSet> sensitivityInjectionsSets;

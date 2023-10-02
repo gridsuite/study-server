@@ -12,10 +12,13 @@ package org.gridsuite.study.server.service;
  */
 
 import org.gridsuite.study.server.StudyException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -32,6 +35,8 @@ public class CaseService {
 
     @Autowired
     private RestTemplate restTemplate;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(CaseService.class);
 
     @Autowired
     public CaseService(@Value("${powsybl.services.case-server.base-uri:http://case-server/}") String caseServerBaseUri) {
@@ -63,7 +68,11 @@ public class CaseService {
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
-        restTemplate.exchange(caseServerBaseUri + path, HttpMethod.DELETE, null, Void.class, caseUuid);
+        try {
+            restTemplate.exchange(caseServerBaseUri + path, HttpMethod.DELETE, null, Void.class, caseUuid);
+        } catch (RestClientException e) {
+            LOGGER.error(String.format("Error while deleting case '%s' : %s", caseUuid, e.getMessage()), e);
+        }
     }
 
     public UUID duplicateCase(UUID caseUuid, Boolean withExpiration) {

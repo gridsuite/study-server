@@ -26,7 +26,7 @@ import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.EntityNotFoundException;
+import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -248,7 +248,8 @@ public class NetworkModificationTreeService {
     public void stashNodes(UUID id, boolean stashChildren, List<UUID> stashedNodes, boolean firstIteration) {
         Optional<NodeEntity> optNodeToStash = nodesRepository.findById(id);
         optNodeToStash.ifPresent(nodeToStash -> {
-
+            UUID modificationGroupUuid = getModificationGroupUuid(nodeToStash.getIdNode());
+            networkModificationService.deleteStashedModifications(modificationGroupUuid);
             if (!stashChildren) {
                 nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> node.setParentNode(nodeToStash.getParentNode()));
             } else {
@@ -579,7 +580,7 @@ public class NetworkModificationTreeService {
     }
 
     public List<Pair<AbstractNode, Integer>> getStashedNodes(UUID studyUuid) {
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndStashedAndParentNodeOrderByStashDateDesc(studyUuid, true, null);
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndStashedAndParentNodeIdNodeOrderByStashDateDesc(studyUuid, true, null);
         List<Pair<AbstractNode, Integer>> result = new ArrayList<>();
         repositories.get(NodeType.NETWORK_MODIFICATION).getAllInOrder(nodes.stream().map(NodeEntity::getIdNode).toList())
                 .forEach(abstractNode -> {

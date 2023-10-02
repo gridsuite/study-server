@@ -23,6 +23,7 @@ import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -247,6 +248,18 @@ public class StudyController {
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.recreateStudyRootNetwork(userId, studyUuid);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/indexation/status")
+    @Operation(summary = "check study indexation")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The study indexation status"),
+        @ApiResponse(responseCode = "204", description = "The study indexation status doesn't exist"),
+        @ApiResponse(responseCode = "404", description = "The study or network doesn't exist")})
+    public ResponseEntity<String> checkStudyIndexationStatus(@PathVariable("studyUuid") UUID studyUuid) {
+        String result = studyService.getStudyIndexationStatus(studyUuid).name();
+        return result != null ? ResponseEntity.ok().body(result) :
+            ResponseEntity.noContent().build();
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/subtrees", params = {"subtreeToCutParentNodeUuid", "referenceNodeUuid"})
@@ -1127,8 +1140,8 @@ public class StudyController {
     @DeleteMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
     @Operation(summary = "Delete node with given id")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted"),
-            @ApiResponse(responseCode = "404", description = "The study or the node not found")})
+        @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted"),
+        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<Void> deleteNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                            @Parameter(description = "id of child to remove") @PathVariable("id") UUID nodeId,
                                            @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
@@ -1153,7 +1166,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/tree/nodes/stash")
     @Operation(summary = "Get the list of nodes in the trash for a given study")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
+        @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
     public ResponseEntity<List<Pair<AbstractNode, Integer>>> getStashedNodes(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getStashedNodes(studyUuid));
     }
@@ -1161,7 +1174,7 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{nodeId}/restore")
     @Operation(summary = "restore node below the given anchor node")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
+        @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
     public ResponseEntity<Void> restoreNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "id of node to restore") @PathVariable("nodeId") UUID nodeId,
                                                           @Parameter(description = "id of node below which the node will be restored") @RequestParam("anchorNodeId") UUID anchorNodeId) {
@@ -1326,12 +1339,11 @@ public class StudyController {
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run")
     @Operation(summary = "run sensitivity analysis on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has started")})
+        @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has started"), @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
     public ResponseEntity<UUID> runSensitivityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                       @RequestBody String sensitivityAnalysisInput) {
+                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runSensitivityAnalysis(studyUuid, nodeUuid, sensitivityAnalysisInput));
+        return ResponseEntity.ok().body(studyService.runSensitivityAnalysis(studyUuid, nodeUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result")
@@ -1344,6 +1356,20 @@ public class StudyController {
         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
         @Parameter(description = "results selector") @RequestParam("selector") String selector) {
         String result = sensitivityAnalysisService.getSensitivityAnalysisResult(nodeUuid, selector);
+        return result != null ? ResponseEntity.ok().body(result) :
+            ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options")
+    @Operation(summary = "Get sensitivity analysis filter options on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis filter options"),
+        @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
+    public ResponseEntity<String> getSensitivityAnalysisFilterOptions(
+        @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+        @Parameter(description = "results selector") @RequestParam("selector") String selector) {
+        String result = sensitivityAnalysisService.getSensitivityResultsFilterOptions(nodeUuid, selector);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1490,6 +1516,15 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", produces = MediaType.TEXT_PLAIN_VALUE)
+    @Operation(summary = "Get the voltage init modifications from a node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init modifications was returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found, or has no voltage init result")})
+    public ResponseEntity<String> getVoltageInitModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(studyService.getVoltageInitModifications(nodeUuid));
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Clone the voltage init modifications, then append them to node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init modifications have been appended.")})
@@ -1547,7 +1582,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
     @Operation(summary = "Get sensitivity analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters")})
-    public ResponseEntity<SensitivityAnalysisParametersValues> getSensitivityAnalysisParametersValues(
+    public ResponseEntity<SensitivityAnalysisParametersInfos> getSensitivityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParametersValues(studyUuid));
     }
@@ -1557,7 +1592,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set")})
     public ResponseEntity<Void> setSensitivityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) SensitivityAnalysisParametersValues sensitivityAnalysisParametersValues,
+            @RequestBody(required = false) SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setSensitivityAnalysisParametersValues(studyUuid, sensitivityAnalysisParametersValues, userId);
         return ResponseEntity.ok().build();

@@ -74,6 +74,8 @@ public class StudyException extends RuntimeException {
         CREATE_VOLTAGE_INIT_PARAMETERS_FAILED,
         UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED,
         DELETE_COMPUTATION_RESULTS_FAILED,
+        STUDY_INDEXATION_FAILED,
+        STUDY_CHECK_INDEXATION_FAILED
     }
 
     private final Type type;
