@@ -30,6 +30,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.dto.ComputationType;
@@ -103,7 +104,7 @@ public class VoltageInitTest {
 
     private static final String VOLTAGE_INIT_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
 
-    private static final String VOLTAGE_INIT_PARAMETERS_JSON = "{\"uuid\":\"0c0f1efd-bd22-4a75-83d3-9e530245c7f4\",\"date\":\"2023-08-22T12:43:37.596944+02:00\",\"name\":null,\"voltageLimits\":[{\"priority\":0,\"lowVoltageLimit\":24,\"highVoltageLimit\":552,\"filters\":[{\"filterId\":\"6754396b-3791-4b80-9971-defbf5968fb7\",\"filterName\":\"testfp\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}],\"constantQGenerators\":[{\"filterId\":\"ff915f2f-578c-4d8c-a267-0135a4323462\",\"filterName\":\"testf1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"variableTwoWindingsTransformers\":[],\"variableShuntCompensators\":[]}]";
+    private static final String VOLTAGE_INIT_PARAMETERS_JSON = "{\"uuid\":\"0c0f1efd-bd22-4a75-83d3-9e530245c7f4\",\"date\":\"2023-08-22T12:43:37.596944+02:00\",\"name\":null,\"voltageLimits\":[{\"priority\":0,\"lowVoltageLimit\":24,\"highVoltageLimit\":552,\"filters\":[{\"containerId\":\"6754396b-3791-4b80-9971-defbf5968fb7\",\"containerName\":\"testfp\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}],\"constantQGenerators\":[{\"containerId\":\"ff915f2f-578c-4d8c-a267-0135a4323462\",\"containerName\":\"testf1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"variableTwoWindingsTransformers\":[],\"variableShuntCompensators\":[]}]";
 
     private static final String VOLTAGE_INIT_EMPTY_PARAMETERS = "{}";
 
@@ -620,10 +621,10 @@ public class VoltageInitTest {
                 .hvdcAcEmulation(true)
                 .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-        SensitivityAnalysisParametersEntity defaultSensitivityAnalysisParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
+        SensitivityAnalysisParametersEntity defaultSensitivityParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
 
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", "defaultLoadflowProvider",
-                defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, voltageInitParametersUuid, null, defaultSensitivityAnalysisParametersEntity);
+                defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, voltageInitParametersUuid, null, defaultSensitivityParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
