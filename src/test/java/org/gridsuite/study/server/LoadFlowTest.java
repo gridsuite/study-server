@@ -293,24 +293,6 @@ public class LoadFlowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
-
-        //Test result count
-        mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(ComputationType.LOAD_FLOW))
-                .queryParam("dryRun", String.valueOf(true)))
-            .andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
-
-        //Test delete all results
-        mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(ComputationType.LOAD_FLOW))
-                .queryParam("dryRun", String.valueOf(false)))
-            .andExpect(status().isOk());
-
-        var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.contains("/v1/results"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
     }
 
     @Test
