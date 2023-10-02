@@ -269,6 +269,8 @@ public class StudyTest {
                 .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
         when(equipmentInfosService.searchEquipments(any(BoolQuery.class))).then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
+        when(equipmentInfosService.getEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("16"));
+        when(equipmentInfosService.getTombstonedEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("4"));
 
         when(networkStoreService.cloneNetwork(NETWORK_UUID, Collections.emptyList())).thenReturn(network);
         when(networkStoreService.getNetworkUuid(network)).thenReturn(NETWORK_UUID);
@@ -2301,6 +2303,28 @@ public class StudyTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid))
                 .andExpectAll(status().isOk(),
                         content().string("SuperSE"));
+    }
+
+    @Test
+    public void testSupervision() throws Exception {
+        MvcResult mvcResult;
+        UUID studyUuid = createStudy("userId", CASE_UUID);
+
+        //Test equipments indexes deletion dry run
+        mvcResult = mockMvc.perform(delete("/v1/supervision/equipments/indexes")
+            .queryParam("dryRun", String.valueOf(true)))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals(20, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+
+        //Test equipments indexes deletion
+        mvcResult = mockMvc.perform(delete("/v1/supervision/equipments/indexes")
+            .queryParam("dryRun", String.valueOf(false)))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals(20, Long.parseLong(mvcResult.getResponse().getContentAsString()));
     }
 
     @After
