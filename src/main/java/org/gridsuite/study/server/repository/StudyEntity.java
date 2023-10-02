@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.repository;
 
 import lombok.*;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 
 import jakarta.persistence.*;
