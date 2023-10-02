@@ -2319,7 +2319,7 @@ public class StudyTest {
         assertEquals(20, Long.parseLong(mvcResult.getResponse().getContentAsString()));
 
         //Test equipments indexes deletion
-        mockMvc.perform(delete("/v1/supervision/equipments/indexes")
+        mvcResult = mockMvc.perform(delete("/v1/supervision/equipments/indexes")
             .queryParam("dryRun", String.valueOf(false)))
             .andExpect(status().isOk())
             .andReturn();
