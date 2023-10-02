@@ -85,16 +85,20 @@ public class EquipmentInfosServiceTests {
         EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id").name("name").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
         assertEquals(equipmentInfosService.addEquipmentInfos(loadInfos), loadInfos);
         assertEquals(1, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
+        assertEquals(1, equipmentInfosService.getEquipmentInfosCount());
 
         equipmentInfosService.deleteAll(NETWORK_UUID);
         assertEquals(0, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
+        assertEquals(0, equipmentInfosService.getEquipmentInfosCount());
 
         equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build());
         equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").name("name2").type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build());
         assertEquals(2, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
+        assertEquals(2, equipmentInfosService.getEquipmentInfosCount());
 
         equipmentInfosService.deleteAll(NETWORK_UUID);
         assertEquals(0, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
+        assertEquals(0, equipmentInfosService.getEquipmentInfosCount());
     }
 
     @Test
@@ -102,16 +106,37 @@ public class EquipmentInfosServiceTests {
         TombstonedEquipmentInfos loadInfos = TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id").build();
         assertEquals(equipmentInfosService.addTombstonedEquipmentInfos(loadInfos), loadInfos);
         assertEquals(1, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());
+        assertEquals(1, equipmentInfosService.getTombstonedEquipmentInfosCount());
 
         equipmentInfosService.deleteAll(NETWORK_UUID);
         assertEquals(0, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());
+        assertEquals(0, equipmentInfosService.getTombstonedEquipmentInfosCount());
 
         equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").build());
         equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").build());
         assertEquals(2, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());
+        assertEquals(2, equipmentInfosService.getTombstonedEquipmentInfosCount());
 
         equipmentInfosService.deleteAll(NETWORK_UUID);
         assertEquals(0, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());
+        assertEquals(0, equipmentInfosService.getTombstonedEquipmentInfosCount());
+    }
+
+    @Test
+    public void testDeleteAllEquipmentInfos() {
+        TombstonedEquipmentInfos tsLoadInfos = TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id").build();
+        EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id").name("name").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
+
+        assertEquals(equipmentInfosService.addTombstonedEquipmentInfos(tsLoadInfos), tsLoadInfos);
+        assertEquals(equipmentInfosService.addEquipmentInfos(loadInfos), loadInfos);
+
+        assertEquals(1, equipmentInfosService.getTombstonedEquipmentInfosCount());
+        assertEquals(1, equipmentInfosService.getEquipmentInfosCount());
+
+        equipmentInfosService.deleteAll();
+
+        assertEquals(0, equipmentInfosService.getTombstonedEquipmentInfosCount());
+        assertEquals(0, equipmentInfosService.getEquipmentInfosCount());
     }
 
     @Test
