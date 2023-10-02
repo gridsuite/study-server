@@ -11,11 +11,9 @@ import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.iidm.network.IdentifiableType;
 import com.powsybl.iidm.network.*;
 import com.powsybl.security.LimitViolation;
 import com.powsybl.security.Security;
-import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.model.VariantInfos;
@@ -1203,7 +1201,7 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, importParameters);
+                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, importParameters, StudyIndexationStatus.INDEXED);
         return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
     }
 
@@ -1216,6 +1214,12 @@ public class StudyService {
             studyRepository.save(studyEntity);
         }
 
+        return studyEntity;
+    }
+
+    private StudyEntity updateStudyIndexationStatus(StudyEntity studyEntity, StudyIndexationStatus indexationStatus) {
+        studyEntity.setIndexationStatus(indexationStatus);
+        notificationService.emitStudyIndexationStatusChanged(studyEntity.getId(), indexationStatus);
         return studyEntity;
     }
 
@@ -1642,18 +1646,34 @@ public class StudyService {
         CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study);
         // reindex study in elasticsearch
         studyInfosService.recreateStudyInfos(studyInfos);
+
+        // Reset indexation status
+        updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXING_ONGOING);
         try {
             networkConversionService.reindexStudyNetworkEquipments(study.getNetworkUuid());
-        } catch (HttpStatusCodeException e) {
-            LOGGER.error(e.toString(), e);
+            updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXED);
+        } catch (Exception e) {
+            // Allow to retry indexation
+            updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
             throw e;
         }
         invalidateBuild(study.getId(), networkModificationTreeService.getStudyRootNodeUuid(study.getId()), false, false);
         LOGGER.info("Study with id = '{}' has been reindexed", study.getId());
     }
 
+    @Transactional
     public void reindexStudy(UUID studyUuid) {
         reindexStudy(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
+    }
+
+    @Transactional
+    public StudyIndexationStatus getStudyIndexationStatus(UUID studyUuid) {
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        if (study.getIndexationStatus() == StudyIndexationStatus.INDEXED
+            && !networkConversionService.checkStudyIndexationStatus(study.getNetworkUuid())) {
+            updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
+        }
+        return study.getIndexationStatus();
     }
 
     @Transactional
