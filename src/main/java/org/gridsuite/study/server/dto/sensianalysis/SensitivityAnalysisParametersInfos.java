@@ -32,7 +32,7 @@ public class SensitivityAnalysisParametersInfos {
 
     List<SensitivityAnalysisInputData.SensitivityInjectionsSet> sensitivityInjectionsSet = new ArrayList<>();
 
-    List<SensitivityAnalysisInputData.SensitivityInjection> sensitivityInjection= new ArrayList<>();
+    List<SensitivityAnalysisInputData.SensitivityInjection> sensitivityInjection = new ArrayList<>();
 
     List<SensitivityAnalysisInputData.SensitivityHVDC> sensitivityHVDC = new ArrayList<>();
 
