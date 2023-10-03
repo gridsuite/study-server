@@ -9,10 +9,14 @@ package org.gridsuite.study.server.service;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,10 +47,15 @@ public class SupervisionService {
 
     private final EquipmentInfosService equipmentInfosService;
 
+    private NotificationService notificationService;
+
+    private final StudyRepository studyRepository;
+
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    public SupervisionService(NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService) {
+    public SupervisionService(StudyRepository studyRepository, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService, NotificationService notificationService) {
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
+        this.studyRepository = studyRepository;
         this.reportService = reportService;
         this.loadFlowService = loadFlowService;
         this.dynamicSimulationService = dynamicSimulationService;
@@ -55,6 +64,7 @@ public class SupervisionService {
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
         this.equipmentInfosService = equipmentInfosService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -77,11 +87,20 @@ public class SupervisionService {
         }
     }
 
+    private void updateStudiesIndexationStatus(StudyIndexationStatus indexationStatus) {
+        List<StudyEntity> studies = studyRepository.findAll();
+        studies.forEach(s -> s.setIndexationStatus(indexationStatus));
+        studyRepository.saveAll(studies);
+
+        studies.forEach(s -> notificationService.emitStudyIndexationStatusChanged(s.getId(), indexationStatus));
+    }
+
     @Transactional
     public Long deleteAllStudyEquipmentsIndexes(boolean dryRun) {
         Long nbIndexesToDelete = equipmentInfosService.getEquipmentInfosCount() + equipmentInfosService.getTombstonedEquipmentInfosCount();
         if (!dryRun) {
             equipmentInfosService.deleteAll();
+            updateStudiesIndexationStatus(StudyIndexationStatus.NOT_INDEXED);
         }
         return nbIndexesToDelete;
     }

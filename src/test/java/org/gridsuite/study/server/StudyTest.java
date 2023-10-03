@@ -2310,6 +2310,22 @@ public class StudyTest {
         MvcResult mvcResult;
         UUID studyUuid = createStudy("userId", CASE_UUID);
 
+        mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", studyUuid))
+            .andExpect(status().isOk());
+
+        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", studyUuid))
+            .andExpectAll(status().isOk(),
+                        content().string("INDEXED"));
+
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+
         //Test equipments indexes deletion dry run
         mvcResult = mockMvc.perform(delete("/v1/supervision/equipments/indexes")
             .queryParam("dryRun", String.valueOf(true)))
@@ -2325,6 +2341,16 @@ public class StudyTest {
             .andReturn();
 
         assertEquals(20, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+        Message<byte[]> indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", studyUuid))
+            .andExpectAll(status().isOk(),
+                        content().string("NOT_INDEXED"));
+
+        var requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
+        assertEquals(1, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/indexed-equipments")).count());
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
     }
 
     @After
