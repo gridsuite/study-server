@@ -38,10 +38,10 @@ public class SupervisionController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.deleteComputationResults(computationType, dryRun));
     }
 
-    @DeleteMapping(value = "/equipments/indexes")
-    @Operation(summary = "delete all equipments indexes for all studies")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all equipments indexes have been deleted")})
-    public ResponseEntity<Long> deleteAllStudyEquipmentsIndexes(@Parameter(description = "Dry run") @RequestParam("dryRun") boolean dryRun) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.deleteAllStudyEquipmentsIndexes(dryRun));
+    @DeleteMapping(value = "/indexed-equipments")
+    @Operation(summary = "delete all indexed equipments for all studies")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed equipments have been deleted")})
+    public ResponseEntity<Long> deleteAllStudiesIndexedEquipments(@Parameter(description = "Dry run") @RequestParam("dryRun") boolean dryRun) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.deleteAllStudiesIndexedEquipments(dryRun));
     }
 }

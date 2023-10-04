@@ -2326,16 +2326,16 @@ public class StudyTest {
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        //Test equipments indexes deletion dry run
-        mvcResult = mockMvc.perform(delete("/v1/supervision/equipments/indexes")
+        //Test indexed equipments deletion dry run
+        mvcResult = mockMvc.perform(delete("/v1/supervision/indexed-equipments")
             .queryParam("dryRun", String.valueOf(true)))
             .andExpect(status().isOk())
             .andReturn();
 
         assertEquals(20, Long.parseLong(mvcResult.getResponse().getContentAsString()));
 
-        //Test equipments indexes deletion
-        mvcResult = mockMvc.perform(delete("/v1/supervision/equipments/indexes")
+        //Test indexed equipments deletion
+        mvcResult = mockMvc.perform(delete("/v1/supervision/indexed-equipments")
             .queryParam("dryRun", String.valueOf(false)))
             .andExpect(status().isOk())
             .andReturn();

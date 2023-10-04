@@ -96,7 +96,7 @@ public class SupervisionService {
     }
 
     @Transactional
-    public Long deleteAllStudyEquipmentsIndexes(boolean dryRun) {
+    public Long deleteAllStudiesIndexedEquipments(boolean dryRun) {
         Long nbIndexesToDelete = equipmentInfosService.getEquipmentInfosCount() + equipmentInfosService.getTombstonedEquipmentInfosCount();
         if (!dryRun) {
             equipmentInfosService.deleteAll();
