@@ -1667,6 +1667,14 @@ public class StudyService {
     }
 
     @Transactional
+    public void reindexStudyIfNeeded(UUID studyUuid) {
+        StudyIndexationStatus status = getStudyIndexationStatus(studyUuid);
+        if (status == StudyIndexationStatus.NOT_INDEXED) {
+            reindexStudy(studyUuid);
+        }
+    }
+
+    @Transactional
     public StudyIndexationStatus getStudyIndexationStatus(UUID studyUuid) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         if (study.getIndexationStatus() == StudyIndexationStatus.INDEXED

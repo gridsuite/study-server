@@ -54,6 +54,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 
+@SuppressWarnings("checkstyle:RegexpSingleline")
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
 @Tag(name = "Study server")
@@ -1322,6 +1323,16 @@ public class StudyController {
     @ApiResponse(responseCode = "200", description = "Study reindexed")
     public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
         studyService.reindexStudy(studyUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/reindex-if-needed")
+    @Operation(summary = "reindex the study if needed")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Study reindexed"),
+        @ApiResponse(responseCode = "404", description = "The study or network doesn't exist")})
+    public ResponseEntity<Void> reindexStudyIfNeeded(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        studyService.reindexStudyIfNeeded(studyUuid);
         return ResponseEntity.ok().build();
     }
 
