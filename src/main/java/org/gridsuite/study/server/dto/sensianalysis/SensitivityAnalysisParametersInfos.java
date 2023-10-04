@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -29,13 +30,13 @@ public class SensitivityAnalysisParametersInfos {
 
     private double flowVoltageSensitivityValueThreshold;
 
-    List<SensitivityAnalysisInputData.SensitivityInjectionsSet> sensitivityInjectionsSet;
+    List<SensitivityAnalysisInputData.SensitivityInjectionsSet> sensitivityInjectionsSet = new ArrayList<>();
 
-    List<SensitivityAnalysisInputData.SensitivityInjection> sensitivityInjection;
+    List<SensitivityAnalysisInputData.SensitivityInjection> sensitivityInjection = new ArrayList<>();
 
-    List<SensitivityAnalysisInputData.SensitivityHVDC> sensitivityHVDC;
+    List<SensitivityAnalysisInputData.SensitivityHVDC> sensitivityHVDC = new ArrayList<>();
 
-    List<SensitivityAnalysisInputData.SensitivityPST> sensitivityPST;
+    List<SensitivityAnalysisInputData.SensitivityPST> sensitivityPST = new ArrayList<>();
 
-    List<SensitivityAnalysisInputData.SensitivityNodes> sensitivityNodes;
+    List<SensitivityAnalysisInputData.SensitivityNodes> sensitivityNodes = new ArrayList<>();
 }

@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.repository;
 
 import lombok.*;
+import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 
@@ -108,6 +109,10 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             indexes = {@Index(name = "studyEntity_importParameters_idx1", columnList = "study_entity_id")},
             foreignKey = @ForeignKey(name = "studyEntity_importParameters_fk1"))
     private Map<String, String> importParameters;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private StudyIndexationStatus indexationStatus = StudyIndexationStatus.NOT_INDEXED;
 
     public ShortCircuitParametersEntity getShortCircuitParameters() {
         if (this.shortCircuitParameters == null) {

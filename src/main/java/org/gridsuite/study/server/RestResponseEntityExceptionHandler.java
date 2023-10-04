@@ -37,11 +37,7 @@ public class RestResponseEntityExceptionHandler {
                 return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(exception.getMessage());
             case STUDY_ALREADY_EXISTS:
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(type);
-            case LOADFLOW_NOT_RUNNABLE:
-            case LOADFLOW_RUNNING:
-            case SECURITY_ANALYSIS_RUNNING:
-            case SENSITIVITY_ANALYSIS_RUNNING:
-            case DYNAMIC_SIMULATION_RUNNING:
+            case LOADFLOW_NOT_RUNNABLE, LOADFLOW_RUNNING, SECURITY_ANALYSIS_RUNNING, SENSITIVITY_ANALYSIS_RUNNING, DYNAMIC_SIMULATION_RUNNING, SHORT_CIRCUIT_ANALYSIS_RUNNING, VOLTAGE_INIT_RUNNING:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(type);
             case NOT_ALLOWED:
             case BAD_NODE_TYPE:
@@ -66,6 +62,8 @@ public class RestResponseEntityExceptionHandler {
             case URI_SYNTAX:
             case CREATE_VOLTAGE_INIT_PARAMETERS_FAILED:
             case UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED:
+            case STUDY_INDEXATION_FAILED:
+            case STUDY_CHECK_INDEXATION_FAILED:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
             case SVG_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getMessage());

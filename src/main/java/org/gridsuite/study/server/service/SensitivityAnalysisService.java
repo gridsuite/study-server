@@ -369,6 +369,11 @@ public class SensitivityAnalysisService {
                 .flowFlowSensitivityValueThreshold(FLOW_FLOW_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE)
                 .angleFlowSensitivityValueThreshold(ANGLE_FLOW_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE)
                 .flowVoltageSensitivityValueThreshold(FLOW_VOLTAGE_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE)
+                .sensitivityInjectionsSet(List.of())
+                .sensitivityInjection(List.of())
+                .sensitivityHVDC(List.of())
+                .sensitivityPST(List.of())
+                .sensitivityNodes(List.of())
                 .build();
     }
 }
