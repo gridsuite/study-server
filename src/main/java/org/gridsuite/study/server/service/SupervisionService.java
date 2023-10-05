@@ -15,6 +15,8 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
 
@@ -31,6 +35,9 @@ import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
  */
 @Service
 public class SupervisionService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SupervisionService.class);
+
     private ReportService reportService;
 
     private LoadFlowService loadFlowService;
@@ -97,10 +104,17 @@ public class SupervisionService {
 
     @Transactional
     public Long deleteAllStudiesIndexedEquipments(boolean dryRun) {
+        // findAll loads all entities from the database, so performance and memory might be an issue for big database. But
+        // I thought to update all the column in the study table directly but it is recommended to pass through entities.
+        // Then I thought those updates could be batched but batch_size and all aren't activated in study-server.
+        // Finally I thought that for around maybe ~100 studies today, it's ok this way.
         Long nbIndexesToDelete = equipmentInfosService.getEquipmentInfosCount() + equipmentInfosService.getTombstonedEquipmentInfosCount();
         if (!dryRun) {
+            AtomicReference<Long> startTime = new AtomicReference<>();
+            startTime.set(System.nanoTime());
             equipmentInfosService.deleteAll();
             updateStudiesIndexationStatus(StudyIndexationStatus.NOT_INDEXED);
+            LOGGER.trace("Indexed equipments deletion for all studies : {} seconds", TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
         return nbIndexesToDelete;
     }

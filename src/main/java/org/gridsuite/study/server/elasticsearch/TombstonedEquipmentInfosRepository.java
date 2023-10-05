@@ -22,8 +22,4 @@ public interface TombstonedEquipmentInfosRepository extends ElasticsearchReposit
     void deleteAllByNetworkUuid(@NonNull UUID networkUuid);
 
     void deleteAllByNetworkUuidAndVariantId(@NonNull UUID networkUuid, @NonNull String variantId);
-
-    long count();
-
-    void deleteAll();
 }
