@@ -116,12 +116,12 @@ public class ShortCircuitService {
         return UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results" + "/{resultUuid}").buildAndExpand(resultUuidOpt.get()).toUriString();
     }
 
-    private String getShortCircuitAnalysisFaultResultsResourcePath(UUID nodeUuid) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, ShortcircuitAnalysisType.ALL_BUSES);
+    private String getShortCircuitAnalysisResultsPageResourcePath(UUID nodeUuid, ShortcircuitAnalysisType type) {
+        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, type);
         if (resultPath == null) {
             return null;
         }
-        return UriComponentsBuilder.fromPath(resultPath + "/fault_results/paged").toUriString();
+        return UriComponentsBuilder.fromPath(resultPath + "/paged").toUriString();
     }
 
     public String getShortCircuitAnalysisResult(UUID nodeUuid, String mode, ShortcircuitAnalysisType type) {
@@ -135,18 +135,18 @@ public class ShortCircuitService {
         return getShortCircuitAnalysisResource(resultPath + params);
     }
 
-    public String getShortCircuitAnalysisFaultResultsPage(UUID nodeUuid, String mode, Pageable pageable) {
+    public String getShortCircuitAnalysisResultsPage(UUID nodeUuid, String mode, ShortcircuitAnalysisType type, Pageable pageable) {
         StringBuilder paramsBuilder = new StringBuilder();
-        paramsBuilder.append("?mode=" + mode + "&page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize());
+        paramsBuilder.append("?mode=" + mode + "&type=" + type + "&page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize());
 
         for (Sort.Order order : pageable.getSort()) {
             paramsBuilder.append("&sort=" + order.getProperty() + "," + order.getDirection());
         }
-        String faultResultsPath = getShortCircuitAnalysisFaultResultsResourcePath(nodeUuid);
-        if (faultResultsPath == null) {
+        String resultsPath = getShortCircuitAnalysisResultsPageResourcePath(nodeUuid, type);
+        if (resultsPath == null) {
             return null;
         }
-        return getShortCircuitAnalysisResource(faultResultsPath + paramsBuilder);
+        return getShortCircuitAnalysisResource(resultsPath + paramsBuilder);
     }
 
     public String getShortCircuitAnalysisStatus(UUID nodeUuid, ShortcircuitAnalysisType type) {

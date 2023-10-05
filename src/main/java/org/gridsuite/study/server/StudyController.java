@@ -640,17 +640,18 @@ public class StudyController {
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/results/fault_results/paged")
-    @Operation(summary = "Get a fault results page for the short circuit analysis result on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis result fault results page"),
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/results/paged")
+    @Operation(summary = "Get a short circuit analysis results page on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis results page"),
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
     public ResponseEntity<String> getShortCircuitAnalysisFaultResultsPage(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                @Parameter(description = "Full or only those with limit violations or none fault results") @RequestParam(name = "mode", required = false, defaultValue = "WITH_LIMIT_VIOLATIONS") String mode,
+                                                               @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type,
                                                                Pageable pageable) {
-        String faultResultsPage = shortCircuitService.getShortCircuitAnalysisFaultResultsPage(nodeUuid, mode, pageable);
-        return faultResultsPage != null ? ResponseEntity.ok().body(faultResultsPage) :
+        String resultsPage = shortCircuitService.getShortCircuitAnalysisResultsPage(nodeUuid, mode, type, pageable);
+        return resultsPage != null ? ResponseEntity.ok().body(resultsPage) :
                 ResponseEntity.noContent().build();
     }
 
