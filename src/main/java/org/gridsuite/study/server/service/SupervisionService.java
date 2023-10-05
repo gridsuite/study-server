@@ -95,19 +95,18 @@ public class SupervisionService {
     }
 
     private void updateStudiesIndexationStatus(StudyIndexationStatus indexationStatus) {
+        // findAll loads all entities from the database, so performance and memory might be an issue for big database.
+        // I thought those updates could be batched but batch_size and all aren't activated in study-server by now.
+        // Finally I thought that for around maybe ~100 studies today, it's ok this way and should be fine up to tens of thousands of studies
         List<StudyEntity> studies = studyRepository.findAll();
         studies.forEach(s -> s.setIndexationStatus(indexationStatus));
         studyRepository.saveAll(studies);
-
+        // This will send a lot of notifications, but it's necessary to update indexation status for openned studies
         studies.forEach(s -> notificationService.emitStudyIndexationStatusChanged(s.getId(), indexationStatus));
     }
 
     @Transactional
     public Long deleteAllStudiesIndexedEquipments(boolean dryRun) {
-        // findAll loads all entities from the database, so performance and memory might be an issue for big database. But
-        // I thought to update all the column in the study table directly but it is recommended to pass through entities.
-        // Then I thought those updates could be batched but batch_size and all aren't activated in study-server.
-        // Finally I thought that for around maybe ~100 studies today, it's ok this way.
         Long nbIndexesToDelete = equipmentInfosService.getEquipmentInfosCount() + equipmentInfosService.getTombstonedEquipmentInfosCount();
         if (!dryRun) {
             AtomicReference<Long> startTime = new AtomicReference<>();
