@@ -269,6 +269,8 @@ public class StudyTest {
                 .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
         when(equipmentInfosService.searchEquipments(any(BoolQuery.class))).then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
+        when(equipmentInfosService.getEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("16"));
+        when(equipmentInfosService.getTombstonedEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("4"));
 
         when(networkStoreService.cloneNetwork(NETWORK_UUID, Collections.emptyList())).thenReturn(network);
         when(networkStoreService.getNetworkUuid(network)).thenReturn(NETWORK_UUID);
@@ -2301,6 +2303,54 @@ public class StudyTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid))
                 .andExpectAll(status().isOk(),
                         content().string("SuperSE"));
+    }
+
+    @Test
+    public void testSupervision() throws Exception {
+        MvcResult mvcResult;
+        UUID studyUuid = createStudy("userId", CASE_UUID);
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", studyUuid))
+            .andExpect(status().isOk());
+
+        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", studyUuid))
+            .andExpectAll(status().isOk(),
+                        content().string("INDEXED"));
+
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        //Test indexed equipments deletion dry run
+        mvcResult = mockMvc.perform(delete("/v1/supervision/indexed-equipments")
+            .queryParam("dryRun", String.valueOf(true)))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals(20, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+
+        //Test indexed equipments deletion
+        mvcResult = mockMvc.perform(delete("/v1/supervision/indexed-equipments")
+            .queryParam("dryRun", String.valueOf(false)))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals(20, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+        Message<byte[]> indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", studyUuid))
+            .andExpectAll(status().isOk(),
+                        content().string("NOT_INDEXED"));
+
+        var requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
+        assertEquals(1, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/indexed-equipments")).count());
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
     }
 
     @After
