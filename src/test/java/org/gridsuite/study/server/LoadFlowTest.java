@@ -337,6 +337,11 @@ public class LoadFlowTest {
                 content().string(LIMIT_VIOLATIONS_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations")));
+
+        // get limit violations on non existing node
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations", studyNameUserIdUuid, UUID.randomUUID())).andExpectAll(
+            status().isOk(),
+            content().string("[]"));
     }
 
     @Test
