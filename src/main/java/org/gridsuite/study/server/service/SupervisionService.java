@@ -7,13 +7,18 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,10 +52,17 @@ public class SupervisionService {
 
     private VoltageInitService voltageInitService;
 
+    private final EquipmentInfosService equipmentInfosService;
+
+    private NotificationService notificationService;
+
+    private final StudyRepository studyRepository;
+
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    public SupervisionService(NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService) {
+    public SupervisionService(StudyRepository studyRepository, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService, NotificationService notificationService) {
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
+        this.studyRepository = studyRepository;
         this.reportService = reportService;
         this.loadFlowService = loadFlowService;
         this.dynamicSimulationService = dynamicSimulationService;
@@ -58,6 +70,8 @@ public class SupervisionService {
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
+        this.equipmentInfosService = equipmentInfosService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -78,6 +92,30 @@ public class SupervisionService {
             default:
                 throw new StudyException(ELEMENT_NOT_FOUND);
         }
+    }
+
+    private void updateStudiesIndexationStatus(StudyIndexationStatus indexationStatus) {
+        // findAll loads all entities from the database, so performance and memory might be an issue for big database.
+        // I thought those updates could be batched but batch_size and all aren't activated in study-server by now.
+        // Finally I thought that for around maybe ~100 studies today, it's ok this way and should be fine up to tens of thousands of studies
+        List<StudyEntity> studies = studyRepository.findAll();
+        studies.forEach(s -> s.setIndexationStatus(indexationStatus));
+        studyRepository.saveAll(studies);
+        // This will send a lot of notifications, but it's necessary to update indexation status for openned studies
+        studies.forEach(s -> notificationService.emitStudyIndexationStatusChanged(s.getId(), indexationStatus));
+    }
+
+    @Transactional
+    public Long deleteAllStudiesIndexedEquipments(boolean dryRun) {
+        Long nbIndexesToDelete = equipmentInfosService.getEquipmentInfosCount() + equipmentInfosService.getTombstonedEquipmentInfosCount();
+        if (!dryRun) {
+            AtomicReference<Long> startTime = new AtomicReference<>();
+            startTime.set(System.nanoTime());
+            equipmentInfosService.deleteAll();
+            updateStudiesIndexationStatus(StudyIndexationStatus.NOT_INDEXED);
+            LOGGER.trace("Indexed equipments deletion for all studies : {} seconds", TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        }
+        return nbIndexesToDelete;
     }
 
     private Integer deleteLoadflowResults() {
