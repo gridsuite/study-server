@@ -35,6 +35,9 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  */
 @Service
 public class VoltageInitService {
+
+    static final String RESULT_UUID = "resultUuid";
+
     private String voltageInitServerBaseUri;
 
     @Autowired
@@ -257,6 +260,16 @@ public class VoltageInitService {
             throw e;
         }
         return modificationsGroupUuid;
+    }
+
+    public void invalidateVoltageInitStatus(List<UUID> uuids) {
+        if (!uuids.isEmpty()) {
+            String path = UriComponentsBuilder
+                    .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/invalidate-status")
+                    .queryParam(RESULT_UUID, uuids).build().toUriString();
+
+            restTemplate.put(voltageInitServerBaseUri + path, Void.class);
+        }
     }
 
 }
