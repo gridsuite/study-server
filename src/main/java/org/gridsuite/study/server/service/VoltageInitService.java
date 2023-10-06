@@ -265,7 +265,7 @@ public class VoltageInitService {
     public void invalidateVoltageInitStatus(List<UUID> uuids) {
         if (!uuids.isEmpty()) {
             String path = UriComponentsBuilder
-                    .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/invalidate-status")
+                    .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/invalidate-status")
                     .queryParam(RESULT_UUID, uuids).build().toUriString();
 
             restTemplate.put(voltageInitServerBaseUri + path, Void.class);

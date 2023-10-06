@@ -1308,7 +1308,6 @@ public class StudyService {
             voltageInitService.updateVoltageInitParameters(voltageInitParametersUuid, parameters);
         }
         invalidateVoltageInitStatusOnAllNodes(studyUuid);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
     }
 
     public void updateSecurityAnalysisParameters(UUID studyUuid, SecurityAnalysisParametersEntity securityAnalysisParametersEntity) {
