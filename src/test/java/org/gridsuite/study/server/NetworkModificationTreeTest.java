@@ -1136,7 +1136,7 @@ public class NetworkModificationTreeTest {
 
         node = buildNetworkModification("modification node 3", "", UUID.fromString(MODIFICATION_GROUP_UUID_STRING), VARIANT_ID, null, null, null, null, null, BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/restore?uuids={modificationID1}", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?uuids={modificationID1}&stashed=false", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
             .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
 
@@ -1172,7 +1172,7 @@ public class NetworkModificationTreeTest {
 
         node = buildNetworkModification("modification node 3", "", UUID.fromString(MODIFICATION_GROUP_UUID_STRING), VARIANT_ID, null, null, null, null, null, BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/stash?uuids={modificationID1}", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?uuids={modificationID1}&stashed=true", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 

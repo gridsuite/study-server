@@ -1522,7 +1522,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
+    public void deleteAllNetworkModifications(UUID studyUuid, UUID nodeUuid, boolean onlyStashed, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
         try {
@@ -1530,7 +1530,24 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.deleteModifications(groupId, modificationsUuids);
+            networkModificationService.deleteModifications(groupId, null, onlyStashed);
+            updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
+        }
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    @Transactional
+    public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, boolean onlyStashed, String userId) {
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
+        try {
+            if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
+                throw new StudyException(NOT_ALLOWED);
+            }
+            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            networkModificationService.deleteModifications(groupId, modificationsUuids, onlyStashed);
             networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
