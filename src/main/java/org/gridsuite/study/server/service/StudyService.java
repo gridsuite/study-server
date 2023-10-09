@@ -1758,6 +1758,12 @@ public class StudyService {
         return getSubReportersByNodeFrom(nodeUuid, nodeOnlyReport, severityLevels);
     }
 
+    @Transactional(readOnly = true)
+    public List<ReporterModel> getReport(UUID reporterUuid, Set<String> severityLevels) {
+        ReporterModel reporter = reportService.getReport(reporterUuid, severityLevels);
+        return List.of(reporter);
+    }
+
     private List<ReporterModel> getSubReportersByNodeFrom(UUID nodeUuid, boolean nodeOnlyReport, Set<String> severityLevels) {
         List<ReporterModel> subReporters = getSubReportersByNodeFrom(nodeUuid, severityLevels);
         if (subReporters.isEmpty()) {

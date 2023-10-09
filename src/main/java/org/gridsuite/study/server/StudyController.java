@@ -1012,6 +1012,14 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(nodeUuid, nodeOnlyReport, severityLevels));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/reporters/{reporterUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get a report for a given reporter")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<List<ReporterModel>> getReport(@Parameter(description = "Reporter uuid") @PathVariable("reporterUuid") UUID reporterUuid,
+                                                         @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReport(reporterUuid, severityLevels));
+    }
+
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report")
     @Operation(summary = "Delete node report")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report has been deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})

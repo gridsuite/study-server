@@ -61,13 +61,15 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "reports" + DELIMITER;
     }
 
+    private String getReporterServerURI() {
+        return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "reporters" + DELIMITER;
+    }
+
     public ReporterModel getReport(@NonNull UUID reportUuid, @NonNull String defaultName, Set<String> severityLevels) {
         var uriBuilder = UriComponentsBuilder.fromPath("{reportUuid}")
                 .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
-                .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false);
-        if (severityLevels != null) {
-            severityLevels.forEach(level -> uriBuilder.queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, level));
-        }
+                .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false)
+                .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
         var path = uriBuilder.buildAndExpand(reportUuid).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -75,6 +77,21 @@ public class ReportService {
         }).getBody();
         // TODO : Remove this hack when fix to avoid key collision in hades2 will be done
         ReporterModel reporter = new ReporterModel(reportUuid.toString(), reportUuid.toString());
+        if (reporters != null) {
+            reporters.forEach(reporter::addSubReporter);
+        }
+        return reporter;
+    }
+
+    public ReporterModel getReport(@NonNull UUID reporterUuid, Set<String> severityLevels) {
+        var uriBuilder = UriComponentsBuilder.fromPath("{reporterUuid}").queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
+        var path = uriBuilder.buildAndExpand(reporterUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        List<ReporterModel> reporters = restTemplate.exchange(this.getReporterServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReporterModel>>() {
+        }).getBody();
+        // TODO : Remove this hack when fix to avoid key collision in hades2 will be done
+        ReporterModel reporter = new ReporterModel(reporterUuid.toString(), reporterUuid.toString());
         if (reporters != null) {
             reporters.forEach(reporter::addSubReporter);
         }
