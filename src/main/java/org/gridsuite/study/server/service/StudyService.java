@@ -44,6 +44,7 @@ import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.PropertyUtils;

@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.securityanalysis;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -21,6 +21,8 @@ import org.gridsuite.study.server.dto.SecurityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.SecurityAnalysisParametersValues;
 import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
 import org.gridsuite.study.server.repository.SecurityAnalysisParametersEntity;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -62,14 +64,14 @@ public class SecurityAnalysisService {
 
     @Autowired
     public SecurityAnalysisService(RemoteServicesProperties remoteServicesProperties,
-            NetworkModificationTreeService networkModificationTreeService,
-            ObjectMapper objectMapper) {
+                                   NetworkModificationTreeService networkModificationTreeService,
+                                   ObjectMapper objectMapper) {
         this.securityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("security-analysis-server");
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
     }
 
-    public String getSecurityAnalysisResult(UUID nodeUuid, List<String> limitTypes) {
+    public String getSecurityAnalysisResult(UUID nodeUuid, SecurityAnalysisResultType resultType, List<String> limitTypes) {
         Objects.requireNonNull(limitTypes);
         String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
@@ -78,7 +80,7 @@ public class SecurityAnalysisService {
             return null;
         }
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getPathFromResultType(resultType))
                 .queryParam("limitType", limitTypes).buildAndExpand(resultUuidOpt.get()).toUriString();
         try {
             result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
@@ -91,6 +93,16 @@ public class SecurityAnalysisService {
         }
 
         return result;
+    }
+
+    private String getPathFromResultType(SecurityAnalysisResultType resultType) {
+        switch (resultType) {
+            case N : return "n";
+            case NMK_CONTINGENCIES : return "nmk-contingencies";
+            case NMK_CONSTRAINTS : return "nmk-constraints";
+            default:
+                return null;
+        }
     }
 
     public UUID runSecurityAnalysis(UUID networkUuid, UUID reportUuid, UUID nodeUuid, String variantId, String provider, List<String> contingencyListNames, SecurityAnalysisParametersInfos securityAnalysisParameters,
