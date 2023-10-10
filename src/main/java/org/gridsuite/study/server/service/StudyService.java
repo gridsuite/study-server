@@ -1186,6 +1186,10 @@ public class StudyService {
         loadflowService.invalidateLoadFlowStatus(networkModificationTreeService.getLoadFlowResultUuids(studyUuid));
     }
 
+    public void invalidateVoltageInitStatusOnAllNodes(UUID studyUuid) {
+        voltageInitService.invalidateVoltageInitStatus(networkModificationTreeService.getStudyVoltageInitResultUuids(studyUuid));
+    }
+
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
                                           String caseFormat, UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
                                           UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, UUID voltageInitParametersUuid, Map<String, String> importParameters) {
@@ -1302,6 +1306,7 @@ public class StudyService {
         } else {
             voltageInitService.updateVoltageInitParameters(voltageInitParametersUuid, parameters);
         }
+        invalidateVoltageInitStatusOnAllNodes(studyUuid);
     }
 
     public void updateSecurityAnalysisParameters(UUID studyUuid, SecurityAnalysisParametersEntity securityAnalysisParametersEntity) {
@@ -1932,6 +1937,7 @@ public class StudyService {
     @Transactional
     public void setVoltageInitParameters(UUID studyUuid, String parameters, String userId) {
         createOrUpdateVoltageInitParameters(studyUuid, parameters);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
