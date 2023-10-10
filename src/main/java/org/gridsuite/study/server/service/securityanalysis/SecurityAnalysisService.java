@@ -97,11 +97,9 @@ public class SecurityAnalysisService {
 
     private String getPathFromResultType(SecurityAnalysisResultType resultType) {
         switch (resultType) {
-            case N : return "n";
             case NMK_CONTINGENCIES : return "nmk-contingencies";
             case NMK_CONSTRAINTS : return "nmk-constraints";
-            default:
-                return null;
+            default: return "n"; //N case
         }
     }
 
