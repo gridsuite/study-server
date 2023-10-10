@@ -765,6 +765,19 @@ public class NetworkModificationTreeService {
         return resultUuids;
     }
 
+    @Transactional(readOnly = true)
+    public List<UUID> getStudyVoltageInitResultUuids(UUID studyUuid) {
+        List<UUID> resultUuids = new ArrayList<>();
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
+        nodes.forEach(n -> {
+            UUID resultUuid = repositories.get(n.getType()).getVoltageInitResultUuid(n.getIdNode());
+            if (resultUuid != null) {
+                resultUuids.add(resultUuid);
+            }
+        });
+        return resultUuids;
+    }
+
     private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
