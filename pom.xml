@@ -13,7 +13,7 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
-        <version>15</version>
+        <version>17</version>
         <relativePath/>
     </parent>
 
