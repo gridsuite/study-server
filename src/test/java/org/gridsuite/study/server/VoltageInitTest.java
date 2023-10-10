@@ -292,6 +292,22 @@ public class VoltageInitTest {
         when(networkStoreService.getNetwork(UUID.fromString(NETWORK_UUID_STRING))).thenReturn(network);
     }
 
+    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters) throws Exception {
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)
+                        .header("userId", "userId")
+                        .contentType(MediaType.ALL)
+                        .content(parameters)).andExpect(
+                status().isOk());
+
+        Message<byte[]> voltageInitStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);
+        assertEquals(studyNameUserIdUuid, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
+    }
+
     @Test
     public void testVoltageInitParameters() throws Exception {
         //insert a study
@@ -304,21 +320,8 @@ public class VoltageInitTest {
 
         JSONAssert.assertEquals(VOLTAGE_INIT_EMPTY_PARAMETERS, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
-        mockMvc.perform(
-                post("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)
-                        .header("userId", "userId")
-                        .contentType(MediaType.ALL)
-                        .content(VOLTAGE_INIT_PARAMETERS_JSON)).andExpect(
-                status().isOk());
-
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, VOLTAGE_INIT_PARAMETERS_JSON);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters")));
-
-        Message<byte[]> voltageInitStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(studyNameUserIdUuid, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-
-        Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);
-        assertEquals(studyNameUserIdUuid, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
 
         //checking update is registered
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)).andExpectAll(
@@ -329,20 +332,7 @@ public class VoltageInitTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID)));
 
         //update voltage init parameters
-        mockMvc.perform(
-            post("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)
-                    .header("userId", "userId")
-                    .contentType(MediaType.ALL)
-                    .content(VOLTAGE_INIT_PARAMETERS_JSON)).andExpect(
-            status().isOk());
-
-        voltageInitStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(studyNameUserIdUuid, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-
-        elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);
-        assertEquals(studyNameUserIdUuid, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
-
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, VOLTAGE_INIT_PARAMETERS_JSON);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID)));
 
         // insert a study with a wrong voltage init parameters uuid
