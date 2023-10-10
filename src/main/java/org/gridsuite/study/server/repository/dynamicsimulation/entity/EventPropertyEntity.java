@@ -8,6 +8,7 @@ package org.gridsuite.study.server.repository.dynamicsimulation.entity;
 
 import lombok.*;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventPropertyInfos;
+import org.gridsuite.study.server.repository.AbstractManuallyAssignedIdentifierEntity;
 import org.gridsuite.study.server.utils.PropertyType;
 
 import jakarta.persistence.*;
@@ -26,7 +27,7 @@ import java.util.UUID;
 @Table(name = "event_property",
     indexes = {@Index(name = "property_event_id_index", columnList = "event_id")},
     uniqueConstraints = @UniqueConstraint(columnNames = {"event_id", "name"}))
-public class EventPropertyEntity extends AbstractAuditableEntity<UUID> implements Serializable {
+public class EventPropertyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements Serializable {
 
     @Id
     @Column(name = "id")
@@ -46,6 +47,9 @@ public class EventPropertyEntity extends AbstractAuditableEntity<UUID> implement
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", foreignKey = @ForeignKey(name = "event_property_fk"))
     private EventEntity event;
+
+    @Embedded
+    private Audit audit = new Audit();
 
     public EventPropertyEntity(EventEntity event, EventPropertyInfos eventProperty) {
         if (eventProperty.getId() == null) {

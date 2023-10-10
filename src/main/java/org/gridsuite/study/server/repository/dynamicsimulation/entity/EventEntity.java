@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
+import org.gridsuite.study.server.repository.AbstractManuallyAssignedIdentifierEntity;
 
 import java.io.Serializable;
 import java.util.*;
@@ -25,7 +26,7 @@ import java.util.*;
 @Setter
 @Entity
 @Table(name = "event", indexes = {@Index(name = "event_node_id_index", columnList = "node_id")})
-public class EventEntity extends AbstractAuditableEntity<UUID> implements Serializable {
+public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements Serializable {
 
     @Id
     @Column(name = "id")
@@ -45,6 +46,9 @@ public class EventEntity extends AbstractAuditableEntity<UUID> implements Serial
 
     @Column(name = "node_id")
     private UUID nodeId; // weak reference to node id of NodeEntity
+
+    @Embedded
+    private Audit audit = new Audit();
 
     public EventEntity(EventInfos event) {
         if (event.getId() == null) {

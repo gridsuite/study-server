@@ -1991,7 +1991,7 @@ public class StudyService {
     }
 
     private void postProcessEventCrud(UUID studyUuid, UUID nodeUuid, List<UUID> childrenUuids) {
-        // for delete ancien result and refresh dynamic simulation run button in UI
+        // for delete old result and refresh dynamic simulation run button in UI
         invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
 
