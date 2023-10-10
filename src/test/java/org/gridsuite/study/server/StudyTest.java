@@ -269,8 +269,11 @@ public class StudyTest {
                 .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
         when(equipmentInfosService.searchEquipments(any(BoolQuery.class))).then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
-        when(equipmentInfosService.getEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("16"));
-        when(equipmentInfosService.getTombstonedEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("4"));
+        when(equipmentInfosService.getEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("32"));
+        when(equipmentInfosService.getEquipmentInfosCount(NETWORK_UUID)).then((Answer<Long>) invocation -> Long.parseLong("16"));
+
+        when(equipmentInfosService.getTombstonedEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("8"));
+        when(equipmentInfosService.getTombstonedEquipmentInfosCount(NETWORK_UUID)).then((Answer<Long>) invocation -> Long.parseLong("4"));
 
         when(networkStoreService.cloneNetwork(NETWORK_UUID, Collections.emptyList())).thenReturn(network);
         when(networkStoreService.getNetworkUuid(network)).thenReturn(NETWORK_UUID);
@@ -2326,21 +2329,26 @@ public class StudyTest {
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        //Test indexed equipments deletion dry run
-        mvcResult = mockMvc.perform(delete("/v1/supervision/indexed-equipments")
-            .queryParam("dryRun", String.valueOf(true)))
+        // Test get indexed equipments and tombstoned equipments counts
+        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-equipments-count"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals(32, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+
+        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-tombstoned-equipments-count"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals(8, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+
+        // Test indexed equipments deletion
+        mvcResult = mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/indexed-equipments", studyUuid))
             .andExpect(status().isOk())
             .andReturn();
 
         assertEquals(20, Long.parseLong(mvcResult.getResponse().getContentAsString()));
 
-        //Test indexed equipments deletion
-        mvcResult = mockMvc.perform(delete("/v1/supervision/indexed-equipments")
-            .queryParam("dryRun", String.valueOf(false)))
-            .andExpect(status().isOk())
-            .andReturn();
-
-        assertEquals(20, Long.parseLong(mvcResult.getResponse().getContentAsString()));
         Message<byte[]> indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", studyUuid))

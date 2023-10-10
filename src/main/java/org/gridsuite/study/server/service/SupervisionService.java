@@ -38,6 +38,8 @@ public class SupervisionService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SupervisionService.class);
 
+    private final NetworkService networkStoreService;
+
     private ReportService reportService;
 
     private LoadFlowService loadFlowService;
@@ -60,7 +62,8 @@ public class SupervisionService {
 
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    public SupervisionService(StudyRepository studyRepository, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService, NotificationService notificationService) {
+    public SupervisionService(NetworkService networkStoreService, StudyRepository studyRepository, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService, NotificationService notificationService) {
+        this.networkStoreService = networkStoreService;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.studyRepository = studyRepository;
         this.reportService = reportService;
@@ -106,15 +109,36 @@ public class SupervisionService {
     }
 
     @Transactional
-    public Long deleteAllStudiesIndexedEquipments(boolean dryRun) {
-        Long nbIndexesToDelete = equipmentInfosService.getEquipmentInfosCount() + equipmentInfosService.getTombstonedEquipmentInfosCount();
-        if (!dryRun) {
-            AtomicReference<Long> startTime = new AtomicReference<>();
-            startTime.set(System.nanoTime());
-            equipmentInfosService.deleteAll();
-            updateStudiesIndexationStatus(StudyIndexationStatus.NOT_INDEXED);
-            LOGGER.trace("Indexed equipments deletion for all studies : {} seconds", TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        }
+    public Long getStudyIndexedEquipmentsCount(UUID networkUUID) {
+        return equipmentInfosService.getEquipmentInfosCount(networkUUID);
+    }
+
+    @Transactional
+    public Long getStudyIndexedTombstonedEquipmentsCount(UUID networkUUID) {
+        return equipmentInfosService.getTombstonedEquipmentInfosCount(networkUUID);
+    }
+
+    @Transactional
+    public Long getIndexedEquipmentsCount() {
+        return equipmentInfosService.getEquipmentInfosCount();
+    }
+
+    @Transactional
+    public Long getIndexedTombstonedEquipmentsCount() {
+        return equipmentInfosService.getTombstonedEquipmentInfosCount();
+    }
+
+    @Transactional
+    public Long deleteStudyIndexedEquipmentsAndTombstoned(UUID studyUuid) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+
+        UUID networkUUID = networkStoreService.getNetworkUuid(studyUuid);
+        Long nbIndexesToDelete = getStudyIndexedEquipmentsCount(networkUUID) + getStudyIndexedTombstonedEquipmentsCount(networkUUID);
+        equipmentInfosService.deleteAllByNetworkUuid(networkUUID);
+        updateStudiesIndexationStatus(StudyIndexationStatus.NOT_INDEXED);
+
+        LOGGER.trace("Indexed equipments deletion for study \"{}\": {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return nbIndexesToDelete;
     }
 
