@@ -122,7 +122,6 @@ public class EquipmentInfosServiceTests {
         assertEquals(1, equipmentInfosService.getTombstonedEquipmentInfosCount(NETWORK_UUID_2));
         assertEquals(2, equipmentInfosService.getTombstonedEquipmentInfosCount());
 
-
         equipmentInfosService.deleteAllByNetworkUuid(NETWORK_UUID);
         assertEquals(0, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());
         assertEquals(0, equipmentInfosService.getTombstonedEquipmentInfosCount(NETWORK_UUID));
