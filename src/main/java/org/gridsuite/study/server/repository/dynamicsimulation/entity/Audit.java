@@ -14,7 +14,6 @@ import lombok.Setter;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.LastModifiedDate;
 
-import java.io.Serializable;
 import java.util.Date;
 
 import static jakarta.persistence.TemporalType.TIMESTAMP;
@@ -34,7 +33,6 @@ public class Audit {
     @Temporal(TIMESTAMP)
     @Column(name = "created_date", updatable = false)
     private Date createdDate;
-
 
     @Column(name = "updated_by")
     private String updatedBy;
