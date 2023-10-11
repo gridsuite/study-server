@@ -7,19 +7,15 @@
 
 package org.gridsuite.study.server.repository.dynamicsimulation.entity;
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
-import org.gridsuite.study.server.StudyConstants;
 
 import jakarta.persistence.*;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.data.annotation.LastModifiedDate;
 
+import java.io.Serializable;
 import java.util.Date;
-import java.util.Optional;
 
 import static jakarta.persistence.TemporalType.TIMESTAMP;
 
@@ -39,37 +35,13 @@ public class Audit {
     @Column(name = "created_date", updatable = false)
     private Date createdDate;
 
+
     @Column(name = "updated_by")
     private String updatedBy;
 
+    @LastModifiedDate
     @Temporal(TIMESTAMP)
     @Column(name = "updated_date")
     private Date updatedDate;
 
-    @PrePersist
-    public void onCreate() {
-        createdDate = new Date();
-        getCurrentAuditor().ifPresent(userId -> createdBy = userId);
-    }
-
-    @PreUpdate
-    public void onUpdate() {
-        updatedDate = new Date();
-        getCurrentAuditor().ifPresent(userId -> updatedBy = userId);
-    }
-
-    private Optional<String> getCurrentAuditor() {
-        return Optional.ofNullable(getRequest())
-                .map(request -> request.getHeader(StudyConstants.HEADER_USER_ID));
-    }
-
-    private HttpServletRequest getRequest() {
-        RequestAttributes attribs = RequestContextHolder.getRequestAttributes();
-
-        if (attribs instanceof ServletRequestAttributes servletAttribs) {
-            return servletAttribs.getRequest();
-        }
-
-        return null;
-    }
 }
