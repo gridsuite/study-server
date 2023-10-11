@@ -1226,6 +1226,10 @@ public class StudyService {
         return studyEntity;
     }
 
+    public StudyEntity updateStudyIndexationStatus(UUID studyUuid, StudyIndexationStatus indexationStatus) {
+        return updateStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), indexationStatus);
+    }
+
     @Transactional
     public StudyEntity saveStudyThenCreateBasicTree(StudyEntity studyEntity, UUID importReportUuid) {
         var study = studyRepository.save(studyEntity);
