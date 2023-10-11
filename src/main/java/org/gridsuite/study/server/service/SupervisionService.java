@@ -108,22 +108,18 @@ public class SupervisionService {
         studies.forEach(s -> notificationService.emitStudyIndexationStatusChanged(s.getId(), indexationStatus));
     }
 
-    @Transactional
     public Long getStudyIndexedEquipmentsCount(UUID networkUUID) {
         return equipmentInfosService.getEquipmentInfosCount(networkUUID);
     }
 
-    @Transactional
     public Long getStudyIndexedTombstonedEquipmentsCount(UUID networkUUID) {
         return equipmentInfosService.getTombstonedEquipmentInfosCount(networkUUID);
     }
 
-    @Transactional
     public Long getIndexedEquipmentsCount() {
         return equipmentInfosService.getEquipmentInfosCount();
     }
 
-    @Transactional
     public Long getIndexedTombstonedEquipmentsCount() {
         return equipmentInfosService.getTombstonedEquipmentInfosCount();
     }
