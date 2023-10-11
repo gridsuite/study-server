@@ -16,6 +16,7 @@ import org.gridsuite.study.server.service.SupervisionService;
 import java.util.UUID;
 
 import org.gridsuite.study.server.dto.ComputationType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +28,15 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/supervision")
 @Tag(name = "Study server - Supervision")
 public class SupervisionController {
+
+    // Simple solution to get index name (with the prefix by environment).
+    // Maybe use the Spring boot actuator or other solution ?
+    // Keep indexName in sync with the annotation @Document in EquipmentInfos and TombstonedEquipmentInfos
+    @Value("#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}equipments")
+    public String indexNameEquipments;
+    @Value("#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}tombstoned-equipments")
+    public String indexNameTombstonedEquipments;
+
     private final SupervisionService supervisionService;
 
     public SupervisionController(SupervisionService supervisionService) {
@@ -39,6 +49,20 @@ public class SupervisionController {
     public ResponseEntity<Integer> deleteComputationResults(@Parameter(description = "Computation type") @RequestParam("type") ComputationType computationType,
                                                            @Parameter(description = "Dry run") @RequestParam("dryRun") boolean dryRun) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.deleteComputationResults(computationType, dryRun));
+    }
+
+    @GetMapping(value = "/indexed-equipments-index-name")
+    @Operation(summary = "get the indexed equipments index name")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed equipments index name")})
+    public ResponseEntity<String> getIndexedEquipmentsIndexName() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(indexNameEquipments);
+    }
+
+    @GetMapping(value = "/indexed-tombstoned-equipments-index-name")
+    @Operation(summary = "get the indexed tombstoned equipments index name")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed tombstoned equipments index name")})
+    public ResponseEntity<String> getIndexedTombstonedEquipmentsIndexName() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(indexNameTombstonedEquipments);
     }
 
     @GetMapping(value = "/indexed-equipments-count")

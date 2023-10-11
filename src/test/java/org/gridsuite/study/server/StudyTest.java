@@ -2329,6 +2329,19 @@ public class StudyTest {
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
+        // Test get indexed equipments index name
+        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-equipments-index-name"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals("equipments", mvcResult.getResponse().getContentAsString());
+
+        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-tombstoned-equipments-index-name"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals("tombstoned-equipments", mvcResult.getResponse().getContentAsString());
+
         // Test get indexed equipments and tombstoned equipments counts
         mvcResult = mockMvc.perform(get("/v1/supervision/indexed-equipments-count"))
             .andExpect(status().isOk())
