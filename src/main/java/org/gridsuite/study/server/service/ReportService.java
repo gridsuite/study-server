@@ -69,44 +69,29 @@ public class ReportService {
         var uriBuilder = UriComponentsBuilder.fromPath("{reportUuid}/reporters")
                 .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
                 .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false);
-        var path = uriBuilder.buildAndExpand(reportUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        List<ReporterModel> reporters = restTemplate.exchange(this.getReportServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReporterModel>>() {
-        }).getBody();
-        // TODO : Remove this hack when fix to avoid key collision in hades2 will be done
-        ReporterModel reporter = new ReporterModel(reportUuid.toString(), reportUuid.toString());
-        if (reporters != null) {
-            reporters.forEach(reporter::addSubReporter);
-        }
-        return reporter;
+        return reportServerCall(reportUuid, this.getReportServerURI(), uriBuilder);
     }
 
     public ReporterModel getReportElements(@NonNull UUID reportUuid, Set<String> severityLevels) {
         var uriBuilder = UriComponentsBuilder.fromPath("{reportUuid}/elements")
                 .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
-        var path = uriBuilder.buildAndExpand(reportUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        List<ReporterModel> reporters = restTemplate.exchange(this.getReportServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReporterModel>>() {
-        }).getBody();
-        // TODO : Remove this hack when fix to avoid key collision in hades2 will be done
-        ReporterModel reporter = new ReporterModel(reportUuid.toString(), reportUuid.toString());
-        if (reporters != null) {
-            reporters.forEach(reporter::addSubReporter);
-        }
-        return reporter;
+        return reportServerCall(reportUuid, this.getReportServerURI(), uriBuilder);
     }
 
     public ReporterModel getReporterElements(@NonNull UUID reporterUuid, Set<String> severityLevels) {
-        var uriBuilder = UriComponentsBuilder.fromPath("/{reporterUuid}/elements").queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
-        var path = uriBuilder.buildAndExpand(reporterUuid).toUriString();
+        var uriBuilder = UriComponentsBuilder.fromPath("/{reporterUuid}/elements")
+                .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
+        return reportServerCall(reporterUuid, this.getReporterServerURI(), uriBuilder);
+    }
+
+    private ReporterModel reportServerCall(UUID id, String serverUri, UriComponentsBuilder uriBuilder) {
+        var path = uriBuilder.buildAndExpand(id).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        List<ReporterModel> reporters = restTemplate.exchange(this.getReporterServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReporterModel>>() {
+        List<ReporterModel> reporters = restTemplate.exchange(serverUri + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReporterModel>>() {
         }).getBody();
         // TODO : Remove this hack when fix to avoid key collision in hades2 will be done
-        ReporterModel reporter = new ReporterModel(reporterUuid.toString(), reporterUuid.toString());
+        ReporterModel reporter = new ReporterModel(id.toString(), id.toString());
         if (reporters != null) {
             reporters.forEach(reporter::addSubReporter);
         }
