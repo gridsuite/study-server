@@ -9,9 +9,6 @@ package org.gridsuite.study.server.service;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -38,6 +35,10 @@ public class SupervisionService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SupervisionService.class);
 
+    private final NetworkService networkStoreService;
+
+    private StudyService studyService;
+
     private ReportService reportService;
 
     private LoadFlowService loadFlowService;
@@ -54,15 +55,12 @@ public class SupervisionService {
 
     private final EquipmentInfosService equipmentInfosService;
 
-    private NotificationService notificationService;
-
-    private final StudyRepository studyRepository;
-
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    public SupervisionService(StudyRepository studyRepository, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService, NotificationService notificationService) {
+    public SupervisionService(StudyService studyService, NetworkService networkStoreService, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService) {
+        this.networkStoreService = networkStoreService;
+        this.studyService = studyService;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
-        this.studyRepository = studyRepository;
         this.reportService = reportService;
         this.loadFlowService = loadFlowService;
         this.dynamicSimulationService = dynamicSimulationService;
@@ -71,7 +69,6 @@ public class SupervisionService {
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
         this.equipmentInfosService = equipmentInfosService;
-        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -94,27 +91,33 @@ public class SupervisionService {
         }
     }
 
-    private void updateStudiesIndexationStatus(StudyIndexationStatus indexationStatus) {
-        // findAll loads all entities from the database, so performance and memory might be an issue for big database.
-        // I thought those updates could be batched but batch_size and all aren't activated in study-server by now.
-        // Finally I thought that for around maybe ~100 studies today, it's ok this way and should be fine up to tens of thousands of studies
-        List<StudyEntity> studies = studyRepository.findAll();
-        studies.forEach(s -> s.setIndexationStatus(indexationStatus));
-        studyRepository.saveAll(studies);
-        // This will send a lot of notifications, but it's necessary to update indexation status for openned studies
-        studies.forEach(s -> notificationService.emitStudyIndexationStatusChanged(s.getId(), indexationStatus));
+    public Long getStudyIndexedEquipmentsCount(UUID networkUUID) {
+        return equipmentInfosService.getEquipmentInfosCount(networkUUID);
+    }
+
+    public Long getStudyIndexedTombstonedEquipmentsCount(UUID networkUUID) {
+        return equipmentInfosService.getTombstonedEquipmentInfosCount(networkUUID);
+    }
+
+    public Long getIndexedEquipmentsCount() {
+        return equipmentInfosService.getEquipmentInfosCount();
+    }
+
+    public Long getIndexedTombstonedEquipmentsCount() {
+        return equipmentInfosService.getTombstonedEquipmentInfosCount();
     }
 
     @Transactional
-    public Long deleteAllStudiesIndexedEquipments(boolean dryRun) {
-        Long nbIndexesToDelete = equipmentInfosService.getEquipmentInfosCount() + equipmentInfosService.getTombstonedEquipmentInfosCount();
-        if (!dryRun) {
-            AtomicReference<Long> startTime = new AtomicReference<>();
-            startTime.set(System.nanoTime());
-            equipmentInfosService.deleteAll();
-            updateStudiesIndexationStatus(StudyIndexationStatus.NOT_INDEXED);
-            LOGGER.trace("Indexed equipments deletion for all studies : {} seconds", TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        }
+    public Long deleteStudyIndexedEquipmentsAndTombstoned(UUID studyUuid) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+
+        UUID networkUUID = networkStoreService.getNetworkUuid(studyUuid);
+        Long nbIndexesToDelete = getStudyIndexedEquipmentsCount(networkUUID) + getStudyIndexedTombstonedEquipmentsCount(networkUUID);
+        equipmentInfosService.deleteAllByNetworkUuid(networkUUID);
+        studyService.updateStudyIndexationStatus(studyUuid, StudyIndexationStatus.NOT_INDEXED);
+
+        LOGGER.trace("Indexed equipments deletion for study \"{}\": {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return nbIndexesToDelete;
     }
 
