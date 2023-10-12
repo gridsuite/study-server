@@ -97,9 +97,9 @@ public class SecurityAnalysisService {
 
     private String getPathFromResultType(SecurityAnalysisResultType resultType) {
         switch (resultType) {
-            case NMK_CONTINGENCIES : return "nmk-contingencies";
-            case NMK_CONSTRAINTS : return "nmk-constraints";
-            default: return "n"; //N case
+            case NMK_CONTINGENCIES : return "nmk-contingencies-result";
+            case NMK_CONSTRAINTS : return "nmk-constraints-result";
+            default: return "n-result"; //N case
         }
     }
 
