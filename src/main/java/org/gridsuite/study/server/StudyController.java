@@ -1093,11 +1093,7 @@ public class StudyController {
                                                            @Parameter(description = "Delete only stashed modifications") @RequestParam(name = "onlyStashed", required = false, defaultValue = "false") Boolean onlyStashed,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        if (networkModificationUuids == null) {
-            studyService.deleteAllNetworkModifications(studyUuid, nodeUuid, onlyStashed, userId);
-        } else {
-            studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, onlyStashed, userId);
-        }
+        studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, onlyStashed, userId);
 
         return ResponseEntity.ok().build();
     }
