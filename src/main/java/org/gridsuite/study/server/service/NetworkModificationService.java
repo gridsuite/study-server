@@ -46,7 +46,6 @@ public class NetworkModificationService {
 
     private static final String DELIMITER = "/";
     private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
-    private static final String MODIFICATIONS_PATH = "modifications";
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
     private static final String NETWORK_UUID = "networkUuid";
     private static final String REPORT_UUID = "reportUuid";
@@ -85,8 +84,8 @@ public class NetworkModificationService {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH)
             .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
-                .queryParam("onlyStashed", stashedModifications)
-                .queryParam("onlyMetadata", onlyMetadata)
+            .queryParam(QUERY_PARAM_ONLY_STASHED, stashedModifications)
+            .queryParam("onlyMetadata", onlyMetadata)
             .buildAndExpand(groupUUid)
             .toUriString();
 
@@ -217,7 +216,7 @@ public class NetworkModificationService {
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
                 .queryParam(UUIDS, modificationsUuids)
                 .queryParam(GROUP_UUID, groupUUid)
-                .queryParam("stashed", false)//TODO put it in a constant
+                .queryParam(QUERY_PARAM_STASHED, false)
                 .buildAndExpand()
                 .toUriString();
 
