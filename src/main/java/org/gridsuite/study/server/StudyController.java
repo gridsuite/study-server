@@ -1004,20 +1004,28 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get node report")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    @Operation(summary = "Get the tree structure of a whole node report, without any elements")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report tree"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<List<ReporterModel>> getNodeReport(@Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @Parameter(description = "Node only report") @RequestParam(value = "nodeOnlyReport", required = false, defaultValue = "true") boolean nodeOnlyReport,
-                                                             @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(nodeUuid, nodeOnlyReport, severityLevels));
+                                                             @Parameter(description = "Node only report") @RequestParam(value = "nodeOnlyReport", required = false, defaultValue = "true") boolean nodeOnlyReport) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(nodeUuid, nodeOnlyReport));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/reporters/{reporterUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get a report for a given reporter")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<List<ReporterModel>> getReport(@Parameter(description = "Reporter uuid") @PathVariable("reporterUuid") UUID reporterUuid,
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report/elements", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get the elements for a whole node report, its reporters and its subreporters")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report elements"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<List<ReporterModel>> getNodeReportElements(@Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                             @Parameter(description = "Node only report") @RequestParam(value = "nodeOnlyReport", required = false, defaultValue = "true") boolean nodeOnlyReport,
+                                                             @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReportElements(nodeUuid, nodeOnlyReport, severityLevels));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/reporters/{reporterUuid}/elements", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get the elements for a given reporter and its subreporters")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The reporter elements"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<ReporterModel> getReporterElements(@Parameter(description = "Reporter uuid") @PathVariable("reporterUuid") UUID reporterUuid,
                                                          @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReport(reporterUuid, severityLevels));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReporterElements(reporterUuid, severityLevels));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report")
