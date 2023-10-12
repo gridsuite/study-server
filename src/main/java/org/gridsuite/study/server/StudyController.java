@@ -649,9 +649,9 @@ public class StudyController {
                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                @Parameter(description = "Full or only those with limit violations or none fault results") @RequestParam(name = "mode", required = false, defaultValue = "WITH_LIMIT_VIOLATIONS") String mode,
                                                                @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type,
-                                                               @Parameter(description = "JSON object used to filter data") @RequestParam(name = "filter", required = false) String filter,
+                                                               @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
                                                                Pageable pageable) {
-        String resultsPage = shortCircuitService.getShortCircuitAnalysisResultsPage(nodeUuid, mode, type, filter, pageable);
+        String resultsPage = shortCircuitService.getShortCircuitAnalysisResultsPage(nodeUuid, mode, type, filters, pageable);
         return resultsPage != null ? ResponseEntity.ok().body(resultsPage) :
                 ResponseEntity.noContent().build();
     }

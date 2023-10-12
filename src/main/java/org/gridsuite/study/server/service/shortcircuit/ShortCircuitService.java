@@ -139,7 +139,7 @@ public class ShortCircuitService {
         return getShortCircuitAnalysisResource(builder.build().toUri());
     }
 
-    public String getShortCircuitAnalysisResultsPage(UUID nodeUuid, String mode, ShortcircuitAnalysisType type, String filter, Pageable pageable) {
+    public String getShortCircuitAnalysisResultsPage(UUID nodeUuid, String mode, ShortcircuitAnalysisType type, String filters, Pageable pageable) {
         String resultsPath = getShortCircuitAnalysisResultsPageResourcePath(nodeUuid, type);
         if (resultsPath == null) {
             return null;
@@ -151,15 +151,15 @@ public class ShortCircuitService {
                 .queryParam("page", pageable.getPageNumber())
                 .queryParam("size", pageable.getPageSize());
 
-        if (filter != null && !filter.isEmpty()) {
-            builder.queryParam("filter", filter);
+        if (filters != null && !filters.isEmpty()) {
+            builder.queryParam("filters", filters);
         }
 
         for (Sort.Order order : pageable.getSort()) {
             builder.queryParam("sort", order.getProperty(), order.getDirection());
         }
 
-        return getShortCircuitAnalysisResource(builder.build().toUri());
+        return getShortCircuitAnalysisResource(builder.build().encode().toUri());
     }
 
     public String getShortCircuitAnalysisStatus(UUID nodeUuid, ShortcircuitAnalysisType type) {
