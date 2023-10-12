@@ -2329,6 +2329,13 @@ public class StudyTest {
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
+        // Test get elasticsearch host
+        mvcResult = mockMvc.perform(get("/v1/supervision/elasticsearch-host"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals("localhost:9200", mvcResult.getResponse().getContentAsString());
+
         // Test get indexed equipments index name
         mvcResult = mockMvc.perform(get("/v1/supervision/indexed-equipments-index-name"))
             .andExpect(status().isOk())

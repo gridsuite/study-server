@@ -37,6 +37,9 @@ public class SupervisionController {
     @Value("#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}tombstoned-equipments")
     public String indexNameTombstonedEquipments;
 
+    @Value("#{@environment.getProperty('spring.data.elasticsearch.host')}" + ":" + "#{@environment.getProperty('spring.data.elasticsearch.port')}")
+    public String elasticSerachHost;
+
     private final SupervisionService supervisionService;
 
     public SupervisionController(SupervisionService supervisionService) {
@@ -49,6 +52,13 @@ public class SupervisionController {
     public ResponseEntity<Integer> deleteComputationResults(@Parameter(description = "Computation type") @RequestParam("type") ComputationType computationType,
                                                            @Parameter(description = "Dry run") @RequestParam("dryRun") boolean dryRun) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.deleteComputationResults(computationType, dryRun));
+    }
+
+    @GetMapping(value = "/elasticsearch-host")
+    @Operation(summary = "get the elasticsearch address")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "the elasticsearch address")})
+    public ResponseEntity<String> getElasticsearchHost() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(elasticSerachHost);
     }
 
     @GetMapping(value = "/indexed-equipments-index-name")
