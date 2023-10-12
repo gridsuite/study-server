@@ -32,7 +32,6 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
-import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.dto.sensianalysis.*;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -571,7 +570,7 @@ public class StudyService {
     public void deleteEquipmentIndexes(UUID networkUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        equipmentInfosService.deleteAll(networkUuid);
+        equipmentInfosService.deleteAllByNetworkUuid(networkUuid);
         LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
@@ -1187,6 +1186,10 @@ public class StudyService {
         loadflowService.invalidateLoadFlowStatus(networkModificationTreeService.getLoadFlowResultUuids(studyUuid));
     }
 
+    public void invalidateVoltageInitStatusOnAllNodes(UUID studyUuid) {
+        voltageInitService.invalidateVoltageInitStatus(networkModificationTreeService.getStudyVoltageInitResultUuids(studyUuid));
+    }
+
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
                                           String caseFormat, UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
                                           UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, UUID voltageInitParametersUuid, Map<String, String> importParameters) {
@@ -1221,6 +1224,10 @@ public class StudyService {
         studyEntity.setIndexationStatus(indexationStatus);
         notificationService.emitStudyIndexationStatusChanged(studyEntity.getId(), indexationStatus);
         return studyEntity;
+    }
+
+    public StudyEntity updateStudyIndexationStatus(UUID studyUuid, StudyIndexationStatus indexationStatus) {
+        return updateStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), indexationStatus);
     }
 
     @Transactional
@@ -1303,6 +1310,7 @@ public class StudyService {
         } else {
             voltageInitService.updateVoltageInitParameters(voltageInitParametersUuid, parameters);
         }
+        invalidateVoltageInitStatusOnAllNodes(studyUuid);
     }
 
     public void updateSecurityAnalysisParameters(UUID studyUuid, SecurityAnalysisParametersEntity securityAnalysisParametersEntity) {
@@ -1941,6 +1949,7 @@ public class StudyService {
     @Transactional
     public void setVoltageInitParameters(UUID studyUuid, String parameters, String userId) {
         createOrUpdateVoltageInitParameters(studyUuid, parameters);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
