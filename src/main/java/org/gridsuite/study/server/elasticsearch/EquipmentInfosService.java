@@ -8,6 +8,7 @@ package org.gridsuite.study.server.elasticsearch;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.QueryStringQuery;
+
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.springframework.data.domain.PageRequest;
@@ -101,12 +102,15 @@ public class EquipmentInfosService {
         return tombstonedEquipmentInfosRepository.count();
     }
 
-    public void deleteAll() {
-        equipmentInfosRepository.deleteAll();
-        tombstonedEquipmentInfosRepository.deleteAll();
+    public long getEquipmentInfosCount(@NonNull UUID networkUuid) {
+        return equipmentInfosRepository.countByNetworkUuid(networkUuid);
     }
 
-    public void deleteAll(@NonNull UUID networkUuid) {
+    public long getTombstonedEquipmentInfosCount(@NonNull UUID networkUuid) {
+        return tombstonedEquipmentInfosRepository.countByNetworkUuid(networkUuid);
+    }
+
+    public void deleteAllByNetworkUuid(@NonNull UUID networkUuid) {
         equipmentInfosRepository.deleteAllByNetworkUuid(networkUuid);
         tombstonedEquipmentInfosRepository.deleteAllByNetworkUuid(networkUuid);
 
