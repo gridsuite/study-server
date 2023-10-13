@@ -40,7 +40,7 @@ public class NetworkVariantsListenerTests {
     @After
     public void tearDown() {
         try {
-            equipmentInfosService.deleteAll(NETWORK_UUID);
+            equipmentInfosService.deleteAllByNetworkUuid(NETWORK_UUID);
         } catch (NoSuchIndexException ex) {
             // no need to worry that much
         }
