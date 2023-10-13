@@ -1769,7 +1769,7 @@ public class StudyService {
     }
 
     private List<ReporterModel> getSubReportersByNodeFrom(UUID nodeUuid, boolean nodeOnlyReport, boolean withReportElements, Set<String> severityLevels) {
-        List<ReporterModel> subReporters = getSubReportersByNodeFrom(nodeUuid, withReportElements, severityLevels);
+        List<ReporterModel> subReporters = getSubReporters(nodeUuid, nodeOnlyReport, withReportElements, severityLevels);
         if (subReporters.isEmpty()) {
             return subReporters;
         } else if (nodeOnlyReport) {
@@ -1783,10 +1783,10 @@ public class StudyService {
         }
     }
 
-    private List<ReporterModel> getSubReportersByNodeFrom(UUID nodeUuid, boolean withReportElements, Set<String> severityLevels) {
+    private List<ReporterModel> getSubReporters(UUID nodeUuid, boolean nodeOnlyReport, boolean withReportElements, Set<String> severityLevels) {
         AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
         ReporterModel reporter = withReportElements ?
-                reportService.getReportElements(nodeInfos.getReportUuid(), severityLevels) :
+                reportService.getReportElements(nodeInfos.getReportUuid(), severityLevels, nodeOnlyReport ? nodeUuid.toString() + "@NetworkModification" : null) :
                 reportService.getReportReporters(nodeInfos.getReportUuid(), nodeInfos.getId().toString());
         Map<String, List<ReporterModel>> subReportersByNode = new LinkedHashMap<>();
         reporter.getSubReporters().forEach(subReporter -> subReportersByNode.putIfAbsent(getNodeIdFromReportKey(subReporter), new ArrayList<>()));

@@ -72,9 +72,12 @@ public class ReportService {
         return reportServerCall(reportUuid, this.getReportServerURI(), uriBuilder);
     }
 
-    public ReporterModel getReportElements(@NonNull UUID reportUuid, Set<String> severityLevels) {
+    public ReporterModel getReportElements(@NonNull UUID reportUuid, Set<String> severityLevels, String nameFilter) {
         var uriBuilder = UriComponentsBuilder.fromPath("{reportUuid}/elements")
                 .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
+        if (nameFilter != null && !nameFilter.isEmpty()) {
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_NAME_FILTER, nameFilter);
+        }
         return reportServerCall(reportUuid, this.getReportServerURI(), uriBuilder);
     }
 
