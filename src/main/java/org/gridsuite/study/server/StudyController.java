@@ -645,7 +645,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis results page"),
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
-    public ResponseEntity<String> getShortCircuitAnalysisFaultResultsPage(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<String> getShortCircuitAnalysisResultsPage(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                @Parameter(description = "Full or only those with limit violations or none fault results") @RequestParam(name = "mode", required = false, defaultValue = "WITH_LIMIT_VIOLATIONS") String mode,
                                                                @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type,

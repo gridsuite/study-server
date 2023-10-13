@@ -122,19 +122,24 @@ public class ShortCircuitService {
         if (resultPath == null) {
             return null;
         }
-        return UriComponentsBuilder.fromPath(resultPath + "/paged").toUriString();
+        if (type == ShortcircuitAnalysisType.ALL_BUSES) {
+            resultPath += "/fault_results";
+        } else if (type == ShortcircuitAnalysisType.ONE_BUS) {
+            resultPath += "/feeder_results";
+        } else {
+            throw new StudyException(SHORT_CIRCUIT_ANALYSIS_BAD_TYPE);
+        }
+        return resultPath;
     }
 
     public String getShortCircuitAnalysisResult(UUID nodeUuid, String mode, ShortcircuitAnalysisType type) {
-        // For ONE_BUS results, we always want full results mode
-        String overridedMode = type == ShortcircuitAnalysisType.ONE_BUS ? "FULL" : mode;
         String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, type);
         if (resultPath == null) {
             return null;
         }
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath)
-                .queryParam("mode", overridedMode);
+                .queryParam("mode", mode);
 
         return getShortCircuitAnalysisResource(builder.build().toUri());
     }
