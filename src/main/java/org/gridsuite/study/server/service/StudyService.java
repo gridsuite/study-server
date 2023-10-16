@@ -11,6 +11,7 @@ import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
+import com.powsybl.commons.reporter.TypedValue;
 import com.powsybl.iidm.network.*;
 import com.powsybl.security.LimitViolation;
 import com.powsybl.security.Security;
@@ -1754,13 +1755,18 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReporterModel> getNodeReport(UUID nodeUuid, boolean nodeOnlyReport) {
-        return getSubReportersByNodeFrom(nodeUuid, nodeOnlyReport, false, null);
+    public List<ReporterModel> getNodeReportTree(UUID nodeUuid, boolean nodeOnlyReport) {
+        return getSubReportersByNodeFrom(nodeUuid, nodeOnlyReport, true, null);
     }
 
     @Transactional(readOnly = true)
-    public List<ReporterModel> getNodeReportElements(UUID nodeUuid, boolean nodeOnlyReport, Set<String> severityLevels) {
-        return getSubReportersByNodeFrom(nodeUuid, nodeOnlyReport, true, severityLevels);
+    public List<ReporterModel> getAllNodesReportElements(UUID nodeUuid, Set<String> severityLevels) {
+        return getSubReportersByNodeFrom(nodeUuid, false, false, severityLevels);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReporterModel> getNodeReportElements(UUID nodeUuid, UUID reportUuid, Set<String> severityLevels, String filter) {
+        return getSubReporters(nodeUuid, reportUuid, false, severityLevels, filter);
     }
 
     @Transactional(readOnly = true)
@@ -1768,8 +1774,8 @@ public class StudyService {
         return reportService.getReporterElements(reporterUuid, severityLevels);
     }
 
-    private List<ReporterModel> getSubReportersByNodeFrom(UUID nodeUuid, boolean nodeOnlyReport, boolean withReportElements, Set<String> severityLevels) {
-        List<ReporterModel> subReporters = getSubReporters(nodeUuid, nodeOnlyReport, withReportElements, severityLevels);
+    private List<ReporterModel> getSubReportersByNodeFrom(UUID nodeUuid, boolean nodeOnlyReport, boolean onlyTree, Set<String> severityLevels) {
+        List<ReporterModel> subReporters = getSubReporters(nodeUuid, onlyTree, severityLevels);
         if (subReporters.isEmpty()) {
             return subReporters;
         } else if (nodeOnlyReport) {
@@ -1779,22 +1785,40 @@ public class StudyService {
                 return subReporters;
             }
             Optional<UUID> parentUuid = networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporters.get(0).getTaskKey()));
-            return parentUuid.isEmpty() ? subReporters : Stream.concat(getSubReportersByNodeFrom(parentUuid.get(), false, withReportElements, severityLevels).stream(), subReporters.stream()).collect(Collectors.toList());
+            return parentUuid.isEmpty() ? subReporters : Stream.concat(getSubReportersByNodeFrom(parentUuid.get(), false, onlyTree, severityLevels).stream(), subReporters.stream()).collect(Collectors.toList());
         }
     }
 
-    private List<ReporterModel> getSubReporters(UUID nodeUuid, boolean nodeOnlyReport, boolean withReportElements, Set<String> severityLevels) {
+    private List<ReporterModel> getSubReporters(UUID nodeUuid, boolean onlyTree, Set<String> severityLevels) {
         AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
-        ReporterModel reporter = withReportElements ?
-                reportService.getReportElements(nodeInfos.getReportUuid(), severityLevels, nodeOnlyReport ? nodeUuid.toString() + "@NetworkModification" : null) :
-                reportService.getReportReporters(nodeInfos.getReportUuid(), nodeInfos.getId().toString());
+        return getSubReporters(nodeUuid, nodeInfos.getReportUuid(), onlyTree, severityLevels, null);
+    }
+
+    private List<ReporterModel> getSubReporters(UUID nodeUuid, UUID reportUuid, boolean onlyTree, Set<String> severityLevels, String taskKeyfilter) {
+        ReporterModel reporter = onlyTree ?
+            reportService.getReportReporters(reportUuid, nodeUuid.toString()) :
+            reportService.getReportElements(reportUuid, severityLevels, taskKeyfilter);
+
         Map<String, List<ReporterModel>> subReportersByNode = new LinkedHashMap<>();
+        Map<String, String> reportIdByNode = new HashMap<>();
         reporter.getSubReporters().forEach(subReporter -> subReportersByNode.putIfAbsent(getNodeIdFromReportKey(subReporter), new ArrayList<>()));
-        reporter.getSubReporters().forEach(subReporter ->
-            subReportersByNode.get(getNodeIdFromReportKey(subReporter)).addAll(subReporter.getSubReporters())
+        reporter.getSubReporters().forEach(subReporter -> {
+                String nodeId = getNodeIdFromReportKey(subReporter);
+                subReportersByNode.get(nodeId).addAll(subReporter.getSubReporters());
+                // at this level, taskValues should contain the taskKey->reportId (usefull for un-built nodes, to track the associated reportId)
+                var value = subReporter.getTaskValues().getOrDefault(subReporter.getTaskKey(), null);
+                if (value != null && !reportIdByNode.containsKey(nodeId)) {
+                    reportIdByNode.put(nodeId, value.toString());
+                }
+            }
         );
         return subReportersByNode.keySet().stream().map(nodeId -> {
-            ReporterModel newSubReporter = new ReporterModel(nodeId, nodeId);
+            Map<String, TypedValue> taskValues = new HashMap<>();
+            if (reportIdByNode.containsKey(nodeId)) {
+                // pass the reportId to the Front
+                taskValues.put("reportId", new TypedValue(reportIdByNode.get(nodeId), "ID"));
+            }
+            ReporterModel newSubReporter = new ReporterModel(nodeId, nodeId, taskValues);
             subReportersByNode.get(nodeId).forEach(newSubReporter::addSubReporter);
             return newSubReporter;
         }).collect(Collectors.toList());
