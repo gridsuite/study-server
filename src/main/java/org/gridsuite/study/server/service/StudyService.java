@@ -32,7 +32,6 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
-import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.dto.sensianalysis.*;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -576,7 +575,7 @@ public class StudyService {
     public void deleteEquipmentIndexes(UUID networkUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        equipmentInfosService.deleteAll(networkUuid);
+        equipmentInfosService.deleteAllByNetworkUuid(networkUuid);
         LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
@@ -1230,6 +1229,10 @@ public class StudyService {
         studyEntity.setIndexationStatus(indexationStatus);
         notificationService.emitStudyIndexationStatusChanged(studyEntity.getId(), indexationStatus);
         return studyEntity;
+    }
+
+    public StudyEntity updateStudyIndexationStatus(UUID studyUuid, StudyIndexationStatus indexationStatus) {
+        return updateStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), indexationStatus);
     }
 
     @Transactional
