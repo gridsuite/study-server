@@ -11,13 +11,16 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.iidm.network.Branch;
 import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.security.LimitViolationType;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.gridsuite.study.server.dto.LimitViolationInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -96,6 +99,8 @@ public class LoadFlowTest {
 
     private static final long TIMEOUT = 1000;
 
+    private static String LIMIT_VIOLATIONS_JSON;
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -156,6 +161,11 @@ public class LoadFlowTest {
         String loadFlowErrorResultUuidStr = objectMapper.writeValueAsString(LOADFLOW_ERROR_RESULT_UUID);
         String loadflowResult = TestUtils.resourceToString("/loadflow-result.json");
 
+        List<LimitViolationInfos> limitViolations = List.of(new LimitViolationInfos("lineId1", 200., "lineName1", 60, 150., Branch.Side.ONE.name(), LimitViolationType.CURRENT),
+            new LimitViolationInfos("lineId2", 100., "lineName2", 300, 80., Branch.Side.TWO.name(), LimitViolationType.CURRENT),
+            new LimitViolationInfos("genId1", 500., "genName1", 120, 370., null, LimitViolationType.HIGH_VOLTAGE));
+        LIMIT_VIOLATIONS_JSON = objectMapper.writeValueAsString(limitViolations);
+
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
@@ -163,7 +173,7 @@ public class LoadFlowTest {
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
                 request.getBody();
-                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)) {
+                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + ".*")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", LOADFLOW_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
@@ -184,6 +194,12 @@ public class LoadFlowTest {
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/status")) {
                     return new MockResponse().setResponseCode(200).setBody(LOADFLOW_STATUS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations")) {
+                    return new MockResponse().setResponseCode(200).setBody(LIMIT_VIOLATIONS_JSON)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)) {
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/stop.*")
                         || path.matches("/v1/results/" + LOADFLOW_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? LOADFLOW_OTHER_NODE_RESULT_UUID : LOADFLOW_RESULT_UUID;
@@ -296,6 +312,66 @@ public class LoadFlowTest {
     }
 
     @Test
+    public void testGetLimitViolations() throws Exception {
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID_2, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        //run a loadflow
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run?limitReduction=0.7", studyNameUserIdUuid, modificationNode1Uuid)
+                .header("userId", "userId"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&limitReduction=0.7")));
+
+        // get limit violations
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
+                status().isOk(),
+                content().string(LIMIT_VIOLATIONS_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations")));
+
+        // get limit violations on non existing node
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations", studyNameUserIdUuid, UUID.randomUUID())).andExpectAll(
+            status().isOk(),
+            content().string("[]"));
+    }
+
+    @Test
+    public void testInvalidateStatus() throws Exception {
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID_2, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        //run a loadflow
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run?limitReduction=0.7", studyNameUserIdUuid, modificationNode1Uuid)
+                .header("userId", "userId"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&limitReduction=0.7")));
+
+        // invalidate status
+        mockMvc.perform(put("/v1/studies/{studyUuid}/loadflow/invalidate-status", studyNameUserIdUuid)
+            .header("userId", "userId")).andExpect(status().isOk());
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)));
+    }
+
+    @Test
     public void testDeleteLoadFlowResults() throws Exception {
         MvcResult mvcResult;
         String resultAsString;
@@ -354,8 +430,8 @@ public class LoadFlowTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), loadflowFailedDestination);
             return resultUuid;
-        }).when(studyService).runLoadFlow(any(), any(), any());
-        studyService.runLoadFlow(studyEntity.getId(), modificationNode.getId(), "");
+        }).when(studyService).runLoadFlow(any(), any(), any(), any());
+        studyService.runLoadFlow(studyEntity.getId(), modificationNode.getId(), "", null);
 
         // Test reset uuid result in the database
         assertTrue(networkModificationTreeService.getLoadFlowResultUuid(modificationNode.getId()).isEmpty());
