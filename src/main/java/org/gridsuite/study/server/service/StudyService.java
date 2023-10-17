@@ -13,9 +13,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.iidm.network.*;
 import com.powsybl.security.LimitViolation;
-import com.powsybl.security.Security;
+import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.security.SecurityAnalysisParameters;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
@@ -750,13 +749,13 @@ public class StudyService {
                 substationsIds, "all");
     }
 
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, String userId) {
+    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, String userId, Float limitReduction) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getLoadFlowResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(loadflowService::deleteLoadFlowResult);
 
         LoadFlowParametersInfos lfParameters = getLoadFlowParametersInfos(studyEntity);
-        UUID result = loadflowService.runLoadFlow(studyUuid, nodeUuid, lfParameters, studyEntity.getLoadFlowProvider(), userId);
+        UUID result = loadflowService.runLoadFlow(studyUuid, nodeUuid, lfParameters, studyEntity.getLoadFlowProvider(), userId, limitReduction);
 
         updateLoadFlowResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
@@ -1120,22 +1119,11 @@ public class StudyService {
                 .limitType(violation.getLimitType()).build();
     }
 
-    public List<LimitViolationInfos> getLimitViolations(UUID studyUuid, UUID nodeUuid, float limitReduction) {
+    public List<LimitViolationInfos> getLimitViolations(UUID studyUuid, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        Network network = networkStoreService.getNetwork(networkUuid, PreloadingStrategy.COLLECTION, networkModificationTreeService.getVariantId(nodeUuid));
-        List<LimitViolation> violations;
-        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        LoadFlowParameters lfCommonParams = getLoadFlowParameters(studyEntity);
-        if (lfCommonParams.isDc()) {
-            violations = Security.checkLimitsDc(network, limitReduction, lfCommonParams.getDcPowerFactor());
-        } else {
-            violations = Security.checkLimits(network, limitReduction);
-        }
-        return violations.stream()
-                .map(StudyService::toLimitViolationInfos).collect(Collectors.toList());
+        return loadflowService.getLimitViolations(nodeUuid);
     }
 
     public byte[] getSubstationSvg(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
@@ -2105,5 +2093,12 @@ public class StudyService {
     public void updateSensitivityAnalysisParameters(UUID studyUuid, SensitivityAnalysisParametersEntity sensitivityParametersEntity) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setSensitivityAnalysisParameters(sensitivityParametersEntity));
+    }
+
+    @Transactional
+    public void invalidateLoadFlowStatus(UUID studyUuid, String userId) {
+        invalidateLoadFlowStatusOnAllNodes(studyUuid);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 }

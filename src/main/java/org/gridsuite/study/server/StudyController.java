@@ -551,9 +551,10 @@ public class StudyController {
     public ResponseEntity<UUID> runLoadFlow(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "The limit reduction") @RequestParam(name = "limitReduction", required = false) Float limitReduction,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runLoadFlow(studyUuid, nodeUuid, userId));
+        return ResponseEntity.ok().body(studyService.runLoadFlow(studyUuid, nodeUuid, userId, limitReduction));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/result")
@@ -784,9 +785,8 @@ public class StudyController {
     @Operation(summary = "Get limit violations.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The limit violations")})
     public ResponseEntity<List<LimitViolationInfos>> getLimitViolations(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                       @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                       @Parameter(description = "The limit reduction") @RequestParam("limitReduction") float limitReduction) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, limitReduction));
+                                                       @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
@@ -1585,6 +1585,17 @@ public class StudyController {
             @RequestBody(required = false) SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setSensitivityAnalysisParametersValues(studyUuid, sensitivityAnalysisParametersValues, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")
+    @Operation(summary = "Invalidate loadflow status on study nodes")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The loadflow status has been invalidated on all study nodes"),
+        @ApiResponse(responseCode = "404", description = "The study is not found")})
+    public ResponseEntity<Void> invalidateLoadFlowStatus(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                         @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.invalidateLoadFlowStatus(studyUuid, userId);
         return ResponseEntity.ok().build();
     }
 }
