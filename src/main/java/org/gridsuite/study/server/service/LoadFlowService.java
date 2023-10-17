@@ -18,6 +18,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.LoadFlowSpecificParameterEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -27,6 +28,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -70,7 +72,7 @@ public class LoadFlowService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, LoadFlowParametersInfos loadflowParameters, String provider, String userId) {
+    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, LoadFlowParametersInfos loadflowParameters, String provider, String userId, Float limitReduction) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
         UUID reportUuid = getReportUuid(nodeUuid);
@@ -92,6 +94,9 @@ public class LoadFlowService {
         }
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        if (limitReduction != null) {
+            uriComponentsBuilder.queryParam("limitReduction", limitReduction);
         }
         var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
 
@@ -258,5 +263,25 @@ public class LoadFlowService {
         if (LoadFlowStatus.RUNNING.name().equals(scs)) {
             throw new StudyException(LOADFLOW_RUNNING);
         }
+    }
+
+    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid) {
+        List<LimitViolationInfos> result = new ArrayList<>();
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getLoadFlowResultUuid(nodeUuid);
+
+        if (resultUuidOpt.isPresent()) {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations")
+                .buildAndExpand(resultUuidOpt.get()).toUriString();
+            try {
+                var responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() { });
+                result = responseEntity.getBody();
+            } catch (HttpStatusCodeException e) {
+                if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                    throw new StudyException(LOADFLOW_NOT_FOUND);
+                }
+                throw e;
+            }
+        }
+        return result;
     }
 }
