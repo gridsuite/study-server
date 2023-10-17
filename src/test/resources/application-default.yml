@@ -17,8 +17,5 @@ logging:
 powsybl-ws:
   database:
     vendor: h2:mem
-    query: ;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    query: ;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL;DEFAULT_NULL_ORDERING=HIGH
     hostPort: ":"
-
-
-
