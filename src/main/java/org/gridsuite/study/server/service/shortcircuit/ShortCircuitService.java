@@ -138,7 +138,7 @@ public class ShortCircuitService {
             return null;
         }
 
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath)
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(shortCircuitServerBaseUri + resultPath)
                 .queryParam("mode", mode);
 
         return getShortCircuitAnalysisResource(builder.build().toUri());
@@ -150,7 +150,7 @@ public class ShortCircuitService {
             return null;
         }
 
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultsPath)
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(shortCircuitServerBaseUri + resultsPath)
                 .queryParam("mode", mode)
                 .queryParam("type", type)
                 .queryParam("page", pageable.getPageNumber())
@@ -164,7 +164,7 @@ public class ShortCircuitService {
             builder.queryParam("sort", order.getProperty(), order.getDirection());
         }
 
-        return getShortCircuitAnalysisResource(builder.build().encode().toUri());
+        return getShortCircuitAnalysisResource(builder.build().encode().toUri()); // need to encode because of filter array
     }
 
     public String getShortCircuitAnalysisStatus(UUID nodeUuid, ShortcircuitAnalysisType type) {
@@ -172,7 +172,9 @@ public class ShortCircuitService {
         if (resultPath == null) {
             return null;
         }
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath + "/status");
+
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(shortCircuitServerBaseUri + resultPath + "/status");
+
         return getShortCircuitAnalysisResource(builder.build().toUri());
     }
 
