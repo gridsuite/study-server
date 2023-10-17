@@ -9,10 +9,6 @@
             <column name="equipment_type" type="VARCHAR(255)"/>
             <column name="event_type" type="VARCHAR(255)"/>
             <column name="node_id" type="UUID"/>
-            <column name="created_by" type="VARCHAR(255)"/>
-            <column name="created_date" type="TIMESTAMP"/>
-            <column name="updated_by" type="VARCHAR(255)"/>
-            <column name="updated_date" type="TIMESTAMP"/>
         </createTable>
     </changeSet>
     <changeSet author="phamquy (generated)" id="1695392364701-6">
@@ -24,10 +20,6 @@
             <column name="type" type="VARCHAR(255)"/>
             <column name="event_id" type="UUID"/>
             <column name="value_" type="VARCHAR(255)"/>
-            <column name="created_by" type="VARCHAR(255)"/>
-            <column name="created_date" type="TIMESTAMP"/>
-            <column name="updated_by" type="VARCHAR(255)"/>
-            <column name="updated_date" type="TIMESTAMP"/>
         </createTable>
     </changeSet>
     <changeSet author="phamquy (generated)" id="1695392364701-7">

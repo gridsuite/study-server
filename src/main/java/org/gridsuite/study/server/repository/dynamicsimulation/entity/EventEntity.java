@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.repository.AbstractManuallyAssignedIdentifierEntity;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.io.Serializable;
 import java.util.*;
@@ -27,7 +26,6 @@ import java.util.*;
 @Setter
 @Entity
 @Table(name = "event", indexes = {@Index(name = "event_node_id_index", columnList = "node_id")})
-@EntityListeners(AuditingEntityListener.class)
 public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements Serializable {
 
     @Id
@@ -49,25 +47,19 @@ public class EventEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "node_id")
     private UUID nodeId; // weak reference to node id of NodeEntity
 
-    @Embedded
-    private Audit audit = new Audit();
-
-    public EventEntity(EventInfos event, String userId) {
+    public EventEntity(EventInfos event) {
         if (event.getId() == null) {
             this.id = UUID.randomUUID();
-            this.audit.setCreatedBy(userId);
-            this.audit.setCreatedDate(new Date());
         } else {
             this.id = event.getId();
             this.markNotNew();
-            this.audit.setUpdatedBy(userId);
         }
         this.nodeId = event.getNodeId();
         this.equipmentId = event.getEquipmentId();
         this.equipmentType = event.getEquipmentType();
         this.eventType = event.getEventType();
         this.properties.addAll(event.getProperties().stream()
-                .map(eventProperty -> new EventPropertyEntity(this, eventProperty, userId))
+                .map(eventProperty -> new EventPropertyEntity(this, eventProperty))
                 .toList());
     }
 }

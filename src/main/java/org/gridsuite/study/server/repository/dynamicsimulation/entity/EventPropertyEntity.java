@@ -12,10 +12,8 @@ import org.gridsuite.study.server.repository.AbstractManuallyAssignedIdentifierE
 import org.gridsuite.study.server.utils.PropertyType;
 
 import jakarta.persistence.*;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.io.Serializable;
-import java.util.Date;
 import java.util.UUID;
 
 /**
@@ -30,7 +28,6 @@ import java.util.UUID;
 @Table(name = "event_property",
     indexes = {@Index(name = "property_event_id_index", columnList = "event_id")},
     uniqueConstraints = @UniqueConstraint(columnNames = {"event_id", "name"}))
-@EntityListeners(AuditingEntityListener.class)
 public class EventPropertyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements Serializable {
 
     @Id
@@ -52,18 +49,12 @@ public class EventPropertyEntity extends AbstractManuallyAssignedIdentifierEntit
     @JoinColumn(name = "event_id", foreignKey = @ForeignKey(name = "event_property_fk"))
     private EventEntity event;
 
-    @Embedded
-    private Audit audit = new Audit();
-
-    public EventPropertyEntity(EventEntity event, EventPropertyInfos eventProperty, String userId) {
+    public EventPropertyEntity(EventEntity event, EventPropertyInfos eventProperty) {
         if (eventProperty.getId() == null) {
             this.id = UUID.randomUUID();
-            this.audit.setCreatedBy(userId);
-            this.audit.setCreatedDate(new Date());
         } else {
             this.id = eventProperty.getId();
             this.markNotNew();
-            this.audit.setUpdatedBy(userId);
         }
         this.event = event;
         this.name = eventProperty.getName();

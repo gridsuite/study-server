@@ -2013,7 +2013,7 @@ public class StudyService {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_CREATING_IN_PROGRESS);
         try {
-            dynamicSimulationEventService.saveEvent(nodeUuid, event, userId);
+            dynamicSimulationEventService.saveEvent(nodeUuid, event);
         } finally {
             postProcessEventCrud(studyUuid, nodeUuid, childrenUuids);
         }
@@ -2024,7 +2024,7 @@ public class StudyService {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_UPDATING_IN_PROGRESS);
         try {
-            dynamicSimulationEventService.saveEvent(nodeUuid, event, userId);
+            dynamicSimulationEventService.saveEvent(nodeUuid, event);
         } finally {
             postProcessEventCrud(studyUuid, nodeUuid, childrenUuids);
         }

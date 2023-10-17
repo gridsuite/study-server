@@ -57,7 +57,7 @@ public class DynamicSimulationEventServiceTest {
     public void setup() {
         cleanDB();
         // init some event by inject directly
-        EventEntity event = new EventEntity(EVENT, "tester");
+        EventEntity event = new EventEntity(EVENT);
         eventRepository.saveAll(List.of(event));
     }
 
@@ -93,7 +93,7 @@ public class DynamicSimulationEventServiceTest {
     public void testCreateEvent() {
         cleanDB();
         // call method to be tested
-        dynamicSimulationEventService.saveEvent(NODE_UUID, EVENT, "tester");
+        dynamicSimulationEventService.saveEvent(NODE_UUID, EVENT);
 
         // retrieve the saved event
         List<EventInfos> eventResultList = dynamicSimulationEventService.getEventsByNodeId(NODE_UUID);
@@ -118,7 +118,7 @@ public class DynamicSimulationEventServiceTest {
         startTimePropertyOpt.ifPresent(elem -> elem.setValue("20"));
 
         // call method to be tested
-        dynamicSimulationEventService.saveEvent(NODE_UUID, eventToUpdate, "tester");
+        dynamicSimulationEventService.saveEvent(NODE_UUID, eventToUpdate);
 
         // retrieve the saved event
         EventInfos eventResult = dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(NODE_UUID, EQUIPMENT_ID);
