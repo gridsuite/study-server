@@ -54,7 +54,6 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 
-@SuppressWarnings("checkstyle:RegexpSingleline")
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
 @Tag(name = "Study server")
@@ -249,18 +248,6 @@ public class StudyController {
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.recreateStudyRootNetwork(userId, studyUuid);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/indexation/status")
-    @Operation(summary = "check study indexation")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The study indexation status"),
-        @ApiResponse(responseCode = "204", description = "The study indexation status doesn't exist"),
-        @ApiResponse(responseCode = "404", description = "The study or network doesn't exist")})
-    public ResponseEntity<String> checkStudyIndexationStatus(@PathVariable("studyUuid") UUID studyUuid) {
-        String result = studyService.getStudyIndexationStatus(studyUuid).name();
-        return result != null ? ResponseEntity.ok().body(result) :
-            ResponseEntity.noContent().build();
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/subtrees", params = {"subtreeToCutParentNodeUuid", "referenceNodeUuid"})
@@ -1316,14 +1303,6 @@ public class StudyController {
     @ApiResponses(@ApiResponse(responseCode = "200", description = "the dynamic simulation default provider has been found"))
     public ResponseEntity<String> getDefaultDynamicSimulationProvider() {
         return ResponseEntity.ok().body(studyService.getDefaultDynamicSimulationProvider());
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/reindex-all")
-    @Operation(summary = "reindex the study")
-    @ApiResponse(responseCode = "200", description = "Study reindexed")
-    public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        studyService.reindexStudy(studyUuid);
-        return ResponseEntity.ok().build();
     }
 
     @PostMapping(value = "/studies/{studyUuid}/reindex-if-needed")
