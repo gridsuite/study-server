@@ -222,11 +222,12 @@ public class NetworkModificationTreeService {
 
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
-    public void doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
+    public List<UUID> doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
         List<UUID> removedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeId);
         deleteNodes(nodeId, deleteChildren, false, removedNodes, deleteNodeInfos);
         notificationService.emitNodesDeleted(studyId, removedNodes, deleteChildren);
+        return removedNodes;
     }
 
     @Transactional

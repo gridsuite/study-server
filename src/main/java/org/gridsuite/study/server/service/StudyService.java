@@ -36,11 +36,13 @@ import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
@@ -124,6 +126,7 @@ public class StudyService {
     private final SecurityAnalysisService securityAnalysisService;
     private final DynamicSimulationService dynamicSimulationService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
+    private final DynamicSimulationEventService dynamicSimulationEventService;
     private final ActionsService actionsService;
     private final CaseService caseService;
     private final ObjectMapper objectMapper;
@@ -163,7 +166,8 @@ public class StudyService {
             CaseService caseService,
             SensitivityAnalysisService sensitivityAnalysisService,
             DynamicSimulationService dynamicSimulationService,
-            VoltageInitService voltageInitService) {
+            VoltageInitService voltageInitService,
+            DynamicSimulationEventService dynamicSimulationEventService) {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
         this.defaultSensitivityAnalysisProvider = defaultSensitivityAnalysisProvider;
@@ -191,6 +195,7 @@ public class StudyService {
         this.caseService = caseService;
         this.dynamicSimulationService = dynamicSimulationService;
         this.voltageInitService = voltageInitService;
+        this.dynamicSimulationEventService = dynamicSimulationEventService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -1577,7 +1582,7 @@ public class StudyService {
         deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
         boolean invalidateChildrenBuild = !deleteChildren && !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeId));
         List<NodeEntity> childrenNodes = networkModificationTreeService.getChildrenByParentUuid(nodeId);
-        networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
+        List<UUID> removedNodes = networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
@@ -1589,7 +1594,8 @@ public class StudyService {
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
-                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds()))
+                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds())),
+                studyServerExecutionService.runAsync(() -> removedNodes.forEach(dynamicSimulationEventService::deleteEventsByNodeId))
         );
 
         try {
@@ -1942,6 +1948,8 @@ public class StudyService {
         return voltageInitService.getVoltageInitParameters(studyEntity.getVoltageInitParametersUuid());
     }
 
+    // --- Dynamic Simulation service methods BEGIN --- //
+
     public List<MappingInfos> getDynamicSimulationMappings(UUID studyUuid) {
         // get mapping from study uuid
         return dynamicSimulationService.getMappings(studyUuid);
@@ -1967,6 +1975,58 @@ public class StudyService {
         return studyRepository.findById(studyUuid)
                 .map(studyEntity -> studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters())
                 .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EventInfos> getDynamicSimulationEvents(UUID nodeUuid) {
+        return dynamicSimulationEventService.getEventsByNodeId(nodeUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public EventInfos getDynamicSimulationEvent(UUID nodeUuid, String equipmentId) {
+        return dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(nodeUuid, equipmentId);
+    }
+
+    private void postProcessEventCrud(UUID studyUuid, UUID nodeUuid) {
+        // for delete old result and refresh dynamic simulation run button in UI
+        invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+    }
+
+    @Transactional
+    public void createDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, EventInfos event) {
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_CREATING_IN_PROGRESS);
+        try {
+            dynamicSimulationEventService.saveEvent(nodeUuid, event);
+        } finally {
+            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+        }
+        postProcessEventCrud(studyUuid, nodeUuid);
+    }
+
+    @Transactional
+    public void updateDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, EventInfos event) {
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_UPDATING_IN_PROGRESS);
+        try {
+            dynamicSimulationEventService.saveEvent(nodeUuid, event);
+        } finally {
+            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+        }
+        postProcessEventCrud(studyUuid, nodeUuid);
+    }
+
+    @Transactional
+    public void deleteDynamicSimulationEvents(UUID studyUuid, UUID nodeUuid, String userId, List<UUID> eventUuids) {
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_DELETING_IN_PROGRESS);
+        try {
+            dynamicSimulationEventService.deleteEvents(eventUuids);
+        } finally {
+            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+        }
+        postProcessEventCrud(studyUuid, nodeUuid);
     }
 
     @Transactional
@@ -1998,8 +2058,15 @@ public class StudyService {
 
         // load configured parameters persisted in the study server DB
         DynamicSimulationParametersInfos configuredParameters = getDynamicSimulationParameters(studyUuid);
+
+        // load configured events persisted in the study server DB
+        List<EventInfos> events = dynamicSimulationEventService.getEventsByNodeId(nodeUuid);
+
         // override configured parameters by provided parameters (only provided fields)
         DynamicSimulationParametersInfos mergeParameters = new DynamicSimulationParametersInfos();
+        // attach events to the merged parameters
+        mergeParameters.setEvents(events);
+
         if (configuredParameters != null) {
             PropertyUtils.copyNonNullProperties(configuredParameters, mergeParameters);
         }
@@ -2034,6 +2101,8 @@ public class StudyService {
     public DynamicSimulationStatus getDynamicSimulationStatus(UUID nodeUuid) {
         return dynamicSimulationService.getStatus(nodeUuid);
     }
+
+    // --- Dynamic Simulation service methods END --- //
 
     public String getNetworkElementsIds(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode, String equipmentType) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
