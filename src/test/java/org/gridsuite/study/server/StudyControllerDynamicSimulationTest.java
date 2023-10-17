@@ -853,15 +853,15 @@ public class StudyControllerDynamicSimulationTest {
         assertEquals(studyUuid, studyUpdateMessageBegin.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(crudType, studyUpdateMessageBegin.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> studyUpdateMessageStatus = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(studyUuid, studyUpdateMessageStatus.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, studyUpdateMessageStatus.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-
         // must have message EVENTS_CRUD_FINISHED from channel : studyUpdateDestination
         Message<byte[]> elementUpdateMessageFinished = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, elementUpdateMessageFinished.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.EVENTS_CRUD_FINISHED, elementUpdateMessageFinished.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
+        Message<byte[]> studyUpdateMessageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, studyUpdateMessageStatus.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, studyUpdateMessageStatus.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     @Test
