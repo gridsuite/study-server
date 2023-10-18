@@ -10,6 +10,7 @@ import lombok.*;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
+import org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 
 import jakarta.persistence.*;
@@ -104,6 +105,14 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
                     name = "sensitivityAnalysisParameters_id_fk"
             ))
     private SensitivityAnalysisParametersEntity sensitivityAnalysisParameters;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "nonEvacuatedEnergyParametersEntity_id",
+        referencedColumnName = "id",
+        foreignKey = @ForeignKey(
+            name = "nonEvacuatedEnergyParameters_id_fk"
+        ))
+    private NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParameters;
 
     @ElementCollection
     @CollectionTable(name = "importParameters",

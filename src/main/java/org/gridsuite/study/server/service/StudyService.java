@@ -32,7 +32,12 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.sensianalysis.*;
+import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyContingencies;
+import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyGeneratorLimitByType;
+import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyGeneratorsLimit;
 import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyInputData;
+import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyMonitoredBranches;
+import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyStagesSelection;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -44,6 +49,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
+import org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -128,6 +134,7 @@ public class StudyService {
     private final SecurityAnalysisService securityAnalysisService;
     private final DynamicSimulationService dynamicSimulationService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
+    private final NonEvacuatedEnergyService nonEvacuatedEnergyService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final ActionsService actionsService;
     private final CaseService caseService;
@@ -167,6 +174,7 @@ public class StudyService {
             ActionsService actionsService,
             CaseService caseService,
             SensitivityAnalysisService sensitivityAnalysisService,
+            NonEvacuatedEnergyService nonEvacuatedEnergyService,
             DynamicSimulationService dynamicSimulationService,
             VoltageInitService voltageInitService,
             DynamicSimulationEventService dynamicSimulationEventService) {
@@ -186,6 +194,7 @@ public class StudyService {
         this.studyServerExecutionService = studyServerExecutionService;
         this.notificationService = notificationService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
+        this.nonEvacuatedEnergyService = nonEvacuatedEnergyService;
         this.loadflowService = loadflowService;
         this.shortCircuitService = shortCircuitService;
         this.singleLineDiagramService = singleLineDiagramService;
@@ -544,7 +553,7 @@ public class StudyService {
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
                                 .map(NodeModificationInfos::getSensitivityAnalysisUuid).filter(Objects::nonNull).forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
-                                .map(NodeModificationInfos::getSensitivityAnalysisNonEvacuatedEnergyUuid).filter(Objects::nonNull).forEach(sensitivityAnalysisService::deleteSensitivityAnalysisNonEvacuatedEnergyResult)), // TODO delete all with one request only
+                                .map(NodeModificationInfos::getNonEvacuatedEnergyUuid).filter(Objects::nonNull).forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
                                 .map(NodeModificationInfos::getShortCircuitAnalysisUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
@@ -629,6 +638,10 @@ public class StudyService {
                 SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues() :
                 SensitivityAnalysisService.fromEntity(sourceStudy.getSensitivityAnalysisParameters());
 
+        org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersValues = sourceStudy.getNonEvacuatedEnergyParameters() == null ?
+            NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersValues() :
+            NonEvacuatedEnergyService.fromEntity(sourceStudy.getNonEvacuatedEnergyParameters());
+
         UUID copiedVoltageInitParametersUuid = sourceStudy.getVoltageInitParametersUuid();
 
         ShortCircuitParameters shortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
@@ -649,6 +662,7 @@ public class StudyService {
                 .shortCircuitParameters(ShortCircuitService.toEntity(shortCircuitParameters, shortCircuitPredefinedConfiguration))
                 .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
                 .sensitivityAnalysisParameters(SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues))
+            .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersValues))
                 .importParameters(newImportParameters)
                 .build();
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), UUID.randomUUID()));
@@ -783,6 +797,7 @@ public class StudyService {
         securityAnalysisService.assertSecurityAnalysisNotRunning(nodeUuid);
         dynamicSimulationService.assertDynamicSimulationNotRunning(nodeUuid);
         sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(nodeUuid);
+        nonEvacuatedEnergyService.assertNonEvacuatedEnergyNotRunning(nodeUuid);
         shortCircuitService.assertShortCircuitAnalysisNotRunning(nodeUuid);
         voltageInitService.assertVoltageInitNotRunning(nodeUuid);
     }
@@ -957,6 +972,14 @@ public class StudyService {
                 .orElse(null);
     }
 
+    public org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos getNonEvacuatedEnergyParametersValues(UUID studyUuid) {
+        return studyRepository.findById(studyUuid)
+            .map(studyEntity -> studyEntity.getNonEvacuatedEnergyParameters() != null ?
+                NonEvacuatedEnergyService.fromEntity(studyEntity.getNonEvacuatedEnergyParameters()) :
+                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersValues())
+            .orElse(null);
+    }
+
     @Transactional
     public void setLoadFlowParameters(UUID studyUuid, LoadFlowParametersValues parameters, String userId) {
         updateLoadFlowParameters(studyUuid, createParametersEntity(parameters));
@@ -967,7 +990,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
@@ -1032,7 +1055,7 @@ public class StudyService {
             studyEntity.setSensitivityAnalysisProvider(provider != null ? provider : defaultSensitivityAnalysisProvider);
             invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS);
+            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         });
     }
 
@@ -1184,7 +1207,7 @@ public class StudyService {
 
     public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
         sensitivityAnalysisService.invalidateSensitivityAnalysisStatus(networkModificationTreeService.getStudySensitivityAnalysisResultUuids(studyUuid));
-        sensitivityAnalysisService.invalidateSensitivityAnalysisNonEvacuatedEnergyStatus(networkModificationTreeService.getStudySensitivityAnalysisNonEvacuatedEnergyResultUuids(studyUuid));
+        nonEvacuatedEnergyService.invalidateNonEvacuatedEnergyStatus(networkModificationTreeService.getStudyNonEvacuatedEnergyResultUuids(studyUuid));
     }
 
     public void invalidateDynamicSimulationStatusOnAllNodes(UUID studyUuid) {
@@ -1213,7 +1236,7 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, importParameters, StudyIndexationStatus.INDEXED);
+                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, null, importParameters, StudyIndexationStatus.INDEXED);
         return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
     }
 
@@ -1269,8 +1292,8 @@ public class StudyService {
         networkModificationTreeService.updateSensitivityAnalysisResultUuid(nodeUuid, sensitivityAnalysisResultUuid);
     }
 
-    void updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(UUID nodeUuid, UUID sensitivityAnalysisNonEvacuatedEnergyResultUuid) {
-        networkModificationTreeService.updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(nodeUuid, sensitivityAnalysisNonEvacuatedEnergyResultUuid);
+    void updateNonEvacuatedEnergyResultUuid(UUID nodeUuid, UUID nonEvacuatedEnergyResultUuid) {
+        networkModificationTreeService.updateNonEvacuatedEnergyResultUuid(nodeUuid, nonEvacuatedEnergyResultUuid);
     }
 
     void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
@@ -1485,7 +1508,7 @@ public class StudyService {
                 studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
                 studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
                 studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSensitivityAnalysisNonEvacuatedEnergyResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisNonEvacuatedEnergyResult)),
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getNonEvacuatedEnergyResultUuids().forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)),
                 studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
                 studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
                 studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
@@ -1523,7 +1546,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
@@ -1613,7 +1636,7 @@ public class StudyService {
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
-                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSensitivityAnalysisNonEvacuatedEnergyResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisNonEvacuatedEnergyResult)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getNonEvacuatedEnergyResultUuids().forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
@@ -2180,9 +2203,22 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
+    @Transactional
+    public void setNonEvacuatedEnergyParametersValues(UUID studyUuid, org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos parameters, String userId) {
+        updateNonEvacuatedEnergyParameters(studyUuid,
+            NonEvacuatedEnergyService.toEntity(parameters != null ? parameters :
+                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersValues()));
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
     public void updateSensitivityAnalysisParameters(UUID studyUuid, SensitivityAnalysisParametersEntity sensitivityParametersEntity) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setSensitivityAnalysisParameters(sensitivityParametersEntity));
+    }
+
+    public void updateNonEvacuatedEnergyParameters(UUID studyUuid, NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
+        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setNonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity));
     }
 
     @Transactional
@@ -2203,39 +2239,59 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
     }
 
-    public UUID runSensitivityAnalysisNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid, String sensitivityAnalysisNonEvacuatedEnergyInput) {
+    public UUID runNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getSensitivityAnalysisNonEvacuatedEnergyResultUuid(nodeUuid);
-        prevResultUuidOpt.ifPresent(sensitivityAnalysisService::deleteSensitivityAnalysisNonEvacuatedEnergyResult);
+        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getNonEvacuatedEnergyResultUuid(nodeUuid);
+        prevResultUuidOpt.ifPresent(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult);
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String provider = getSensitivityAnalysisProvider(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
-        NonEvacuatedEnergyInputData nonEvacuatedEnergyInputData;
-        try {
-            nonEvacuatedEnergyInputData = objectMapper.readValue(sensitivityAnalysisNonEvacuatedEnergyInput, NonEvacuatedEnergyInputData.class);
-            if (nonEvacuatedEnergyInputData.getParameters() == null) {
-                SensitivityAnalysisParameters sensitivityAnalysisParameters = SensitivityAnalysisParameters.load();
-                LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
-                sensitivityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
-                nonEvacuatedEnergyInputData.setParameters(sensitivityAnalysisParameters);
-            }
+        org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersValues = getNonEvacuatedEnergyParametersValues(studyUuid);
+        SensitivityAnalysisParameters sensitivityAnalysisParameters = SensitivityAnalysisParameters.load();
+        sensitivityAnalysisParameters.setFlowFlowSensitivityValueThreshold(nonEvacuatedEnergyParametersValues.getGeneratorsLimit().getSensitivityThreshold());
 
-            if (nonEvacuatedEnergyInputData.getParameters().getLoadFlowParameters().isDc()) {
-                throw new StudyException(NOT_ALLOWED, "Non evacuated energy computation only allowed in load flow AC mode");
-            }
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
+        LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
+        List<LoadFlowSpecificParameterInfos> specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SENSITIVITY_ANALYSIS);
+        sensitivityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
 
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysisNonEvacuatedEnergy(nodeUuid, networkUuid, variantId, reportUuid, provider, nonEvacuatedEnergyInputData);
+        NonEvacuatedEnergyInputData nonEvacuatedEnergyInputData = new NonEvacuatedEnergyInputData();
+        nonEvacuatedEnergyInputData.setProvider(nonEvacuatedEnergyParametersValues.getProvider());
+        nonEvacuatedEnergyInputData.setParameters(sensitivityAnalysisParameters);
+        nonEvacuatedEnergyInputData.setLoadFlowSpecificParameters(specificParameters == null ?
+            Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)));
 
-        updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(nodeUuid, result);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS);
+        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyStagesDefinition(nonEvacuatedEnergyParametersValues.getStagesDefinition());
+
+        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyStagesSelection(nonEvacuatedEnergyParametersValues.getStagesSelection()
+            .stream()
+            .filter(NonEvacuatedEnergyStagesSelection::isActivated)
+            .collect(Collectors.toList()));
+
+        List<NonEvacuatedEnergyGeneratorLimitByType> generatorLimitByTypes = nonEvacuatedEnergyParametersValues.getGeneratorsLimit().getGenerators()
+            .stream()
+            .filter(NonEvacuatedEnergyGeneratorLimitByType::isActivated)
+            .collect(Collectors.toList());
+        NonEvacuatedEnergyGeneratorsLimit generatorsLimit = new NonEvacuatedEnergyGeneratorsLimit(nonEvacuatedEnergyParametersValues.getGeneratorsLimit().getSensitivityThreshold(), generatorLimitByTypes);
+        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyGeneratorsLimit(generatorsLimit);
+
+        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyMonitoredBranches(nonEvacuatedEnergyParametersValues.getMonitoredBranches()
+            .stream()
+            .filter(NonEvacuatedEnergyMonitoredBranches::isActivated)
+            .collect(Collectors.toList()));
+
+        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyContingencies(nonEvacuatedEnergyParametersValues.getContingencies()
+            .stream()
+            .filter(NonEvacuatedEnergyContingencies::isActivated)
+            .collect(Collectors.toList()));
+
+        UUID result = nonEvacuatedEnergyService.runNonEvacuatedEnergy(nodeUuid, networkUuid, variantId, reportUuid, nonEvacuatedEnergyInputData);
+
+        updateNonEvacuatedEnergyResultUuid(nodeUuid, result);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         return result;
     }
 }

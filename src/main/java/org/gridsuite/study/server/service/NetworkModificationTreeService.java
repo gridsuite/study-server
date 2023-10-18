@@ -305,9 +305,9 @@ public class NetworkModificationTreeService {
                 deleteNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
             }
 
-            UUID sensitivityAnalysisNonEvacuatedEnergyResultUuid = repositories.get(nodeToDelete.getType()).getSensitivityAnalysisNonEvacuatedEnergyResultUuid(id);
-            if (sensitivityAnalysisNonEvacuatedEnergyResultUuid != null) {
-                deleteNodeInfos.addSensitivityAnalysisNonEvacuatedEnergyResultUuid(sensitivityAnalysisNonEvacuatedEnergyResultUuid);
+            UUID nonEvacuatedEnergyResultUuid = repositories.get(nodeToDelete.getType()).getNonEvacuatedEnergyResultUuid(id);
+            if (nonEvacuatedEnergyResultUuid != null) {
+                deleteNodeInfos.addNonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid);
             }
 
             UUID shortCircuitAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getShortCircuitAnalysisResultUuid(id);
@@ -430,7 +430,7 @@ public class NetworkModificationTreeService {
                 model.setLoadFlowResultUuid(null);
                 model.setSecurityAnalysisResultUuid(null);
                 model.setSensitivityAnalysisResultUuid(null);
-                model.setSensitivityAnalysisNonEvacuatedEnergyResultUuid(null);
+                model.setNonEvacuatedEnergyResultUuid(null);
                 model.setShortCircuitAnalysisResultUuid(null);
                 model.setOneBusShortCircuitAnalysisResultUuid(null);
                 model.setVoltageInitResultUuid(null);
@@ -669,8 +669,8 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(UUID nodeUuid, UUID sensitivityAnalysisNonEvacuatedEnergyResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(nodeUuid, sensitivityAnalysisNonEvacuatedEnergyResultUuid));
+    public void updateNonEvacuatedEnergyResultUuid(UUID nodeUuid, UUID nonEvacuatedEnergyResultUuid) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateNonEvacuatedEnergyResultUuid(nodeUuid, nonEvacuatedEnergyResultUuid));
     }
 
     @Transactional
@@ -689,8 +689,8 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<UUID> getSensitivityAnalysisNonEvacuatedEnergyResultUuid(UUID nodeUuid) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSensitivityAnalysisNonEvacuatedEnergyResultUuid(nodeUuid));
+    public Optional<UUID> getNonEvacuatedEnergyResultUuid(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNonEvacuatedEnergyResultUuid(nodeUuid));
     }
 
     @Transactional(readOnly = true)
@@ -770,11 +770,11 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public List<UUID> getStudySensitivityAnalysisNonEvacuatedEnergyResultUuids(UUID studyUuid) {
+    public List<UUID> getStudyNonEvacuatedEnergyResultUuids(UUID studyUuid) {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.forEach(n -> {
-            UUID uuid = repositories.get(n.getType()).getSensitivityAnalysisNonEvacuatedEnergyResultUuid(n.getIdNode());
+            UUID uuid = repositories.get(n.getType()).getNonEvacuatedEnergyResultUuid(n.getIdNode());
             if (uuid != null) {
                 uuids.add(uuid);
             }
@@ -884,9 +884,9 @@ public class NetworkModificationTreeService {
             invalidateNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
         }
 
-        UUID sensitivityAnalysisNonEvacuatedEnergyResultUuid = repositories.get(node.getType()).getSensitivityAnalysisNonEvacuatedEnergyResultUuid(node.getIdNode());
-        if (sensitivityAnalysisNonEvacuatedEnergyResultUuid != null) {
-            invalidateNodeInfos.addSensitivityAnalysisNonEvacuatedEnergyResultUuid(sensitivityAnalysisNonEvacuatedEnergyResultUuid);
+        UUID nonEvacuatedEnergyResultUuid = repositories.get(node.getType()).getNonEvacuatedEnergyResultUuid(node.getIdNode());
+        if (nonEvacuatedEnergyResultUuid != null) {
+            invalidateNodeInfos.addNonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid);
         }
 
         UUID shortCircuitAnalysisResultUuid = repositories.get(node.getType()).getShortCircuitAnalysisResultUuid(node.getIdNode());
@@ -954,7 +954,7 @@ public class NetworkModificationTreeService {
             nodeRepository.updateLoadFlowResultUuid(childUuid, null);
             nodeRepository.updateSecurityAnalysisResultUuid(childUuid, null);
             nodeRepository.updateSensitivityAnalysisResultUuid(childUuid, null);
-            nodeRepository.updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(childUuid, null);
+            nodeRepository.updateNonEvacuatedEnergyResultUuid(childUuid, null);
             nodeRepository.updateShortCircuitAnalysisResultUuid(childUuid, null);
             nodeRepository.updateOneBusShortCircuitAnalysisResultUuid(childUuid, null);
             nodeRepository.updateVoltageInitResultUuid(childUuid, null);

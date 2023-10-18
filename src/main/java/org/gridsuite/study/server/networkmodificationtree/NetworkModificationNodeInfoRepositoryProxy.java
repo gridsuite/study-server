@@ -55,7 +55,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getVoltageInitResultUuid(),
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
-            modificationNode.getSensitivityAnalysisNonEvacuatedEnergyResultUuid(),
+            modificationNode.getNonEvacuatedEnergyResultUuid(),
             modificationNode.getDynamicSimulationResultUuid(),
             modificationNode.getNodeBuildStatus().toEntity());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
@@ -74,7 +74,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getVoltageInitResultUuid(),
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
-            node.getSensitivityAnalysisNonEvacuatedEnergyResultUuid(),
+            node.getNonEvacuatedEnergyResultUuid(),
             node.getDynamicSimulationResultUuid(),
             node.getNodeBuildStatus().toDto()));
     }
@@ -185,15 +185,15 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(AbstractNode node, UUID sensitivityAnalysisNonEvacuatedEnergyResultUuid) {
+    public void updateNonEvacuatedEnergyResultUuid(AbstractNode node, UUID nonEvacuatedEnergyResultUuid) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setSensitivityAnalysisNonEvacuatedEnergyResultUuid(sensitivityAnalysisNonEvacuatedEnergyResultUuid);
-        updateNode(modificationNode, "sensitivityAnalysisNonEvacuatedEnergyResultUuid");
+        modificationNode.setNonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid);
+        updateNode(modificationNode, "nonEvacuatedEnergyResultUuid");
     }
 
     @Override
-    public UUID getSensitivityAnalysisNonEvacuatedEnergyResultUuid(AbstractNode node) {
-        return ((NetworkModificationNode) node).getSensitivityAnalysisNonEvacuatedEnergyResultUuid();
+    public UUID getNonEvacuatedEnergyResultUuid(AbstractNode node) {
+        return ((NetworkModificationNode) node).getNonEvacuatedEnergyResultUuid();
     }
 
     @Override
@@ -249,7 +249,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .loadFlowUuid(networkModificationNode.getLoadFlowResultUuid())
             .securityAnalysisUuid(networkModificationNode.getSecurityAnalysisResultUuid())
             .sensitivityAnalysisUuid(networkModificationNode.getSensitivityAnalysisResultUuid())
-            .sensitivityAnalysisNonEvacuatedEnergyUuid(networkModificationNode.getSensitivityAnalysisNonEvacuatedEnergyResultUuid())
+            .nonEvacuatedEnergyUuid(networkModificationNode.getNonEvacuatedEnergyResultUuid())
             .shortCircuitAnalysisUuid(networkModificationNode.getShortCircuitAnalysisResultUuid())
             .oneBusShortCircuitAnalysisUuid(networkModificationNode.getOneBusShortCircuitAnalysisResultUuid())
             .voltageInitUuid(networkModificationNode.getVoltageInitResultUuid())

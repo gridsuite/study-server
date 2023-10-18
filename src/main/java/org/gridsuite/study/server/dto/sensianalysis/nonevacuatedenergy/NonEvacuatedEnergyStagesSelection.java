@@ -7,11 +7,13 @@
 package org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -19,11 +21,16 @@ import java.util.List;
  */
 @SuperBuilder
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
-@Schema(description = "Sensitivity analysis non evacuated energy stages")
-public class NonEvacuatedEnergyStages {
-    List<NonEvacuatedEnergyStage> stages;
+@Schema(description = "Sensitivity analysis non evacuated energy stages selection")
+public class NonEvacuatedEnergyStagesSelection {
+    String name;
+
+    List<Integer> stagesDefinitonIndex = new ArrayList<>();
+
+    List<Integer> pMaxPercentsIndex;
 
     boolean activated;
 }

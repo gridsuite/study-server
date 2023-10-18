@@ -52,6 +52,8 @@ public class SupervisionService {
 
     private SensitivityAnalysisService sensitivityAnalysisService;
 
+    private NonEvacuatedEnergyService nonEvacuatedEnergyService;
+
     private ShortCircuitService shortCircuitService;
 
     private VoltageInitService voltageInitService;
@@ -60,7 +62,7 @@ public class SupervisionService {
 
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    public SupervisionService(StudyService studyService, NetworkModificationTreeService networkModificationTreeService, NetworkService networkStoreService, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService) {
+    public SupervisionService(StudyService studyService, NetworkModificationTreeService networkModificationTreeService, NetworkService networkStoreService, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, NonEvacuatedEnergyService nonEvacuatedEnergyService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService) {
         this.networkStoreService = networkStoreService;
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -70,6 +72,7 @@ public class SupervisionService {
         this.dynamicSimulationService = dynamicSimulationService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
+        this.nonEvacuatedEnergyService = nonEvacuatedEnergyService;
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
         this.equipmentInfosService = equipmentInfosService;
@@ -169,11 +172,11 @@ public class SupervisionService {
         reportService.deleteTreeReports(subreportToDelete);
         sensitivityAnalysisService.deleteSensitivityAnalysisResults();
 
-        nodes = networkModificationNodeInfoRepository.findAllBySensitivityAnalysisNonEvacuatedEnergyResultUuidNotNull();
-        nodes.stream().forEach(node -> node.setSensitivityAnalysisNonEvacuatedEnergyResultUuid(null));
+        nodes = networkModificationNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull();
+        nodes.stream().forEach(node -> node.setNonEvacuatedEnergyResultUuid(null));
         subreportToDelete = formatSubreportMap(ComputationType.SENSITIVITY_ANALYSIS.subReporterKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
-        sensitivityAnalysisService.deleteSensitivityAnalysisNonEvacuatedEnergyResults();
+        nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResults();
         LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.SENSITIVITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
 
         return nodes.size();

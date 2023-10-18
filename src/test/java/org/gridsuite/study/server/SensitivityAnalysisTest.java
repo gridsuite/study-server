@@ -31,6 +31,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
+import org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.dto.ComputationType;
@@ -137,6 +138,9 @@ public class SensitivityAnalysisTest {
     private SensitivityAnalysisService sensitivityAnalysisService;
 
     @Autowired
+    private NonEvacuatedEnergyService nonEvacuatedEnergyService;
+
+    @Autowired
     private ActionsService actionsService;
 
     @Autowired
@@ -178,6 +182,7 @@ public class SensitivityAnalysisTest {
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
+        nonEvacuatedEnergyService.setSensitivityAnalysisServerBaseUri(baseUrl);
         actionsService.setActionsServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
 
@@ -420,7 +425,7 @@ public class SensitivityAnalysisTest {
         assertTrue(requests.contains("/v1/non-evacuated-energy-results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
-        assertEquals(0, networkModificationNodeInfoRepository.findAllBySensitivityAnalysisNonEvacuatedEnergyResultUuidNotNull().size());
+        assertEquals(0, networkModificationNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull().size());
 
         String baseUrlWireMock = wireMock.baseUrl();
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrlWireMock);
@@ -597,7 +602,9 @@ public class SensitivityAnalysisTest {
                 .sensitivityNodes(new ArrayList<>())
                 .build();
         SensitivityAnalysisParametersEntity sensitivityParametersEntity = SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues);
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, sensitivityParametersEntity);
+        NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersValues());
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, sensitivityParametersEntity,
+                                                             defaultNonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
@@ -629,7 +636,9 @@ public class SensitivityAnalysisTest {
                 .sensitivityNodes(new ArrayList<>())
                 .build();
         SensitivityAnalysisParametersEntity sensitivityParametersEntity = SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues);
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, sensitivityParametersEntity);
+        NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersValues());
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, sensitivityParametersEntity,
+                                                             defaultNonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

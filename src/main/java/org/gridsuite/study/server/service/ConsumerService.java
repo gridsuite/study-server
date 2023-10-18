@@ -474,13 +474,13 @@ public class ConsumerService {
                     LOGGER.info("Sensitivity analysis non evacuated energy result '{}' available for node '{}'", resultUuid, receiverObj.getNodeUuid());
 
                     // update DB
-                    updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(receiverObj.getNodeUuid(), resultUuid);
+                    updateNonEvacuatedEnergyResultUuid(receiverObj.getNodeUuid(), resultUuid);
 
                     // send notifications
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS);
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_RESULT);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -500,11 +500,11 @@ public class ConsumerService {
                     LOGGER.info("Sensitivity analysis non evacuated energy stopped for node '{}'", receiverObj.getNodeUuid());
 
                     // delete sensitivity analysis non evacuated energy result in database
-                    updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(receiverObj.getNodeUuid(), null);
+                    updateNonEvacuatedEnergyResultUuid(receiverObj.getNodeUuid(), null);
 
                     // send notification for stopped computation
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -524,12 +524,12 @@ public class ConsumerService {
                     LOGGER.info("Sensitivity analysis non evacuated energy failed for node '{}'", receiverObj.getNodeUuid());
 
                     // delete sensitivity analysis non evacuated energy result in database
-                    updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(receiverObj.getNodeUuid(), null);
+                    updateNonEvacuatedEnergyResultUuid(receiverObj.getNodeUuid(), null);
 
                     // send notification for failed computation
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_FAILED);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_FAILED);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -549,8 +549,8 @@ public class ConsumerService {
         networkModificationTreeService.updateSensitivityAnalysisResultUuid(nodeUuid, sensitivityAnalysisResultUuid);
     }
 
-    void updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(UUID nodeUuid, UUID sensitivityAnalysisNonEvacuatedEnergyResultUuid) {
-        networkModificationTreeService.updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(nodeUuid, sensitivityAnalysisNonEvacuatedEnergyResultUuid);
+    void updateNonEvacuatedEnergyResultUuid(UUID nodeUuid, UUID nonEvacuatedEnergyResultUuid) {
+        networkModificationTreeService.updateNonEvacuatedEnergyResultUuid(nodeUuid, nonEvacuatedEnergyResultUuid);
     }
 
     void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {

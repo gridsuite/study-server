@@ -68,6 +68,7 @@ public class StudyController {
     private final NetworkConversionService networkConversionService;
     private final SecurityAnalysisService securityAnalysisService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
+    private final NonEvacuatedEnergyService nonEvacuatedEnergyService;
     private final ShortCircuitService shortCircuitService;
     private final VoltageInitService voltageInitService;
     private final LoadFlowService loadflowService;
@@ -81,6 +82,7 @@ public class StudyController {
             NetworkConversionService networkConversionService,
             SecurityAnalysisService securityAnalysisService,
             SensitivityAnalysisService sensitivityAnalysisService,
+            NonEvacuatedEnergyService nonEvacuatedEnergyService,
             ShortCircuitService shortCircuitService,
             VoltageInitService voltageInitService,
             LoadFlowService loadflowService,
@@ -93,6 +95,7 @@ public class StudyController {
         this.networkConversionService = networkConversionService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
+        this.nonEvacuatedEnergyService = nonEvacuatedEnergyService;
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
         this.loadflowService = loadflowService;
@@ -1705,11 +1708,10 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/run")
     @Operation(summary = "run sensitivity analysis non evacuated energy on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy has started")})
-    public ResponseEntity<UUID> runSensitivityAnalysisNonEvacuatedEnergy(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                         @RequestBody String sensitivityAnalysisNonEvacuatedEnergyInput) {
+    public ResponseEntity<UUID> runEvacuatedEnergy(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runSensitivityAnalysisNonEvacuatedEnergy(studyUuid, nodeUuid, sensitivityAnalysisNonEvacuatedEnergyInput));
+        return ResponseEntity.ok().body(studyService.runNonEvacuatedEnergy(studyUuid, nodeUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/result")
@@ -1717,9 +1719,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy result"),
         @ApiResponse(responseCode = "204", description = "No sensitivity analysis non evacuated energy has been done yet"),
         @ApiResponse(responseCode = "404", description = "The sensitivity analysis non evacuated energy has not been found")})
-    public ResponseEntity<String> getSensitivityAnalysisNonEvacuatedEnergyResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = sensitivityAnalysisService.getSensitivityAnalysisNonEvacuatedEnergyResult(nodeUuid);
+    public ResponseEntity<String> getNonEvacuatedEnergyResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = nonEvacuatedEnergyService.getNonEvacuatedEnergyResult(nodeUuid);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1729,9 +1731,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy status"),
         @ApiResponse(responseCode = "204", description = "No sensitivity analysis non evacuated energy has been done yet"),
         @ApiResponse(responseCode = "404", description = "The sensitivity analysis status non evacuated energy has not been found")})
-    public ResponseEntity<String> getSensitivityAnalysisNonEvacuatedEnergyStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = sensitivityAnalysisService.getSensitivityAnalysisNonEvacuatedEnergyStatus(nodeUuid);
+    public ResponseEntity<String> getNonEvacuatedEnergyStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = nonEvacuatedEnergyService.getNonEvacuatedEnergyStatus(nodeUuid);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1739,9 +1741,28 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/stop")
     @Operation(summary = "stop sensitivity analysis non evacuated energy on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy has been stopped")})
-    public ResponseEntity<Void> stopSensitivityAnalysisNonEvacuatedEnergy(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        sensitivityAnalysisService.stopSensitivityAnalysisNonEvacuatedEnergy(studyUuid, nodeUuid);
+    public ResponseEntity<Void> stopNonEvacuatedEnergy(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        nonEvacuatedEnergyService.stopNonEvacuatedEnergy(studyUuid, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/sensitivity-analysis-non-evacuated-energy/parameters")
+    @Operation(summary = "Get sensitivity analysis non evacuated energy parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy parameters")})
+    public ResponseEntity<org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos> getNonEvacuatedEnergyParametersValues(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getNonEvacuatedEnergyParametersValues(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis-non-evacuated-energy/parameters")
+    @Operation(summary = "set sensitivity analysis non evacuated energy parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters non evacuated energy are set")})
+    public ResponseEntity<Void> setNonEvacuatedEnergyParametersValues(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody(required = false) org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersValues,
+        @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setNonEvacuatedEnergyParametersValues(studyUuid, nonEvacuatedEnergyParametersValues, userId);
         return ResponseEntity.ok().build();
     }
 }

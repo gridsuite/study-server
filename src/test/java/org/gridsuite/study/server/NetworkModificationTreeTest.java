@@ -136,6 +136,9 @@ public class NetworkModificationTreeTest {
     private SensitivityAnalysisService sensitivityAnalysisService;
 
     @Autowired
+    private NonEvacuatedEnergyService nonEvacuatedEnergyService;
+
+    @Autowired
     private NetworkMapService networkMapService;
 
     @Autowired
@@ -249,6 +252,7 @@ public class NetworkModificationTreeTest {
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
+        nonEvacuatedEnergyService.setSensitivityAnalysisServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
 
         final Dispatcher dispatcher = new Dispatcher() {
@@ -362,7 +366,6 @@ public class NetworkModificationTreeTest {
         RootNode root = createRoot();
         // Check build status initialized to NOT_BUILT if null
         final NetworkModificationNode node1 = buildNetworkModificationNode("not_built", "not built node", MODIFICATION_GROUP_UUID_2, VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
-
         createNode(root.getStudyId(), root, node1, userId);
         root = getRootNode(root.getStudyId());
         List<AbstractNode> children = root.getChildren();
@@ -727,6 +730,7 @@ public class NetworkModificationTreeTest {
         final NetworkModificationNode networkModification1 = buildNetworkModificationNode("hypo 1", "potamus", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
         final NetworkModificationNode networkModification2 = buildNetworkModificationNode("hypo 2", "potamus", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
         final NetworkModificationNode networkModification3 = buildNetworkModificationNode("hypo 3", "potamus", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+
         /* trying to insert before root */
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}?mode=BEFORE", root.getStudyId(), root.getId())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -1016,7 +1020,7 @@ public class NetworkModificationTreeTest {
     }
 
     private NetworkModificationNode buildNetworkModificationNode(String name, String description, UUID modificationGroupUuid, String variantId,
-        UUID loadFlowResultUuid, UUID securityAnalysisResultUuid, UUID sensitivityAnalysisResultUuid, UUID sensitivityAnalysisNonEvacuatedEnergyResultUuid, UUID shortCircuitAnalysisResultUuid, UUID oneBusShortCircuitAnalysisResultUuid, BuildStatus buildStatus) {
+        UUID loadFlowResultUuid, UUID securityAnalysisResultUuid, UUID sensitivityAnalysisResultUuid, UUID nonEvacuatedEnergyResultUuid, UUID shortCircuitAnalysisResultUuid, UUID oneBusShortCircuitAnalysisResultUuid, BuildStatus buildStatus) {
         return NetworkModificationNode.builder()
             .name(name)
             .description(description)
@@ -1025,7 +1029,7 @@ public class NetworkModificationTreeTest {
             .loadFlowResultUuid(loadFlowResultUuid)
             .securityAnalysisResultUuid(securityAnalysisResultUuid)
             .sensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid)
-            .sensitivityAnalysisNonEvacuatedEnergyResultUuid(sensitivityAnalysisNonEvacuatedEnergyResultUuid)
+            .nonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid)
             .shortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid)
             .oneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid)
             .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
@@ -1049,7 +1053,7 @@ public class NetworkModificationTreeTest {
         assertEquals(expectedModificationNode.getLoadFlowResultUuid(), currentModificationNode.getLoadFlowResultUuid());
         assertEquals(expectedModificationNode.getSecurityAnalysisResultUuid(), currentModificationNode.getSecurityAnalysisResultUuid());
         assertEquals(expectedModificationNode.getSensitivityAnalysisResultUuid(), currentModificationNode.getSensitivityAnalysisResultUuid());
-        assertEquals(expectedModificationNode.getSensitivityAnalysisNonEvacuatedEnergyResultUuid(), currentModificationNode.getSensitivityAnalysisNonEvacuatedEnergyResultUuid());
+        assertEquals(expectedModificationNode.getNonEvacuatedEnergyResultUuid(), currentModificationNode.getNonEvacuatedEnergyResultUuid());
         assertEquals(expectedModificationNode.getShortCircuitAnalysisResultUuid(), currentModificationNode.getShortCircuitAnalysisResultUuid());
         assertEquals(expectedModificationNode.getOneBusShortCircuitAnalysisResultUuid(), currentModificationNode.getOneBusShortCircuitAnalysisResultUuid());
         assertEquals(expectedModificationNode.getNodeBuildStatus(), currentModificationNode.getNodeBuildStatus());

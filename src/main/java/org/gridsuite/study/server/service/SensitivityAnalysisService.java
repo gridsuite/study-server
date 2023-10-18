@@ -15,7 +15,6 @@ import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData
 import org.gridsuite.study.server.dto.sensianalysis.*;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyInputData;
 import org.gridsuite.study.server.repository.sensianalysis.*;
 import org.gridsuite.study.server.repository.EquipmentsContainerEmbeddable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -231,8 +230,7 @@ public class SensitivityAnalysisService {
 
     public void assertSensitivityAnalysisNotRunning(UUID nodeUuid) {
         String sas = getSensitivityAnalysisStatus(nodeUuid);
-        String nonEvacuatedEnergyStatus = getSensitivityAnalysisNonEvacuatedEnergyStatus(nodeUuid);
-        if (SensitivityAnalysisStatus.RUNNING.name().equals(sas) || SensitivityAnalysisStatus.RUNNING.name().equals(nonEvacuatedEnergyStatus)) {
+        if (SensitivityAnalysisStatus.RUNNING.name().equals(sas)) {
             throw new StudyException(SENSITIVITY_ANALYSIS_RUNNING);
         }
     }
@@ -377,132 +375,5 @@ public class SensitivityAnalysisService {
                 .sensitivityPST(List.of())
                 .sensitivityNodes(List.of())
                 .build();
-    }
-
-    public UUID runSensitivityAnalysisNonEvacuatedEnergy(UUID nodeUuid, UUID networkUuid,
-                                                         String variantId,
-                                                         UUID reportUuid,
-                                                         String provider,
-                                                         NonEvacuatedEnergyInputData nonEvacuatedEnergyInputData) {
-        String receiver;
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
-        var uriComponentsBuilder = UriComponentsBuilder
-            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/non-evacuated-energy")
-            .queryParam("reportUuid", reportUuid.toString())
-            .queryParam("reporterId", nodeUuid.toString());
-        if (!provider.isEmpty()) {
-            uriComponentsBuilder.queryParam("provider", provider);
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        var path = uriComponentsBuilder
-            .queryParam(QUERY_PARAM_RECEIVER, receiver)
-            .buildAndExpand(networkUuid).toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<NonEvacuatedEnergyInputData> httpEntity = new HttpEntity<>(nonEvacuatedEnergyInputData, headers);
-
-        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
-    }
-
-    public String getSensitivityAnalysisNonEvacuatedEnergyResult(UUID nodeUuid) {
-        String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisNonEvacuatedEnergyResultUuid(nodeUuid);
-        if (resultUuidOpt.isEmpty()) {
-            return null;
-        }
-
-        // initializing from uri string (not from path string) allows build() to escape selector content
-        URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
-            .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, "non-evacuated-energy-results", resultUuidOpt.get().toString())
-            .build().encode().toUri();
-        try {
-            result = restTemplate.getForObject(uri, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
-            } else {
-                throw handleHttpError(e, SENSITIVITY_ANALYSIS_ERROR);
-            }
-        }
-        return result;
-    }
-
-    public String getSensitivityAnalysisNonEvacuatedEnergyStatus(UUID nodeUuid) {
-        String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisNonEvacuatedEnergyResultUuid(nodeUuid);
-
-        if (resultUuidOpt.isEmpty()) {
-            return null;
-        }
-
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy-results/{resultUuid}/status")
-            .buildAndExpand(resultUuidOpt.get()).toUriString();
-        try {
-            result = restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
-            }
-            throw e;
-        }
-        return result;
-    }
-
-    public void stopSensitivityAnalysisNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(nodeUuid);
-
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisNonEvacuatedEnergyResultUuid(nodeUuid);
-        if (resultUuidOpt.isEmpty()) {
-            return;
-        }
-
-        String receiver;
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
-        String path = UriComponentsBuilder
-            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy-results/{resultUuid}/stop")
-            .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
-
-        restTemplate.put(sensitivityAnalysisServerBaseUri + path, Void.class);
-    }
-
-    public void invalidateSensitivityAnalysisNonEvacuatedEnergyStatus(List<UUID> uuids) {
-        if (!uuids.isEmpty()) {
-            String path = UriComponentsBuilder
-                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy-results/invalidate-status")
-                .queryParam(RESULT_UUID, uuids).build().toUriString();
-
-            restTemplate.put(sensitivityAnalysisServerBaseUri + path, Void.class);
-        }
-    }
-
-    public void deleteSensitivityAnalysisNonEvacuatedEnergyResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy-results/{resultUuid}")
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
-    }
-
-    public void deleteSensitivityAnalysisNonEvacuatedEnergyResults() {
-        try {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy-results")
-                .toUriString();
-            restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
-        }
     }
 }

@@ -80,10 +80,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return null;
     }
 
-    public void updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(AbstractNode node, UUID sensitivityAnalysisNonEvacuatedEnergyResultUuid) {
+    public void updateNonEvacuatedEnergyResultUuid(AbstractNode node, UUID nonEvacuatedEnergyResultUuid) {
     }
 
-    public UUID getSensitivityAnalysisNonEvacuatedEnergyResultUuid(AbstractNode node) {
+    public UUID getNonEvacuatedEnergyResultUuid(AbstractNode node) {
         return null;
     }
 
@@ -224,12 +224,12 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getSensitivityAnalysisResultUuid(getNode(nodeUuid));
     }
 
-    public void updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(UUID nodeUuid, UUID sensitivityAnalysisNonEvacuatedEnergyResultUuid) {
-        updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(getNode(nodeUuid), sensitivityAnalysisNonEvacuatedEnergyResultUuid);
+    public void updateNonEvacuatedEnergyResultUuid(UUID nodeUuid, UUID nonEvacuatedEnergyResultUuid) {
+        updateNonEvacuatedEnergyResultUuid(getNode(nodeUuid), nonEvacuatedEnergyResultUuid);
     }
 
-    public UUID getSensitivityAnalysisNonEvacuatedEnergyResultUuid(UUID nodeUuid) {
-        return getSensitivityAnalysisNonEvacuatedEnergyResultUuid(getNode(nodeUuid));
+    public UUID getNonEvacuatedEnergyResultUuid(UUID nodeUuid) {
+        return getNonEvacuatedEnergyResultUuid(getNode(nodeUuid));
     }
 
     public UUID getShortCircuitAnalysisResultUuid(UUID nodeUuid) {
