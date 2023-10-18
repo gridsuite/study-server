@@ -1804,24 +1804,14 @@ public class StudyService {
             reportService.getReportElements(reportUuid, severityLevels, taskKeyfilter);
 
         Map<String, List<ReporterModel>> subReportersByNode = new LinkedHashMap<>();
-        Map<String, String> reportIdByNode = new HashMap<>();
         reporter.getSubReporters().forEach(subReporter -> subReportersByNode.putIfAbsent(getNodeIdFromReportKey(subReporter), new ArrayList<>()));
-        reporter.getSubReporters().forEach(subReporter -> {
-                String nodeId = getNodeIdFromReportKey(subReporter);
-                subReportersByNode.get(nodeId).addAll(subReporter.getSubReporters());
-                // at this level, taskValues should contain the taskKey->reportId (usefull for un-built nodes, to track the associated reportId)
-                var value = subReporter.getTaskValues().getOrDefault(subReporter.getTaskKey(), null);
-                if (value != null && !reportIdByNode.containsKey(nodeId)) {
-                    reportIdByNode.put(nodeId, value.toString());
-                }
-            }
+        reporter.getSubReporters().forEach(subReporter ->
+            subReportersByNode.get(getNodeIdFromReportKey(subReporter)).addAll(subReporter.getSubReporters())
         );
         return subReportersByNode.keySet().stream().map(nodeId -> {
+            // pass the reportId to the Front as taskValues
             Map<String, TypedValue> taskValues = new HashMap<>();
-            if (reportIdByNode.containsKey(nodeId)) {
-                // pass the reportId to the Front
-                taskValues.put("reportId", new TypedValue(reportIdByNode.get(nodeId), "ID"));
-            }
+            taskValues.put("reportId", new TypedValue(reportUuid.toString(), "ID"));
             ReporterModel newSubReporter = new ReporterModel(nodeId, nodeId, taskValues);
             subReportersByNode.get(nodeId).forEach(newSubReporter::addSubReporter);
             return newSubReporter;
