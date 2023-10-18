@@ -129,7 +129,7 @@ public class ShortCircuitService {
         } else {
             throw new StudyException(SHORT_CIRCUIT_ANALYSIS_BAD_TYPE);
         }
-        return resultPath;
+        return resultPath + "/paged";
     }
 
     public String getShortCircuitAnalysisResult(UUID nodeUuid, String mode, ShortcircuitAnalysisType type) {
@@ -152,7 +152,6 @@ public class ShortCircuitService {
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultsPath)
                 .queryParam("mode", mode)
-                .queryParam("type", type)
                 .queryParam("page", pageable.getPageNumber())
                 .queryParam("size", pageable.getPageSize());
 
