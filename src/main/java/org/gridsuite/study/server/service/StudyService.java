@@ -39,6 +39,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -1765,8 +1766,11 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReporterModel> getNodeReportElements(UUID nodeUuid, UUID reportUuid, Set<String> severityLevels, String filter) {
-        return getSubReporters(nodeUuid, reportUuid, false, severityLevels, filter);
+    public List<ReporterModel> getNodeReportElements(UUID nodeUuid, UUID reportUuid, Set<String> severityLevels) {
+        // filtering Root node with its nodeId in report db does not work
+        AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
+        String taskKeyfilter = nodeInfos.getType() == NodeType.ROOT ? null : nodeUuid.toString();
+        return getSubReporters(nodeUuid, reportUuid, false, severityLevels, taskKeyfilter);
     }
 
     @Transactional(readOnly = true)
