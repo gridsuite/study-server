@@ -31,6 +31,8 @@ public class NodeModificationInfos {
 
     private UUID sensitivityAnalysisUuid;
 
+    private UUID sensitivityAnalysisNonEvacuatedEnergyUuid;
+
     private UUID shortCircuitAnalysisUuid;
 
     private UUID oneBusShortCircuitAnalysisUuid;

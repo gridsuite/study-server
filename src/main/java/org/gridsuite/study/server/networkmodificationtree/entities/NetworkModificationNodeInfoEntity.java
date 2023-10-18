@@ -56,6 +56,9 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @Column(name = "sensitivityAnalysisResultUuid")
     private UUID sensitivityAnalysisResultUuid;
 
+    @Column(name = "sensitivityAnalysisNonEvacuatedEnergyResultUuid")
+    private UUID sensitivityAnalysisNonEvacuatedEnergyResultUuid;
+
     @Column(name = "dynamicSimulationResultUuid")
     private UUID dynamicSimulationResultUuid;
 

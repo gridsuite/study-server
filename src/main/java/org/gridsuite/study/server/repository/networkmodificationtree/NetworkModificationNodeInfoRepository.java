@@ -25,6 +25,8 @@ public interface NetworkModificationNodeInfoRepository extends NodeInfoRepositor
 
     List<NetworkModificationNodeInfoEntity> findAllBySensitivityAnalysisResultUuidNotNull();
 
+    List<NetworkModificationNodeInfoEntity> findAllBySensitivityAnalysisNonEvacuatedEnergyResultUuidNotNull();
+
     List<NetworkModificationNodeInfoEntity> findAllByShortCircuitAnalysisResultUuidNotNull();
 
     List<NetworkModificationNodeInfoEntity> findAllByVoltageInitResultUuidNotNull();

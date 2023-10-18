@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, RTE (http://www.rte-france.com)
+ * Copyright (c) 2023, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -23,17 +23,29 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData;
-import org.gridsuite.study.server.dto.sensianalysis.*;
-import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.dto.LoadFlowSpecificParameterInfos;
+import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
+import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyInputData;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
+import org.gridsuite.study.server.repository.LoadFlowSpecificParameterEntity;
+import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.ActionsService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.ReportService;
+import org.gridsuite.study.server.service.SensitivityAnalysisService;
+import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -58,20 +70,25 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+
 import java.io.IOException;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -80,16 +97,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-public class SensitivityAnalysisTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SensitivityAnalysisTest.class);
+public class SensitivityAnalysisNonEvacuatedEnergyTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SensitivityAnalysisNonEvacuatedEnergyTest.class);
 
-    private static final String SENSITIVITY_ANALYSIS_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
-    private static final String SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
-    private static final String SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
-    private static final String NOT_FOUND_SENSITIVITY_ANALYSIS_UUID = "a3a80c9b-9594-4e55-8ec7-07ea965d24eb";
+    private static final String SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
+    private static final String SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
+    private static final String SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_ERROR_NODE_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
+    private static final String NOT_FOUND_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_UUID = "a3a80c9b-9594-4e55-8ec7-07ea965d24eb";
 
-    private static final String FAKE_RESULT_JSON = "fake result json";
-    private static final String SENSITIVITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+    private static final String FAKE_NON_EVACUATED_ENERGY_RESULT_JSON = "fake non evacuated energy result json";
+    private static final String SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
@@ -105,7 +122,7 @@ public class SensitivityAnalysisTest {
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String VARIANT_ID_3 = "variant_3";
-    private static String SENSITIVITY_INPUT = null;
+    private static String SENSITIVITY_NON_EVACUATED_ENERGY_INPUT = null;
 
     private static final long TIMEOUT = 1000;
 
@@ -153,9 +170,9 @@ public class SensitivityAnalysisTest {
 
     //output destinations
     private final String studyUpdateDestination = "study.update";
-    private final String sensitivityAnalysisResultDestination = "sensitivityanalysis.result";
-    private final String sensitivityAnalysisStoppedDestination = "sensitivityanalysis.stopped";
-    private final String sensitivityAnalysisFailedDestination = "sensitivityanalysis.failed";
+    private final String sensitivityAnalysisNonEvacuatedEnergyResultDestination = "nonEvacuatedEnergy.result";
+    private final String sensitivityAnalysisNonEvacuatedEnergyStoppedDestination = "nonEvacuatedEnergy.stopped";
+    private final String sensitivityAnalysisNonEvacuatedEnergyFailedDestination = "nonEvacuatedEnergy.failed";
 
     public static final String SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":0.0,\"angleFlowSensitivityValueThreshold\":0.0,\"flowVoltageSensitivityValueThreshold\":0.0," +
             "\"sensitivityInjectionsSet\":[],\"sensitivityInjection\":[],\"sensitivityHVDC\":[],\"sensitivityPST\":[],\"sensitivityNodes\":[]}";
@@ -181,32 +198,8 @@ public class SensitivityAnalysisTest {
         actionsService.setActionsServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
 
-        SensitivityAnalysisInputData sensitivityAnalysisInputData = SensitivityAnalysisInputData.builder()
-            .sensitivityInjectionsSets(List.of(SensitivityAnalysisInputData.SensitivityInjectionsSet.builder()
-                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name1")))
-                .injections(List.of(new EquipmentsContainer(UUID.randomUUID(), "name2")))
-                .distributionType(SensitivityAnalysisInputData.DistributionType.PROPORTIONAL)
-                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name3"))).build()))
-            .sensitivityInjections(List.of(SensitivityAnalysisInputData.SensitivityInjection.builder()
-                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name4")))
-                .injections(List.of(new EquipmentsContainer(UUID.randomUUID(), "name5")))
-                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name6"))).build()))
-            .sensitivityHVDCs(List.of(SensitivityAnalysisInputData.SensitivityHVDC.builder()
-                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name7")))
-                .sensitivityType(SensitivityAnalysisInputData.SensitivityType.DELTA_MW)
-                .hvdcs(List.of(new EquipmentsContainer(UUID.randomUUID(), "name8")))
-                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name9"))).build()))
-            .sensitivityPSTs(List.of(SensitivityAnalysisInputData.SensitivityPST.builder()
-                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name10")))
-                .sensitivityType(SensitivityAnalysisInputData.SensitivityType.DELTA_A)
-                .psts(List.of(new EquipmentsContainer(UUID.randomUUID(), "name11")))
-                    .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name12"))).build()))
-            .sensitivityNodes(List.of(SensitivityAnalysisInputData.SensitivityNodes.builder()
-                .monitoredVoltageLevels(List.of(new EquipmentsContainer(UUID.randomUUID(), "name13")))
-                .equipmentsInVoltageRegulation(List.of(new EquipmentsContainer(UUID.randomUUID(), "name14")))
-                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name15"))).build()))
-            .build();
-        SENSITIVITY_INPUT = objectWriter.writeValueAsString(sensitivityAnalysisInputData);
+        NonEvacuatedEnergyInputData nonEvacuatedEnergyInputData = NonEvacuatedEnergyInputData.builder().build();
+        SENSITIVITY_NON_EVACUATED_ENERGY_INPUT = objectWriter.writeValueAsString(nonEvacuatedEnergyInputData);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -216,57 +209,53 @@ public class SensitivityAnalysisTest {
                 String path = Objects.requireNonNull(request.getPath());
                 request.getBody();
 
-                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
-                    String resultUuid = path.matches(".*variantId=" + VARIANT_ID_3 + ".*") ? SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID : SENSITIVITY_ANALYSIS_RESULT_UUID;
+                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/non-evacuated-energy.*")) {
+                    String resultUuid = path.matches(".*variantId=" + VARIANT_ID_3 + ".*") ? SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID : SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", resultUuid)
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                        .build(), sensitivityAnalysisResultDestination);
+                        .build(), sensitivityAnalysisNonEvacuatedEnergyResultDestination);
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/run-and-save.*")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/non-evacuated-energy.*")) {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                        .build(), sensitivityAnalysisFailedDestination);
-                    return new MockResponse().setResponseCode(200).setBody("\"" + SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"")
+                        .build(), sensitivityAnalysisNonEvacuatedEnergyFailedDestination);
+                    return new MockResponse().setResponseCode(200).setBody("\"" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_ERROR_NODE_RESULT_UUID + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/run-and-save.*")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/non-evacuated-energy.*")) {
                     input.send(MessageBuilder.withPayload("")
-                        .build(), sensitivityAnalysisFailedDestination);
-                    return new MockResponse().setResponseCode(200).setBody("\"" + SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"")
+                        .build(), sensitivityAnalysisNonEvacuatedEnergyFailedDestination);
+                    return new MockResponse().setResponseCode(200).setBody("\"" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_ERROR_NODE_RESULT_UUID + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/stop.*")
-                    || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
-                    String resultUuid = path.matches(".*variantId=" + VARIANT_ID_3 + ".*") ? SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID : SENSITIVITY_ANALYSIS_RESULT_UUID;
+                } else if (path.matches("/v1/non-evacuated-energy-results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID + "/stop.*")
+                    || path.matches("/v1/non-evacuated-energy-results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID + "/stop.*")) {
+                    String resultUuid = path.matches(".*variantId=" + VARIANT_ID_3 + ".*") ? SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID : SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", resultUuid)
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                        .build(), sensitivityAnalysisStoppedDestination);
+                        .build(), sensitivityAnalysisNonEvacuatedEnergyStoppedDestination);
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID)) {
-                    return new MockResponse().setResponseCode(200).setBody(FAKE_RESULT_JSON)
+                } else if (path.matches("/v1/non-evacuated-energy-results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID)) {
+                    return new MockResponse().setResponseCode(200).setBody(FAKE_NON_EVACUATED_ENERGY_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/status")
-                           || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/status")) {
-                    return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_STATUS_JSON)
+                } else if (path.matches("/v1/non-evacuated-energy-results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID + "/status")
+                           || path.matches("/v1/non-evacuated-energy-results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID + "/status")) {
+                    return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "\\?.*")
-                    || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "\\?.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(FAKE_RESULT_JSON)
+                } else if (path.matches("/v1/non-evacuated-energy-results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID + ".*")
+                    || path.matches("/v1/non-evacuated-energy-results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID + ".*")) {
+                    return new MockResponse().setResponseCode(200).setBody(FAKE_NON_EVACUATED_ENERGY_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/filter-options" + "\\?.*")
-                        || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/filter-options" + "\\?.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(FAKE_RESULT_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID) && request.getMethod().equals("DELETE")) {
-                    return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_STATUS_JSON)
+                } else if (path.matches("/v1/non-evacuated-energy-results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID) && request.getMethod().equals("DELETE")) {
+                    return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_RESULT_UUID)
-                           || path.matches("/v1/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID)) {
+                } else if (path.matches("/v1/non-evacuated-energy-results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID)
+                           || path.matches("/v1/non-evacuated-energy-results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID)) {
                     return new MockResponse().setResponseCode(200).addHeader("Content-Type",
                         "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results") || path.matches("/v1/non-evacuated-energy-results")) {
+                } else if (path.matches("/v1/non-evacuated-energy-results")) {
                     return new MockResponse().setResponseCode(200).addHeader("Content-Type",
                         "application/json; charset=utf-8");
                 } else if (path.matches("/v1/treereports")) {
@@ -286,17 +275,17 @@ public class SensitivityAnalysisTest {
         server.setDispatcher(dispatcher);
     }
 
-    private void testSensitivityAnalysisWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID resultUuid) throws Exception {
+    private void testSensitivityAnalysisNonEvacuatedEnergyWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID resultUuid) throws Exception {
         MvcResult mvcResult;
         String resultAsString;
 
-        // sensitivity analysis not found
-        mockMvc.perform(get("/v1/sensitivity-analysis/results/{resultUuid}", NOT_FOUND_SENSITIVITY_ANALYSIS_UUID)).andExpect(status().isNotFound());
+        // sensitivity analysis non evacuated energy not found
+        mockMvc.perform(get("/v1/non-evacuated-energy/results/{resultUuid}", NOT_FOUND_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_UUID)).andExpect(status().isNotFound());
 
-        // run sensitivity analysis
-        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, nodeUuid)
+        // run sensitivity analysis non evacuated energy
+        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/run", studyUuid, nodeUuid)
             .contentType(MediaType.APPLICATION_JSON).header("userId", "userId")
-            .content(SENSITIVITY_INPUT)).andExpect(status().isOk())
+            .content(SENSITIVITY_NON_EVACUATED_ENERGY_INPUT)).andExpect(status().isOk())
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         UUID uuidResponse = mapper.readValue(resultAsString, UUID.class);
@@ -305,51 +294,46 @@ public class SensitivityAnalysisTest {
         Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS, updateType);
 
         Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT, updateType);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT, updateType);
 
         sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS, updateType);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*?receiver=.*nodeUuid.*")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/non-evacuated-energy.*?receiver=.*nodeUuid.*")));
 
-        // get sensitivity analysis result
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, nodeUuid, "fakeJsonSelector"))
-            .andExpectAll(status().isOk(), content().string(FAKE_RESULT_JSON));
+        // get result
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/result", studyUuid, nodeUuid))
+            .andExpectAll(status().isOk(), content().string(FAKE_NON_EVACUATED_ENERGY_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/results/" + resultUuid)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/non-evacuated-energy-results/" + resultUuid)));
 
-        // get sensitivity analysis result filter options
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, nodeUuid, "fakeJsonSelector"))
-                .andExpectAll(status().isOk(), content().string(FAKE_RESULT_JSON));
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/results/" + resultUuid + "/filter-options")));
-
-        // get sensitivity analysis status
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/status", studyUuid, nodeUuid)).andExpectAll(
+        // get status
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/status", studyUuid, nodeUuid)).andExpectAll(
             status().isOk(),
-            content().string(SENSITIVITY_ANALYSIS_STATUS_JSON));
+            content().string(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s/status", resultUuid)));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/non-evacuated-energy-results/%s/status", resultUuid)));
 
-        // stop sensitivity analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/stop", studyUuid, nodeUuid)).andExpect(status().isOk());
+        // stop sensitivity analysis non evacuated energy
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/stop", studyUuid, nodeUuid)).andExpect(status().isOk());
 
         sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertTrue(updateType.equals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS) || updateType.equals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT));
+        assertTrue(updateType.equals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS) || updateType.equals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + resultUuid + "/stop\\?receiver=.*nodeUuid.*")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/non-evacuated-energy-results/" + resultUuid + "/stop\\?receiver=.*nodeUuid.*")));
     }
 
     @Test
-    public void testSensitivityAnalysis() throws Exception {
+    public void testSensitivityAnalysisNonEvacuatedEnergy() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -361,103 +345,61 @@ public class SensitivityAnalysisTest {
         NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_3, "node 3");
         UUID modificationNode3Uuid = modificationNode3.getId();
 
-        // run sensitivity analysis on root node (not allowed)
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyNameUserIdUuid, rootNodeUuid)
+        // run sensitivity analysis non evacuated energy on root node (not allowed)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/run", studyNameUserIdUuid, rootNodeUuid)
             .contentType(MediaType.APPLICATION_JSON).header("userId", "userId")
-            .content(SENSITIVITY_INPUT))
+            .content(SENSITIVITY_NON_EVACUATED_ENERGY_INPUT))
             .andExpect(status().isForbidden());
 
-        testSensitivityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
-        testSensitivityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
+        testSensitivityAnalysisNonEvacuatedEnergyWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID));
+        testSensitivityAnalysisNonEvacuatedEnergyWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
-                studyNameUserIdUuid, UUID.randomUUID(), "fakeJsonSelector"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/result",
+                studyNameUserIdUuid, UUID.randomUUID()))
             .andExpectAll(status().isNoContent());
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}",
-                        studyNameUserIdUuid, UUID.randomUUID(), "fakeJsonSelector"))
-                .andExpectAll(status().isNoContent());
-
-        // run additional sensitivity analysis for deletion test
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyNameUserIdUuid, modificationNode2Uuid)
+        // run additional sensitivity analysis non evacuated energy for deletion test
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/run", studyNameUserIdUuid, modificationNode2Uuid)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(SENSITIVITY_INPUT)).andExpect(status().isOk())
+                .content(SENSITIVITY_NON_EVACUATED_ENERGY_INPUT)).andExpect(status().isOk())
             .andReturn();
 
         Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS, updateType);
 
         Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT, updateType);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT, updateType);
 
         sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS, updateType);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*?receiver=.*nodeUuid.*")));
-
-        //Test result count
-        mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(ComputationType.SENSITIVITY_ANALYSIS))
-                .queryParam("dryRun", String.valueOf(true)))
-            .andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
-
-        //Delete Security analysis results
-        assertEquals(1, networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
-        mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(ComputationType.SENSITIVITY_ANALYSIS))
-                .queryParam("dryRun", String.valueOf(false)))
-            .andExpect(status().isOk());
-
-        var requests = TestUtils.getRequestsDone(4, server);
-        assertTrue(requests.contains("/v1/results"));
-        assertTrue(requests.contains("/v1/non-evacuated-energy-results"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
-        assertEquals(0, networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
-        assertEquals(0, networkModificationNodeInfoRepository.findAllBySensitivityAnalysisNonEvacuatedEnergyResultUuidNotNull().size());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/non-evacuated-energy.*?receiver=.*nodeUuid.*")));
 
         String baseUrlWireMock = wireMock.baseUrl();
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrlWireMock);
 
-        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID))
-            .willReturn(WireMock.notFound().withBody("Oups did I ever let think suc a thing existed ?")));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
-                studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
-            .andExpectAll(status().isNoContent());
-
-        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID))
-            .willReturn(WireMock.serverError().withBody("{ \"message\": \"Oups\" }")));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
-                studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
-            .andExpectAll(status().isNoContent());
-
-        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID))
-            .willReturn(WireMock.serverError().withBody("flat message")));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
-                studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
+        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/non-evacuated-energy-results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID))
+            .willReturn(WireMock.notFound().withBody("Oups did I ever let think such a thing existed ?")));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/result",
+                studyNameUserIdUuid, modificationNode1Uuid))
             .andExpectAll(status().isNoContent());
     }
 
     @Test
     @SneakyThrows
-    public void testGetSensitivityResultWithWrongId() {
+    public void testGetSensitivityNonEvacuatedEnergyResultWithWrongId() {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID notFoundSensitivityUuid = UUID.randomUUID();
         UUID studyUuid = studyEntity.getId();
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON)
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/result", studyUuid, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(SENSITIVITY_INPUT))
-                .andExpect(status().isNoContent()).andReturn();
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(SENSITIVITY_INPUT))
+                        .content(SENSITIVITY_NON_EVACUATED_ENERGY_INPUT))
                 .andExpect(status().isNoContent()).andReturn();
 
         String baseUrlWireMock = wireMock.baseUrl();
@@ -466,30 +408,22 @@ public class SensitivityAnalysisTest {
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNodeUuid = modificationNode1.getId();
-        networkModificationTreeService.updateSensitivityAnalysisResultUuid(modificationNodeUuid, notFoundSensitivityUuid);
-        assertTrue(networkModificationTreeService.getSensitivityAnalysisResultUuid(modificationNodeUuid).isPresent());
-        assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getSensitivityAnalysisResultUuid(modificationNodeUuid).get());
+        networkModificationTreeService.updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(modificationNodeUuid, notFoundSensitivityUuid);
+        assertTrue(networkModificationTreeService.getSensitivityAnalysisNonEvacuatedEnergyResultUuid(modificationNodeUuid).isPresent());
+        assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getSensitivityAnalysisNonEvacuatedEnergyResultUuid(modificationNodeUuid).get());
 
-        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid))
+        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/non-evacuated-energy-results/" + notFoundSensitivityUuid))
                 .willReturn(WireMock.notFound()));
 
-        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid + "/filter-options" + ".*"))
-                .willReturn(WireMock.notFound()));
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON)
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/result", studyUuid, modificationNodeUuid, FAKE_NON_EVACUATED_ENERGY_RESULT_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(SENSITIVITY_INPUT))
-                .andExpect(status().isNotFound()).andReturn();
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(SENSITIVITY_INPUT))
+                        .content(SENSITIVITY_NON_EVACUATED_ENERGY_INPUT))
                 .andExpect(status().isNotFound()).andReturn();
     }
 
     @Test
     @SneakyThrows
-    public void testResetUuidResultWhenSAFailed() {
+    public void testResetUuidResultWhenSensitivityAnalysisNonEvacuatedEnergyFailed() {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
@@ -497,29 +431,28 @@ public class SensitivityAnalysisTest {
         String resultUuidJson = mapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateSensitivityAnalysisResultUuid(modificationNode.getId(), resultUuid);
-        assertTrue(networkModificationTreeService.getSensitivityAnalysisResultUuid(modificationNode.getId()).isPresent());
-        assertEquals(resultUuid, networkModificationTreeService.getSensitivityAnalysisResultUuid(modificationNode.getId()).get());
+        networkModificationTreeService.updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(modificationNode.getId(), resultUuid);
+        assertTrue(networkModificationTreeService.getSensitivityAnalysisNonEvacuatedEnergyResultUuid(modificationNode.getId()).isPresent());
+        assertEquals(resultUuid, networkModificationTreeService.getSensitivityAnalysisNonEvacuatedEnergyResultUuid(modificationNode.getId()).get());
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
-            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), sensitivityAnalysisFailedDestination);
+            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), sensitivityAnalysisNonEvacuatedEnergyFailedDestination);
             return resultUuid;
-        }).when(studyService).runSensitivityAnalysis(any(), any());
-        studyService.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId());
+        }).when(studyService).runSensitivityAnalysisNonEvacuatedEnergy(any(), any(), any());
+        studyService.runSensitivityAnalysisNonEvacuatedEnergy(studyEntity.getId(), modificationNode.getId(), SENSITIVITY_NON_EVACUATED_ENERGY_INPUT);
 
         // Test reset uuid result in the database
-        assertTrue(networkModificationTreeService.getSensitivityAnalysisResultUuid(modificationNode.getId()).isEmpty());
+        assertTrue(networkModificationTreeService.getSensitivityAnalysisNonEvacuatedEnergyResultUuid(modificationNode.getId()).isEmpty());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED, updateType);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_FAILED, updateType);
     }
 
-    // test sensitivity analysis on network 2 will fail
     @Test
-    public void testSensitivityAnalysisFailedForNotification() throws Exception {
+    public void testSensitivityAnalysisNonEvacuatedEnergyFailedForNotification() throws Exception {
         MvcResult mvcResult;
         String resultAsString;
 
@@ -529,29 +462,29 @@ public class SensitivityAnalysisTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        //run failing sensitivity analysis (because in network 2)
-        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, modificationNode1Uuid)
+        // run failing sensitivity analysis non evacuated energy (because in network 2)
+        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/run", studyUuid, modificationNode1Uuid)
             .contentType(MediaType.APPLICATION_JSON).header("userId", "userId")
-            .content(SENSITIVITY_INPUT))
+            .content(SENSITIVITY_NON_EVACUATED_ENERGY_INPUT))
             .andExpect(status().isOk()).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         String uuidResponse = mapper.readValue(resultAsString, String.class);
 
-        assertEquals(SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID, uuidResponse);
+        assertEquals(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_ERROR_NODE_RESULT_UUID, uuidResponse);
 
-        // failed sensitivity analysis
+        // failed sensitivity analysis non evacuated energy
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED, updateType);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_FAILED, updateType);
 
-        // message sent by run and save controller to notify frontend sensitivity analysis is running and should update status
+        // message sent by run controller to notify frontend sensitivity analysis non evacuated energy is running and should update status
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS, updateType);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/run-and-save.*?receiver=.*nodeUuid.*")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/non-evacuated-energy.*?receiver=.*nodeUuid.*")));
 
         /*
          *  what follows is mostly for test coverage -> a failed message without receiver is sent -> will be ignored by consumer
@@ -562,20 +495,20 @@ public class SensitivityAnalysisTest {
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyUuid2, rootNodeUuid2, UUID.randomUUID(), VARIANT_ID, "node 2");
         UUID modificationNode1Uuid2 = modificationNode2.getId();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid2, modificationNode1Uuid2)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/run", studyUuid2, modificationNode1Uuid2)
             .contentType(MediaType.APPLICATION_JSON).header("userId", "userId")
-            .content(SENSITIVITY_INPUT))
+            .content(SENSITIVITY_NON_EVACUATED_ENERGY_INPUT))
             .andExpect(status().isOk());
 
-        // failed sensitivity analysis without receiver -> no failure message sent to frontend
+        // failed sensitivity analysis non evacuated energy without receiver -> no failure message sent to frontend
 
-        // message sent by run and save controller to notify frontend sensitivity analysis is running and should update status
+        // message sent by run controller to notify frontend sensitivity analysis non evacuated energy is running and should update status
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid2, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS, updateType);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/run-and-save.*?receiver=.*nodeUuid.*")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/non-evacuated-energy.*?receiver=.*nodeUuid.*")));
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
@@ -674,7 +607,7 @@ public class SensitivityAnalysisTest {
 
     @After
     public void tearDown() {
-        List<String> destinations = List.of(studyUpdateDestination, sensitivityAnalysisFailedDestination, sensitivityAnalysisResultDestination, sensitivityAnalysisStoppedDestination);
+        List<String> destinations = List.of(studyUpdateDestination, sensitivityAnalysisNonEvacuatedEnergyFailedDestination, sensitivityAnalysisNonEvacuatedEnergyResultDestination, sensitivityAnalysisNonEvacuatedEnergyStoppedDestination);
 
         cleanDB();
 
@@ -687,50 +620,5 @@ public class SensitivityAnalysisTest {
         } catch (IOException e) {
             // Ignoring
         }
-    }
-
-    @Test
-    public void testSensitivityAnalysisParameters() throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
-        UUID studyNameUserIdUuid = studyEntity.getId();
-        //get sensitivity analysis parameters
-        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk(),
-                content().string(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
-
-        //create sensitivity analysis Parameters
-        EquipmentsContainer equipments1 = new EquipmentsContainer(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da321"), "identifiable1");
-        EquipmentsContainer equipments2 = new EquipmentsContainer(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da322"), "identifiable2");
-        EquipmentsContainer equipments3 = new EquipmentsContainer(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da323"), "identifiable3");
-        SensitivityAnalysisInputData.SensitivityInjectionsSet injectionsSet = new SensitivityAnalysisInputData.SensitivityInjectionsSet(List.of(equipments2), List.of(equipments1), SensitivityAnalysisInputData.DistributionType.PROPORTIONAL, List.of(equipments3), true);
-        SensitivityAnalysisInputData.SensitivityInjection injections = new SensitivityAnalysisInputData.SensitivityInjection(List.of(equipments1), List.of(equipments2), List.of(equipments3), true);
-        SensitivityAnalysisInputData.SensitivityHVDC hvdc = new SensitivityAnalysisInputData.SensitivityHVDC(List.of(equipments1), SensitivityAnalysisInputData.SensitivityType.DELTA_MW, List.of(equipments2), List.of(equipments3), true);
-        SensitivityAnalysisInputData.SensitivityPST pst = new SensitivityAnalysisInputData.SensitivityPST(List.of(equipments2), SensitivityAnalysisInputData.SensitivityType.DELTA_MW, List.of(equipments1), List.of(equipments3), true);
-        SensitivityAnalysisInputData.SensitivityNodes nodes = new SensitivityAnalysisInputData.SensitivityNodes(List.of(equipments1), List.of(equipments2), List.of(equipments3), true);
-
-        //create sensitivity analysis Parameters
-        SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues = SensitivityAnalysisParametersInfos.builder()
-                .flowFlowSensitivityValueThreshold(90)
-                .angleFlowSensitivityValueThreshold(0.6)
-                .flowVoltageSensitivityValueThreshold(0.1)
-                .sensitivityInjectionsSet(List.of(injectionsSet))
-                .sensitivityInjection(List.of(injections))
-                .sensitivityHVDC(List.of(hvdc))
-                .sensitivityPST(List.of(pst))
-                .sensitivityNodes(List.of(nodes))
-                .build();
-        String mnBodyJson = objectWriter.writeValueAsString(sensitivityAnalysisParametersValues);
-
-        mockMvc.perform(
-                post("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)
-                        .header("userId", "userId")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mnBodyJson)).andExpect(
-                status().isOk());
-
-        //getting set values
-        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk(),
-                content().string(SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON));
     }
 }

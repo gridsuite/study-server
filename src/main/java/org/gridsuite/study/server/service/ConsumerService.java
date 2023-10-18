@@ -461,6 +461,82 @@ public class ConsumerService {
         };
     }
 
+    @Bean
+    public Consumer<Message<String>> consumeSensitivityAnalysisNonEvacuatedEnergyResult() {
+        return message -> {
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                    LOGGER.info("Sensitivity analysis non evacuated energy result '{}' available for node '{}'", resultUuid, receiverObj.getNodeUuid());
+
+                    // update DB
+                    updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(receiverObj.getNodeUuid(), resultUuid);
+
+                    // send notifications
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeSensitivityAnalysisNonEvacuatedEnergyStopped() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                    LOGGER.info("Sensitivity analysis non evacuated energy stopped for node '{}'", receiverObj.getNodeUuid());
+
+                    // delete sensitivity analysis non evacuated energy result in database
+                    updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(receiverObj.getNodeUuid(), null);
+
+                    // send notification for stopped computation
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeSensitivityAnalysisNonEvacuatedEnergyFailed() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                    LOGGER.info("Sensitivity analysis non evacuated energy failed for node '{}'", receiverObj.getNodeUuid());
+
+                    // delete sensitivity analysis non evacuated energy result in database
+                    updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(receiverObj.getNodeUuid(), null);
+
+                    // send notification for failed computation
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_FAILED);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
     void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
         networkModificationTreeService.updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
     }
@@ -471,6 +547,10 @@ public class ConsumerService {
 
     void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
         networkModificationTreeService.updateSensitivityAnalysisResultUuid(nodeUuid, sensitivityAnalysisResultUuid);
+    }
+
+    void updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(UUID nodeUuid, UUID sensitivityAnalysisNonEvacuatedEnergyResultUuid) {
+        networkModificationTreeService.updateSensitivityAnalysisNonEvacuatedEnergyResultUuid(nodeUuid, sensitivityAnalysisNonEvacuatedEnergyResultUuid);
     }
 
     void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {

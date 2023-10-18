@@ -1701,4 +1701,47 @@ public class StudyController {
         studyService.invalidateShortCircuitStatus(studyUuid);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/run")
+    @Operation(summary = "run sensitivity analysis non evacuated energy on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy has started")})
+    public ResponseEntity<UUID> runSensitivityAnalysisNonEvacuatedEnergy(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                         @RequestBody String sensitivityAnalysisNonEvacuatedEnergyInput) {
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        return ResponseEntity.ok().body(studyService.runSensitivityAnalysisNonEvacuatedEnergy(studyUuid, nodeUuid, sensitivityAnalysisNonEvacuatedEnergyInput));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/result")
+    @Operation(summary = "Get a sensitivity analysis non evacuated energy result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy result"),
+        @ApiResponse(responseCode = "204", description = "No sensitivity analysis non evacuated energy has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The sensitivity analysis non evacuated energy has not been found")})
+    public ResponseEntity<String> getSensitivityAnalysisNonEvacuatedEnergyResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = sensitivityAnalysisService.getSensitivityAnalysisNonEvacuatedEnergyResult(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+            ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/status")
+    @Operation(summary = "Get the sensitivity analysis non evacuated energy status on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy status"),
+        @ApiResponse(responseCode = "204", description = "No sensitivity analysis non evacuated energy has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The sensitivity analysis status non evacuated energy has not been found")})
+    public ResponseEntity<String> getSensitivityAnalysisNonEvacuatedEnergyStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = sensitivityAnalysisService.getSensitivityAnalysisNonEvacuatedEnergyStatus(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+            ResponseEntity.noContent().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/stop")
+    @Operation(summary = "stop sensitivity analysis non evacuated energy on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy has been stopped")})
+    public ResponseEntity<Void> stopSensitivityAnalysisNonEvacuatedEnergy(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        sensitivityAnalysisService.stopSensitivityAnalysisNonEvacuatedEnergy(studyUuid, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
 }

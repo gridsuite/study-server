@@ -168,7 +168,14 @@ public class SupervisionService {
         Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SENSITIVITY_ANALYSIS.subReporterKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         sensitivityAnalysisService.deleteSensitivityAnalysisResults();
+
+        nodes = networkModificationNodeInfoRepository.findAllBySensitivityAnalysisNonEvacuatedEnergyResultUuidNotNull();
+        nodes.stream().forEach(node -> node.setSensitivityAnalysisNonEvacuatedEnergyResultUuid(null));
+        subreportToDelete = formatSubreportMap(ComputationType.SENSITIVITY_ANALYSIS.subReporterKey, nodes);
+        reportService.deleteTreeReports(subreportToDelete);
+        sensitivityAnalysisService.deleteSensitivityAnalysisNonEvacuatedEnergyResults();
         LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.SENSITIVITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+
         return nodes.size();
     }
 

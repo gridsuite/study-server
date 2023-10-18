@@ -6,7 +6,7 @@ spring:
 
   cloud:
     function:
-      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeDsResult;consumeDsStopped;consumeDsFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed;consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed
+      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeDsResult;consumeDsStopped;consumeDsFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed;consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed;consumeSensitivityAnalysisNonEvacuatedEnergyResult;consumeSensitivityAnalysisNonEvacuatedEnergyStopped;consumeSensitivityAnalysisNonEvacuatedEnergyFailed
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -58,6 +58,15 @@ spring:
         consumeSensitivityAnalysisFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.failed
           group: studySensitivityAnalysisFailedGroup
+        consumeSensitivityAnalysisNonEvacuatedEnergyResult-in-0:
+           destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.result
+           group: studySensitivityAnalysisNonEvacuatedEnergyResultGroup
+        consumeSensitivityAnalysisNonEvacuatedEnergyStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.stopped
+          group: studySensitivityAnalysisNonEvacuatedEnergyStoppedGroup
+        consumeSensitivityAnalysisNonEvacuatedEnergyFailed-in-0:
+           destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.failed
+           group: studySensitivityAnalysisNonEvacuatedEnergyFailedGroup
         consumeShortCircuitAnalysisResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.result
           group: studyShortCircuitAnalysisResultGroup
