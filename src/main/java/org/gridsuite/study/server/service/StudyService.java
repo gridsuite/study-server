@@ -1809,9 +1809,9 @@ public class StudyService {
             subReportersByNode.get(getNodeIdFromReportKey(subReporter)).addAll(subReporter.getSubReporters())
         );
         return subReportersByNode.keySet().stream().map(nodeId -> {
-            // pass the reportId to the Front as taskValues
+            // For a node report, pass the reportId to the Front as taskValues, to allow direct access
             Map<String, TypedValue> taskValues = new HashMap<>();
-            taskValues.put("reportId", new TypedValue(reportUuid.toString(), "ID"));
+            taskValues.put("id", new TypedValue(reportUuid.toString(), "ID"));
             ReporterModel newSubReporter = new ReporterModel(nodeId, nodeId, taskValues);
             subReportersByNode.get(nodeId).forEach(newSubReporter::addSubReporter);
             return newSubReporter;
