@@ -163,7 +163,7 @@ public class ShortCircuitService {
             builder.queryParam("sort", order.getProperty() + "," + order.getDirection());
         }
 
-        return getShortCircuitAnalysisResource(builder.build().encode().toUri()); // need to encode because of filter array
+        return getShortCircuitAnalysisResource(builder.build().encode().toUri()); // need to encode because of filter JSON array
     }
 
     public String getShortCircuitAnalysisStatus(UUID nodeUuid, ShortcircuitAnalysisType type) {
