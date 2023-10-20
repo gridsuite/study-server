@@ -30,6 +30,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisService;
@@ -565,9 +566,10 @@ public class StudyController {
     public ResponseEntity<UUID> runLoadFlow(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "The limit reduction") @RequestParam(name = "limitReduction", required = false) Float limitReduction,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runLoadFlow(studyUuid, nodeUuid, userId));
+        return ResponseEntity.ok().body(studyService.runLoadFlow(studyUuid, nodeUuid, userId, limitReduction));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/result")
@@ -799,9 +801,8 @@ public class StudyController {
     @Operation(summary = "Get limit violations.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The limit violations")})
     public ResponseEntity<List<LimitViolationInfos>> getLimitViolations(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                       @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                       @Parameter(description = "The limit reduction") @RequestParam("limitReduction") float limitReduction) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, limitReduction));
+                                                       @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
@@ -1398,6 +1399,8 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    // --- Dynamic Simulation Endpoints BEGIN --- //
+
     @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/mappings")
     @Operation(summary = "Get all mapping of dynamic simulation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All mappings of dynamic simulation"),
@@ -1438,6 +1441,72 @@ public class StudyController {
     public ResponseEntity<DynamicSimulationParametersInfos> getDynamicSimulationParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getDynamicSimulationParameters(studyUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events")
+    @Operation(summary = "Get dynamic simulation events from a node")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The dynamic simulation events was returned"),
+        @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<List<EventInfos>> getDynamicSimulationEvents(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                       @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+        List<EventInfos> dynamicSimulationEvents = studyService.getDynamicSimulationEvents(nodeUuid);
+        return ResponseEntity.ok().body(dynamicSimulationEvents);
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events", params = {"equipmentId"})
+    @Operation(summary = "Get dynamic simulation event from a node with a given equipment id")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The dynamic simulation event was returned"),
+        @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<EventInfos> getDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @Parameter(description = "Equipment id") @RequestParam(value = "equipmentId") String equipmentId) {
+        EventInfos dynamicSimulationEvent = studyService.getDynamicSimulationEvent(nodeUuid, equipmentId);
+        return dynamicSimulationEvent != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(dynamicSimulationEvent) :
+                ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events")
+    @Operation(summary = "Create a dynamic simulation event for a node")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The network event was created"),
+        @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Void> createDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                             @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                             @RequestBody EventInfos event,
+                                                             @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.createDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events")
+    @Operation(summary = "Update a dynamic simulation event for a node")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The dynamic simulation event was updated"),
+        @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Void> updateDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                             @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                             @RequestBody EventInfos event,
+                                                             @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events")
+    @Operation(summary = "Delete dynamic simulation events for a node")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The dynamic simulation events was deleted"),
+        @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Void> deleteDynamicSimulationEvents(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                              @Parameter(description = "Dynamic simulation event UUIDs") @RequestParam("eventUuids") List<UUID> eventUuids,
+                                                              @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.deleteDynamicSimulationEvents(studyUuid, nodeUuid, userId, eventUuids);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/run")
@@ -1499,6 +1568,8 @@ public class StudyController {
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
     }
+
+    // --- Dynamic Simulation Endpoints END --- //
 
     @GetMapping(value = "/studies/{studyUuid}/security-analysis/parameters")
     @Operation(summary = "Get security analysis parameters on study")
@@ -1598,6 +1669,17 @@ public class StudyController {
             @RequestBody(required = false) SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setSensitivityAnalysisParametersValues(studyUuid, sensitivityAnalysisParametersValues, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")
+    @Operation(summary = "Invalidate loadflow status on study nodes")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The loadflow status has been invalidated on all study nodes"),
+        @ApiResponse(responseCode = "404", description = "The study is not found")})
+    public ResponseEntity<Void> invalidateLoadFlowStatus(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                         @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.invalidateLoadFlowStatus(studyUuid, userId);
         return ResponseEntity.ok().build();
     }
 }

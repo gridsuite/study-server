@@ -222,11 +222,12 @@ public class NetworkModificationTreeService {
 
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
-    public void doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
+    public List<UUID> doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
         List<UUID> removedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeId);
         deleteNodes(nodeId, deleteChildren, false, removedNodes, deleteNodeInfos);
         notificationService.emitNodesDeleted(studyId, removedNodes, deleteChildren);
+        return removedNodes;
     }
 
     @Transactional
@@ -757,6 +758,19 @@ public class NetworkModificationTreeService {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.forEach(n -> {
             UUID resultUuid = repositories.get(n.getType()).getDynamicSimulationResultUuid(n.getIdNode());
+            if (resultUuid != null) {
+                resultUuids.add(resultUuid);
+            }
+        });
+        return resultUuids;
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getStudyVoltageInitResultUuids(UUID studyUuid) {
+        List<UUID> resultUuids = new ArrayList<>();
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
+        nodes.forEach(n -> {
+            UUID resultUuid = repositories.get(n.getType()).getVoltageInitResultUuid(n.getIdNode());
             if (resultUuid != null) {
                 resultUuids.add(resultUuid);
             }
