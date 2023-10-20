@@ -96,11 +96,11 @@ public class SecurityAnalysisService {
     }
 
     private String getPathFromResultType(SecurityAnalysisResultType resultType) {
-        switch (resultType) {
-            case NMK_CONTINGENCIES : return "nmk-contingencies-result";
-            case NMK_CONSTRAINTS : return "nmk-constraints-result";
-            default: return "n-result"; //N case
-        }
+        return switch (resultType) {
+            case NMK_CONTINGENCIES -> "nmk-contingencies-result";
+            case NMK_LIMIT_VIOLATIONS -> "nmk-constraints-result";
+            case N -> "n-result";
+        };
     }
 
     public UUID runSecurityAnalysis(UUID networkUuid, UUID reportUuid, UUID nodeUuid, String variantId, String provider, List<String> contingencyListNames, SecurityAnalysisParametersInfos securityAnalysisParameters,

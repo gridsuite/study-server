@@ -471,7 +471,7 @@ public class SecurityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s/nmk-contingencies?limitType", resultUuid)));
 
         // get NMK_CONSTRAINTS security analysis result
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}", studyUuid, nodeUuid, SecurityAnalysisResultType.NMK_CONSTRAINTS)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}", studyUuid, nodeUuid, SecurityAnalysisResultType.NMK_LIMIT_VIOLATIONS)).andExpectAll(
             status().isOk(),
             content().string(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON));
 
