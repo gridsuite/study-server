@@ -32,6 +32,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.springframework.data.domain.Pageable;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
@@ -782,9 +783,10 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
     public ResponseEntity<String> getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                  @Parameter(description = "Limit types") @RequestParam(name = "limitType", required = false) List<String> limitTypes) {
+                                                                  @Parameter(description = "Limit types") @RequestParam(name = "limitType", required = false) List<String> limitTypes,
+                                                                  @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType) {
         List<String> nonNullLimitTypes = limitTypes != null ? limitTypes : Collections.emptyList();
-        String result = securityAnalysisService.getSecurityAnalysisResult(nodeUuid, nonNullLimitTypes);
+        String result = securityAnalysisService.getSecurityAnalysisResult(nodeUuid, resultType, nonNullLimitTypes);
         return result != null ? ResponseEntity.ok().body(result) :
                ResponseEntity.noContent().build();
     }
