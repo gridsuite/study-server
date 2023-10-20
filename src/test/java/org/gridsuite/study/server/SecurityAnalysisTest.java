@@ -195,13 +195,13 @@ public class SecurityAnalysisTest {
                         .build(), saResultDestination);
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n?limitType").equals(path)) {
+                } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n-result?limitType").equals(path)) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_N_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-contingencies?limitType").equals(path)) {
+                } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-contingencies-result?limitType").equals(path)) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-constraints?limitType").equals(path)) {
+                } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-constraints-result?limitType").equals(path)) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
@@ -220,13 +220,13 @@ public class SecurityAnalysisTest {
                         || path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(CONTINGENCIES_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/n?limitType").equals(path)) {
+                } else if (("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/n-result?limitType").equals(path)) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_N_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/nmk-contingencies?limitType").equals(path)) {
+                } else if (("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/nmk-contingencies-result?limitType").equals(path)) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/nmk-constraints?limitType").equals(path)) {
+                } else if (("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/nmk-constraints-result?limitType").equals(path)) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/status").equals(path)) {
@@ -468,14 +468,14 @@ public class SecurityAnalysisTest {
             status().isOk(),
             content().string(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s/nmk-contingencies?limitType", resultUuid)));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s/nmk-contingencies-result?limitType", resultUuid)));
 
         // get NMK_CONSTRAINTS security analysis result
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}", studyUuid, nodeUuid, SecurityAnalysisResultType.NMK_LIMIT_VIOLATIONS)).andExpectAll(
             status().isOk(),
             content().string(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s/nmk-constraints?limitType", resultUuid)));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s/nmk-constraints-result?limitType", resultUuid)));
 
         // get security analysis status
         MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status", studyUuid, nodeUuid)).andExpectAll(
