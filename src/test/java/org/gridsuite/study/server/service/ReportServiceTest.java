@@ -128,10 +128,15 @@ public class ReportServiceTest {
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
-                if (path.matches("/v1/reports/.*")) {
+                if (path.matches("/v1/reports/.*/reporters\\?defaultName=.*")) {
                     return new MockResponse().setResponseCode(HttpStatus.OK.value())
-                        .setBody(mapper.writeValueAsString(getNodeReport(Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2), request.getRequestUrl().queryParameter(QUERY_PARAM_REPORT_DEFAULT_NAME)).getSubReporters()))
-                        .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                            .setBody(mapper.writeValueAsString(getNodeReport(Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2), request.getRequestUrl().queryParameter(QUERY_PARAM_REPORT_DEFAULT_NAME)).getSubReporters()))
+                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                } else if (path.matches("/v1/reports/.*/elements\\?severityLevels=.*")) {
+                    String reportId = Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2);
+                        return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                                .setBody(mapper.writeValueAsString(getRootNodeSimpleReport(reportId).getSubReporters()))
+                                .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(HttpStatus.I_AM_A_TEAPOT.value()).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -164,7 +169,7 @@ public class ReportServiceTest {
 
     @SneakyThrows
     @Test
-    public void testNodeReport() {
+    public void testTreeReport() {
         RootNode rootNode = createRoot();
         ReporterModel expectedRootReporter = getNodeReport(ROOT_NODE_REPORT_UUID.toString(), rootNode.getId().toString());
 
@@ -210,7 +215,7 @@ public class ReportServiceTest {
 
     @SneakyThrows
     @Test
-    public void testNodeMultipleReport() {
+    public void testTreeMultipleReport() {
         RootNode rootNode = createRoot();
         NetworkModificationNode node = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), rootNode.getId(), createModificationNodeInfo("Modification Node", MODIFICATION_NODE_REPORT_UUID), InsertMode.AFTER, null);
         NetworkModificationNode child1 = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), node.getId(), createModificationNodeInfo("Child 1", MODIFICATION_CHILD_NODE1_REPORT_UUID), InsertMode.AFTER, null);
@@ -260,6 +265,38 @@ public class ReportServiceTest {
         assertNotEquals(mapper.writeValueAsString(reportsNode1), mapper.writeValueAsString(reportsNode2));
     }
 
+    @SneakyThrows
+    @Test
+    public void testAllLogsReport() {
+        RootNode rootNode = createRoot();
+        ReporterModel expectedRootReporter = getRootNodeSimpleReport(ROOT_NODE_REPORT_UUID.toString());
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/reports/elements?severityLevels=INFO&severityLevels=WARN", rootNode.getStudyId(), rootNode.getId()))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+        List<ReporterModel> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        });
+        assertEquals(mapper.writeValueAsString(expectedRootReporter.getSubReporters()), mapper.writeValueAsString(reports));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+    }
+
+    @SneakyThrows
+    @Test
+    public void testNodeReport() {
+        RootNode rootNode = createRoot();
+        ReporterModel expectedRootReporter = getRootNodeSimpleReport(ROOT_NODE_REPORT_UUID.toString());
+
+        MvcResult mvcResult =
+            mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/reports/{reportUuid}/elements?severityLevels=INFO&severityLevels=WARN",
+                rootNode.getStudyId(), rootNode.getId(), ROOT_NODE_REPORT_UUID.toString()))
+            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+        List<ReporterModel> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        });
+        assertEquals(mapper.writeValueAsString(expectedRootReporter.getSubReporters()), mapper.writeValueAsString(reports));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+    }
+
     private ReporterModel getNodeReport(String reportUuid, String nodeUuid) {
         return Set.of(ROOT_NODE_REPORT_UUID.toString(), MODIFICATION_NODE_REPORT_UUID.toString()).contains(reportUuid) ?
                 getNodeSimpleReport(reportUuid, nodeUuid) : getNodeMultipleReport(reportUuid, nodeUuid);
@@ -270,6 +307,14 @@ public class ReportServiceTest {
         Map<String, TypedValue> taskValues = new HashMap<>();
         taskValues.put("id", new TypedValue(reportUuid, "ID"));
         reporter.addSubReporter(new ReporterModel(nodeUuid, nodeUuid, taskValues));
+        return reporter;
+    }
+
+    private ReporterModel getRootNodeSimpleReport(String reportUuid) {
+        ReporterModel reporter = new ReporterModel(reportUuid, reportUuid);
+        Map<String, TypedValue> taskValues = new HashMap<>();
+        taskValues.put("id", new TypedValue(reportUuid, "ID"));
+        reporter.addSubReporter(new ReporterModel("Root", "Root", taskValues));
         return reporter;
     }
 
