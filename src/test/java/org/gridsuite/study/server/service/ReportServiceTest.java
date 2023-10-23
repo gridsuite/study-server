@@ -132,7 +132,7 @@ public class ReportServiceTest {
                     return new MockResponse().setResponseCode(HttpStatus.OK.value())
                             .setBody(mapper.writeValueAsString(getNodeReport(Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2), request.getRequestUrl().queryParameter(QUERY_PARAM_REPORT_DEFAULT_NAME)).getSubReporters()))
                             .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-                } else if (path.matches("/v1/reports/.*/elements\\?severityLevels=.*")) {
+                } else if (path.matches("/v1/reports/.*/elements\\?severityLevels=.*") || path.matches("/v1/reporters/.*/elements\\?severityLevels=.*")) {
                     String reportId = Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2);
                         return new MockResponse().setResponseCode(HttpStatus.OK.value())
                                 .setBody(mapper.writeValueAsString(getRootNodeSimpleReport(reportId).getSubReporters()))
@@ -295,6 +295,23 @@ public class ReportServiceTest {
         });
         assertEquals(mapper.writeValueAsString(expectedRootReporter.getSubReporters()), mapper.writeValueAsString(reports));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+    }
+
+    @SneakyThrows
+    @Test
+    public void testReporterReport() {
+        RootNode rootNode = createRoot();
+        ReporterModel expectedRootReporter = getRootNodeSimpleReport(ROOT_NODE_REPORT_UUID.toString());
+
+        MvcResult mvcResult =
+                mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/reporters/{reporterUuid}/elements?severityLevels=INFO&severityLevels=WARN",
+                                rootNode.getStudyId(), rootNode.getId(), ROOT_NODE_REPORT_UUID.toString()))
+                        .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                        .andReturn();
+        ReporterModel report = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        });
+        assertEquals(mapper.writeValueAsString(expectedRootReporter), mapper.writeValueAsString(report));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reporters/.*")));
     }
 
     private ReporterModel getNodeReport(String reportUuid, String nodeUuid) {
