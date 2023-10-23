@@ -68,7 +68,6 @@ public class ReportServiceTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReportServiceTest.class);
 
     private static final UUID ROOT_NODE_REPORT_UUID = UUID.randomUUID();
-    private static final String ROOT_NODE_REPORT_ID = "8bbb0084-dae6-4413-a4f5-804643480d27";
     private static final UUID MODIFICATION_NODE_REPORT_UUID = UUID.randomUUID();
 
     private static UUID MODIFICATION_NODE_UUID;
@@ -115,6 +114,7 @@ public class ReportServiceTest {
         reportService.setReportServerBaseUri(baseUrl);
 
         // FIXME: remove lines when dicos will be used on the front side
+        // Override the custom module to restore the standard module in order to have the original serialization used like the report server
         mapper.registerModule(new ReporterModelJsonModule() {
             @Override
             public Object getTypeId() {
@@ -268,17 +268,18 @@ public class ReportServiceTest {
     private ReporterModel getNodeSimpleReport(String reportUuid, String nodeUuid) {
         ReporterModel reporter = new ReporterModel(reportUuid, reportUuid);
         Map<String, TypedValue> taskValues = new HashMap<>();
-        taskValues.put("id", new TypedValue(ROOT_NODE_REPORT_ID, "ID"));
+        taskValues.put("id", new TypedValue(reportUuid, "ID"));
         reporter.addSubReporter(new ReporterModel(nodeUuid, nodeUuid, taskValues));
         return reporter;
     }
 
     private ReporterModel getNodeMultipleReport(String reportUuid, String nodeUuid) {
         ReporterModel reporter = new ReporterModel(reportUuid, reportUuid);
-        ReporterModel subReporter = new ReporterModel(MODIFICATION_NODE_UUID.toString(), MODIFICATION_NODE_UUID.toString());
+        Map<String, TypedValue> taskValues = Map.of("id", new TypedValue(reportUuid, "ID"));
+        ReporterModel subReporter = new ReporterModel(MODIFICATION_NODE_UUID.toString(), MODIFICATION_NODE_UUID.toString(), taskValues);
         subReporter.addSubReporter(new ReporterModel("test" + nodeUuid, "test" + nodeUuid));
         reporter.addSubReporter(subReporter);
-        reporter.addSubReporter(new ReporterModel(nodeUuid, nodeUuid));
+        reporter.addSubReporter(new ReporterModel(nodeUuid, nodeUuid, taskValues));
         return reporter;
     }
 }

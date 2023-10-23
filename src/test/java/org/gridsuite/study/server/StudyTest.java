@@ -335,6 +335,7 @@ public class StudyTest {
         networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
 
         // FIXME: remove lines when dicos will be used on the front side
+        // Override the custom module to restore the standard module in order to have the original serialization used like the report server
         mapper.registerModule(new ReporterModelJsonModule() {
             @Override
             public Object getTypeId() {
