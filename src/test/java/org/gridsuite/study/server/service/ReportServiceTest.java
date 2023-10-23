@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
+import com.powsybl.commons.reporter.TypedValue;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
@@ -45,10 +46,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_DEFAULT_NAME;
@@ -70,6 +68,7 @@ public class ReportServiceTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReportServiceTest.class);
 
     private static final UUID ROOT_NODE_REPORT_UUID = UUID.randomUUID();
+    private static final String ROOT_NODE_REPORT_ID = "8bbb0084-dae6-4413-a4f5-804643480d27";
     private static final UUID MODIFICATION_NODE_REPORT_UUID = UUID.randomUUID();
 
     private static UUID MODIFICATION_NODE_UUID;
@@ -262,12 +261,15 @@ public class ReportServiceTest {
     }
 
     private ReporterModel getNodeReport(String reportUuid, String nodeUuid) {
-        return Set.of(ROOT_NODE_REPORT_UUID.toString(), MODIFICATION_NODE_REPORT_UUID.toString()).contains(reportUuid) ? getNodeSimpleReport(reportUuid, nodeUuid) : getNodeMultipleReport(reportUuid, nodeUuid);
+        return Set.of(ROOT_NODE_REPORT_UUID.toString(), MODIFICATION_NODE_REPORT_UUID.toString()).contains(reportUuid) ?
+                getNodeSimpleReport(reportUuid, nodeUuid) : getNodeMultipleReport(reportUuid, nodeUuid);
     }
 
     private ReporterModel getNodeSimpleReport(String reportUuid, String nodeUuid) {
         ReporterModel reporter = new ReporterModel(reportUuid, reportUuid);
-        reporter.addSubReporter(new ReporterModel(nodeUuid, nodeUuid));
+        Map<String, TypedValue> taskValues = new HashMap<>();
+        taskValues.put("id", new TypedValue(ROOT_NODE_REPORT_ID, "ID"));
+        reporter.addSubReporter(new ReporterModel(nodeUuid, nodeUuid, taskValues));
         return reporter;
     }
 
