@@ -80,7 +80,7 @@ public class SecurityAnalysisService {
             return null;
         }
 
-        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getPathFromResultType(resultType) + "/paged")
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getPathFromResultType(resultType))
             .queryParam("page", pageable.getPageNumber())
             .queryParam("size", pageable.getPageSize());
 
@@ -109,8 +109,8 @@ public class SecurityAnalysisService {
 
     private String getPathFromResultType(SecurityAnalysisResultType resultType) {
         return switch (resultType) {
-            case NMK_CONTINGENCIES -> "nmk-contingencies-result";
-            case NMK_LIMIT_VIOLATIONS -> "nmk-constraints-result";
+            case NMK_CONTINGENCIES -> "nmk-contingencies-result/paged";
+            case NMK_LIMIT_VIOLATIONS -> "nmk-constraints-result/paged";
             case N -> "n-result";
         };
     }

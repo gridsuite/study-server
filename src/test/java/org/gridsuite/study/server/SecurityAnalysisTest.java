@@ -194,7 +194,7 @@ public class SecurityAnalysisTest {
                         .build(), saResultDestination);
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
+                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n-result\\?page=.*size=.*filters=.*sort=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_N_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-contingencies-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
@@ -219,7 +219,7 @@ public class SecurityAnalysisTest {
                         || path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(CONTINGENCIES_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/n-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
+                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/n-result\\?page=.*size=.*filters=.*sort=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_N_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/nmk-contingencies-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
@@ -460,7 +460,7 @@ public class SecurityAnalysisTest {
                 status().isOk(),
                 content().string(SECURITY_ANALYSIS_N_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(String.format("/v1/results/%s/n-result/paged\\?page=.*size=.*filters=.*sort=.*", resultUuid))));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(String.format("/v1/results/%s/n-result\\?page=.*size=.*filters=.*sort=.*", resultUuid))));
 
         // get NMK_CONTINGENCIES security analysis result
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&sort=random_sort", studyUuid, nodeUuid, SecurityAnalysisResultType.NMK_CONTINGENCIES)).andExpectAll(
