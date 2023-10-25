@@ -67,8 +67,7 @@ public class ReportService {
 
     public ReporterModel getReportReporters(@NonNull UUID reportUuid, @NonNull String defaultName) {
         var uriBuilder = UriComponentsBuilder.fromPath("{reportUuid}/reporters")
-                .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
-                .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false);
+                .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName);
         return reportServerCall(reportUuid, this.getReportServerURI(), uriBuilder);
     }
 
@@ -103,7 +102,6 @@ public class ReportService {
 
     public void deleteReport(@NonNull UUID reportUuid) {
         var path = UriComponentsBuilder.fromPath("{reportUuid}")
-            .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false)
             .buildAndExpand(reportUuid)
             .toUriString();
         restTemplate.delete(this.getReportServerURI() + path);
