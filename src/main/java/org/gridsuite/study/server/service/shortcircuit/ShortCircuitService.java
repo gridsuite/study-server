@@ -15,6 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ShortCircuitStatus;
+import org.gridsuite.study.server.dto.ShortCircuitTypePlanTension;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -202,12 +203,14 @@ public class ShortCircuitService {
 
     public static ShortCircuitParametersEntity toEntity(ShortCircuitParameters parameters) {
         Objects.requireNonNull(parameters);
+        // todo: update afetr powsybl upgrade.
         return new ShortCircuitParametersEntity(parameters.isWithLimitViolations(),
                 parameters.isWithVoltageResult(),
                 parameters.isWithFortescueResult(),
                 parameters.isWithFeederResult(),
                 parameters.getStudyType(),
-                parameters.getMinVoltageDropProportionalThreshold());
+                parameters.getMinVoltageDropProportionalThreshold(),
+                false, false, false, false, ShortCircuitTypePlanTension.NOMINAL);
     }
 
     public static ShortCircuitParameters fromEntity(ShortCircuitParametersEntity entity) {
