@@ -85,7 +85,7 @@ public class SecurityAnalysisService {
             .queryParam("size", pageable.getPageSize());
 
         if (filters != null && !filters.isEmpty()) {
-            pathBuilder.queryParam("filters", filters);
+            pathBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
         }
 
         for (Sort.Order order : pageable.getSort()) {
