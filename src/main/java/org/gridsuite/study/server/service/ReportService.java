@@ -57,33 +57,29 @@ public class ReportService {
         this.reportServerBaseUri = reportServerBaseUri;
     }
 
-    private String getReportServerURI() {
+    private String getReportsServerURI() {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "reports" + DELIMITER;
     }
 
-    private String getReporterServerURI() {
-        return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "reporters" + DELIMITER;
+    private String getSubReportsServerURI() {
+        return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "subreports" + DELIMITER;
     }
 
-    public ReporterModel getReportReporters(@NonNull UUID reportUuid, @NonNull String defaultName) {
-        var uriBuilder = UriComponentsBuilder.fromPath("{reportUuid}/reporters")
-                .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName);
-        return reportServerCall(reportUuid, this.getReportServerURI(), uriBuilder);
-    }
-
-    public ReporterModel getReportElements(@NonNull UUID reportUuid, Set<String> severityLevels, String nameFilter) {
-        var uriBuilder = UriComponentsBuilder.fromPath("{reportUuid}/elements")
+    public ReporterModel getReport(@NonNull UUID id, @NonNull String defaultName, boolean withElement, String taskKeyFilter, Set<String> severityLevels) {
+        var uriBuilder = UriComponentsBuilder.fromPath("{id}")
+                .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
+                .queryParam(QUERY_PARAM_REPORT_WITH_ELEMENTS, withElement)
                 .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
-        if (nameFilter != null && !nameFilter.isEmpty()) {
-            uriBuilder.queryParam(QUERY_PARAM_REPORT_NAME_FILTER, nameFilter);
+        if (taskKeyFilter != null && !taskKeyFilter.isEmpty()) {
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_TASKKEY_FILTER, taskKeyFilter);
         }
-        return reportServerCall(reportUuid, this.getReportServerURI(), uriBuilder);
+        return reportServerCall(id, this.getReportsServerURI(), uriBuilder);
     }
 
-    public ReporterModel getReporterElements(@NonNull UUID reporterUuid, Set<String> severityLevels) {
-        var uriBuilder = UriComponentsBuilder.fromPath("/{reporterUuid}/elements")
+    public ReporterModel getSubReport(@NonNull UUID id, Set<String> severityLevels) {
+        var uriBuilder = UriComponentsBuilder.fromPath("{id}")
                 .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
-        return reportServerCall(reporterUuid, this.getReporterServerURI(), uriBuilder);
+        return reportServerCall(id, this.getSubReportsServerURI(), uriBuilder);
     }
 
     private ReporterModel reportServerCall(UUID id, String serverUri, UriComponentsBuilder uriBuilder) {
@@ -104,7 +100,7 @@ public class ReportService {
         var path = UriComponentsBuilder.fromPath("{reportUuid}")
             .buildAndExpand(reportUuid)
             .toUriString();
-        restTemplate.delete(this.getReportServerURI() + path);
+        restTemplate.delete(this.getReportsServerURI() + path);
     }
 
     public void deleteTreeReports(@NonNull Map<UUID, String> treeReportsKeys) {
