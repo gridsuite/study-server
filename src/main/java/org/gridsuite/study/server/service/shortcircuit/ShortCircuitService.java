@@ -39,6 +39,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.StudyUtils.addPageableToQueryParams;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -132,7 +133,15 @@ public class ShortCircuitService {
         return resultPath + "/paged";
     }
 
-    public String getShortCircuitAnalysisResult(UUID nodeUuid, String mode, ShortcircuitAnalysisType type) {
+    public String getShortCircuitAnalysisResult(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, boolean paged, Pageable pageable) {
+        if (paged) {
+            return getShortCircuitAnalysisResultsPage(nodeUuid, mode, type, filters, pageable);
+        } else {
+            return getShortCircuitAnalysisResult(nodeUuid, mode, type);
+        }
+    }
+
+    public String getShortCircuitAnalysisResult(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type) {
         String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, type);
         if (resultPath == null) {
             return null;
@@ -144,24 +153,20 @@ public class ShortCircuitService {
         return getShortCircuitAnalysisResource(builder.build().toUri());
     }
 
-    public String getShortCircuitAnalysisResultsPage(UUID nodeUuid, String mode, ShortcircuitAnalysisType type, String filters, Pageable pageable) {
+    public String getShortCircuitAnalysisResultsPage(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, Pageable pageable) {
         String resultsPath = getShortCircuitAnalysisResultsPageResourcePath(nodeUuid, type);
         if (resultsPath == null) {
             return null;
         }
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultsPath)
-                .queryParam("mode", mode)
-                .queryParam("page", pageable.getPageNumber())
-                .queryParam("size", pageable.getPageSize());
+                .queryParam("mode", mode);
 
         if (filters != null && !filters.isEmpty()) {
             builder.queryParam("filters", filters);
         }
 
-        for (Sort.Order order : pageable.getSort()) {
-            builder.queryParam("sort", order.getProperty() + "," + order.getDirection());
-        }
+        addPageableToQueryParams(builder, pageable);
 
         return getShortCircuitAnalysisResource(builder.build().encode().toUri()); // need to encode because of filter JSON array
     }
