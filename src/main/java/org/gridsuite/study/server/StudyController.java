@@ -897,8 +897,9 @@ public class StudyController {
     public ResponseEntity<Void> setShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) ShortCircuitParameters shortCircuitParameters,
+            @Parameter(description = "predefinedParam") @RequestParam(name = "predefinedParam", defaultValue = "NOMINAL") ShortCircuitPredefinedParametersType predefinedParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setShortCircuitParameters(studyUuid, shortCircuitParameters, userId);
+        studyService.setShortCircuitParameters(studyUuid, shortCircuitParameters, userId, predefinedParameters);
         return ResponseEntity.ok().build();
     }
 
@@ -907,7 +908,8 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters")})
     public ResponseEntity<ShortCircuitParameters> getShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getShortCircuitParameters(studyUuid));
+        ShortCircuitParameters shortCircuitParameters = studyService.getShortCircuitParameters(studyUuid);
+        return ResponseEntity.ok().body(shortCircuitParameters);
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")

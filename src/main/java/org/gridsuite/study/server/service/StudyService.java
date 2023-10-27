@@ -19,6 +19,7 @@ import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.security.SecurityAnalysisParameters;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
+import com.powsybl.shortcircuit.VoltageRange;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import lombok.NonNull;
@@ -1050,14 +1051,22 @@ public class StudyService {
     }
 
     public ShortCircuitParameters getShortCircuitParameters(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
+        ShortCircuitParameters shortCircuitParameters = studyRepository.findById(studyUuid)
                 .map(studyEntity -> ShortCircuitService.fromEntity(studyEntity.getShortCircuitParameters()))
                 .orElse(null);
+        return shortCircuitParameters;
     }
 
     @Transactional
     public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParameters parameters, String userId) {
         updateShortCircuitParameters(studyUuid, ShortCircuitService.toEntity(parameters != null ? parameters : ShortCircuitService.getDefaultShortCircuitParameters()));
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    @Transactional
+    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParameters parameters, String userId, ShortCircuitPredefinedParametersType predefinedParameters) {
+        ShortCircuitParametersEntity shortCircuitParametersEntity = ShortCircuitService.toEntity(parameters != null ? parameters : ShortCircuitService.getDefaultShortCircuitParameters(), predefinedParameters);
+        updateShortCircuitParameters(studyUuid, shortCircuitParametersEntity);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
