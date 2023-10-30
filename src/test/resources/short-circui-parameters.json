@@ -1,0 +1,52 @@
+{
+  "version": "1.2",
+  "withLimitViolations": true,
+  "withFortescueResult": false,
+  "withFeederResult": true,
+  "studyType": "TRANSIENT",
+  "withVoltageResult": false,
+  "minVoltageDropProportionalThreshold": 20.0,
+  "withLoads": true,
+  "withShuntCompensators": true,
+  "withVSCConverterStations": true,
+  "withNeutralPosition": false,
+  "initialVoltageProfileMode": "NOMINAL",
+  "voltageRanges": [
+    {
+      "minimumNominalVoltage": 20.0,
+      "maximumNominalVoltage": 20.0,
+      "voltageRangeCoefficient": 1.0
+    },
+    {
+      "minimumNominalVoltage": 45.0,
+      "maximumNominalVoltage": 45.0,
+      "voltageRangeCoefficient": 1.0
+    },
+    {
+      "minimumNominalVoltage": 63.0,
+      "maximumNominalVoltage": 63.0,
+      "voltageRangeCoefficient": 1.0
+    },
+    {
+      "minimumNominalVoltage": 90.0,
+      "maximumNominalVoltage": 90.0,
+      "voltageRangeCoefficient": 1.0
+    },
+    {
+      "minimumNominalVoltage": 150.0,
+      "maximumNominalVoltage": 150.0,
+      "voltageRangeCoefficient": 1.0
+    },
+    {
+      "minimumNominalVoltage": 225.0,
+      "maximumNominalVoltage": 225.0,
+      "voltageRangeCoefficient": 1.0
+    },
+    {
+      "minimumNominalVoltage": 400.0,
+      "maximumNominalVoltage": 400.0,
+      "voltageRangeCoefficient": 1.0
+    }
+  ],
+  "predefinedParameters": "NOMINAL"
+}
