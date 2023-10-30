@@ -1,4 +1,30 @@
 <configuration>
+    <!-- configure nicer logs for tests:
+
+    spring boot default format:
+      > 2023-10-19T12:33:32.067+02:00  INFO 950066 - - - [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+
+    this conf format:
+      > 12:49:58.755 [main] INFO  org.springframework.boot.test.mock.web.SpringBootMockServletContext - Initializing Spring TestDispatcherServlet ''
+
+    I guess they chose a very tabular format and show dates and PID because for
+    log files on servers it's useful, but not so for tests..
+
+    also the format changes midtest (before and after the springboot banner) when springboot
+    configures the loggers so it's not coherent:
+
+    spring boot default:
+      > 09:24:26.018 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper - Found @SpringBootConfiguration
+      > :: Spring Boot ::                (v3.1.2)
+      > 2023-10-20T09:26:57.664+02:00  INFO 1026967 - - - [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+
+    this conf (uses the same pattern all the time as the initial one in the default springboot conf):
+      > 09:32:28.415 [main] INFO  org.springframework.boot.test.context.SpringBootTestContextBootstrapper - Found @SpringBootConfiguration
+      >  :: Spring Boot ::                (v3.1.2)
+      > 09:32:45.146 [main] INFO  org.springframework.boot.test.mock.web.SpringBootMockServletContext - Initializing Spring TestDispatcherServlet ''
+
+    TODO: is there a better way to do this ? Or should sprinboot test do this themselves??
+    -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger - %msg%n
@@ -8,11 +34,5 @@
     <root level="info">
         <appender-ref ref="STDOUT"/>
     </root>
-
-    <!--
-        suppress unreadable huge logs..
-    -->
-    <logger name="org.springframework.test" level="warn"/>
-    <logger name="org.springframework.boot.test" level="warn"/>
 
 </configuration>
