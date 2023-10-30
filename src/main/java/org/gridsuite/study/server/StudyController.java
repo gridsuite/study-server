@@ -1016,7 +1016,11 @@ public class StudyController {
                                                              @Parameter(description = "The report Id") @RequestParam(name = "reportId", required = false) String reportId,
                                                              @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(nodeUuid, nodeOnlyReport, withElements, reportId, severityLevels));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+            reportId != null ?
+                studyService.getNodeReport(nodeUuid, reportId, severityLevels) :
+                studyService.getParentNodesReportsFrom(nodeUuid, nodeOnlyReport, severityLevels)
+        );
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/subreport", produces = MediaType.APPLICATION_JSON_VALUE)

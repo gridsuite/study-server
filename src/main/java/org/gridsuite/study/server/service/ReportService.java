@@ -65,10 +65,10 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "subreports" + DELIMITER;
     }
 
-    public ReporterModel getReport(@NonNull UUID id, @NonNull String defaultName, boolean withElement, String taskKeyFilter, Set<String> severityLevels) {
+    public ReporterModel getReport(@NonNull UUID id, @NonNull String defaultName, String taskKeyFilter, Set<String> severityLevels) {
         var uriBuilder = UriComponentsBuilder.fromPath("{id}")
                 .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
-                .queryParam(QUERY_PARAM_REPORT_WITH_ELEMENTS, withElement)
+                .queryParam(QUERY_PARAM_REPORT_WITH_ELEMENTS, true)
                 .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
         if (taskKeyFilter != null && !taskKeyFilter.isEmpty()) {
             uriBuilder.queryParam(QUERY_PARAM_REPORT_TASKKEY_FILTER, taskKeyFilter);
@@ -98,6 +98,7 @@ public class ReportService {
 
     public void deleteReport(@NonNull UUID reportUuid) {
         var path = UriComponentsBuilder.fromPath("{reportUuid}")
+            .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false)
             .buildAndExpand(reportUuid)
             .toUriString();
         restTemplate.delete(this.getReportsServerURI() + path);
