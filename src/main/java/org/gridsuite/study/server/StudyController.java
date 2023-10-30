@@ -7,7 +7,6 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import io.swagger.v3.oas.annotations.Operation;
@@ -896,20 +895,20 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")})
     public ResponseEntity<Void> setShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) ShortCircuitParameters shortCircuitParameters,
+            @RequestBody(required = false) ShortCircuitCustomParameters shortCircuitCustomParameters,
             @Parameter(description = "predefinedParam") @RequestParam(name = "predefinedParam", defaultValue = "NOMINAL") ShortCircuitPredefinedParametersType predefinedParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setShortCircuitParameters(studyUuid, shortCircuitParameters, userId, predefinedParameters);
+        studyService.setShortCircuitParameters(studyUuid, shortCircuitCustomParameters, userId, predefinedParameters);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
     @Operation(summary = "Get short-circuit analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters")})
-    public ResponseEntity<ShortCircuitParameters> getShortCircuitParameters(
+    public ResponseEntity<ShortCircuitCustomParameters
+            > getShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
-        ShortCircuitParameters shortCircuitParameters = studyService.getShortCircuitParameters(studyUuid);
-        return ResponseEntity.ok().body(shortCircuitParameters);
+        return ResponseEntity.ok().body(studyService.getShortCircuitCustomParameters(studyUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")

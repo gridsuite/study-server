@@ -19,7 +19,6 @@ import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.security.SecurityAnalysisParameters;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
-import com.powsybl.shortcircuit.VoltageRange;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import lombok.NonNull;
@@ -1057,6 +1056,13 @@ public class StudyService {
         return shortCircuitParameters;
     }
 
+    public ShortCircuitCustomParameters getShortCircuitCustomParameters(UUID studyUuid) {
+        ShortCircuitCustomParameters shortCircuitCustomParameters = studyRepository.findById(studyUuid)
+                .map(studyEntity -> ShortCircuitService.toCustomParameters(studyEntity.getShortCircuitParameters()))
+                .orElse(null);
+        return shortCircuitCustomParameters;
+    }
+
     @Transactional
     public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParameters parameters, String userId) {
         updateShortCircuitParameters(studyUuid, ShortCircuitService.toEntity(parameters != null ? parameters : ShortCircuitService.getDefaultShortCircuitParameters()));
@@ -1064,8 +1070,8 @@ public class StudyService {
     }
 
     @Transactional
-    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParameters parameters, String userId, ShortCircuitPredefinedParametersType predefinedParameters) {
-        ShortCircuitParametersEntity shortCircuitParametersEntity = ShortCircuitService.toEntity(parameters != null ? parameters : ShortCircuitService.getDefaultShortCircuitParameters(), predefinedParameters);
+    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitCustomParameters parameters, String userId, ShortCircuitPredefinedParametersType predefinedParameters) {
+        ShortCircuitParametersEntity shortCircuitParametersEntity = ShortCircuitService.toEntity(parameters != null ? parameters : ShortCircuitService.getDefaultShortCircuitCustomParameters(), predefinedParameters);
         updateShortCircuitParameters(studyUuid, shortCircuitParametersEntity);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
