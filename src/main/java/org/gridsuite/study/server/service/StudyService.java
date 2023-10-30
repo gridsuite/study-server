@@ -1064,12 +1064,6 @@ public class StudyService {
     }
 
     @Transactional
-    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParameters parameters, String userId) {
-        updateShortCircuitParameters(studyUuid, ShortCircuitService.toEntity(parameters != null ? parameters : ShortCircuitService.getDefaultShortCircuitParameters()));
-        notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
-    @Transactional
     public void setShortCircuitParameters(UUID studyUuid, ShortCircuitCustomParameters parameters, String userId, ShortCircuitPredefinedParametersType predefinedParameters) {
         ShortCircuitParametersEntity shortCircuitParametersEntity = ShortCircuitService.toEntity(parameters != null ? parameters : ShortCircuitService.getDefaultShortCircuitCustomParameters(), predefinedParameters);
         updateShortCircuitParameters(studyUuid, shortCircuitParametersEntity);
