@@ -640,7 +640,7 @@ public class StudyController {
                                                         @Parameter(description = "BASIC (faults without limits and feeders), " +
                                                             "FULL (faults with both), " +
                                                             "WITH_LIMIT_VIOLATIONS (like FULL but only those with limit violations) or " +
-                                                            "NONE (no fault)") @RequestParam(name = "mode", required = false, defaultValue = "WITH_LIMIT_VIOLATIONS") FaultResultsMode mode,
+                                                            "NONE (no fault)") @RequestParam(name = "mode", required = false, defaultValue = "FULL") FaultResultsMode mode,
                                                         @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type,
                                                         @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
                                                         @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false) boolean paged,
