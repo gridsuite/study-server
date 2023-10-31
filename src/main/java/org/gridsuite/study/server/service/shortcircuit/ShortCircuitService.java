@@ -126,8 +126,6 @@ public class ShortCircuitService {
             resultPath += "/fault_results";
         } else if (type == ShortcircuitAnalysisType.ONE_BUS) {
             resultPath += "/feeder_results";
-        } else {
-            throw new StudyException(SHORT_CIRCUIT_ANALYSIS_BAD_TYPE);
         }
         return resultPath + "/paged";
     }
