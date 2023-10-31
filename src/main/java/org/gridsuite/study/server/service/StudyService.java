@@ -1763,7 +1763,7 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReporterModel> getParentNodesReportsFrom(UUID nodeUuid, boolean nodeOnlyReport, Set<String> severityLevels) {
+    public List<ReporterModel> getParentNodesReport(UUID nodeUuid, boolean nodeOnlyReport, Set<String> severityLevels) {
         AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
         List<ReporterModel> subReporters = getSubReporters(nodeUuid, nodeInfos.getReportUuid(), severityLevels, null);
         if (subReporters.isEmpty()) {
@@ -1778,7 +1778,7 @@ public class StudyService {
             if (parentUuid.isEmpty()) {
                 return subReporters;
             }
-            List<ReporterModel> parentReporters = getParentNodesReportsFrom(parentUuid.get(), false, severityLevels);
+            List<ReporterModel> parentReporters = self.getParentNodesReport(parentUuid.get(), false, severityLevels);
             return Stream.concat(parentReporters.stream(), subReporters.stream()).collect(Collectors.toList());
         }
     }
