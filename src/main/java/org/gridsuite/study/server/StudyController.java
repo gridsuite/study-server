@@ -1682,4 +1682,13 @@ public class StudyController {
         studyService.invalidateLoadFlowStatus(studyUuid, userId);
         return ResponseEntity.ok().build();
     }
+
+    @PutMapping(value = "/studies/{studyUuid}/short-circuit/invalidate-status")
+    @Operation(summary = "Invalidate short circuit status on study nodes")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit status has been invalidated on all study nodes"), @ApiResponse(responseCode = "404", description = "The study is not found")})
+    public ResponseEntity<Void> invalidateShortCircuitStatus(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                         @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.invalidateShortCircuittatus(studyUuid, userId);
+        return ResponseEntity.ok().build();
+    }
 }

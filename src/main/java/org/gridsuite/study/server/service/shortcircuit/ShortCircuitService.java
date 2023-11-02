@@ -51,6 +51,8 @@ public class ShortCircuitService {
 
     public static final String VERSION = "1.2";
 
+    static final String RESULT_UUID = "resultUuid";
+
     private String shortCircuitServerBaseUri;
 
     @Autowired
@@ -370,6 +372,16 @@ public class ShortCircuitService {
                 .version(VERSION)
                 .build();
         return shortCircuitCustomParameters;
+    }
+
+    public void invalidateShortCircuitStatus(List<UUID> uuids) {
+        if (!uuids.isEmpty()) {
+            String path = UriComponentsBuilder
+                    .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/invalidate-status")
+                    .queryParam(RESULT_UUID, uuids).build().toUriString();
+
+            restTemplate.put(shortCircuitServerBaseUri + path, Void.class);
+        }
     }
 
 }

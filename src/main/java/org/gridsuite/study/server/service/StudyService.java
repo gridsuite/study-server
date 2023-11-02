@@ -1053,6 +1053,7 @@ public class StudyService {
         ShortCircuitParameters shortCircuitParameters = studyRepository.findById(studyUuid)
                 .map(studyEntity -> ShortCircuitService.fromEntity(studyEntity.getShortCircuitParameters()))
                 .orElse(null);
+        // todo : add default parameters instead of null
         return shortCircuitParameters;
     }
 
@@ -2170,5 +2171,16 @@ public class StudyService {
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    public void invalidateShortCircuitStatusOnAllNodes(UUID studyUuid) {
+        shortCircuitService.invalidateShortCircuitStatus(networkModificationTreeService.getShortCircuitResultUuids(studyUuid));
+    }
+
+    @Transactional
+    public void invalidateShortCircuittatus(UUID studyUuid, String userId) {
+        invalidateShortCircuitStatusOnAllNodes(studyUuid);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        //notificationService.emitElementUpdated(studyUuid, userId);
     }
 }

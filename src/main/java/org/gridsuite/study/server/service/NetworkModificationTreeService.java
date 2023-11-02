@@ -778,6 +778,24 @@ public class NetworkModificationTreeService {
         return resultUuids;
     }
 
+    @Transactional(readOnly = true)
+    public List<UUID> getShortCircuitResultUuids(UUID studyUuid) {
+        List<UUID> uuids = new ArrayList<>();
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
+        nodes.forEach(n -> {
+            // we need to check one bus and all bus
+            UUID uuidOneBus = repositories.get(n.getType()).getOneBusShortCircuitAnalysisResultUuid(n.getIdNode());
+            UUID uuidAllBus = repositories.get(n.getType()).getShortCircuitAnalysisResultUuid(n.getIdNode());
+            if (uuidOneBus != null) {
+                uuids.add(uuidOneBus);
+            }
+            if (uuidAllBus != null) {
+                uuids.add(uuidAllBus);
+            }
+        });
+        return uuids;
+    }
+
     private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
