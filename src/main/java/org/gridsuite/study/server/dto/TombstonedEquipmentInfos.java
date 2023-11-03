@@ -22,6 +22,7 @@ import org.springframework.data.elasticsearch.annotations.Setting;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "Tombstoned equipment infos")
+// Keep indexname in sync with the value in SupervisionController
 @Document(indexName = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}tombstoned-equipments")
 @Setting(settingPath = "elasticsearch_settings.json")
 @TypeAlias(value = "TombstonedEquipmentInfos")

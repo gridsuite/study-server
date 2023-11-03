@@ -29,6 +29,7 @@ import java.util.Set;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "Equipment infos")
+// Keep indexname in sync with the value in SupervisionController
 @Document(indexName = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}equipments")
 @Setting(settingPath = "elasticsearch_settings.json")
 @TypeAlias(value = "EquipmentInfos")

@@ -77,6 +77,11 @@ public class NotificationService {
     public static final String MODIFICATIONS_UPDATING_IN_PROGRESS = "updatingInProgress";
     public static final String MODIFICATIONS_UPDATING_FINISHED = "UPDATE_FINISHED";
 
+    public static final String EVENTS_CRUD_CREATING_IN_PROGRESS = "eventCreatingInProgress";
+    public static final String EVENTS_CRUD_DELETING_IN_PROGRESS = "eventDeletingInProgress";
+    public static final String EVENTS_CRUD_UPDATING_IN_PROGRESS = "eventUpdatingInProgress";
+    public static final String EVENTS_CRUD_FINISHED = "EVENT_CRUD_FINISHED";
+
     public static final String HEADER_INSERT_MODE = "insertMode";
     public static final String HEADER_NEW_NODE = "newNode";
     public static final String HEADER_REFERENCE_NODE_UUID = "referenceNodeUuid";
@@ -302,6 +307,27 @@ public class NotificationService {
                 .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
                 .setHeader(HEADER_NODES, childrenUuids)
                 .setHeader(HEADER_UPDATE_TYPE, MODIFICATIONS_UPDATING_FINISHED)
+                .build()
+        );
+    }
+
+    public void emitStartEventCrudNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids, String crudType) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
+                .setHeader(HEADER_NODES, childrenUuids)
+                .setHeader(HEADER_UPDATE_TYPE, crudType)
+                .build()
+        );
+    }
+
+    @PostCompletion
+    public void emitEndEventCrudNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
+                .setHeader(HEADER_NODES, childrenUuids)
+                .setHeader(HEADER_UPDATE_TYPE, EVENTS_CRUD_FINISHED)
                 .build()
         );
     }

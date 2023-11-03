@@ -117,7 +117,7 @@ public interface DynamicSimulationService {
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
 
         NetworkInfos network = getDefaultNetwork();
-        return new DynamicSimulationParametersInfos(0.0, 500.0, "", idaSolver.getId(), solvers, network, null);
+        return new DynamicSimulationParametersInfos(0.0, 500.0, "", idaSolver.getId(), solvers, network, null, null);
     }
 
     static NetworkInfos getDefaultNetwork() {
