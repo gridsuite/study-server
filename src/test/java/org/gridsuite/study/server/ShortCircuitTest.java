@@ -197,7 +197,10 @@ public class ShortCircuitTest {
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")) {
                     return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop.*")
+                } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)) {
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                }else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop.*")
                         || path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID : SHORT_CIRCUIT_ANALYSIS_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
@@ -572,6 +575,49 @@ public class ShortCircuitTest {
 
         // stop non existing short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)).andExpect(status().isOk());
+    }
+
+    @Test
+    public void testInvalidateShortCircuitStatus() throws Exception {
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
+                modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
+        UUID modificationNode2Uuid = modificationNode2.getId();
+
+        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid,
+                modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
+        UUID modificationNode3Uuid = modificationNode3.getId();
+
+
+
+        //run a short circuit analysis
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
+                        .header("userId", "userId"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+
+        // invalidate status
+        mockMvc.perform(put("/v1/studies/{studyUuid}/short-circuit/invalidate-status", studyNameUserIdUuid)
+                .header("userId", "userId")).andExpect(status().isOk());
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
+
+
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {

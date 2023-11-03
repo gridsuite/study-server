@@ -2181,6 +2181,5 @@ public class StudyService {
     public void invalidateShortCircuittatus(UUID studyUuid, String userId) {
         invalidateShortCircuitStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        //notificationService.emitElementUpdated(studyUuid, userId);
     }
 }
