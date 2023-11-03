@@ -244,7 +244,7 @@ public class VoltageInitTest {
                                     IdentifiableType.GENERATOR, "genId", Set.of("s1"));
                     return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(networkModificationResult))
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/modifications\\?errorOnGroupNotFound=false&stashed=false&onlyMetadata=.*")) {
+                } else if (path.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/modifications\\?errorOnGroupNotFound=false&stashed=false")) {
                     return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST))
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/stop.*")
@@ -470,7 +470,7 @@ public class VoltageInitTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", studyNameUserIdUuid, modificationNode3Uuid)
                 .header("userId", "userId")).andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(2, server).stream().allMatch(r ->
-                r.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/modifications\\?errorOnGroupNotFound=false&stashed=false&onlyMetadata=false") ||
+                r.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/modifications\\?errorOnGroupNotFound=false&stashed=false") ||
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")
         ));
 

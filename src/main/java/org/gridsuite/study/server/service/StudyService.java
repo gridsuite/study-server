@@ -1227,6 +1227,10 @@ public class StudyService {
         return studyEntity;
     }
 
+    public StudyEntity updateStudyIndexationStatus(UUID studyUuid, StudyIndexationStatus indexationStatus) {
+        return updateStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), indexationStatus);
+    }
+
     @Transactional
     public StudyEntity saveStudyThenCreateBasicTree(StudyEntity studyEntity, UUID importReportUuid) {
         var study = studyRepository.save(studyEntity);
@@ -2060,7 +2064,7 @@ public class StudyService {
     public String getVoltageInitModifications(@NonNull UUID nodeUuid) {
         // get modifications group uuid associated to voltage init results
         UUID voltageInitModificationsGroupUuid = voltageInitService.getModificationsGroupUuid(nodeUuid);
-        return networkModificationService.getModifications(voltageInitModificationsGroupUuid, false, false);
+        return networkModificationService.getModifications(voltageInitModificationsGroupUuid, false);
     }
 
     public void copyVoltageInitModifications(UUID studyUuid, UUID nodeUuid, String userId) {

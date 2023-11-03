@@ -83,12 +83,11 @@ public class NetworkModificationService {
     }
 
     // Return json string because modification dtos are not available here
-    public String getModifications(UUID groupUUid, boolean stashedModifications, boolean onlyMetadata) {
+    public String getModifications(UUID groupUUid, boolean stashedModifications) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH)
             .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
                 .queryParam("stashed", stashedModifications)
-                .queryParam("onlyMetadata", onlyMetadata)
             .buildAndExpand(groupUUid)
             .toUriString();
 

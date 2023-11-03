@@ -551,14 +551,14 @@ public class NetworkModificationTreeService {
 
     // Return json string because modification dtos are not available here
     @Transactional(readOnly = true)
-    public String getNetworkModifications(@NonNull UUID nodeUuid, boolean stashedModifications, boolean onlyMetadata) {
-        return networkModificationService.getModifications(getModificationGroupUuid(nodeUuid), stashedModifications, onlyMetadata);
+    public String getNetworkModifications(@NonNull UUID nodeUuid, boolean stashedModifications) {
+        return networkModificationService.getModifications(getModificationGroupUuid(nodeUuid), stashedModifications);
     }
 
     // Return json string because modification dtos are not available here
     @Transactional(readOnly = true)
     public String getNetworkModifications(@NonNull UUID nodeUuid) {
-        return getNetworkModifications(nodeUuid, false, false);
+        return getNetworkModifications(nodeUuid, false);
     }
 
     @Transactional
