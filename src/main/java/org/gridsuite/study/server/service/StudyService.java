@@ -2137,7 +2137,7 @@ public class StudyService {
     public String getVoltageInitModifications(@NonNull UUID nodeUuid) {
         // get modifications group uuid associated to voltage init results
         UUID voltageInitModificationsGroupUuid = voltageInitService.getModificationsGroupUuid(nodeUuid);
-        return networkModificationService.getModifications(voltageInitModificationsGroupUuid, false);
+        return networkModificationService.getModifications(voltageInitModificationsGroupUuid, false, false);
     }
 
     public void copyVoltageInitModifications(UUID studyUuid, UUID nodeUuid, String userId) {
