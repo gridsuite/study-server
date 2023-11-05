@@ -239,7 +239,7 @@ public class ShortCircuitTest {
         //get default ShortCircuitParameters
         mockMvc.perform(get("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
-                content().string(TestUtils.resourceToString("/short-circui-parameters.json")));
+                content().string(TestUtils.resourceToString("/short-circuit-parameters.json")));
 
         //setting short-circuit analysis Parameters
         //passing self made json because shortCircuitParameter serializer removes the parameters with default value

@@ -896,9 +896,8 @@ public class StudyController {
     public ResponseEntity<Void> setShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) ShortCircuitCustomParameters shortCircuitCustomParameters,
-            @Parameter(description = "predefinedParam") @RequestParam(name = "predefinedParam", defaultValue = "NOMINAL") ShortCircuitPredefinedParametersType predefinedParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setShortCircuitParameters(studyUuid, shortCircuitCustomParameters, userId, predefinedParameters);
+        studyService.setShortCircuitParameters(studyUuid, shortCircuitCustomParameters, userId);
         return ResponseEntity.ok().build();
     }
 

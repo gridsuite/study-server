@@ -219,11 +219,11 @@ public class ShortCircuitService {
                 parameters.isWithVSCConverterStations(),
                 parameters.isWithNeutralPosition(),
                 parameters.getInitialVoltageProfileMode(),
-                //todo: which value to choose: the same as profile mode?
+                // predefinedParameters default value is NOMINAML
                 ShortCircuitPredefinedParametersType.NOMINAL);
     }
 
-    public static ShortCircuitParametersEntity toEntity(ShortCircuitCustomParameters parameters, ShortCircuitPredefinedParametersType predefinedParameters) {
+    public static ShortCircuitParametersEntity toEntity(ShortCircuitCustomParameters parameters) {
         Objects.requireNonNull(parameters);
         return new ShortCircuitParametersEntity(parameters.isWithLimitViolations(),
                 parameters.isWithVoltageResult(),
@@ -236,7 +236,7 @@ public class ShortCircuitService {
                 parameters.isWithVSCConverterStations(),
                 parameters.isWithNeutralPosition(),
                 parameters.getInitialVoltageProfileMode(),
-                predefinedParameters);
+                parameters.getPredefinedParameters());
     }
 
     public static ShortCircuitParameters fromEntity(ShortCircuitParametersEntity entity) {
@@ -257,7 +257,9 @@ public class ShortCircuitService {
                 .setWithVSCConverterStations(withVscConverterStations)
                 .setWithNeutralPosition(withNeutralPosition)
                 .setInitialVoltageProfileMode(initialVoltageProfileMode)
-                .setVoltageRanges(getVoltageRanges(initialVoltageProfileMode));
+                // we need to set  the voltageRanges only if the initialVoltageProfileMode is CONFIGURED
+                // if the initialVoltageProfileMode is NOMINAL the voltageRanges won't be taken care of when serializing the ShortCircuitParameters
+                .setVoltageRanges(getVoltageRanges());
         return shortCircuitParametersCopy;
     }
 
@@ -340,16 +342,15 @@ public class ShortCircuitService {
         }
     }
 
-    public static List<VoltageRange> getVoltageRanges(InitialVoltageProfileMode initialVoltageProfileMode) {
+    public static List<VoltageRange> getVoltageRanges() {
         List<VoltageRange> voltageRanges = new ArrayList<>();
-        boolean isConfigured = InitialVoltageProfileMode.CONFIGURED.equals(initialVoltageProfileMode);
-        voltageRanges.add(new VoltageRange(20.0, isConfigured ? 22.0 : 20.0, isConfigured ? 1.1 : 1));
-        voltageRanges.add(new VoltageRange(45.0, isConfigured ? 49.5 : 45.0, isConfigured ? 1.1 : 1));
-        voltageRanges.add(new VoltageRange(63.0, isConfigured ? 69.3 : 63.0, isConfigured ? 1.1 : 1));
-        voltageRanges.add(new VoltageRange(90.0, isConfigured ? 99.0 : 90.0, isConfigured ? 1.1 : 1));
-        voltageRanges.add(new VoltageRange(150.0, isConfigured ? 165.0 : 150.0, isConfigured ? 1.1 : 1));
-        voltageRanges.add(new VoltageRange(225.0, isConfigured ? 245.0 : 225.0, isConfigured ? 1.09 : 1));
-        voltageRanges.add(new VoltageRange(400.0, isConfigured ? 420.0 : 400.0, isConfigured ? 1.09 : 1));
+        voltageRanges.add(new VoltageRange(20.0, 22.0, 1.1));
+        voltageRanges.add(new VoltageRange(45.0, 49.5, 1.1));
+        voltageRanges.add(new VoltageRange(63.0, 69.3, 1.1));
+        voltageRanges.add(new VoltageRange(90.0, 99.0, 1.1));
+        voltageRanges.add(new VoltageRange(150.0, 165.0, 1.1));
+        voltageRanges.add(new VoltageRange(225.0, 245.0, 1.09));
+        voltageRanges.add(new VoltageRange(400.0, 420.0, 1.09));
         return voltageRanges;
     }
 
@@ -367,7 +368,6 @@ public class ShortCircuitService {
                 .withVSCConverterStations(entity.isWithVscConverterStations())
                 .withNeutralPosition(entity.isWithNeutralPosition())
                 .initialVoltageProfileMode(entity.getInitialVoltageProfileMode())
-                .voltageRanges(getVoltageRanges(entity.getInitialVoltageProfileMode()))
                 .predefinedParameters(entity.getPredefinedParameters())
                 .version(VERSION)
                 .build();

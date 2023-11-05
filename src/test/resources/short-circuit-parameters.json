@@ -1,0 +1,15 @@
+{
+  "version": "1.2",
+  "withLimitViolations": true,
+  "withFortescueResult": false,
+  "withFeederResult": true,
+  "studyType": "TRANSIENT",
+  "withVoltageResult": false,
+  "minVoltageDropProportionalThreshold": 20.0,
+  "withLoads": true,
+  "withShuntCompensators": true,
+  "withVSCConverterStations": true,
+  "withNeutralPosition": false,
+  "initialVoltageProfileMode": "NOMINAL",
+  "predefinedParameters": "NOMINAL"
+}
