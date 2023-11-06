@@ -139,7 +139,8 @@ public class StudyService {
 
     public enum ReportType {
         NETWORK_MODIFICATION("NetworkModification"),
-        LOAD_FLOW("LoadFlow");
+        LOAD_FLOW("LoadFlow"),
+        SECURITY_ANALYSIS("SecurityAnalysis");
         private final String name;
 
         ReportType(String name) {
