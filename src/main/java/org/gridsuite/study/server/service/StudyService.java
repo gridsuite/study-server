@@ -141,7 +141,8 @@ public class StudyService {
         NETWORK_MODIFICATION("NetworkModification"),
         LOAD_FLOW("LoadFlow"),
         SECURITY_ANALYSIS("SecurityAnalysis"),
-        SHORT_CIRCUIT_ANALYSIS("ShortCircuitAnalysis");
+        SHORT_CIRCUIT_ANALYSIS("ShortCircuitAnalysis"),
+        SENSITIVITY_ANALYSIS("SensitivityAnalysis");
         private final String name;
 
         ReportType(String name) {
