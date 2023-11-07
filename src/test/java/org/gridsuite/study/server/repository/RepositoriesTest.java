@@ -10,7 +10,7 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.InitialVoltageProfileMode;
 import com.powsybl.shortcircuit.StudyType;
 import lombok.SneakyThrows;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedParametersType;
+import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.After;
 import org.junit.Test;
@@ -60,7 +60,7 @@ public class RepositoriesTest {
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
                 countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false, 0.95, List.of());
-        ShortCircuitParametersEntity shortCircuitParametersEntity = new ShortCircuitParametersEntity(false, false, false, false, StudyType.TRANSIENT, 1, false, false, false, false, InitialVoltageProfileMode.NOMINAL, ShortCircuitPredefinedParametersType.NOMINAL);
+        ShortCircuitParametersEntity shortCircuitParametersEntity = new ShortCircuitParametersEntity(false, false, false, false, StudyType.TRANSIENT, 1, false, false, false, false, InitialVoltageProfileMode.NOMINAL, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
 
         countriesTemp.add("IT");
         LoadFlowParametersEntity loadFlowParametersEntity2 = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
@@ -68,7 +68,7 @@ public class RepositoriesTest {
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
                 countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false, 0.95, List.of());
-        ShortCircuitParametersEntity shortCircuitParametersEntity2 = new ShortCircuitParametersEntity(true, true, false, true, StudyType.STEADY_STATE, 0, false, false, false, false, InitialVoltageProfileMode.NOMINAL, ShortCircuitPredefinedParametersType.NOMINAL);
+        ShortCircuitParametersEntity shortCircuitParametersEntity2 = new ShortCircuitParametersEntity(true, true, false, true, StudyType.STEADY_STATE, 0, false, false, false, false, InitialVoltageProfileMode.NOMINAL, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
 
         countriesTemp.add("DE");
         LoadFlowParametersEntity loadFlowParametersEntity3 = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
@@ -76,7 +76,7 @@ public class RepositoriesTest {
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
                 countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false, 0.895, List.of());
-        ShortCircuitParametersEntity shortCircuitParametersEntity3 = new ShortCircuitParametersEntity(true, false, false, true, StudyType.SUB_TRANSIENT, 10, false, false, false, false, InitialVoltageProfileMode.NOMINAL, ShortCircuitPredefinedParametersType.NOMINAL);
+        ShortCircuitParametersEntity shortCircuitParametersEntity3 = new ShortCircuitParametersEntity(true, false, false, true, StudyType.SUB_TRANSIENT, 10, false, false, false, false, InitialVoltageProfileMode.NOMINAL, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
 
         StudyEntity studyEntity1 = StudyEntity.builder()
                 .id(UUID.randomUUID())

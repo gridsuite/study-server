@@ -11,7 +11,7 @@ import com.powsybl.shortcircuit.StudyType;
 import lombok.*;
 
 import jakarta.persistence.*;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedParametersType;
+import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 
 import java.util.UUID;
 
@@ -27,7 +27,7 @@ import java.util.UUID;
 @Table(name = "shortCircuitParameters")
 public class ShortCircuitParametersEntity {
 
-    public ShortCircuitParametersEntity(boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult, boolean withFeederResult, StudyType studyType, double minVoltageDropProportionalThreshold, boolean withLoads, boolean withShuntCompensators, boolean withVscConverterStations, boolean withNeutralPosition, InitialVoltageProfileMode initialVoltageProfileMode, ShortCircuitPredefinedParametersType predefinedParameters) {
+    public ShortCircuitParametersEntity(boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult, boolean withFeederResult, StudyType studyType, double minVoltageDropProportionalThreshold, boolean withLoads, boolean withShuntCompensators, boolean withVscConverterStations, boolean withNeutralPosition, InitialVoltageProfileMode initialVoltageProfileMode, ShortCircuitPredefinedConfiguration predefinedParameters) {
         this(null, withLimitViolations, withVoltageResult, withFortescueResult, withFeederResult, studyType, minVoltageDropProportionalThreshold, predefinedParameters, withLoads, withShuntCompensators, withVscConverterStations, withNeutralPosition, initialVoltageProfileMode);
     }
 
@@ -57,7 +57,7 @@ public class ShortCircuitParametersEntity {
 
     @Column(name = "predefinedParameters")
     @Enumerated(EnumType.STRING)
-    private ShortCircuitPredefinedParametersType predefinedParameters;
+    private ShortCircuitPredefinedConfiguration predefinedParameters;
 
     @Column(name = "withLoads", columnDefinition = "boolean default true")
     private boolean withLoads;

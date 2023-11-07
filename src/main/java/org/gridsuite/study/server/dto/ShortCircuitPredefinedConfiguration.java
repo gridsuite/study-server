@@ -9,7 +9,7 @@ package org.gridsuite.study.server.dto;
 /**
  * @author AJELLAL Ali <ali.ajellal@rte-france.com>
  */
-public enum ShortCircuitPredefinedParametersType {
-    NOMINAL,
-    CONFIGURED
+public enum ShortCircuitPredefinedConfiguration {
+    ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP,
+    ICC_MAX_WITH_CEI909
 }

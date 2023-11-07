@@ -16,9 +16,9 @@ import com.powsybl.shortcircuit.VoltageRange;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ShortCircuitCustomParameters;
+import org.gridsuite.study.server.dto.ShortCircuitParametersInfo;
 import org.gridsuite.study.server.dto.ShortCircuitStatus;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedParametersType;
+import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -242,10 +242,10 @@ public class ShortCircuitService {
                 parameters.isWithNeutralPosition(),
                 parameters.getInitialVoltageProfileMode(),
                 // predefinedParameters default value is NOMINAL
-                ShortCircuitPredefinedParametersType.NOMINAL);
+                ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
     }
 
-    public static ShortCircuitParametersEntity toEntity(ShortCircuitCustomParameters parameters) {
+    public static ShortCircuitParametersEntity toEntity(ShortCircuitParametersInfo parameters) {
         Objects.requireNonNull(parameters);
         return new ShortCircuitParametersEntity(parameters.isWithLimitViolations(),
                 parameters.isWithVoltageResult(),
@@ -357,9 +357,9 @@ public class ShortCircuitService {
         return voltageRanges;
     }
 
-    public static ShortCircuitCustomParameters toCustomParameters(ShortCircuitParametersEntity entity) {
+    public static ShortCircuitParametersInfo toCustomParameters(ShortCircuitParametersEntity entity) {
         Objects.requireNonNull(entity);
-        return ShortCircuitCustomParameters.builder()
+        return ShortCircuitParametersInfo.builder()
                 .studyType(entity.getStudyType())
                 .minVoltageDropProportionalThreshold(entity.getMinVoltageDropProportionalThreshold())
                 .withFeederResult(entity.isWithFeederResult())

@@ -7,8 +7,13 @@
 package org.gridsuite.study.server.dto;
 
 import com.powsybl.shortcircuit.InitialVoltageProfileMode;
+import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.shortcircuit.StudyType;
+import com.powsybl.shortcircuit.VoltageRange;
 import lombok.*;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author AJELLAL Ali <ali.ajellal@rte-france.com>
@@ -19,7 +24,7 @@ import lombok.*;
 @Getter
 @Setter
 @Builder
-public class ShortCircuitCustomParameters {
+public class ShortCircuitParametersInfo {
     private String version;
     private boolean withLimitViolations;
     private boolean withFortescueResult;
@@ -32,5 +37,7 @@ public class ShortCircuitCustomParameters {
     private boolean withVSCConverterStations;
     private boolean withNeutralPosition;
     private InitialVoltageProfileMode initialVoltageProfileMode;
-    private ShortCircuitPredefinedParametersType predefinedParameters;
+    private ShortCircuitPredefinedConfiguration predefinedParameters;
+    private ShortCircuitParameters parameters;
+    private Map<String, List<VoltageRange>> voltageRanges;
 }
