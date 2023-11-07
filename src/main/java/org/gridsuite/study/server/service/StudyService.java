@@ -1058,10 +1058,9 @@ public class StudyService {
     }
 
     public ShortCircuitCustomParameters getShortCircuitCustomParameters(UUID studyUuid) {
-        ShortCircuitCustomParameters shortCircuitCustomParameters = studyRepository.findById(studyUuid)
+        return studyRepository.findById(studyUuid)
                 .map(studyEntity -> ShortCircuitService.toCustomParameters(studyEntity.getShortCircuitParameters()))
                 .orElse(null);
-        return shortCircuitCustomParameters;
     }
 
     @Transactional
@@ -2195,7 +2194,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void invalidateShortCircuittatus(UUID studyUuid, String userId) {
+    public void invalidateShortCircuitStatus(UUID studyUuid, String userId) {
         invalidateShortCircuitStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);

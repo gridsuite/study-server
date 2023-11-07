@@ -241,7 +241,7 @@ public class ShortCircuitService {
                 parameters.isWithVSCConverterStations(),
                 parameters.isWithNeutralPosition(),
                 parameters.getInitialVoltageProfileMode(),
-                // predefinedParameters default value is NOMINAML
+                // predefinedParameters default value is NOMINAL
                 ShortCircuitPredefinedParametersType.NOMINAL);
     }
 
@@ -267,7 +267,7 @@ public class ShortCircuitService {
     }
 
     private static ShortCircuitParameters newShortCircuitParameters(StudyType studyType, double minVoltageDropProportionalThreshold, boolean withFeederResult, boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult, boolean withLoads, boolean withShuntCompensators, boolean withVscConverterStations, boolean withNeutralPosition, InitialVoltageProfileMode initialVoltageProfileMode) {
-        ShortCircuitParameters shortCircuitParametersCopy = new ShortCircuitParameters()
+        return new ShortCircuitParameters()
                 .setStudyType(studyType)
                 .setMinVoltageDropProportionalThreshold(minVoltageDropProportionalThreshold)
                 .setWithFeederResult(withFeederResult)
@@ -282,7 +282,6 @@ public class ShortCircuitService {
                 // we need to set  the voltageRanges only if the initialVoltageProfileMode is CONFIGURED
                 // if the initialVoltageProfileMode is NOMINAL the voltageRanges won't be taken care of when serializing the ShortCircuitParameters
                 .setVoltageRanges(getVoltageRanges());
-        return shortCircuitParametersCopy;
     }
 
     public static ShortCircuitParameters copy(ShortCircuitParameters shortCircuitParameters) {
@@ -290,7 +289,7 @@ public class ShortCircuitService {
     }
 
     private static ShortCircuitParameters newShortCircuitParameters(StudyType studyType, double minVoltageDropProportionalThreshold, boolean withFeederResult, boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult, boolean withLoads, boolean withShuntCompensators, boolean withVscConverterStations, boolean withNeutralPosition, InitialVoltageProfileMode initialVoltageProfileMode, List<VoltageRange> voltageRanges) {
-        ShortCircuitParameters shortCircuitParametersCopy = new ShortCircuitParameters()
+        return new ShortCircuitParameters()
                 .setStudyType(studyType)
                 .setMinVoltageDropProportionalThreshold(minVoltageDropProportionalThreshold)
                 .setWithFeederResult(withFeederResult)
@@ -304,28 +303,10 @@ public class ShortCircuitService {
                 .setWithNeutralPosition(withNeutralPosition)
                 .setInitialVoltageProfileMode(initialVoltageProfileMode)
                 .setVoltageRanges(voltageRanges);
-        return shortCircuitParametersCopy;
     }
 
     public static ShortCircuitParameters getDefaultShortCircuitParameters() {
         return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, true, true, true, false, InitialVoltageProfileMode.NOMINAL, null);
-    }
-
-    public static ShortCircuitCustomParameters getDefaultShortCircuitCustomParameters() {
-        return ShortCircuitCustomParameters.builder()
-                .studyType(StudyType.TRANSIENT)
-                .minVoltageDropProportionalThreshold(20)
-                .withFeederResult(true)
-                .withLimitViolations(true)
-                .withVoltageResult(false)
-                .withFortescueResult(false)
-                .withLoads(true)
-                .withShuntCompensators(true)
-                .withVSCConverterStations(true)
-                .withNeutralPosition(false)
-                .initialVoltageProfileMode(InitialVoltageProfileMode.NOMINAL)
-                .predefinedParameters(ShortCircuitPredefinedParametersType.NOMINAL)
-                .build();
     }
 
     public void setShortCircuitServerBaseUri(String shortCircuitServerBaseUri) {
@@ -378,7 +359,7 @@ public class ShortCircuitService {
 
     public static ShortCircuitCustomParameters toCustomParameters(ShortCircuitParametersEntity entity) {
         Objects.requireNonNull(entity);
-        ShortCircuitCustomParameters shortCircuitCustomParameters = ShortCircuitCustomParameters.builder()
+        return ShortCircuitCustomParameters.builder()
                 .studyType(entity.getStudyType())
                 .minVoltageDropProportionalThreshold(entity.getMinVoltageDropProportionalThreshold())
                 .withFeederResult(entity.isWithFeederResult())
@@ -393,7 +374,6 @@ public class ShortCircuitService {
                 .predefinedParameters(entity.getPredefinedParameters())
                 .version(VERSION)
                 .build();
-        return shortCircuitCustomParameters;
     }
 
     public void invalidateShortCircuitStatus(List<UUID> uuids) {

@@ -1705,7 +1705,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit status has been invalidated on all study nodes"), @ApiResponse(responseCode = "404", description = "The study is not found")})
     public ResponseEntity<Void> invalidateShortCircuitStatus(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.invalidateShortCircuittatus(studyUuid, userId);
+        studyService.invalidateShortCircuitStatus(studyUuid, userId);
         return ResponseEntity.ok().build();
     }
 }
