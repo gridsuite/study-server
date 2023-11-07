@@ -54,7 +54,7 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_REPORT_SEVERITY_LEVEL = "severityLevels";
     public static final String QUERY_PARAM_REPORT_WITH_ELEMENTS = "withElements";
     public static final String QUERY_PARAM_REPORT_TASKKEY_FILTER = "taskKeyFilter";
-    public static final String QUERY_PARAM_REPORT_TASKKEY_TYPE_FILTER = "taskKeyTypeFilter";
+    public static final String QUERY_PARAM_REPORT_TASKKEY_FILTER_MATCHING_TYPE = "taskKeyFilterMatchingType";
     public static final String QUERY_PARAM_RECEIVER = "receiver";
     public static final String HEADER_RECEIVER = "receiver";
     public static final String HEADER_BUS_ID = "busId";

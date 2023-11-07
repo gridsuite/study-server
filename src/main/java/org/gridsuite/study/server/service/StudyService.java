@@ -133,8 +133,12 @@ public class StudyService {
     private final CaseService caseService;
     private final ObjectMapper objectMapper;
 
-    enum ComputationUsingLoadFlow {
+    public enum ComputationUsingLoadFlow {
         LOAD_FLOW, SECURITY_ANALYSIS, SENSITIVITY_ANALYSIS
+    }
+
+    public enum TaskKeyFilterMatchingType {
+        EXACT_MATCHING, ENDS_WITH
     }
 
     public enum ReportType {
@@ -1777,15 +1781,23 @@ public class StudyService {
         // TODO : Remove this hack when the taskKey of the root node will be replaced by the node uuid
         AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
         String taskKeyFilter = nodeInfos.getType() == NodeType.ROOT ? null : nodeUuid.toString() + "@" + reportType.toString();
-        return getSubReporters(nodeUuid, UUID.fromString(reportId), taskKeyFilter, null, severityLevels);
+        return getSubReporters(nodeUuid, UUID.fromString(reportId), taskKeyFilter, TaskKeyFilterMatchingType.EXACT_MATCHING, severityLevels);
     }
 
     @Transactional(readOnly = true)
     public List<ReporterModel> getParentNodesReport(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType, Set<String> severityLevels) {
+        String taskKeyFilter;
+        TaskKeyFilterMatchingType filterMatchingType;
+        if (nodeOnlyReport) {
+            taskKeyFilter = nodeUuid + "@" + reportType;
+            filterMatchingType = TaskKeyFilterMatchingType.EXACT_MATCHING;
+        } else {
+            // in "all logs/nodes" mode, we have to filter only on the report type (ex: anything ending with "@NetWorkModification")
+            taskKeyFilter = "@" + reportType;
+            filterMatchingType = TaskKeyFilterMatchingType.ENDS_WITH;
+        }
         AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
-        String taskKeyFilter = nodeOnlyReport ? nodeUuid.toString() + "@" + reportType.toString() : null;
-        String taskKeyTypeFilter = nodeOnlyReport ? null : "@" + reportType.toString();
-        List<ReporterModel> subReporters = getSubReporters(nodeUuid, nodeInfos.getReportUuid(), taskKeyFilter, taskKeyTypeFilter, severityLevels);
+        List<ReporterModel> subReporters = getSubReporters(nodeUuid, nodeInfos.getReportUuid(), taskKeyFilter, filterMatchingType, severityLevels);
         if (subReporters.isEmpty()) {
             return subReporters;
         } else if (nodeOnlyReport) {
@@ -1803,8 +1815,8 @@ public class StudyService {
         }
     }
 
-    private List<ReporterModel> getSubReporters(UUID nodeUuid, UUID reportUuid, String taskKeyfilter, String taskKeyTypefilter, Set<String> severityLevels) {
-        ReporterModel reporter = reportService.getReport(reportUuid, nodeUuid.toString(), taskKeyfilter, taskKeyTypefilter, severityLevels);
+    private List<ReporterModel> getSubReporters(UUID nodeUuid, UUID reportUuid, String taskKeyfilter, TaskKeyFilterMatchingType filterMatchingType, Set<String> severityLevels) {
+        ReporterModel reporter = reportService.getReport(reportUuid, nodeUuid.toString(), taskKeyfilter, filterMatchingType, severityLevels);
         Map<String, List<ReporterModel>> subReportersByNode = new LinkedHashMap<>();
         reporter.getSubReporters().forEach(subReporter -> subReportersByNode.putIfAbsent(getNodeIdFromReportKey(subReporter), new ArrayList<>()));
         reporter.getSubReporters().forEach(subReporter ->

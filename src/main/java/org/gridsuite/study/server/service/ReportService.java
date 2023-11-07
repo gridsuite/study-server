@@ -65,16 +65,14 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "subreports" + DELIMITER;
     }
 
-    public ReporterModel getReport(@NonNull UUID id, @NonNull String defaultName, String taskKeyFilter, String taskKeyTypeFilter, Set<String> severityLevels) {
+    public ReporterModel getReport(@NonNull UUID id, @NonNull String defaultName, String taskKeyFilter, StudyService.TaskKeyFilterMatchingType filterMatchingType, Set<String> severityLevels) {
         var uriBuilder = UriComponentsBuilder.fromPath("{id}")
                 .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
                 .queryParam(QUERY_PARAM_REPORT_WITH_ELEMENTS, true)
                 .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
         if (taskKeyFilter != null && !taskKeyFilter.isEmpty()) {
             uriBuilder.queryParam(QUERY_PARAM_REPORT_TASKKEY_FILTER, taskKeyFilter);
-        }
-        if (taskKeyTypeFilter != null && !taskKeyTypeFilter.isEmpty()) {
-            uriBuilder.queryParam(QUERY_PARAM_REPORT_TASKKEY_TYPE_FILTER, taskKeyTypeFilter);
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_TASKKEY_FILTER_MATCHING_TYPE, filterMatchingType);
         }
         return reportServerCall(id, this.getReportsServerURI(), uriBuilder);
     }
