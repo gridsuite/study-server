@@ -22,29 +22,95 @@ import lombok.experimental.SuperBuilder;
 @Setter
 public class SimSolverInfos extends AbstractSolverInfos {
 
+    public static final String H_MIN = "hMin";
+    public static final String H_MAX = "hMax";
+    public static final String K_REDUCE_STEP = "kReduceStep";
+
     // Important note: must using @JsonProperty to precise property's name when serialize/deserialize
     // fields which begin by a minuscule following by a majuscule, for example 'hMxxx', otherwise jackson
     // mapper will serialize as 'hmxxx' by default
-    @JsonProperty("hMin")
+    @JsonProperty(H_MIN)
     private double hMin;
 
-    @JsonProperty("hMax")
+    @JsonProperty(H_MAX)
     private double hMax;
 
-    @JsonProperty("kReduceStep")
+    @JsonProperty(K_REDUCE_STEP)
     private double kReduceStep;
-
-    @JsonProperty("nEff")
-    private int nEff;
-
-    @JsonProperty("nDeadband")
-    private int nDeadband;
-
-    private int maxRootRestart;
 
     private int maxNewtonTry;
 
     private String linearSolverName;
 
-    private boolean recalculateStep;
+    private double fnormtol;
+
+    private double initialaddtol;
+
+    private double scsteptol;
+
+    private double mxnewtstep;
+
+    private int msbset;
+
+    private int mxiter;
+
+    private int printfl;
+
+    private boolean optimizeAlgebraicResidualsEvaluations;
+
+    private boolean skipNRIfInitialGuessOK;
+
+    private boolean enableSilentZ;
+
+    private boolean optimizeReinitAlgebraicResidualsEvaluations;
+
+    private String minimumModeChangeTypeForAlgebraicRestoration;
+
+    private String minimumModeChangeTypeForAlgebraicRestorationInit;
+
+    private double fnormtolAlg;
+
+    private double initialaddtolAlg;
+
+    private double scsteptolAlg;
+
+    private double mxnewtstepAlg;
+
+    private int msbsetAlg;
+
+    private int mxiterAlg;
+
+    private int printflAlg;
+
+    private double fnormtolAlgJ;
+
+    private double initialaddtolAlgJ;
+
+    private double scsteptolAlgJ;
+
+    private double mxnewtstepAlgJ;
+
+    private int msbsetAlgJ;
+
+    private int mxiterAlgJ;
+
+    private int printflAlgJ;
+
+    private double fnormtolAlgInit;
+
+    private double initialaddtolAlgInit;
+
+    private double scsteptolAlgInit;
+
+    private double mxnewtstepAlgInit;
+
+    private int msbsetAlgInit;
+
+    private int mxiterAlgInit;
+
+    private int printflAlgInit;
+
+    private int maximumNumberSlowStepIncrease;
+
+    private double minimalAcceptableStep;
 }
