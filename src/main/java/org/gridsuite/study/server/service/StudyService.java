@@ -14,7 +14,6 @@ import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.TypedValue;
 import com.powsybl.iidm.network.*;
 import com.powsybl.security.LimitViolation;
-import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.security.SecurityAnalysisParameters;
@@ -31,13 +30,14 @@ import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
-import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.sensianalysis.*;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
+import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
+import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact.ImpactType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -1819,25 +1819,31 @@ public class StudyService {
 
         Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
             networkModificationResult.getNetworkImpacts().stream()
-                .filter(impact -> impact.getImpactType() == SimpleImpactType.DELETION)
-                .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(impact.getElementId(), impact.getElementType().name()))
+                .filter(impact -> impact.getImpactType() == ImpactType.DELETION)
+                .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(((SimpleElementImpact) impact).getElementId(), impact.getElementType().name()))
             .collect(Collectors.toSet());
+
+        Set<String> collectionElementImpacts = networkModificationResult.getNetworkImpacts().stream()
+                .filter(impact -> impact.getImpactType() == ImpactType.COLLECTION)
+                .map(impact -> impact.getElementType().name())
+                .collect(Collectors.toSet());
 
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
             NetworkImpactsInfos.builder()
                 .deletedEquipments(deletionsInfos)
                 .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
+                .collectionElementImpacts(collectionElementImpacts)
                 .build()
-        );
+        );    
 
         if (networkModificationResult.getNetworkImpacts().stream()
-            .filter(impact -> impact.getImpactType() == SimpleImpactType.MODIFICATION)
+            .filter(impact -> impact.getImpactType() == ImpactType.MODIFICATION)
             .anyMatch(impact -> impact.getElementType() == IdentifiableType.SWITCH)) {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SWITCH);
         }
 
         if (networkModificationResult.getNetworkImpacts().stream()
-            .filter(impact -> impact.getImpactType() == SimpleImpactType.MODIFICATION)
+            .filter(impact -> impact.getImpactType() == ImpactType.MODIFICATION)
             .anyMatch(impact -> impact.getElementType() == IdentifiableType.LINE)) {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LINE);
         }

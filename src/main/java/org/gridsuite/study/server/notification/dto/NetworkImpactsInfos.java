@@ -9,6 +9,8 @@ package org.gridsuite.study.server.notification.dto;
 
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import lombok.*;
 
 @AllArgsConstructor
@@ -23,5 +25,9 @@ public class NetworkImpactsInfos {
 
     @Builder.Default
     private Set<EquipmentDeletionInfos> deletedEquipments = Set.of();
+
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    @Builder.Default
+    private Set<String> collectionElementImpacts = Set.of();
 }
 

@@ -4,8 +4,8 @@
   "networkImpacts": [
     {
       "impactType": "CREATION",
-      "elementId": "lineId",
       "elementType": "LINE",
+      "elementId": "lineId",
       "substationIds": [
         "s1",
         "s2"
@@ -13,32 +13,32 @@
     },
     {
       "impactType": "MODIFICATION",
-      "elementId": "loadId",
       "elementType": "LOAD",
+      "elementId": "loadId",
       "substationIds": [
         "s3"
       ]
     },
     {
       "impactType": "DELETION",
-      "elementId": "generatorId",
       "elementType": "GENERATOR",
+      "elementId": "generatorId",
       "substationIds": [
         "s4"
       ]
     },
     {
       "impactType": "MODIFICATION",
-      "elementId": "substationId1",
       "elementType": "SUBSTATION",
+      "elementId": "substationId1",
       "substationIds": [
         "substationId1"
       ]
     },
     {
       "impactType": "DELETION",
-      "elementId": "substationId2",
       "elementType": "SUBSTATION",
+      "elementId": "substationId2",
       "substationIds": [
         "substationId2"
       ]

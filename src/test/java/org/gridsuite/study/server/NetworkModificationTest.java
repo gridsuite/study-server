@@ -32,8 +32,8 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
+import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact.ImpactType;
 import org.gridsuite.study.server.dto.modification.*;
-import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
@@ -137,7 +137,7 @@ public class NetworkModificationTest {
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
     private static final String URI_NETWORK_MODIF_WITH_ID = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{uuid}";
 
-    private static final NetworkModificationResult DEFAULT_BUILD_RESULT = createModificationResultWithElementImpact(SimpleImpactType.CREATION, IdentifiableType.LINE, "lineId", Set.of("s1", "s2")).get();
+    private static final NetworkModificationResult DEFAULT_BUILD_RESULT = createModificationResultWithElementImpact(ImpactType.CREATION, IdentifiableType.LINE, "lineId", Set.of("s1", "s2")).get();
 
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
@@ -463,7 +463,7 @@ public class NetworkModificationTest {
 
         // Create network modification on BUILT modification node
         Optional<NetworkModificationResult> networkModificationResult =
-                createModificationResultWithElementImpact(SimpleImpactType.CREATION, IdentifiableType.LOAD, "loadId", Set.of("s1"));
+                createModificationResultWithElementImpact(ImpactType.CREATION, IdentifiableType.LOAD, "loadId", Set.of("s1"));
         stubId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(networkModificationResult));
         NetworkImpactsInfos expectedPayload = NetworkImpactsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s1")).deletedEquipments(ImmutableSet.of()).build();
 
@@ -586,7 +586,7 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
 
         Optional<NetworkModificationResult> networkModificationResult =
-            createModificationResultWithElementImpact(SimpleImpactType.MODIFICATION, IdentifiableType.SWITCH, "switchId", Set.of("s1", "s2", "s3"));
+            createModificationResultWithElementImpact(ImpactType.MODIFICATION, IdentifiableType.SWITCH, "switchId", Set.of("s1", "s2", "s3"));
         stubId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(networkModificationResult));
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJson).contentType(MediaType.APPLICATION_JSON)
@@ -2394,7 +2394,7 @@ public class NetworkModificationTest {
 
         // Create network modification on BUILT modification node
         Optional<NetworkModificationResult> networkModificationResult =
-                createModificationResultWithElementImpact(SimpleImpactType.CREATION, IdentifiableType.LOAD, "loadId", Set.of("s1"));
+                createModificationResultWithElementImpact(ImpactType.CREATION, IdentifiableType.LOAD, "loadId", Set.of("s1"));
         stubId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(networkModificationResult));
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                         .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)

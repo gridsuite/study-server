@@ -23,8 +23,8 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact.ImpactType;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
-import org.gridsuite.study.server.dto.modification.SimpleElementImpact;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 
 import org.gridsuite.study.server.notification.NotificationService;
@@ -240,7 +240,7 @@ public class VoltageInitTest {
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/groups/.*/duplications.*")) {
                     Optional<NetworkModificationResult> networkModificationResult =
-                            createModificationResultWithElementImpact(SimpleElementImpact.SimpleImpactType.MODIFICATION,
+                            createModificationResultWithElementImpact(ImpactType.MODIFICATION,
                                     IdentifiableType.GENERATOR, "genId", Set.of("s1"));
                     return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(networkModificationResult))
                             .addHeader("Content-Type", "application/json; charset=utf-8");
