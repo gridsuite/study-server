@@ -143,9 +143,11 @@ public class StudyService {
 
     public enum ReportType {
         NETWORK_MODIFICATION("NetworkModification"),
-        LOAD_FLOW("LoadFlow"),
+        LOADFLOW("LoadFlow"),
         SECURITY_ANALYSIS("SecurityAnalysis"),
         SHORT_CIRCUIT_ANALYSIS("ShortCircuitAnalysis"),
+        ALL_BUSES_SHORTCIRCUIT_ANALYSIS("AllBusesShortCircuitAnalysis"),
+        ONE_BUS_SHORTCIRCUIT_ANALYSIS("OneBusShortCircuitAnalysis"),
         SENSITIVITY_ANALYSIS("SensitivityAnalysis");
         private final String name;
 
