@@ -24,6 +24,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -56,22 +57,39 @@ public class ReportService {
         this.reportServerBaseUri = reportServerBaseUri;
     }
 
-    private String getReportServerURI() {
+    private String getReportsServerURI() {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "reports" + DELIMITER;
     }
 
-    public ReporterModel getReport(@NonNull UUID reportUuid, @NonNull String defaultName) {
-        var path = UriComponentsBuilder.fromPath("{reportUuid}")
-            .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
-            .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false)
-            .buildAndExpand(reportUuid)
-            .toUriString();
+    private String getSubReportsServerURI() {
+        return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "subreports" + DELIMITER;
+    }
+
+    public ReporterModel getReport(@NonNull UUID id, @NonNull String defaultName, String taskKeyFilter, Set<String> severityLevels) {
+        var uriBuilder = UriComponentsBuilder.fromPath("{id}")
+                .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
+                .queryParam(QUERY_PARAM_REPORT_WITH_ELEMENTS, true)
+                .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
+        if (taskKeyFilter != null && !taskKeyFilter.isEmpty()) {
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_TASKKEY_FILTER, taskKeyFilter);
+        }
+        return reportServerCall(id, this.getReportsServerURI(), uriBuilder);
+    }
+
+    public ReporterModel getSubReport(@NonNull UUID id, Set<String> severityLevels) {
+        var uriBuilder = UriComponentsBuilder.fromPath("{id}")
+                .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
+        return reportServerCall(id, this.getSubReportsServerURI(), uriBuilder);
+    }
+
+    private ReporterModel reportServerCall(UUID id, String serverUri, UriComponentsBuilder uriBuilder) {
+        var path = uriBuilder.buildAndExpand(id).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        List<ReporterModel> reporters = restTemplate.exchange(this.getReportServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReporterModel>>() {
+        List<ReporterModel> reporters = restTemplate.exchange(serverUri + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReporterModel>>() {
         }).getBody();
         // TODO : Remove this hack when fix to avoid key collision in hades2 will be done
-        ReporterModel reporter = new ReporterModel(reportUuid.toString(), reportUuid.toString());
+        ReporterModel reporter = new ReporterModel(id.toString(), id.toString());
         if (reporters != null) {
             reporters.forEach(reporter::addSubReporter);
         }
@@ -83,7 +101,7 @@ public class ReportService {
             .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false)
             .buildAndExpand(reportUuid)
             .toUriString();
-        restTemplate.delete(this.getReportServerURI() + path);
+        restTemplate.delete(this.getReportsServerURI() + path);
     }
 
     public void deleteTreeReports(@NonNull Map<UUID, String> treeReportsKeys) {

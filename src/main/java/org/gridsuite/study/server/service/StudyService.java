@@ -11,6 +11,7 @@ import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
+import com.powsybl.commons.reporter.TypedValue;
 import com.powsybl.iidm.network.*;
 import com.powsybl.security.LimitViolation;
 import com.powsybl.iidm.network.VariantManagerConstants;
@@ -38,6 +39,7 @@ import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -1461,17 +1463,16 @@ public class StudyService {
         }
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
-                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
+            studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
         );
-
         try {
             executeInParallel.get();
         } catch (Exception e) {
@@ -1748,12 +1749,23 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReporterModel> getNodeReport(UUID nodeUuid, boolean nodeOnlyReport) {
-        return getSubReportersByNodeFrom(nodeUuid, nodeOnlyReport);
+    public ReporterModel getSubReport(String subReportId, Set<String> severityLevels) {
+        return reportService.getSubReport(UUID.fromString(subReportId), severityLevels);
     }
 
-    private List<ReporterModel> getSubReportersByNodeFrom(UUID nodeUuid, boolean nodeOnlyReport) {
-        List<ReporterModel> subReporters = getSubReportersByNodeFrom(nodeUuid);
+    @Transactional(readOnly = true)
+    public List<ReporterModel> getNodeReport(UUID nodeUuid, String reportId, Set<String> severityLevels) {
+        // Hack: filtering Root node with its nodeId in report db does not work
+        // TODO : Remove this hack when the taskKey of the root node will be replaced by the node uuid
+        AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
+        String taskKeyFilter = nodeInfos.getType() == NodeType.ROOT ? null : nodeUuid.toString();
+        return getSubReporters(nodeUuid, UUID.fromString(reportId), severityLevels, taskKeyFilter);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReporterModel> getParentNodesReport(UUID nodeUuid, boolean nodeOnlyReport, Set<String> severityLevels) {
+        AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
+        List<ReporterModel> subReporters = getSubReporters(nodeUuid, nodeInfos.getReportUuid(), severityLevels, null);
         if (subReporters.isEmpty()) {
             return subReporters;
         } else if (nodeOnlyReport) {
@@ -1763,20 +1775,25 @@ public class StudyService {
                 return subReporters;
             }
             Optional<UUID> parentUuid = networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporters.get(0).getTaskKey()));
-            return parentUuid.isEmpty() ? subReporters : Stream.concat(getSubReportersByNodeFrom(parentUuid.get(), false).stream(), subReporters.stream()).collect(Collectors.toList());
+            if (parentUuid.isEmpty()) {
+                return subReporters;
+            }
+            List<ReporterModel> parentReporters = self.getParentNodesReport(parentUuid.get(), false, severityLevels);
+            return Stream.concat(parentReporters.stream(), subReporters.stream()).collect(Collectors.toList());
         }
     }
 
-    private List<ReporterModel> getSubReportersByNodeFrom(UUID nodeUuid) {
-        AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
-        ReporterModel reporter = reportService.getReport(nodeInfos.getReportUuid(), nodeInfos.getId().toString());
+    private List<ReporterModel> getSubReporters(UUID nodeUuid, UUID reportUuid, Set<String> severityLevels, String taskKeyfilter) {
+        ReporterModel reporter = reportService.getReport(reportUuid, nodeUuid.toString(), taskKeyfilter, severityLevels);
         Map<String, List<ReporterModel>> subReportersByNode = new LinkedHashMap<>();
         reporter.getSubReporters().forEach(subReporter -> subReportersByNode.putIfAbsent(getNodeIdFromReportKey(subReporter), new ArrayList<>()));
         reporter.getSubReporters().forEach(subReporter ->
             subReportersByNode.get(getNodeIdFromReportKey(subReporter)).addAll(subReporter.getSubReporters())
         );
         return subReportersByNode.keySet().stream().map(nodeId -> {
-            ReporterModel newSubReporter = new ReporterModel(nodeId, nodeId);
+            // For a node report, pass the reportId to the Front as taskValues, to allow direct access
+            Map<String, TypedValue> taskValues = Map.of("id", new TypedValue(reportUuid.toString(), "ID"));
+            ReporterModel newSubReporter = new ReporterModel(nodeId, nodeId, taskValues);
             subReportersByNode.get(nodeId).forEach(newSubReporter::addSubReporter);
             return newSubReporter;
         }).collect(Collectors.toList());
@@ -2120,7 +2137,7 @@ public class StudyService {
     public String getVoltageInitModifications(@NonNull UUID nodeUuid) {
         // get modifications group uuid associated to voltage init results
         UUID voltageInitModificationsGroupUuid = voltageInitService.getModificationsGroupUuid(nodeUuid);
-        return networkModificationService.getModifications(voltageInitModificationsGroupUuid, false);
+        return networkModificationService.getModifications(voltageInitModificationsGroupUuid, false, false);
     }
 
     public void copyVoltageInitModifications(UUID studyUuid, UUID nodeUuid, String userId) {

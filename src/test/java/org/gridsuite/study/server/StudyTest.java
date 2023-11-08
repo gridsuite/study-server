@@ -335,6 +335,7 @@ public class StudyTest {
         networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
 
         // FIXME: remove lines when dicos will be used on the front side
+        // Override the custom module to restore the standard module in order to have the original serialization used like the report server
         mapper.registerModule(new ReporterModelJsonModule() {
             @Override
             public Object getTypeId() {
@@ -902,7 +903,7 @@ public class StudyTest {
         UUID studyUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report", studyUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report", studyUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         List<ReporterModel> reporterModel = mapper.readValue(resultAsString, new TypeReference<List<ReporterModel>>() { });
