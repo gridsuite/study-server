@@ -1053,10 +1053,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<String> getNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                          @Parameter(description = "Stashed Modification") @RequestParam(name = "stashed", required = false, defaultValue = "false") Boolean stashed,
+                                                          @RequestParam(name = "onlyStashed", required = false, defaultValue = "false") Boolean onlyStashed,
                                                           @Parameter(description = "Only metadata") @RequestParam(name = "onlyMetadata", required = false, defaultValue = "false") Boolean onlyMetadata) {
         // Return json string because modification dtos are not available here
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(nodeUuid, stashed, onlyMetadata));
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(nodeUuid, onlyStashed, onlyMetadata));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
@@ -1089,34 +1089,29 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> deleteNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                           @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
+                                                           @Parameter(description = "Network modification UUIDs") @RequestParam(name = "uuids", required = false) List<UUID> networkModificationUuids,
+                                                           @Parameter(description = "Delete only stashed modifications") @RequestParam(name = "onlyStashed", required = false, defaultValue = "false") Boolean onlyStashed,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
+        studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, onlyStashed, userId);
+
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/stash")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
     @Operation(summary = "Stash network modifications for a node")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications were stashed"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications were stashed / restored "), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> stashNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
+                                                               @Parameter(description = "Stashed Modification") @RequestParam(name = "stashed", required = true) Boolean stashed,
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.stashNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/restore")
-    @Operation(summary = "Restore network modifications for a node")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications were restored"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<Void> restoreNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                            @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
-                                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.restoreNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
+        if (stashed.booleanValue()) {
+            studyService.stashNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
+        } else {
+            studyService.restoreNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
+        }
         return ResponseEntity.ok().build();
     }
 
