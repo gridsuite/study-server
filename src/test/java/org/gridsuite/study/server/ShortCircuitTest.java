@@ -12,6 +12,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.shortcircuit.InitialVoltageProfileMode;
+import com.powsybl.shortcircuit.ShortCircuitParameters;
+import com.powsybl.shortcircuit.StudyType;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
@@ -19,6 +22,8 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.ShortCircuitParametersInfo;
+import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
@@ -241,22 +246,17 @@ public class ShortCircuitTest {
                 status().isOk(),
                 content().string(TestUtils.resourceToString("/short-circuit-parameters.json")));
 
-        //setting short-circuit analysis Parameters
-        //passing self made json because shortCircuitParameter serializer removes the parameters with default value
-        String shortCircuitParameterBodyJson = "{\n" +
-                "  \"version\" : \"1.2\",\n" +
-                "  \"studyType\" : \"SUB_TRANSIENT\",\n" +
-                "  \"minVoltageDropProportionalThreshold\" : 1.0,\n" +
-                "  \"withVoltageResult\" : false,\n" +
-                "  \"withFeederResult\" : false,\n" +
-                "  \"withLimitViolations\" : false,\n" +
-                "  \"withFortescueResult\": true\n" +
-                "}";
+        // change some short circuit parameters
+        ShortCircuitParameters shortCircuitParameters = ShortCircuitService.newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, true, true, true, true, InitialVoltageProfileMode.NOMINAL, null);
+        ShortCircuitParametersInfo shortCircuitParametersInfo = new ShortCircuitParametersInfo();
+        shortCircuitParametersInfo.setParameters(shortCircuitParameters);
+        shortCircuitParametersInfo.setPredefinedParameters(ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_CEI909);
+
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(shortCircuitParameterBodyJson)).andExpect(
+                        .content(objectWriter.writeValueAsString(shortCircuitParametersInfo))).andExpect(
                 status().isOk());
 
         //getting set values

@@ -2,7 +2,7 @@
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet author="ajellalali (generated)" id="1698312318405-14">
         <addColumn tableName="short_circuit_parameters">
-            <column name="predefined_parameters" type="varchar(255)"  defaultValue="NOMINAL"/>
+            <column name="predefined_parameters" type="varchar(255)"  defaultValue="ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP"/>
             <column defaultValueBoolean="true" name="with_loads" type="boolean"/>
             <column defaultValueBoolean="true" name="with_shunt_compensators" type="boolean"/>
             <column defaultValueBoolean="true" name="with_vsc_converter_stations" type="boolean"/>

@@ -900,7 +900,7 @@ public class StudyController {
     public ResponseEntity<ShortCircuitParametersInfo
             > getShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getShortCircuitCustomParameters(studyUuid));
+        return ResponseEntity.ok().body(studyService.getShortCircuitParametersInfo(studyUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")
@@ -1703,9 +1703,8 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/short-circuit/invalidate-status")
     @Operation(summary = "Invalidate short circuit status on study nodes")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit status has been invalidated on all study nodes"), @ApiResponse(responseCode = "404", description = "The study is not found")})
-    public ResponseEntity<Void> invalidateShortCircuitStatus(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                         @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.invalidateShortCircuitStatus(studyUuid, userId);
+    public ResponseEntity<Void> invalidateShortCircuitStatus(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        studyService.invalidateShortCircuitStatus(studyUuid);
         return ResponseEntity.ok().build();
     }
 }

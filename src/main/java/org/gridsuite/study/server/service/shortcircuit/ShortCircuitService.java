@@ -50,8 +50,6 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 @Service
 public class ShortCircuitService {
 
-    public static final String VERSION = "1.2";
-
     static final String RESULT_UUID = "resultUuid";
 
     private String shortCircuitServerBaseUri;
@@ -241,12 +239,13 @@ public class ShortCircuitService {
                 parameters.isWithVSCConverterStations(),
                 parameters.isWithNeutralPosition(),
                 parameters.getInitialVoltageProfileMode(),
-                // predefinedParameters default value is NOMINAL
+                // predefinedParameters default value is ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP
                 ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
     }
 
-    public static ShortCircuitParametersEntity toEntity(ShortCircuitParametersInfo parameters) {
-        Objects.requireNonNull(parameters);
+    public static ShortCircuitParametersEntity toEntity(ShortCircuitParametersInfo shortCircuitParametersInfo) {
+        Objects.requireNonNull(shortCircuitParametersInfo);
+        ShortCircuitParameters parameters = shortCircuitParametersInfo.getParameters();
         return new ShortCircuitParametersEntity(parameters.isWithLimitViolations(),
                 parameters.isWithVoltageResult(),
                 parameters.isWithFortescueResult(),
@@ -258,37 +257,21 @@ public class ShortCircuitService {
                 parameters.isWithVSCConverterStations(),
                 parameters.isWithNeutralPosition(),
                 parameters.getInitialVoltageProfileMode(),
-                parameters.getPredefinedParameters());
+                shortCircuitParametersInfo.getPredefinedParameters());
     }
 
     public static ShortCircuitParameters fromEntity(ShortCircuitParametersEntity entity) {
         Objects.requireNonNull(entity);
-        return newShortCircuitParameters(entity.getStudyType(), entity.getMinVoltageDropProportionalThreshold(), entity.isWithFeederResult(), entity.isWithLimitViolations(), entity.isWithVoltageResult(), entity.isWithFortescueResult(), entity.isWithLoads(), entity.isWithShuntCompensators(), entity.isWithVscConverterStations(), entity.isWithNeutralPosition(), entity.getInitialVoltageProfileMode());
-    }
-
-    private static ShortCircuitParameters newShortCircuitParameters(StudyType studyType, double minVoltageDropProportionalThreshold, boolean withFeederResult, boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult, boolean withLoads, boolean withShuntCompensators, boolean withVscConverterStations, boolean withNeutralPosition, InitialVoltageProfileMode initialVoltageProfileMode) {
-        return new ShortCircuitParameters()
-                .setStudyType(studyType)
-                .setMinVoltageDropProportionalThreshold(minVoltageDropProportionalThreshold)
-                .setWithFeederResult(withFeederResult)
-                .setWithLimitViolations(withLimitViolations)
-                .setWithVoltageResult(withVoltageResult)
-                .setWithFortescueResult(withFortescueResult)
-                .setWithLoads(withLoads)
-                .setWithShuntCompensators(withShuntCompensators)
-                .setWithVSCConverterStations(withVscConverterStations)
-                .setWithNeutralPosition(withNeutralPosition)
-                .setInitialVoltageProfileMode(initialVoltageProfileMode)
-                // we need to set  the voltageRanges only if the initialVoltageProfileMode is CONFIGURED
-                // if the initialVoltageProfileMode is NOMINAL the voltageRanges won't be taken care of when serializing the ShortCircuitParameters
-                .setVoltageRanges(getVoltageRanges());
+        boolean isNominal = InitialVoltageProfileMode.NOMINAL.equals(entity.getInitialVoltageProfileMode());
+        List<VoltageRange> voltageRanges = getVoltageRanges(isNominal);
+        return newShortCircuitParameters(entity.getStudyType(), entity.getMinVoltageDropProportionalThreshold(), entity.isWithFeederResult(), entity.isWithLimitViolations(), entity.isWithVoltageResult(), entity.isWithFortescueResult(), entity.isWithLoads(), entity.isWithShuntCompensators(), entity.isWithVscConverterStations(), entity.isWithNeutralPosition(), entity.getInitialVoltageProfileMode(), voltageRanges);
     }
 
     public static ShortCircuitParameters copy(ShortCircuitParameters shortCircuitParameters) {
         return newShortCircuitParameters(shortCircuitParameters.getStudyType(), shortCircuitParameters.getMinVoltageDropProportionalThreshold(), shortCircuitParameters.isWithFeederResult(), shortCircuitParameters.isWithLimitViolations(), shortCircuitParameters.isWithVoltageResult(), shortCircuitParameters.isWithFortescueResult(), shortCircuitParameters.isWithLoads(), shortCircuitParameters.isWithShuntCompensators(), shortCircuitParameters.isWithVSCConverterStations(), shortCircuitParameters.isWithNeutralPosition(), shortCircuitParameters.getInitialVoltageProfileMode(), shortCircuitParameters.getVoltageRanges());
     }
 
-    private static ShortCircuitParameters newShortCircuitParameters(StudyType studyType, double minVoltageDropProportionalThreshold, boolean withFeederResult, boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult, boolean withLoads, boolean withShuntCompensators, boolean withVscConverterStations, boolean withNeutralPosition, InitialVoltageProfileMode initialVoltageProfileMode, List<VoltageRange> voltageRanges) {
+    public static ShortCircuitParameters newShortCircuitParameters(StudyType studyType, double minVoltageDropProportionalThreshold, boolean withFeederResult, boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult, boolean withLoads, boolean withShuntCompensators, boolean withVscConverterStations, boolean withNeutralPosition, InitialVoltageProfileMode initialVoltageProfileMode, List<VoltageRange> voltageRanges) {
         return new ShortCircuitParameters()
                 .setStudyType(studyType)
                 .setMinVoltageDropProportionalThreshold(minVoltageDropProportionalThreshold)
@@ -302,6 +285,8 @@ public class ShortCircuitService {
                 .setWithVSCConverterStations(withVscConverterStations)
                 .setWithNeutralPosition(withNeutralPosition)
                 .setInitialVoltageProfileMode(initialVoltageProfileMode)
+                // if the initialVoltageProfileMode is NOMINAL the voltageRanges won't be taken care of when serializing the ShortCircuitParameters
+                // it is mandatory only if the initialVoltageProfileMode is CONFIGURED
                 .setVoltageRanges(voltageRanges);
     }
 
@@ -345,34 +330,27 @@ public class ShortCircuitService {
         }
     }
 
-    public static List<VoltageRange> getVoltageRanges() {
+    public static List<VoltageRange> getVoltageRanges(boolean isNominal) {
         List<VoltageRange> voltageRanges = new ArrayList<>();
-        voltageRanges.add(new VoltageRange(20.0, 22.0, 1.1));
-        voltageRanges.add(new VoltageRange(45.0, 49.5, 1.1));
-        voltageRanges.add(new VoltageRange(63.0, 69.3, 1.1));
-        voltageRanges.add(new VoltageRange(90.0, 99.0, 1.1));
-        voltageRanges.add(new VoltageRange(150.0, 165.0, 1.1));
-        voltageRanges.add(new VoltageRange(225.0, 245.0, 1.09));
-        voltageRanges.add(new VoltageRange(400.0, 420.0, 1.09));
+        voltageRanges.add(new VoltageRange(20.0, isNominal ? 20.0 : 22.0, isNominal ? 1 : 1.1));
+        voltageRanges.add(new VoltageRange(45.0, isNominal ? 45.0 : 49.5, isNominal ? 1 : 1.1));
+        voltageRanges.add(new VoltageRange(63.0, isNominal ? 63.0 : 69.3, isNominal ? 1 : 1.1));
+        voltageRanges.add(new VoltageRange(90.0, isNominal ? 90.0 : 99.0, isNominal ? 1 : 1.1));
+        voltageRanges.add(new VoltageRange(150.0, isNominal ? 150.0 : 165.0, isNominal ? 1 : 1.1));
+        voltageRanges.add(new VoltageRange(225.0, isNominal ? 225.0 : 245.0, isNominal ? 1 : 1.09));
+        voltageRanges.add(new VoltageRange(380.0, isNominal ? 400 : 420.0, isNominal ? 1 : 1.09));
         return voltageRanges;
     }
 
-    public static ShortCircuitParametersInfo toCustomParameters(ShortCircuitParametersEntity entity) {
+    public static ShortCircuitParametersInfo toShortCircuitParametersInfo(ShortCircuitParametersEntity entity) {
         Objects.requireNonNull(entity);
+        Map<String, List<VoltageRange>> voltageRangesMap = new HashMap<>();
+        voltageRangesMap.put(InitialVoltageProfileMode.NOMINAL.toString(), getVoltageRanges(true));
+        voltageRangesMap.put(InitialVoltageProfileMode.CONFIGURED.toString(), getVoltageRanges(false));
         return ShortCircuitParametersInfo.builder()
-                .studyType(entity.getStudyType())
-                .minVoltageDropProportionalThreshold(entity.getMinVoltageDropProportionalThreshold())
-                .withFeederResult(entity.isWithFeederResult())
-                .withLimitViolations(entity.isWithLimitViolations())
-                .withVoltageResult(entity.isWithVoltageResult())
-                .withFortescueResult(entity.isWithFortescueResult())
-                .withLoads(entity.isWithLoads())
-                .withShuntCompensators(entity.isWithShuntCompensators())
-                .withVSCConverterStations(entity.isWithVscConverterStations())
-                .withNeutralPosition(entity.isWithNeutralPosition())
-                .initialVoltageProfileMode(entity.getInitialVoltageProfileMode())
                 .predefinedParameters(entity.getPredefinedParameters())
-                .version(VERSION)
+                .parameters(fromEntity(entity))
+                .voltageRangesInfo(voltageRangesMap)
                 .build();
     }
 

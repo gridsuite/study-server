@@ -6,9 +6,7 @@
  */
 package org.gridsuite.study.server.dto;
 
-import com.powsybl.shortcircuit.InitialVoltageProfileMode;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
-import com.powsybl.shortcircuit.StudyType;
 import com.powsybl.shortcircuit.VoltageRange;
 import lombok.*;
 
@@ -25,19 +23,7 @@ import java.util.Map;
 @Setter
 @Builder
 public class ShortCircuitParametersInfo {
-    private String version;
-    private boolean withLimitViolations;
-    private boolean withFortescueResult;
-    private boolean withFeederResult;
-    private StudyType studyType;
-    private boolean withVoltageResult;
-    private double minVoltageDropProportionalThreshold;
-    private boolean withLoads;
-    private boolean withShuntCompensators;
-    private boolean withVSCConverterStations;
-    private boolean withNeutralPosition;
-    private InitialVoltageProfileMode initialVoltageProfileMode;
     private ShortCircuitPredefinedConfiguration predefinedParameters;
     private ShortCircuitParameters parameters;
-    private Map<String, List<VoltageRange>> voltageRanges;
+    private Map<String, List<VoltageRange>> voltageRangesInfo;
 }
