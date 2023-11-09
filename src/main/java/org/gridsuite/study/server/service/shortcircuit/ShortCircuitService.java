@@ -23,7 +23,6 @@ import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.StudyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -31,6 +30,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -39,6 +39,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.StudyUtils.addPageableToQueryParams;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -119,37 +120,55 @@ public class ShortCircuitService {
         return UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results" + "/{resultUuid}").buildAndExpand(resultUuidOpt.get()).toUriString();
     }
 
-    private String getShortCircuitAnalysisFaultResultsResourcePath(UUID nodeUuid) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, ShortcircuitAnalysisType.ALL_BUSES);
-        if (resultPath == null) {
-            return null;
-        }
-        return UriComponentsBuilder.fromPath(resultPath + "/fault_results/paged").toUriString();
-    }
-
-    public String getShortCircuitAnalysisResult(UUID nodeUuid, String mode, ShortcircuitAnalysisType type) {
-        // For ONE_BUS results, we always want full results mode
-        String overridedMode = type == ShortcircuitAnalysisType.ONE_BUS ? "FULL" : mode;
-        String params = "?mode=" + overridedMode;
+    private String getShortCircuitAnalysisResultsPageResourcePath(UUID nodeUuid, ShortcircuitAnalysisType type) {
         String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, type);
         if (resultPath == null) {
             return null;
         }
-        return getShortCircuitAnalysisResource(resultPath + params);
+        if (type == ShortcircuitAnalysisType.ALL_BUSES) {
+            resultPath += "/fault_results";
+        } else if (type == ShortcircuitAnalysisType.ONE_BUS) {
+            resultPath += "/feeder_results";
+        }
+        return resultPath + "/paged";
     }
 
-    public String getShortCircuitAnalysisFaultResultsPage(UUID nodeUuid, String mode, Pageable pageable) {
-        StringBuilder paramsBuilder = new StringBuilder();
-        paramsBuilder.append("?mode=" + mode + "&page=" + pageable.getPageNumber() + "&size=" + pageable.getPageSize());
-
-        for (Sort.Order order : pageable.getSort()) {
-            paramsBuilder.append("&sort=" + order.getProperty() + "," + order.getDirection());
+    public String getShortCircuitAnalysisResult(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, boolean paged, Pageable pageable) {
+        if (paged) {
+            return getShortCircuitAnalysisResultsPage(nodeUuid, mode, type, filters, pageable);
+        } else {
+            return getShortCircuitAnalysisResult(nodeUuid, mode, type);
         }
-        String faultResultsPath = getShortCircuitAnalysisFaultResultsResourcePath(nodeUuid);
-        if (faultResultsPath == null) {
+    }
+
+    public String getShortCircuitAnalysisResult(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type) {
+        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, type);
+        if (resultPath == null) {
             return null;
         }
-        return getShortCircuitAnalysisResource(faultResultsPath + paramsBuilder);
+
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath)
+                .queryParam("mode", mode);
+
+        return getShortCircuitAnalysisResource(builder.build().toUri());
+    }
+
+    public String getShortCircuitAnalysisResultsPage(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, Pageable pageable) {
+        String resultsPath = getShortCircuitAnalysisResultsPageResourcePath(nodeUuid, type);
+        if (resultsPath == null) {
+            return null;
+        }
+
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultsPath)
+                .queryParam("mode", mode);
+
+        if (filters != null && !filters.isEmpty()) {
+            builder.queryParam("filters", filters);
+        }
+
+        addPageableToQueryParams(builder, pageable);
+
+        return getShortCircuitAnalysisResource(builder.build().encode().toUri()); // need to encode because of filter JSON array
     }
 
     public String getShortCircuitAnalysisStatus(UUID nodeUuid, ShortcircuitAnalysisType type) {
@@ -157,13 +176,16 @@ public class ShortCircuitService {
         if (resultPath == null) {
             return null;
         }
-        return getShortCircuitAnalysisResource(resultPath + "/status");
+
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath + "/status");
+
+        return getShortCircuitAnalysisResource(builder.build().toUri());
     }
 
-    public String getShortCircuitAnalysisResource(String resourcePath) {
+    public String getShortCircuitAnalysisResource(URI resourcePath) {
         String result;
         try {
-            result = restTemplate.getForObject(shortCircuitServerBaseUri + resourcePath, String.class);
+            result = restTemplate.getForObject(resourcePath, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
