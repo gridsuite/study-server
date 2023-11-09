@@ -23,6 +23,8 @@ import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
 import org.gridsuite.study.server.repository.SecurityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -70,8 +72,7 @@ public class SecurityAnalysisService {
         this.objectMapper = objectMapper;
     }
 
-    public String getSecurityAnalysisResult(UUID nodeUuid, SecurityAnalysisResultType resultType, List<String> limitTypes) {
-        Objects.requireNonNull(limitTypes);
+    public String getSecurityAnalysisResult(UUID nodeUuid, SecurityAnalysisResultType resultType, String filters, Pageable pageable) {
         String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
 
@@ -79,8 +80,20 @@ public class SecurityAnalysisService {
             return null;
         }
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getPathFromResultType(resultType))
-                .queryParam("limitType", limitTypes).buildAndExpand(resultUuidOpt.get()).toUriString();
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getPathFromResultType(resultType))
+            .queryParam("page", pageable.getPageNumber())
+            .queryParam("size", pageable.getPageSize());
+
+        if (filters != null && !filters.isEmpty()) {
+            pathBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+        }
+
+        for (Sort.Order order : pageable.getSort()) {
+            pathBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection());
+        }
+
+        String path = pathBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+
         try {
             result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
@@ -96,8 +109,8 @@ public class SecurityAnalysisService {
 
     private String getPathFromResultType(SecurityAnalysisResultType resultType) {
         return switch (resultType) {
-            case NMK_CONTINGENCIES -> "nmk-contingencies-result";
-            case NMK_LIMIT_VIOLATIONS -> "nmk-constraints-result";
+            case NMK_CONTINGENCIES -> "nmk-contingencies-result/paged";
+            case NMK_LIMIT_VIOLATIONS -> "nmk-constraints-result/paged";
             case N -> "n-result";
         };
     }
