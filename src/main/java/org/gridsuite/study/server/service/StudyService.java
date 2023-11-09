@@ -1779,11 +1779,7 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public List<ReporterModel> getNodeReport(UUID nodeUuid, String reportId, ReportType reportType, Set<String> severityLevels) {
-        // Hack: filtering Root node with its nodeId in report db does not work
-        // TODO : Remove this hack when the taskKey of the root node will be replaced by the node uuid
-        AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
-        String taskKeyFilter = nodeInfos.getType() == NodeType.ROOT ? null : nodeUuid.toString() + "@" + reportType.toString();
-        return getSubReporters(nodeUuid, UUID.fromString(reportId), taskKeyFilter, TaskKeyFilterMatchingType.EXACT_MATCHING, severityLevels);
+        return getSubReporters(nodeUuid, UUID.fromString(reportId), nodeUuid + "@" + reportType, TaskKeyFilterMatchingType.EXACT_MATCHING, severityLevels);
     }
 
     @Transactional(readOnly = true)
