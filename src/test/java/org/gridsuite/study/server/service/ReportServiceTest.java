@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
+import com.powsybl.commons.reporter.TypedValue;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
@@ -45,10 +46,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_DEFAULT_NAME;
@@ -116,6 +114,7 @@ public class ReportServiceTest {
         reportService.setReportServerBaseUri(baseUrl);
 
         // FIXME: remove lines when dicos will be used on the front side
+        // Override the custom module to restore the standard module in order to have the original serialization used like the report server
         mapper.registerModule(new ReporterModelJsonModule() {
             @Override
             public Object getTypeId() {
@@ -129,10 +128,15 @@ public class ReportServiceTest {
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
-                if (path.matches("/v1/reports/.*")) {
+                if (path.matches("/v1/reports/.*\\?defaultName=.*")) {
                     return new MockResponse().setResponseCode(HttpStatus.OK.value())
-                        .setBody(mapper.writeValueAsString(getNodeReport(Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2), request.getRequestUrl().queryParameter(QUERY_PARAM_REPORT_DEFAULT_NAME)).getSubReporters()))
-                        .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                            .setBody(mapper.writeValueAsString(getNodeReport(Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2), request.getRequestUrl().queryParameter(QUERY_PARAM_REPORT_DEFAULT_NAME)).getSubReporters()))
+                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                } else if (path.matches("/v1/subreports/.*\\?severityLevels=.*")) {
+                    String reportId = Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2);
+                        return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                                .setBody(mapper.writeValueAsString(getRootNodeSimpleReport(reportId).getSubReporters()))
+                                .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(HttpStatus.I_AM_A_TEAPOT.value()).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -165,11 +169,11 @@ public class ReportServiceTest {
 
     @SneakyThrows
     @Test
-    public void testNodeReport() {
+    public void testReport() {
         RootNode rootNode = createRoot();
         ReporterModel expectedRootReporter = getNodeReport(ROOT_NODE_REPORT_UUID.toString(), rootNode.getId().toString());
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report?nodeOnlyReport=true", rootNode.getStudyId(), rootNode.getId()))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true", rootNode.getStudyId(), rootNode.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         List<ReporterModel> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
@@ -177,7 +181,7 @@ public class ReportServiceTest {
         assertEquals(mapper.writeValueAsString(expectedRootReporter.getSubReporters()), mapper.writeValueAsString(reports));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report?nodeOnlyReport=false", rootNode.getStudyId(), rootNode.getId()))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false", rootNode.getStudyId(), rootNode.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
@@ -189,7 +193,7 @@ public class ReportServiceTest {
         output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);  // message for modification node creation
         ReporterModel expectedNodeReporter = getNodeReport(MODIFICATION_NODE_REPORT_UUID.toString(), node.getId().toString());
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report?nodeOnlyReport=true", rootNode.getStudyId(), node.getId()))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true", rootNode.getStudyId(), node.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
@@ -197,7 +201,7 @@ public class ReportServiceTest {
         assertEquals(mapper.writeValueAsString(expectedNodeReporter.getSubReporters()), mapper.writeValueAsString(reports));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report?nodeOnlyReport=false", rootNode.getStudyId(), node.getId()))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false", rootNode.getStudyId(), node.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
@@ -211,7 +215,7 @@ public class ReportServiceTest {
 
     @SneakyThrows
     @Test
-    public void testNodeMultipleReport() {
+    public void testMultipleReport() {
         RootNode rootNode = createRoot();
         NetworkModificationNode node = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), rootNode.getId(), createModificationNodeInfo("Modification Node", MODIFICATION_NODE_REPORT_UUID), InsertMode.AFTER, null);
         NetworkModificationNode child1 = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), node.getId(), createModificationNodeInfo("Child 1", MODIFICATION_CHILD_NODE1_REPORT_UUID), InsertMode.AFTER, null);
@@ -228,7 +232,7 @@ public class ReportServiceTest {
         ReporterModel expectedChild1Reporter = getNodeReport(MODIFICATION_CHILD_NODE1_REPORT_UUID.toString(), child1.getId().toString());
         ReporterModel expectedChild2Reporter = getNodeReport(MODIFICATION_CHILD_NODE2_REPORT_UUID.toString(), child2.getId().toString());
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report?nodeOnlyReport=true", rootNode.getStudyId(), child1.getId()))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true", rootNode.getStudyId(), child1.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         List<ReporterModel> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
@@ -236,7 +240,7 @@ public class ReportServiceTest {
         assertEquals(mapper.writeValueAsString(List.of(expectedChild1Reporter.getSubReporters().get(1))), mapper.writeValueAsString(reports));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report?nodeOnlyReport=false", rootNode.getStudyId(), child1.getId()))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false", rootNode.getStudyId(), child1.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         List<ReporterModel> reportsNode1 = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
@@ -247,7 +251,7 @@ public class ReportServiceTest {
         );
         assertTrue(TestUtils.getRequestsDone(2, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report?nodeOnlyReport=false", rootNode.getStudyId(), child2.getId()))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false", rootNode.getStudyId(), child2.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         List<ReporterModel> reportsNode2 = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
@@ -261,22 +265,67 @@ public class ReportServiceTest {
         assertNotEquals(mapper.writeValueAsString(reportsNode1), mapper.writeValueAsString(reportsNode2));
     }
 
+    @SneakyThrows
+    @Test
+    public void testSubReport() {
+        RootNode rootNode = createRoot();
+        ReporterModel expectedRootReporter = getRootNodeSimpleReport(ROOT_NODE_REPORT_UUID.toString());
+
+        MvcResult mvcResult =
+                mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/subreport?reportId={id}&severityLevels=INFO&severityLevels=WARN",
+                                rootNode.getStudyId(), rootNode.getId(), ROOT_NODE_REPORT_UUID.toString()))
+                        .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                        .andReturn();
+        ReporterModel report = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        });
+        assertEquals(mapper.writeValueAsString(expectedRootReporter), mapper.writeValueAsString(report));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/subreports/.*")));
+    }
+
+    @SneakyThrows
+    @Test
+    public void testNodeReport() {
+        RootNode rootNode = createRoot();
+        ReporterModel expectedRootReporter = getNodeReport(ROOT_NODE_REPORT_UUID.toString(), rootNode.getId().toString());
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report?reportId={id}",
+                                rootNode.getStudyId(), rootNode.getId(), ROOT_NODE_REPORT_UUID.toString()))
+                        .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                        .andReturn();
+        List<ReporterModel> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        });
+        assertEquals(mapper.writeValueAsString(expectedRootReporter.getSubReporters()), mapper.writeValueAsString(reports));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+    }
+
     private ReporterModel getNodeReport(String reportUuid, String nodeUuid) {
-        return Set.of(ROOT_NODE_REPORT_UUID.toString(), MODIFICATION_NODE_REPORT_UUID.toString()).contains(reportUuid) ? getNodeSimpleReport(reportUuid, nodeUuid) : getNodeMultipleReport(reportUuid, nodeUuid);
+        return Set.of(ROOT_NODE_REPORT_UUID.toString(), MODIFICATION_NODE_REPORT_UUID.toString()).contains(reportUuid) ?
+                getNodeSimpleReport(reportUuid, nodeUuid) : getNodeMultipleReport(reportUuid, nodeUuid);
     }
 
     private ReporterModel getNodeSimpleReport(String reportUuid, String nodeUuid) {
         ReporterModel reporter = new ReporterModel(reportUuid, reportUuid);
-        reporter.addSubReporter(new ReporterModel(nodeUuid, nodeUuid));
+        Map<String, TypedValue> taskValues = new HashMap<>();
+        taskValues.put("id", new TypedValue(reportUuid, "ID"));
+        reporter.addSubReporter(new ReporterModel(nodeUuid, nodeUuid, taskValues));
+        return reporter;
+    }
+
+    private ReporterModel getRootNodeSimpleReport(String reportUuid) {
+        ReporterModel reporter = new ReporterModel(reportUuid, reportUuid);
+        Map<String, TypedValue> taskValues = new HashMap<>();
+        taskValues.put("id", new TypedValue(reportUuid, "ID"));
+        reporter.addSubReporter(new ReporterModel("Root", "Root", taskValues));
         return reporter;
     }
 
     private ReporterModel getNodeMultipleReport(String reportUuid, String nodeUuid) {
         ReporterModel reporter = new ReporterModel(reportUuid, reportUuid);
-        ReporterModel subReporter = new ReporterModel(MODIFICATION_NODE_UUID.toString(), MODIFICATION_NODE_UUID.toString());
+        Map<String, TypedValue> taskValues = Map.of("id", new TypedValue(reportUuid, "ID"));
+        ReporterModel subReporter = new ReporterModel(MODIFICATION_NODE_UUID.toString(), MODIFICATION_NODE_UUID.toString(), taskValues);
         subReporter.addSubReporter(new ReporterModel("test" + nodeUuid, "test" + nodeUuid));
         reporter.addSubReporter(subReporter);
-        reporter.addSubReporter(new ReporterModel(nodeUuid, nodeUuid));
+        reporter.addSubReporter(new ReporterModel(nodeUuid, nodeUuid, taskValues));
         return reporter;
     }
 }

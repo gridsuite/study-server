@@ -47,17 +47,21 @@ public final class StudyConstants {
 
     public static final String GROUP_UUID = "groupUuid";
     public static final String REPORT_UUID = "reportUuid";
-    public static final String REPORTER_ID = "reporterId";
     public static final String UUIDS = "uuids";
     public static final String QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND = "errorOnGroupNotFound";
     public static final String QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND = "errorOnReportNotFound";
     public static final String QUERY_PARAM_REPORT_DEFAULT_NAME = "defaultName";
+    public static final String QUERY_PARAM_REPORT_SEVERITY_LEVEL = "severityLevels";
+    public static final String QUERY_PARAM_REPORT_WITH_ELEMENTS = "withElements";
+    public static final String QUERY_PARAM_REPORT_TASKKEY_FILTER = "taskKeyFilter";
     public static final String QUERY_PARAM_RECEIVER = "receiver";
     public static final String HEADER_RECEIVER = "receiver";
     public static final String HEADER_BUS_ID = "busId";
     public static final String HEADER_IMPORT_PARAMETERS = "importParameters";
     public static final String HEADER_MESSAGE = "message";
     public static final String HEADER_USER_ID = "userId";
+    public static final String QUERY_PARAM_ONLY_STASHED = "onlyStashed";
+    public static final String QUERY_PARAM_STASHED = "stashed";
 
     public enum SldDisplayMode {
         FEEDER_POSITION,
