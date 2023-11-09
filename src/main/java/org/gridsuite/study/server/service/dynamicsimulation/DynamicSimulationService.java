@@ -90,8 +90,18 @@ public interface DynamicSimulationService {
      * @return a default dynamic simulation parameters
      */
     static DynamicSimulationParametersInfos getDefaultDynamicSimulationParameters() {
-        // these parameters are taken from solver.par file in dynamic simulation server
+        IdaSolverInfos idaSolver = getDefaultIdaSolver();
+        SimSolverInfos simSolver = getDefaultSimSolver();
+        List<SolverInfos> solvers = List.of(idaSolver, simSolver);
+
+        NetworkInfos network = getDefaultNetwork();
+        return new DynamicSimulationParametersInfos(0.0, 500.0, "", idaSolver.getId(), solvers, network, null, null);
+    }
+
+    static IdaSolverInfos getDefaultIdaSolver() {
         IdaSolverInfos idaSolver = new IdaSolverInfos();
+
+        // these parameters are taken from solver.par file in dynamic simulation server
         idaSolver.setId("IDA");
         idaSolver.setType(SolverTypeInfos.IDA);
         idaSolver.setOrder(2);
@@ -124,7 +134,13 @@ public interface DynamicSimulationService {
         idaSolver.setMinimalAcceptableStep(1.e-8);
         idaSolver.setMaximumNumberSlowStepIncrease(40);
 
+        return idaSolver;
+    }
+
+    static SimSolverInfos getDefaultSimSolver() {
         SimSolverInfos simSolver = new SimSolverInfos();
+
+        // these parameters are taken from solver.par file in dynamic simulation server
         simSolver.setId("SIM");
         simSolver.setType(SolverTypeInfos.SIM);
         simSolver.setHMin(0.001);
@@ -169,10 +185,7 @@ public interface DynamicSimulationService {
         simSolver.setMinimalAcceptableStep(1.e-3);
         simSolver.setMaximumNumberSlowStepIncrease(40);
 
-        List<SolverInfos> solvers = List.of(idaSolver, simSolver);
-
-        NetworkInfos network = getDefaultNetwork();
-        return new DynamicSimulationParametersInfos(0.0, 500.0, "", idaSolver.getId(), solvers, network, null, null);
+        return simSolver;
     }
 
     static NetworkInfos getDefaultNetwork() {
