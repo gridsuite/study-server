@@ -13,7 +13,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.StudyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -47,5 +50,12 @@ public final class StudyUtils {
         }
 
         return responseBody;
+    }
+
+    public static void addPageableToQueryParams(UriComponentsBuilder builder, Pageable pageable) {
+        builder.queryParam("page", pageable.getPageNumber()).queryParam("size", pageable.getPageSize());
+        for (Sort.Order order : pageable.getSort()) {
+            builder.queryParam("sort", order.getProperty() + "," + order.getDirection());
+        }
     }
 }
