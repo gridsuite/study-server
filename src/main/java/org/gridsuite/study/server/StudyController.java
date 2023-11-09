@@ -770,10 +770,10 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
     public ResponseEntity<String> getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                  @Parameter(description = "Limit types") @RequestParam(name = "limitType", required = false) List<String> limitTypes,
-                                                                  @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType) {
-        List<String> nonNullLimitTypes = limitTypes != null ? limitTypes : Collections.emptyList();
-        String result = securityAnalysisService.getSecurityAnalysisResult(nodeUuid, resultType, nonNullLimitTypes);
+                                                                  @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
+                                                                  @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+                                                                  Pageable pageable) {
+        String result = securityAnalysisService.getSecurityAnalysisResult(nodeUuid, resultType, filters, pageable);
         return result != null ? ResponseEntity.ok().body(result) :
                ResponseEntity.noContent().build();
     }
