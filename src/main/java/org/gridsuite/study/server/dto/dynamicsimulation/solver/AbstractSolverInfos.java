@@ -22,4 +22,51 @@ import lombok.experimental.SuperBuilder;
 public abstract class AbstractSolverInfos implements SolverInfos {
     private String id;
     private SolverTypeInfos type;
+
+    private double fnormtolAlg;
+
+    private double initialaddtolAlg;
+
+    private double scsteptolAlg;
+
+    private double mxnewtstepAlg;
+
+    private int msbsetAlg;
+
+    private int mxiterAlg;
+
+    private int printflAlg;
+
+    private double fnormtolAlgJ;
+
+    private double initialaddtolAlgJ;
+
+    private double scsteptolAlgJ;
+
+    private double mxnewtstepAlgJ;
+
+    private int msbsetAlgJ;
+
+    private int mxiterAlgJ;
+
+    private int printflAlgJ;
+
+    private double fnormtolAlgInit;
+
+    private double initialaddtolAlgInit;
+
+    private double scsteptolAlgInit;
+
+    private double mxnewtstepAlgInit;
+
+    private int msbsetAlgInit;
+
+    private int mxiterAlgInit;
+
+    private int printflAlgInit;
+
+    private int maximumNumberSlowStepIncrease;
+
+    private double minimalAcceptableStep;
+
 }
