@@ -25,6 +25,7 @@ public class SimSolverInfos extends AbstractSolverInfos {
     public static final String H_MIN = "hMin";
     public static final String H_MAX = "hMax";
     public static final String K_REDUCE_STEP = "kReduceStep";
+    public static final String F_NORM_TOL = "fNormTol";
 
     // Important note: must using @JsonProperty to precise property's name when serialize/deserialize
     // fields which begin by a minuscule following by a majuscule, for example 'hMxxx', otherwise jackson
@@ -42,19 +43,20 @@ public class SimSolverInfos extends AbstractSolverInfos {
 
     private String linearSolverName;
 
-    private double fnormtol;
+    @JsonProperty(F_NORM_TOL)
+    private double fNormTol;
 
-    private double initialaddtol;
+    private double initialAddTol;
 
-    private double scsteptol;
+    private double scStepTol;
 
-    private double mxnewtstep;
+    private double mxNewTStep;
 
     private int msbset;
 
-    private int mxiter;
+    private int mxIter;
 
-    private int printfl;
+    private int printFl;
 
     private boolean optimizeAlgebraicResidualsEvaluations;
 
@@ -62,7 +64,7 @@ public class SimSolverInfos extends AbstractSolverInfos {
 
     private boolean enableSilentZ;
 
-    private boolean optimizeReinitAlgebraicResidualsEvaluations;
+    private boolean optimizeReInitAlgebraicResidualsEvaluations;
 
     private String minimumModeChangeTypeForAlgebraicRestoration;
 

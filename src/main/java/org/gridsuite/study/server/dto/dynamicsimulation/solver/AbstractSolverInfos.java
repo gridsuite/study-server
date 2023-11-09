@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server.dto.dynamicsimulation.solver;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -20,50 +21,62 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @Setter
 public abstract class AbstractSolverInfos implements SolverInfos {
+
+    public static final String F_NORM_TOL_ALG = "fNormTolAlg";
+    public static final String F_NORM_TOL_ALG_J = "fNormTolAlgJ";
+    public static final String F_NORM_TOL_ALG_INIT = "fNormTolAlgInit";
+
+    // Important note: must using @JsonProperty to precise property's name when serialize/deserialize
+    // fields which begin by a minuscule following by a majuscule, for example 'hMxxx', otherwise jackson
+    // mapper will serialize as 'hmxxx' by default
+
     private String id;
     private SolverTypeInfos type;
 
-    private double fnormtolAlg;
+    @JsonProperty(F_NORM_TOL_ALG)
+    private double fNormTolAlg;
 
-    private double initialaddtolAlg;
+    private double initialAddTolAlg;
 
-    private double scsteptolAlg;
+    private double scStepTolAlg;
 
-    private double mxnewtstepAlg;
+    private double mxNewTStepAlg;
 
     private int msbsetAlg;
 
-    private int mxiterAlg;
+    private int mxIterAlg;
 
-    private int printflAlg;
+    private int printFlAlg;
 
-    private double fnormtolAlgJ;
+    @JsonProperty(F_NORM_TOL_ALG_J)
+    private double fNormTolAlgJ;
 
-    private double initialaddtolAlgJ;
+    private double initialAddTolAlgJ;
 
-    private double scsteptolAlgJ;
+    private double scStepTolAlgJ;
 
-    private double mxnewtstepAlgJ;
+    private double mxNewTStepAlgJ;
 
     private int msbsetAlgJ;
 
-    private int mxiterAlgJ;
+    private int mxIterAlgJ;
 
-    private int printflAlgJ;
+    private int printFlAlgJ;
 
-    private double fnormtolAlgInit;
+    @JsonProperty(F_NORM_TOL_ALG_INIT)
+    private double fNormTolAlgInit;
 
-    private double initialaddtolAlgInit;
+    private double initialAddTolAlgInit;
 
-    private double scsteptolAlgInit;
+    private double scStepTolAlgInit;
 
-    private double mxnewtstepAlgInit;
+    private double mxNewTStepAlgInit;
 
     private int msbsetAlgInit;
 
-    private int mxiterAlgInit;
+    private int mxIterAlgInit;
 
-    private int printflAlgInit;
+    private int printFlAlgInit;
 
     private int maximumNumberSlowStepIncrease;
 
