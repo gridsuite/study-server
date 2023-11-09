@@ -552,8 +552,8 @@ public class NetworkModificationTreeService {
 
     // Return json string because modification dtos are not available here
     @Transactional(readOnly = true)
-    public String getNetworkModifications(@NonNull UUID nodeUuid, boolean stashedModifications, boolean onlyMetadata) {
-        return networkModificationService.getModifications(getModificationGroupUuid(nodeUuid), stashedModifications, onlyMetadata);
+    public String getNetworkModifications(@NonNull UUID nodeUuid, boolean onlyStashed, boolean onlyMetadata) {
+        return networkModificationService.getModifications(getModificationGroupUuid(nodeUuid), onlyStashed, onlyMetadata);
     }
 
     // Return json string because modification dtos are not available here
