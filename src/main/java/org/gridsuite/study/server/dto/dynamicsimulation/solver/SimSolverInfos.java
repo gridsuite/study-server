@@ -22,29 +22,52 @@ import lombok.experimental.SuperBuilder;
 @Setter
 public class SimSolverInfos extends AbstractSolverInfos {
 
+    public static final String H_MIN = "hMin";
+    public static final String H_MAX = "hMax";
+    public static final String K_REDUCE_STEP = "kReduceStep";
+    public static final String F_NORM_TOL = "fNormTol";
+
     // Important note: must using @JsonProperty to precise property's name when serialize/deserialize
     // fields which begin by a minuscule following by a majuscule, for example 'hMxxx', otherwise jackson
     // mapper will serialize as 'hmxxx' by default
-    @JsonProperty("hMin")
+    @JsonProperty(H_MIN)
     private double hMin;
 
-    @JsonProperty("hMax")
+    @JsonProperty(H_MAX)
     private double hMax;
 
-    @JsonProperty("kReduceStep")
+    @JsonProperty(K_REDUCE_STEP)
     private double kReduceStep;
-
-    @JsonProperty("nEff")
-    private int nEff;
-
-    @JsonProperty("nDeadband")
-    private int nDeadband;
-
-    private int maxRootRestart;
 
     private int maxNewtonTry;
 
     private String linearSolverName;
 
-    private boolean recalculateStep;
+    @JsonProperty(F_NORM_TOL)
+    private double fNormTol;
+
+    private double initialAddTol;
+
+    private double scStepTol;
+
+    private double mxNewTStep;
+
+    private int msbset;
+
+    private int mxIter;
+
+    private int printFl;
+
+    private boolean optimizeAlgebraicResidualsEvaluations;
+
+    private boolean skipNRIfInitialGuessOK;
+
+    private boolean enableSilentZ;
+
+    private boolean optimizeReInitAlgebraicResidualsEvaluations;
+
+    private String minimumModeChangeTypeForAlgebraicRestoration;
+
+    private String minimumModeChangeTypeForAlgebraicRestorationInit;
+
 }
