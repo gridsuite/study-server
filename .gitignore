@@ -10,3 +10,6 @@ target/
 # IntelliJ
 /.idea
 *.iml
+
+# https://github.com/liquibase/liquibase/issues/2196
+/derby.log
