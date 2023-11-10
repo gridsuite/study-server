@@ -9,6 +9,7 @@ package org.gridsuite.study.server.dto.dynamicsimulation.solver;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.util.Strings;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -32,28 +33,9 @@ public class SolverInfosTest {
 
     @Test
     public void testToJson() {
-        IdaSolverInfos idaSolver = new IdaSolverInfos();
-        idaSolver.setId("1");
-        idaSolver.setType(SolverTypeInfos.IDA);
-        idaSolver.setOrder(1);
-        idaSolver.setInitStep(0.000001);
-        idaSolver.setMinStep(0.000001);
-        idaSolver.setMaxStep(10);
-        idaSolver.setAbsAccuracy(0.0001);
-        idaSolver.setRelAccuracy(0.0001);
+        IdaSolverInfos idaSolver = DynamicSimulationService.getDefaultIdaSolver();
 
-        SimSolverInfos simSolver = new SimSolverInfos();
-        simSolver.setId("3");
-        simSolver.setType(SolverTypeInfos.SIM);
-        simSolver.setHMin(0.000001);
-        simSolver.setHMax(1);
-        simSolver.setKReduceStep(0.5);
-        simSolver.setNEff(10);
-        simSolver.setNDeadband(2);
-        simSolver.setMaxRootRestart(3);
-        simSolver.setMaxNewtonTry(10);
-        simSolver.setLinearSolverName("KLU");
-        simSolver.setRecalculateStep(false);
+        SimSolverInfos simSolver = DynamicSimulationService.getDefaultSimSolver();
 
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
 
@@ -65,28 +47,85 @@ public class SolverInfosTest {
 
     @Test
     public void testParseJson() {
-        String json = "[ {\n" +
-                "  \"id\" : \"1\",\n" +
-                "  \"type\" : \"IDA\",\n" +
-                "  \"order\" : 1,\n" +
-                "  \"initStep\" : 1.0E-6,\n" +
-                "  \"minStep\" : 1.0E-6,\n" +
-                "  \"maxStep\" : 10.0,\n" +
-                "  \"absAccuracy\" : 1.0E-4,\n" +
-                "  \"relAccuracy\" : 1.0E-4\n" +
-                "}, {\n" +
-                "  \"id\" : \"3\",\n" +
-                "  \"type\" : \"SIM\",\n" +
-                "  \"maxRootRestart\" : 3,\n" +
-                "  \"maxNewtonTry\" : 10,\n" +
-                "  \"linearSolverName\" : \"KLU\",\n" +
-                "  \"recalculateStep\" : false,\n" +
-                "  \"hMin\" : 1.0E-6,\n" +
-                "  \"hMax\" : 1.0,\n" +
-                "  \"kReduceStep\" : 0.5,\n" +
-                "  \"nEff\" : 10.0,\n" +
-                "  \"nDeadband\" : 2\n" +
-                "} ]";
+        String json = """
+            [ {
+              "id" : "IDA",
+              "type" : "IDA",
+              "initialAddTolAlg" : 1.0,
+              "scStepTolAlg" : 1.0E-4,
+              "mxNewTStepAlg" : 10000.0,
+              "msbsetAlg" : 5,
+              "mxIterAlg" : 30,
+              "printFlAlg" : 0,
+              "initialAddTolAlgJ" : 1.0,
+              "scStepTolAlgJ" : 1.0E-4,
+              "mxNewTStepAlgJ" : 10000.0,
+              "msbsetAlgJ" : 1,
+              "mxIterAlgJ" : 50,
+              "printFlAlgJ" : 0,
+              "initialAddTolAlgInit" : 1.0,
+              "scStepTolAlgInit" : 1.0E-4,
+              "mxNewTStepAlgInit" : 10000.0,
+              "msbsetAlgInit" : 1,
+              "mxIterAlgInit" : 50,
+              "printFlAlgInit" : 0,
+              "maximumNumberSlowStepIncrease" : 40,
+              "minimalAcceptableStep" : 1.0E-8,
+              "order" : 2,
+              "initStep" : 1.0E-7,
+              "minStep" : 1.0E-7,
+              "maxStep" : 10.0,
+              "absAccuracy" : 1.0E-4,
+              "relAccuracy" : 1.0E-4,
+              "fNormTolAlg" : 1.0E-4,
+              "fNormTolAlgJ" : 1.0E-4,
+              "fNormTolAlgInit" : 1.0E-4
+            }, {
+              "id" : "SIM",
+              "type" : "SIM",
+              "initialAddTolAlg" : 1.0,
+              "scStepTolAlg" : 0.001,
+              "mxNewTStepAlg" : 10000.0,
+              "msbsetAlg" : 5,
+              "mxIterAlg" : 30,
+              "printFlAlg" : 0,
+              "initialAddTolAlgJ" : 1.0,
+              "scStepTolAlgJ" : 0.001,
+              "mxNewTStepAlgJ" : 10000.0,
+              "msbsetAlgJ" : 1,
+              "mxIterAlgJ" : 50,
+              "printFlAlgJ" : 0,
+              "initialAddTolAlgInit" : 1.0,
+              "scStepTolAlgInit" : 0.001,
+              "mxNewTStepAlgInit" : 10000.0,
+              "msbsetAlgInit" : 1,
+              "mxIterAlgInit" : 50,
+              "printFlAlgInit" : 0,
+              "maximumNumberSlowStepIncrease" : 40,
+              "minimalAcceptableStep" : 0.001,
+              "maxNewtonTry" : 10,
+              "linearSolverName" : "KLU",
+              "initialAddTol" : 1.0,
+              "scStepTol" : 0.001,
+              "mxNewTStep" : 10000.0,
+              "msbset" : 0,
+              "mxIter" : 15,
+              "printFl" : 0,
+              "optimizeAlgebraicResidualsEvaluations" : true,
+              "skipNRIfInitialGuessOK" : true,
+              "enableSilentZ" : true,
+              "optimizeReInitAlgebraicResidualsEvaluations" : true,
+              "minimumModeChangeTypeForAlgebraicRestoration" : "ALGEBRAIC_J_UPDATE",
+              "minimumModeChangeTypeForAlgebraicRestorationInit" : "ALGEBRAIC_J_UPDATE",
+              "fNormTolAlg" : 0.001,
+              "fNormTolAlgJ" : 0.001,
+              "fNormTolAlgInit" : 0.001,
+              "hMin" : 0.001,
+              "hMax" : 1.0,
+              "kReduceStep" : 0.5,
+              "fNormTol" : 0.001
+            } ]
+            """;
 
         List<SolverInfos> solvers = SolverInfos.parseJson(json, objectMapper);
 

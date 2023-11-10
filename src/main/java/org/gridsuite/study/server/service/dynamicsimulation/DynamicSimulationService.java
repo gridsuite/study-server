@@ -90,42 +90,113 @@ public interface DynamicSimulationService {
      * @return a default dynamic simulation parameters
      */
     static DynamicSimulationParametersInfos getDefaultDynamicSimulationParameters() {
-        // these parameters are taken from solver.par file in dynamic simulation server
-        IdaSolverInfos idaSolver = new IdaSolverInfos();
-        idaSolver.setId("1");
-        idaSolver.setType(SolverTypeInfos.IDA);
-        idaSolver.setOrder(1);
-        idaSolver.setInitStep(0.000001);
-        idaSolver.setMinStep(0.000001);
-        idaSolver.setMaxStep(10);
-        idaSolver.setAbsAccuracy(0.0001);
-        idaSolver.setRelAccuracy(0.0001);
-
-        SimSolverInfos simSolver = new SimSolverInfos();
-        simSolver.setId("3");
-        simSolver.setType(SolverTypeInfos.SIM);
-        simSolver.setHMin(0.000001);
-        simSolver.setHMax(1);
-        simSolver.setKReduceStep(0.5);
-        simSolver.setNEff(10);
-        simSolver.setNDeadband(2);
-        simSolver.setMaxRootRestart(3);
-        simSolver.setMaxNewtonTry(10);
-        simSolver.setLinearSolverName("KLU");
-        simSolver.setRecalculateStep(false);
-
+        IdaSolverInfos idaSolver = getDefaultIdaSolver();
+        SimSolverInfos simSolver = getDefaultSimSolver();
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
 
         NetworkInfos network = getDefaultNetwork();
         return new DynamicSimulationParametersInfos(0.0, 500.0, "", idaSolver.getId(), solvers, network, null, null);
     }
 
+    static IdaSolverInfos getDefaultIdaSolver() {
+        IdaSolverInfos idaSolver = new IdaSolverInfos();
+
+        // these parameters are taken from solver.par file in dynamic simulation server
+        idaSolver.setId("IDA");
+        idaSolver.setType(SolverTypeInfos.IDA);
+        idaSolver.setOrder(2);
+        idaSolver.setInitStep(1.e-7);
+        idaSolver.setMinStep(1.e-7);
+        idaSolver.setMaxStep(10);
+        idaSolver.setAbsAccuracy(1.e-4);
+        idaSolver.setRelAccuracy(1.e-4);
+
+        idaSolver.setFNormTolAlg(1.e-4);
+        idaSolver.setInitialAddTolAlg(1);
+        idaSolver.setScStepTolAlg(1.e-4);
+        idaSolver.setMxNewTStepAlg(10000);
+        idaSolver.setMsbsetAlg(5);
+        idaSolver.setMxIterAlg(30);
+        idaSolver.setPrintFlAlg(0);
+        idaSolver.setFNormTolAlgJ(1.e-4);
+        idaSolver.setInitialAddTolAlgJ(1);
+        idaSolver.setScStepTolAlgJ(1.e-4);
+        idaSolver.setMxNewTStepAlgJ(10000);
+        idaSolver.setMsbsetAlgJ(1);
+        idaSolver.setMxIterAlgJ(50);
+        idaSolver.setPrintFlAlgJ(0);
+        idaSolver.setFNormTolAlgInit(1.e-4);
+        idaSolver.setInitialAddTolAlgInit(1);
+        idaSolver.setScStepTolAlgInit(1.e-4);
+        idaSolver.setMxNewTStepAlgInit(10000);
+        idaSolver.setMsbsetAlgInit(1);
+        idaSolver.setMxIterAlgInit(50);
+        idaSolver.setPrintFlAlgInit(0);
+        idaSolver.setMinimalAcceptableStep(1.e-8);
+        idaSolver.setMaximumNumberSlowStepIncrease(40);
+
+        return idaSolver;
+    }
+
+    static SimSolverInfos getDefaultSimSolver() {
+        SimSolverInfos simSolver = new SimSolverInfos();
+
+        // these parameters are taken from solver.par file in dynamic simulation server
+        simSolver.setId("SIM");
+        simSolver.setType(SolverTypeInfos.SIM);
+        simSolver.setHMin(0.001);
+        simSolver.setHMax(1);
+        simSolver.setKReduceStep(0.5);
+        simSolver.setMaxNewtonTry(10);
+        simSolver.setLinearSolverName("KLU");
+
+        simSolver.setFNormTol(1.e-3);
+        simSolver.setInitialAddTol(1);
+        simSolver.setScStepTol(1.e-3);
+        simSolver.setMxNewTStep(10000);
+        simSolver.setMsbset(0);
+        simSolver.setMxIter(15);
+        simSolver.setPrintFl(0);
+        simSolver.setOptimizeAlgebraicResidualsEvaluations(true);
+        simSolver.setSkipNRIfInitialGuessOK(true);
+        simSolver.setEnableSilentZ(true);
+        simSolver.setOptimizeReInitAlgebraicResidualsEvaluations(true);
+        simSolver.setMinimumModeChangeTypeForAlgebraicRestoration("ALGEBRAIC_J_UPDATE");
+        simSolver.setMinimumModeChangeTypeForAlgebraicRestorationInit("ALGEBRAIC_J_UPDATE");
+
+        simSolver.setFNormTolAlg(1.e-3);
+        simSolver.setInitialAddTolAlg(1);
+        simSolver.setScStepTolAlg(1.e-3);
+        simSolver.setMxNewTStepAlg(10000);
+        simSolver.setMsbsetAlg(5);
+        simSolver.setMxIterAlg(30);
+        simSolver.setPrintFlAlg(0);
+        simSolver.setFNormTolAlgJ(1.e-3);
+        simSolver.setInitialAddTolAlgJ(1);
+        simSolver.setScStepTolAlgJ(1.e-3);
+        simSolver.setMxNewTStepAlgJ(10000);
+        simSolver.setMsbsetAlgJ(1);
+        simSolver.setMxIterAlgJ(50);
+        simSolver.setPrintFlAlgJ(0);
+        simSolver.setFNormTolAlgInit(1.e-3);
+        simSolver.setInitialAddTolAlgInit(1);
+        simSolver.setScStepTolAlgInit(1.e-3);
+        simSolver.setMxNewTStepAlgInit(10000);
+        simSolver.setMsbsetAlgInit(1);
+        simSolver.setMxIterAlgInit(50);
+        simSolver.setPrintFlAlgInit(0);
+        simSolver.setMinimalAcceptableStep(1.e-3);
+        simSolver.setMaximumNumberSlowStepIncrease(40);
+
+        return simSolver;
+    }
+
     static NetworkInfos getDefaultNetwork() {
         // these parameters are taken from network.par file in dynamic simulation server
         NetworkInfos network = new NetworkInfos();
         network.setCapacitorNoReclosingDelay(300);
-        network.setDanglingLineCurrentLimitMaxTimeOperation(90);
-        network.setLineCurrentLimitMaxTimeOperation(90);
+        network.setDanglingLineCurrentLimitMaxTimeOperation(240);
+        network.setLineCurrentLimitMaxTimeOperation(240);
         network.setLoadTp(90);
         network.setLoadTq(90);
         network.setLoadAlpha(1);
@@ -137,7 +208,7 @@ public interface DynamicSimulationService {
         network.setLoadZPMax(100);
         network.setLoadZQMax(100);
         network.setReactanceNoReclosingDelay(0);
-        network.setTransformerCurrentLimitMaxTimeOperation(90);
+        network.setTransformerCurrentLimitMaxTimeOperation(240);
         network.setTransformerT1StHT(60);
         network.setTransformerT1StTHT(30);
         network.setTransformerTNextHT(10);
