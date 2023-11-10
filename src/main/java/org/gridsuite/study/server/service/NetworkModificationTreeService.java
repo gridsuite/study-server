@@ -1011,6 +1011,11 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
+    public void addModificationsToExclude(UUID nodeUuid, List<UUID> modificationUUid) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).addModificationsToExclude(nodeUuid, modificationUUid));
+    }
+
+    @Transactional
     public void removeModificationsToExclude(UUID nodeUuid, List<UUID> modificationUUid) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).removeModificationsToExclude(nodeUuid, modificationUUid));
     }

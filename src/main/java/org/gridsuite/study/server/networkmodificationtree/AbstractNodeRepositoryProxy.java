@@ -99,6 +99,9 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
     }
 
+    public void addModificationsToExclude(AbstractNode node, List<UUID> modificationsUuids) {
+    }
+
     public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationUuid) {
     }
 
@@ -247,6 +250,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public void handleExcludeModification(UUID nodeUuid, UUID modificationUuid, boolean active) {
         handleExcludeModification(getNode(nodeUuid), modificationUuid, active);
+    }
+
+    public void addModificationsToExclude(UUID nodeUuid, List<UUID> modificationsUuids) {
+        addModificationsToExclude(getNode(nodeUuid), modificationsUuids);
     }
 
     public void removeModificationsToExclude(UUID nodeUuid, List<UUID> modificationUuid) {

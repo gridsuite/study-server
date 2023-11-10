@@ -74,6 +74,7 @@ public class NotificationService {
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
     public static final String MODIFICATIONS_DELETING_IN_PROGRESS = "deletingInProgress";
+    public static final String MODIFICATIONS_RESTORING_IN_PROGRESS = "restoringInProgress";
     public static final String MODIFICATIONS_UPDATING_IN_PROGRESS = "updatingInProgress";
     public static final String MODIFICATIONS_UPDATING_FINISHED = "UPDATE_FINISHED";
 

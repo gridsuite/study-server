@@ -1139,6 +1139,8 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?uuids={modificationID1}&stashed=false", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
             .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
+        node = (NetworkModificationNode) getNode(root.getStudyId(), node.getId());
+        assertEquals(0, node.getModificationsToExclude().size());
 
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
@@ -1175,6 +1177,8 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?uuids={modificationID1}&stashed=true", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        node = (NetworkModificationNode) getNode(root.getStudyId(), node.getId());
+        assertEquals(1, node.getModificationsToExclude().size());
 
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
