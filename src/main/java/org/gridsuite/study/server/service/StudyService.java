@@ -1057,14 +1057,14 @@ public class StudyService {
                 .orElse(null);
     }
 
-    public ShortCircuitParametersInfo getShortCircuitParametersInfo(UUID studyUuid) {
+    public ShortCircuitParametersInfos getShortCircuitParametersInfo(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(studyEntity -> ShortCircuitService.toShortCircuitParametersInfo(studyEntity.getShortCircuitParameters()))
                 .orElse(null);
     }
 
     @Transactional
-    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParametersInfo parameters, String userId) {
+    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParametersInfos parameters, String userId) {
         Objects.requireNonNull(parameters);
         ShortCircuitParametersEntity shortCircuitParametersEntity = ShortCircuitService.toEntity(parameters);
         updateShortCircuitParameters(studyUuid, shortCircuitParametersEntity);

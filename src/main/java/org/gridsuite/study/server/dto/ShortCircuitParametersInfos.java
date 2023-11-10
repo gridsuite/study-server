@@ -22,7 +22,7 @@ import java.util.Map;
 @Getter
 @Setter
 @Builder
-public class ShortCircuitParametersInfo {
+public class ShortCircuitParametersInfos {
     private ShortCircuitPredefinedConfiguration predefinedParameters;
     private ShortCircuitParameters parameters;
     private Map<String, List<VoltageRange>> voltageRangesInfo;

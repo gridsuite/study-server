@@ -888,17 +888,16 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")})
     public ResponseEntity<Void> setShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) ShortCircuitParametersInfo shortCircuitParametersInfo,
+            @RequestBody(required = false) ShortCircuitParametersInfos shortCircuitParametersInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setShortCircuitParameters(studyUuid, shortCircuitParametersInfo, userId);
+        studyService.setShortCircuitParameters(studyUuid, shortCircuitParametersInfos, userId);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
     @Operation(summary = "Get short-circuit analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters")})
-    public ResponseEntity<ShortCircuitParametersInfo
-            > getShortCircuitParameters(
+    public ResponseEntity<ShortCircuitParametersInfos> getShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getShortCircuitParametersInfo(studyUuid));
     }

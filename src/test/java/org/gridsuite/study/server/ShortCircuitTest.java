@@ -22,7 +22,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ShortCircuitParametersInfo;
+import org.gridsuite.study.server.dto.ShortCircuitParametersInfos;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -248,15 +248,15 @@ public class ShortCircuitTest {
 
         // change some short circuit parameters
         ShortCircuitParameters shortCircuitParameters = ShortCircuitService.newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, true, true, true, true, InitialVoltageProfileMode.NOMINAL, null);
-        ShortCircuitParametersInfo shortCircuitParametersInfo = new ShortCircuitParametersInfo();
-        shortCircuitParametersInfo.setParameters(shortCircuitParameters);
-        shortCircuitParametersInfo.setPredefinedParameters(ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_CEI909);
+        ShortCircuitParametersInfos shortCircuitParametersInfos = new ShortCircuitParametersInfos();
+        shortCircuitParametersInfos.setParameters(shortCircuitParameters);
+        shortCircuitParametersInfos.setPredefinedParameters(ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_CEI909);
 
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectWriter.writeValueAsString(shortCircuitParametersInfo))).andExpect(
+                        .content(objectWriter.writeValueAsString(shortCircuitParametersInfos))).andExpect(
                 status().isOk());
 
         //getting set values

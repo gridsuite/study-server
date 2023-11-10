@@ -16,7 +16,7 @@ import com.powsybl.shortcircuit.VoltageRange;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ShortCircuitParametersInfo;
+import org.gridsuite.study.server.dto.ShortCircuitParametersInfos;
 import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -243,9 +243,9 @@ public class ShortCircuitService {
                 ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
     }
 
-    public static ShortCircuitParametersEntity toEntity(ShortCircuitParametersInfo shortCircuitParametersInfo) {
-        Objects.requireNonNull(shortCircuitParametersInfo);
-        ShortCircuitParameters parameters = shortCircuitParametersInfo.getParameters();
+    public static ShortCircuitParametersEntity toEntity(ShortCircuitParametersInfos shortCircuitParametersInfos) {
+        Objects.requireNonNull(shortCircuitParametersInfos);
+        ShortCircuitParameters parameters = shortCircuitParametersInfos.getParameters();
         return new ShortCircuitParametersEntity(parameters.isWithLimitViolations(),
                 parameters.isWithVoltageResult(),
                 parameters.isWithFortescueResult(),
@@ -257,7 +257,7 @@ public class ShortCircuitService {
                 parameters.isWithVSCConverterStations(),
                 parameters.isWithNeutralPosition(),
                 parameters.getInitialVoltageProfileMode(),
-                shortCircuitParametersInfo.getPredefinedParameters());
+                shortCircuitParametersInfos.getPredefinedParameters());
     }
 
     public static ShortCircuitParameters fromEntity(ShortCircuitParametersEntity entity) {
@@ -279,14 +279,12 @@ public class ShortCircuitService {
                 .setWithLimitViolations(withLimitViolations)
                 .setWithVoltageResult(withVoltageResult)
                 .setWithFortescueResult(withFortescueResult)
-                //add fields related to version 1.2
                 .setWithLoads(withLoads)
                 .setWithShuntCompensators(withShuntCompensators)
                 .setWithVSCConverterStations(withVscConverterStations)
                 .setWithNeutralPosition(withNeutralPosition)
                 .setInitialVoltageProfileMode(initialVoltageProfileMode)
-                // if the initialVoltageProfileMode is NOMINAL the voltageRanges won't be taken care of when serializing the ShortCircuitParameters
-                // it is mandatory only if the initialVoltageProfileMode is CONFIGURED
+                // the voltageRanges is not taken in account when initialVoltageProfileMode=NOMINAL
                 .setVoltageRanges(voltageRanges);
     }
 
@@ -342,12 +340,12 @@ public class ShortCircuitService {
         return voltageRanges;
     }
 
-    public static ShortCircuitParametersInfo toShortCircuitParametersInfo(ShortCircuitParametersEntity entity) {
+    public static ShortCircuitParametersInfos toShortCircuitParametersInfo(ShortCircuitParametersEntity entity) {
         Objects.requireNonNull(entity);
         Map<String, List<VoltageRange>> voltageRangesMap = new HashMap<>();
         voltageRangesMap.put(InitialVoltageProfileMode.NOMINAL.toString(), getVoltageRanges(true));
         voltageRangesMap.put(InitialVoltageProfileMode.CONFIGURED.toString(), getVoltageRanges(false));
-        return ShortCircuitParametersInfo.builder()
+        return ShortCircuitParametersInfos.builder()
                 .predefinedParameters(entity.getPredefinedParameters())
                 .parameters(fromEntity(entity))
                 .voltageRangesInfo(voltageRangesMap)
