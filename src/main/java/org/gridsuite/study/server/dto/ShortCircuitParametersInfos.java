@@ -7,8 +7,8 @@
 package org.gridsuite.study.server.dto;
 
 import com.powsybl.shortcircuit.ShortCircuitParameters;
-import com.powsybl.shortcircuit.VoltageRange;
 import lombok.*;
+import org.springframework.data.util.Pair;
 
 import java.util.List;
 import java.util.Map;
@@ -25,5 +25,5 @@ import java.util.Map;
 public class ShortCircuitParametersInfos {
     private ShortCircuitPredefinedConfiguration predefinedParameters;
     private ShortCircuitParameters parameters;
-    private Map<String, List<VoltageRange>> voltageRangesInfo;
+    private Map<String, List<Pair<Double, Double>>> voltageRangesInfo;
 }
