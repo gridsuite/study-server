@@ -15,43 +15,6 @@
     "initialVoltageProfileMode": "NOMINAL"
   },
   "voltageRangesInfo": {
-    "CONFIGURED": [
-      {
-        "minimumNominalVoltage": 20.0,
-        "maximumNominalVoltage": 22.0,
-        "voltageRangeCoefficient": 1.1
-      },
-      {
-        "minimumNominalVoltage": 45.0,
-        "maximumNominalVoltage": 49.5,
-        "voltageRangeCoefficient": 1.1
-      },
-      {
-        "minimumNominalVoltage": 63.0,
-        "maximumNominalVoltage": 69.3,
-        "voltageRangeCoefficient": 1.1
-      },
-      {
-        "minimumNominalVoltage": 90.0,
-        "maximumNominalVoltage": 99.0,
-        "voltageRangeCoefficient": 1.1
-      },
-      {
-        "minimumNominalVoltage": 150.0,
-        "maximumNominalVoltage": 165.0,
-        "voltageRangeCoefficient": 1.1
-      },
-      {
-        "minimumNominalVoltage": 225.0,
-        "maximumNominalVoltage": 245.0,
-        "voltageRangeCoefficient": 1.09
-      },
-      {
-        "minimumNominalVoltage": 380.0,
-        "maximumNominalVoltage": 420.0,
-        "voltageRangeCoefficient": 1.09
-      }
-    ],
     "NOMINAL": [
       {
         "minimumNominalVoltage": 20.0,
@@ -84,9 +47,46 @@
         "voltageRangeCoefficient": 1.0
       },
       {
-        "minimumNominalVoltage": 380.0,
+        "minimumNominalVoltage": 400.0,
         "maximumNominalVoltage": 400.0,
         "voltageRangeCoefficient": 1.0
+      }
+    ],
+    "CEI909": [
+      {
+        "minimumNominalVoltage": 20.0,
+        "maximumNominalVoltage": 22.0,
+        "voltageRangeCoefficient": 1.1
+      },
+      {
+        "minimumNominalVoltage": 45.0,
+        "maximumNominalVoltage": 49.5,
+        "voltageRangeCoefficient": 1.1
+      },
+      {
+        "minimumNominalVoltage": 63.0,
+        "maximumNominalVoltage": 69.3,
+        "voltageRangeCoefficient": 1.1
+      },
+      {
+        "minimumNominalVoltage": 90.0,
+        "maximumNominalVoltage": 99.0,
+        "voltageRangeCoefficient": 1.1
+      },
+      {
+        "minimumNominalVoltage": 150.0,
+        "maximumNominalVoltage": 165.0,
+        "voltageRangeCoefficient": 1.1
+      },
+      {
+        "minimumNominalVoltage": 225.0,
+        "maximumNominalVoltage": 245.0,
+        "voltageRangeCoefficient": 1.0
+      },
+      {
+        "minimumNominalVoltage": 400.0,
+        "maximumNominalVoltage": 420.0,
+        "voltageRangeCoefficient": 1.05
       }
     ]
   }

@@ -15,10 +15,7 @@ import com.powsybl.shortcircuit.StudyType;
 import com.powsybl.shortcircuit.VoltageRange;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ShortCircuitParametersInfos;
-import org.gridsuite.study.server.dto.ShortCircuitStatus;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -263,7 +260,7 @@ public class ShortCircuitService {
     public static ShortCircuitParameters fromEntity(ShortCircuitParametersEntity entity) {
         Objects.requireNonNull(entity);
         boolean isNominal = InitialVoltageProfileMode.NOMINAL.equals(entity.getInitialVoltageProfileMode());
-        List<VoltageRange> voltageRanges = getVoltageRanges(isNominal);
+        List<VoltageRange> voltageRanges = isNominal ? NOMINAL_VOLTAGE_RANGES : CEI909_VOLTAGE_RANGES;
         return newShortCircuitParameters(entity.getStudyType(), entity.getMinVoltageDropProportionalThreshold(), entity.isWithFeederResult(), entity.isWithLimitViolations(), entity.isWithVoltageResult(), entity.isWithFortescueResult(), entity.isWithLoads(), entity.isWithShuntCompensators(), entity.isWithVscConverterStations(), entity.isWithNeutralPosition(), entity.getInitialVoltageProfileMode(), voltageRanges);
     }
 
@@ -328,23 +325,31 @@ public class ShortCircuitService {
         }
     }
 
-    public static List<VoltageRange> getVoltageRanges(boolean isNominal) {
-        List<VoltageRange> voltageRanges = new ArrayList<>();
-        voltageRanges.add(new VoltageRange(20.0, isNominal ? 20.0 : 22.0, isNominal ? 1 : 1.1));
-        voltageRanges.add(new VoltageRange(45.0, isNominal ? 45.0 : 49.5, isNominal ? 1 : 1.1));
-        voltageRanges.add(new VoltageRange(63.0, isNominal ? 63.0 : 69.3, isNominal ? 1 : 1.1));
-        voltageRanges.add(new VoltageRange(90.0, isNominal ? 90.0 : 99.0, isNominal ? 1 : 1.1));
-        voltageRanges.add(new VoltageRange(150.0, isNominal ? 150.0 : 165.0, isNominal ? 1 : 1.1));
-        voltageRanges.add(new VoltageRange(225.0, isNominal ? 225.0 : 245.0, isNominal ? 1 : 1.09));
-        voltageRanges.add(new VoltageRange(380.0, isNominal ? 400 : 420.0, isNominal ? 1 : 1.09));
-        return voltageRanges;
-    }
+    private static final List<VoltageRange> NOMINAL_VOLTAGE_RANGES = List.of(
+            new VoltageRange(20.0, 20.0, 1),
+            new VoltageRange(45.0, 45.0, 1),
+            new VoltageRange(63.0, 63.0, 1),
+            new VoltageRange(90.0, 90.0, 1),
+            new VoltageRange(150.0, 150.0, 1),
+            new VoltageRange(225.0, 225.0, 1),
+            new VoltageRange(400.0, 400.0, 1)
+    );
+
+    private static final List<VoltageRange> CEI909_VOLTAGE_RANGES = List.of(
+            new VoltageRange(20.0, 22.0, 1.1),
+            new VoltageRange(45.0, 49.5, 1.1),
+            new VoltageRange(63.0, 69.3, 1.1),
+            new VoltageRange(90.0, 99.0, 1.1),
+            new VoltageRange(150.0, 165.0, 1.1),
+            new VoltageRange(225.0, 245.0, 1.0),
+            new VoltageRange(400.0, 420.0, 1.05)
+    );
 
     public static ShortCircuitParametersInfos toShortCircuitParametersInfo(ShortCircuitParametersEntity entity) {
         Objects.requireNonNull(entity);
         Map<String, List<VoltageRange>> voltageRangesMap = new HashMap<>();
-        voltageRangesMap.put(InitialVoltageProfileMode.NOMINAL.toString(), getVoltageRanges(true));
-        voltageRangesMap.put(InitialVoltageProfileMode.CONFIGURED.toString(), getVoltageRanges(false));
+        voltageRangesMap.put(ShortCircuitInitialVoltageProfileMode.NOMINAL.toString(), NOMINAL_VOLTAGE_RANGES);
+        voltageRangesMap.put(ShortCircuitInitialVoltageProfileMode.CEI909.toString(), CEI909_VOLTAGE_RANGES);
         return ShortCircuitParametersInfos.builder()
                 .predefinedParameters(entity.getPredefinedParameters())
                 .parameters(fromEntity(entity))
