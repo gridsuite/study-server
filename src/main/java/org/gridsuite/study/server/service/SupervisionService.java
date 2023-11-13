@@ -8,6 +8,7 @@ package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -39,6 +40,8 @@ public class SupervisionService {
 
     private StudyService studyService;
 
+    private NetworkModificationTreeService networkModificationTreeService;
+
     private ReportService reportService;
 
     private LoadFlowService loadFlowService;
@@ -57,9 +60,10 @@ public class SupervisionService {
 
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    public SupervisionService(StudyService studyService, NetworkService networkStoreService, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService) {
+    public SupervisionService(StudyService studyService, NetworkModificationTreeService networkModificationTreeService, NetworkService networkStoreService, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService) {
         this.networkStoreService = networkStoreService;
         this.studyService = studyService;
+        this.networkModificationTreeService = networkModificationTreeService;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.reportService = reportService;
         this.loadFlowService = loadFlowService;
@@ -196,6 +200,12 @@ public class SupervisionService {
             node -> node.getReportUuid(),
             node -> node.getId() + "@" + subReporterKey)
         );
+    }
+
+    @Transactional
+    public void invalidateNodeBuilds(UUID studyUuid) {
+        RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
+        studyService.invalidateBuild(studyUuid, rootNode.getId(), false, false);
     }
 }
 
