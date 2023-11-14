@@ -23,7 +23,6 @@ import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.util.Pair;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -260,18 +259,7 @@ public class ShortCircuitService {
 
     public static ShortCircuitParameters fromEntity(ShortCircuitParametersEntity entity) {
         Objects.requireNonNull(entity);
-        //boolean isNominal = InitialVoltageProfileMode.NOMINAL.equals(entity.getInitialVoltageProfileMode());
-        //TODO: TO update when getting powsybl's intervales
-        List<VoltageRange> voltageRanges = List.of(
-                new VoltageRange(20.0, 22.0, 1.1),
-                new VoltageRange(45.0, 49.5, 1.1),
-                new VoltageRange(63.0, 69.3, 1.1),
-                new VoltageRange(90.0, 99.0, 1.1),
-                new VoltageRange(150.0, 165.0, 1.1),
-                new VoltageRange(225.0, 245.0, 1.0),
-                new VoltageRange(400.0, 420.0, 1.05)
-        );
-        return newShortCircuitParameters(entity.getStudyType(), entity.getMinVoltageDropProportionalThreshold(), entity.isWithFeederResult(), entity.isWithLimitViolations(), entity.isWithVoltageResult(), entity.isWithFortescueResult(), entity.isWithLoads(), entity.isWithShuntCompensators(), entity.isWithVscConverterStations(), entity.isWithNeutralPosition(), entity.getInitialVoltageProfileMode(), voltageRanges);
+        return newShortCircuitParameters(entity.getStudyType(), entity.getMinVoltageDropProportionalThreshold(), entity.isWithFeederResult(), entity.isWithLimitViolations(), entity.isWithVoltageResult(), entity.isWithFortescueResult(), entity.isWithLoads(), entity.isWithShuntCompensators(), entity.isWithVscConverterStations(), entity.isWithNeutralPosition(), entity.getInitialVoltageProfileMode(), CEI909_VOLTAGE_PROFILE);
     }
 
     public static ShortCircuitParameters copy(ShortCircuitParameters shortCircuitParameters) {
@@ -335,34 +323,18 @@ public class ShortCircuitService {
         }
     }
 
-    private static final List<Pair<Double, Double>> NOMINAL_VOLTAGE_RANGES = List.of(
-            Pair.of(20.0, 20.0),
-            Pair.of(45.0, 45.0),
-            Pair.of(63.0, 63.0),
-            Pair.of(90.0, 90.0),
-            Pair.of(150.0, 150.0),
-            Pair.of(225.0, 225.0),
-            Pair.of(380.0, 400.0)
-    );
-    private static final List<Pair<Double, Double>> CEI909_VOLTAGE_RANGES = List.of(
-           Pair.of(20.0, 22.0),
-           Pair.of(45.0, 49.5),
-           Pair.of(63.0, 69.3),
-           Pair.of(90.0, 99.0),
-           Pair.of(150.0, 165.0),
-           Pair.of(225.0, 245.0),
-           Pair.of(380.0, 420.0)
+    public static final List<VoltageRange> CEI909_VOLTAGE_PROFILE = List.of(
+            new VoltageRange(20.0, 224.99, 1.1),
+            new VoltageRange(225.0, 379.99, 1.09),
+            new VoltageRange(380.0, 420.0, 1.05)
     );
 
     public static ShortCircuitParametersInfos toShortCircuitParametersInfo(ShortCircuitParametersEntity entity) {
         Objects.requireNonNull(entity);
-        Map<String, List<Pair<Double, Double>>> voltageRangesMap = new HashMap<>();
-        voltageRangesMap.put(ShortCircuitInitialVoltageProfileMode.NOMINAL.toString(), NOMINAL_VOLTAGE_RANGES);
-        voltageRangesMap.put(ShortCircuitInitialVoltageProfileMode.CEI909.toString(), CEI909_VOLTAGE_RANGES);
         return ShortCircuitParametersInfos.builder()
                 .predefinedParameters(entity.getPredefinedParameters())
                 .parameters(fromEntity(entity))
-                .voltageRangesInfo(voltageRangesMap)
+                .voltageRangesInfo(CEI909_VOLTAGE_PROFILE)
                 .build();
     }
 
