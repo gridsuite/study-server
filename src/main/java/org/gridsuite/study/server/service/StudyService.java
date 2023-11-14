@@ -1450,7 +1450,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void invalidateAllNodeBuilds(UUID studyUuid) {
+    public void invalidateAllNodesBuilds(UUID studyUuid) {
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
         invalidateBuild(studyUuid, rootNode.getId(), false, false);
     }

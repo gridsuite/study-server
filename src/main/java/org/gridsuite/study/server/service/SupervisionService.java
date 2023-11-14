@@ -198,8 +198,8 @@ public class SupervisionService {
         );
     }
 
-    public void invalidateAllNodeBuilds(UUID studyUuid) {
-        studyService.invalidateAllNodeBuilds(studyUuid);
+    public void invalidateAllNodesBuilds(UUID studyUuid) {
+        studyService.invalidateAllNodesBuilds(studyUuid);
     }
 }
 
