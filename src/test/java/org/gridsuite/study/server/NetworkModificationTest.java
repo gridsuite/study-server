@@ -2628,14 +2628,6 @@ public class NetworkModificationTest {
 
         checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuids, expectedPayload);
 
-        // assert that the broker message has been sent
-        Message<byte[]> messageSwitch = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(messageSwitch.getPayload()));
-        MessageHeaders headersSwitch = messageSwitch.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersSwitch.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuids.get(0), headersSwitch.get(NotificationService.HEADER_NODE));
-        assertEquals(NotificationService.UPDATE_TYPE_SWITCH, headersSwitch.get(NotificationService.HEADER_UPDATE_TYPE));
-
         checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, nodeUuids);
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuids.get(0));
     }

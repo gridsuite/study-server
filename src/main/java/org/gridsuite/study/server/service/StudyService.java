@@ -14,7 +14,6 @@ import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.TypedValue;
 import com.powsybl.iidm.network.*;
 import com.powsybl.security.LimitViolation;
-import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.security.SecurityAnalysisParameters;
@@ -1458,7 +1457,7 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateOnlyTargetNode) {
+    public void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateOnlyTargetNode) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
@@ -1839,18 +1838,6 @@ public class StudyService {
                 .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
                 .build()
         );
-
-        if (networkModificationResult.getNetworkImpacts().stream()
-            .filter(impact -> impact.getImpactType() == SimpleImpactType.MODIFICATION)
-            .anyMatch(impact -> impact.getElementType() == IdentifiableType.SWITCH)) {
-            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SWITCH);
-        }
-
-        if (networkModificationResult.getNetworkImpacts().stream()
-            .filter(impact -> impact.getImpactType() == SimpleImpactType.MODIFICATION)
-            .anyMatch(impact -> impact.getElementType() == IdentifiableType.LINE)) {
-            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LINE);
-        }
     }
 
     public void notify(@NonNull String notificationName, @NonNull UUID studyUuid) {
