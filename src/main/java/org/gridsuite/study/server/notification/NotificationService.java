@@ -43,7 +43,6 @@ public class NotificationService {
     public static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
     public static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
     public static final String UPDATE_TYPE_BUILD_FAILED = "buildFailed";
-    public static final String UPDATE_TYPE_LINE = "line";
     public static final String UPDATE_TYPE_LOADFLOW_RESULT = "loadflowResult";
     public static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
     public static final String UPDATE_TYPE_LOADFLOW_FAILED = "loadflow_failed";
@@ -69,7 +68,6 @@ public class NotificationService {
     public static final String UPDATE_TYPE_STUDY_NETWORK_RECREATION_DONE = "study_network_recreation_done";
     public static final String UPDATE_TYPE_STUDY = "study";
     public static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
-    public static final String UPDATE_TYPE_SWITCH = "switch";
     public static final String UPDATE_TYPE_INDEXATION_STATUS = "indexation_status_updated";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";

@@ -1831,18 +1831,6 @@ public class StudyService {
                 .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
                 .build()
         );
-
-        if (networkModificationResult.getNetworkImpacts().stream()
-            .filter(impact -> impact.getImpactType() == SimpleImpactType.MODIFICATION)
-            .anyMatch(impact -> impact.getElementType() == IdentifiableType.SWITCH)) {
-            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SWITCH);
-        }
-
-        if (networkModificationResult.getNetworkImpacts().stream()
-            .filter(impact -> impact.getImpactType() == SimpleImpactType.MODIFICATION)
-            .anyMatch(impact -> impact.getElementType() == IdentifiableType.LINE)) {
-            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LINE);
-        }
     }
 
     public void notify(@NonNull String notificationName, @NonNull UUID studyUuid) {
