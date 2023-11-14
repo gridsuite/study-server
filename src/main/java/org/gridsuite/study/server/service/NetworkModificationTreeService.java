@@ -562,6 +562,11 @@ public class NetworkModificationTreeService {
         return getNetworkModifications(nodeUuid, false, true);
     }
 
+    @Transactional(readOnly = true)
+    public Integer getNetworkModificationsCount(@NonNull UUID nodeUuid, boolean onlyStashed) {
+        return networkModificationService.getModificationsCount(getModificationGroupUuid(nodeUuid), onlyStashed);
+    }
+
     @Transactional
     public UUID getReportUuid(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getReportUuid(nodeUuid)).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
