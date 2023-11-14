@@ -159,9 +159,6 @@ public class NetworkMapTest {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/busbar-sections":
                         return new MockResponse().setResponseCode(200).setBody(busbarSectionsDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels-equipments":
-                        return new MockResponse().setResponseCode(200).setBody(VOLTAGE_LEVELS_EQUIPMENTS_JSON)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-level-equipments/" + VL_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(VOLTAGE_LEVEL_EQUIPMENTS_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -314,23 +311,6 @@ public class NetworkMapTest {
         //get the voltage level map data info of a network
         String voltageLevelDataAsString = mapper.writeValueAsString(List.of(IdentifiableInfos.builder().id(VL_ID_1).name("VL_NAME_1").build()));
         getNetworkElementInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "LIST", VL_ID_1, voltageLevelDataAsString);
-    }
-
-    @Test
-    public void testGetVoltageLevelsAndEquipments() throws Exception {
-        //create study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
-        UUID studyNameUserIdUuid = studyEntity.getId();
-        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
-
-        //get the voltage levels and its equipments
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels-equipments",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/voltage-levels-equipments", NETWORK_UUID_STRING)));
     }
 
     @Test
