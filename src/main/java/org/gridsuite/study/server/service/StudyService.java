@@ -1449,13 +1449,7 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    @Transactional
-    public void invalidateAllNodesBuilds(UUID studyUuid) {
-        RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
-        invalidateBuild(studyUuid, rootNode.getId(), false, false);
-    }
-
-    private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateOnlyTargetNode) {
+    public void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateOnlyTargetNode) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
