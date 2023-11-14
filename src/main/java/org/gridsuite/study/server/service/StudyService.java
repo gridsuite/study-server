@@ -140,6 +140,7 @@ public class StudyService {
         EXACT_MATCHING, ENDS_WITH
     }
 
+    // TODO remove ComputationType (and use ReportType instead) after short-circuit logs have been invalidaded with admin-tool
     public enum ReportType {
         NETWORK_MODIFICATION("NetworkModification"),
         LOADFLOW("LoadFlow"),
