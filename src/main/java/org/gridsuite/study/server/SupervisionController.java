@@ -96,11 +96,11 @@ public class SupervisionController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.deleteStudyIndexedEquipmentsAndTombstoned(studyUuid));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes")
+    @DeleteMapping(value = "/studies/{studyUuid}/nodes/builds")
     @Operation(summary = "Invalidate node builds for the given study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all built nodes for the given study have been invalidated")})
-    public ResponseEntity<Void> invalidateNodeBuilds(@PathVariable("studyUuid") UUID studyUuid) {
-        supervisionService.invalidateNodeBuilds(studyUuid);
+    public ResponseEntity<Void> invalidateAllNodeBuilds(@PathVariable("studyUuid") UUID studyUuid) {
+        supervisionService.invalidateAllNodeBuilds(studyUuid);
         return ResponseEntity.ok().build();
     }
 

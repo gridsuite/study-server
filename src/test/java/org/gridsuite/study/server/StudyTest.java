@@ -2381,7 +2381,7 @@ public class StudyTest {
         assertEquals(1, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/indexed-equipments")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
 
-        mockMvc.perform(put("/v1/supervision/studies/{studyUuid}/nodes", studyUuid))
+        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/nodes/builds", studyUuid))
             .andExpect(status().isOk());
 
         buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
