@@ -30,6 +30,10 @@ public class LimitViolationInfos {
 
     private Integer acceptableDuration;
 
+    private Integer actualOverload;
+
+    private Integer upComingOverload;
+
     private Double value;
 
     private String side;
