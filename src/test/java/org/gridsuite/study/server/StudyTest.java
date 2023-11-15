@@ -1560,7 +1560,7 @@ public class StudyTest {
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
 
-        UUID stubGetUuid = wireMockUtils.stubNetworkModificationGet();
+        UUID stubGetCountUuid = wireMockUtils.stubNetworkModificationCountGet(node1.getModificationGroupUuid().toString(), 0);
 
         //try to cut and paste a node before itself and expect forbidden
         mockMvc.perform(post(STUDIES_URL +
@@ -1568,7 +1568,7 @@ public class StudyTest {
             study1Uuid, node1.getId(), node1.getId(), InsertMode.BEFORE)
             .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
-        wireMockUtils.verifyNetworkModificationsGet(stubGetUuid, node1.getModificationGroupUuid().toString());
+        wireMockUtils.verifyNetworkModificationCountsGet(stubGetCountUuid, node1.getModificationGroupUuid().toString());
 
         //try to cut and paste a node after itself and expect forbidden
         mockMvc.perform(post(STUDIES_URL +
@@ -1576,7 +1576,7 @@ public class StudyTest {
             study1Uuid, node1.getId(), node1.getId(), InsertMode.AFTER)
             .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
-        wireMockUtils.verifyNetworkModificationsGet(stubGetUuid, node1.getModificationGroupUuid().toString());
+        wireMockUtils.verifyNetworkModificationCountsGet(stubGetCountUuid, node1.getModificationGroupUuid().toString());
 
         //try to cut and paste a node in a new branch after itself and expect forbidden
         mockMvc.perform(post(STUDIES_URL +
@@ -1584,7 +1584,7 @@ public class StudyTest {
             study1Uuid, node1.getId(), node1.getId(), InsertMode.CHILD)
             .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
-        wireMockUtils.verifyNetworkModificationsGet(stubGetUuid, node1.getModificationGroupUuid().toString());
+        wireMockUtils.verifyNetworkModificationCountsGet(stubGetCountUuid, node1.getModificationGroupUuid().toString());
     }
 
     @Test
@@ -1652,14 +1652,14 @@ public class StudyTest {
                 .andExpect(status().isNotFound());
 
         //try to cut and paste to before the root node and expect forbidden
-        UUID stubUuid = wireMockUtils.stubNetworkModificationGet();
+        UUID stubUuid = wireMockUtils.stubNetworkModificationCountGet(node1.getModificationGroupUuid().toString(), 0);
         mockMvc.perform(post(STUDIES_URL +
                         "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 study1Uuid, node1.getId(), rootNode.getId(), InsertMode.BEFORE)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isForbidden());
 
-        wireMockUtils.verifyNetworkModificationsGet(stubUuid, node1.getModificationGroupUuid().toString());
+        wireMockUtils.verifyNetworkModificationCountsGet(stubUuid, node1.getModificationGroupUuid().toString());
     }
 
     @Test
@@ -2037,18 +2037,18 @@ public class StudyTest {
     }
 
     private void cutAndPasteNode(UUID studyUuid, NetworkModificationNode nodeToCopy, UUID referenceNodeUuid, InsertMode insertMode, int childCount, String userId) throws Exception {
-        UUID stubUuid = wireMockUtils.stubNetworkModificationGet(nodeToCopy.getModificationGroupUuid().toString(),
-            EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? EMPTY_ARRAY : DEFAULT_MODIFICATION_LIST_RESULT);
+        UUID stubUuid = wireMockUtils.stubNetworkModificationCountGet(nodeToCopy.getModificationGroupUuid().toString(),
+            EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? 0 : 1);
         mockMvc.perform(post(STUDIES_URL +
                 "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 studyUuid, nodeToCopy.getId(), referenceNodeUuid, insertMode)
                 .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkElementUpdatedMessageSent(studyUuid, userId);
-        wireMockUtils.verifyNetworkModificationsGet(stubUuid, nodeToCopy.getModificationGroupUuid().toString());
+        wireMockUtils.verifyNetworkModificationCountsGet(stubUuid, nodeToCopy.getModificationGroupUuid().toString());
 
-        boolean nodeHasModifications = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeToCopy.getId()));
-        wireMockUtils.verifyNetworkModificationsGet(stubUuid, nodeToCopy.getModificationGroupUuid().toString());
+        boolean nodeHasModifications = networkModificationTreeService.getNetworkModificationsCount(nodeToCopy.getId(), false) > 0;
+        wireMockUtils.verifyNetworkModificationCountsGet(stubUuid, nodeToCopy.getModificationGroupUuid().toString());
 
         /*
          * moving node
@@ -2113,8 +2113,8 @@ public class StudyTest {
 
     private UUID duplicateNode(UUID sourceStudyUuid, UUID targetStudyUuid, NetworkModificationNode nodeToCopy, UUID referenceNodeUuid, InsertMode insertMode, String userId) throws Exception {
         List<UUID> allNodesBeforeDuplication = networkModificationTreeService.getAllNodes(targetStudyUuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
-        UUID stubGetUuid = wireMockUtils.stubNetworkModificationGet(nodeToCopy.getModificationGroupUuid().toString(),
-            EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? EMPTY_ARRAY : DEFAULT_MODIFICATION_LIST_RESULT);
+        UUID stubGetCountUuid = wireMockUtils.stubNetworkModificationCountGet(nodeToCopy.getModificationGroupUuid().toString(),
+            EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? 0 : 1);
         UUID stubDuplicateUuid = wireMockUtils.stubDuplicateModificationGroup();
         if (sourceStudyUuid.equals(targetStudyUuid)) {
             //if source and target are the same no need to pass sourceStudy param
@@ -2142,7 +2142,7 @@ public class StudyTest {
         checkUpdateModelsStatusMessagesReceived(targetStudyUuid, nodesAfterDuplication.get(0));
         checkElementUpdatedMessageSent(targetStudyUuid, userId);
 
-        wireMockUtils.verifyNetworkModificationsGet(stubGetUuid, nodeToCopy.getModificationGroupUuid().toString());
+        wireMockUtils.verifyNetworkModificationCountsGet(stubGetCountUuid, nodeToCopy.getModificationGroupUuid().toString());
         wireMockUtils.verifyDuplicateModificationGroup(stubDuplicateUuid, 1);
 
         return nodesAfterDuplication.get(0);
