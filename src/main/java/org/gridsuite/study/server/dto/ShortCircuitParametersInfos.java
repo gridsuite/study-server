@@ -24,5 +24,5 @@ import java.util.List;
 public class ShortCircuitParametersInfos {
     private ShortCircuitPredefinedConfiguration predefinedParameters;
     private ShortCircuitParameters parameters;
-    private List<VoltageRange> voltageRangesInfo;
+    private List<VoltageRange> cei909VoltageRanges;
 }

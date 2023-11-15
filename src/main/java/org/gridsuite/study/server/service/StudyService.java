@@ -629,7 +629,7 @@ public class StudyService {
         UUID copiedVoltageInitParametersUuid = sourceStudy.getVoltageInitParametersUuid();
 
         ShortCircuitParameters shortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
-
+        ShortCircuitPredefinedConfiguration shortCircuitPredefinedConfiguration = sourceStudy.getShortCircuitParameters().getPredefinedParameters();
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudy.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
 
         StudyEntity studyEntity = StudyEntity.builder()
@@ -643,7 +643,7 @@ public class StudyService {
                 .sensitivityAnalysisProvider(sourceStudy.getSensitivityAnalysisProvider())
                 .dynamicSimulationProvider(sourceStudy.getDynamicSimulationProvider())
                 .dynamicSimulationParameters(DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper))
-                .shortCircuitParameters(ShortCircuitService.toEntity(shortCircuitParameters))
+                .shortCircuitParameters(ShortCircuitService.toEntity(shortCircuitParameters, shortCircuitPredefinedConfiguration))
                 .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
                 .sensitivityAnalysisParameters(SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues))
                 .importParameters(newImportParameters)
@@ -1063,9 +1063,10 @@ public class StudyService {
     }
 
     @Transactional
-    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParametersInfos parameters, String userId) {
-        Objects.requireNonNull(parameters);
-        ShortCircuitParametersEntity shortCircuitParametersEntity = ShortCircuitService.toEntity(parameters);
+    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParametersInfos shortCircuitParametersInfos, String userId) {
+        Objects.requireNonNull(shortCircuitParametersInfos);
+        Objects.requireNonNull(shortCircuitParametersInfos.getParameters());
+        ShortCircuitParametersEntity shortCircuitParametersEntity = ShortCircuitService.toEntity(shortCircuitParametersInfos.getParameters(), shortCircuitParametersInfos.getPredefinedParameters());
         updateShortCircuitParameters(studyUuid, shortCircuitParametersEntity);
         notificationService.emitElementUpdated(studyUuid, userId);
     }

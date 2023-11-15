@@ -223,7 +223,7 @@ public class ShortCircuitService {
         return networkModificationTreeService.getReportUuid(nodeUuid);
     }
 
-    public static ShortCircuitParametersEntity toEntity(ShortCircuitParameters parameters) {
+    public static ShortCircuitParametersEntity toEntity(ShortCircuitParameters parameters, ShortCircuitPredefinedConfiguration shortCircuitPredefinedConfiguration) {
         Objects.requireNonNull(parameters);
         return new ShortCircuitParametersEntity(parameters.isWithLimitViolations(),
                 parameters.isWithVoltageResult(),
@@ -236,25 +236,7 @@ public class ShortCircuitService {
                 parameters.isWithVSCConverterStations(),
                 parameters.isWithNeutralPosition(),
                 parameters.getInitialVoltageProfileMode(),
-                // predefinedParameters default value is ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP
-                ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
-    }
-
-    public static ShortCircuitParametersEntity toEntity(ShortCircuitParametersInfos shortCircuitParametersInfos) {
-        Objects.requireNonNull(shortCircuitParametersInfos);
-        ShortCircuitParameters parameters = shortCircuitParametersInfos.getParameters();
-        return new ShortCircuitParametersEntity(parameters.isWithLimitViolations(),
-                parameters.isWithVoltageResult(),
-                parameters.isWithFortescueResult(),
-                parameters.isWithFeederResult(),
-                parameters.getStudyType(),
-                parameters.getMinVoltageDropProportionalThreshold(),
-                parameters.isWithLoads(),
-                parameters.isWithShuntCompensators(),
-                parameters.isWithVSCConverterStations(),
-                parameters.isWithNeutralPosition(),
-                parameters.getInitialVoltageProfileMode(),
-                shortCircuitParametersInfos.getPredefinedParameters());
+                shortCircuitPredefinedConfiguration);
     }
 
     public static ShortCircuitParameters fromEntity(ShortCircuitParametersEntity entity) {
@@ -324,9 +306,9 @@ public class ShortCircuitService {
     }
 
     public static final List<VoltageRange> CEI909_VOLTAGE_PROFILE = List.of(
-            new VoltageRange(20.0, 224.99, 1.1),
-            new VoltageRange(225.0, 379.99, 1.09),
-            new VoltageRange(380.0, 420.0, 1.05)
+            new VoltageRange(10.0, 199.99, 1.1),
+            new VoltageRange(200.0, 299.99, 1.09),
+            new VoltageRange(300.0, 500.0, 1.05)
     );
 
     public static ShortCircuitParametersInfos toShortCircuitParametersInfo(ShortCircuitParametersEntity entity) {
@@ -334,7 +316,7 @@ public class ShortCircuitService {
         return ShortCircuitParametersInfos.builder()
                 .predefinedParameters(entity.getPredefinedParameters())
                 .parameters(fromEntity(entity))
-                .voltageRangesInfo(CEI909_VOLTAGE_PROFILE)
+                .cei909VoltageRanges(CEI909_VOLTAGE_PROFILE)
                 .build();
     }
 

@@ -14,20 +14,20 @@
     "withNeutralPosition":true,
     "initialVoltageProfileMode":"NOMINAL"
   },
-  "voltageRangesInfo":[
+  "cei909VoltageRanges":[
     {
-      "minimumNominalVoltage":20.0,
-      "maximumNominalVoltage":224.99,
+      "minimumNominalVoltage":10.0,
+      "maximumNominalVoltage":199.99,
       "voltageRangeCoefficient":1.1
     },
     {
-      "minimumNominalVoltage":225.0,
-      "maximumNominalVoltage":379.99,
+      "minimumNominalVoltage":200.0,
+      "maximumNominalVoltage":299.99,
       "voltageRangeCoefficient":1.09
     },
     {
-      "minimumNominalVoltage":380.0,
-      "maximumNominalVoltage":420.0,
+      "minimumNominalVoltage":300.0,
+      "maximumNominalVoltage":500.0,
       "voltageRangeCoefficient":1.05
     }
   ]
