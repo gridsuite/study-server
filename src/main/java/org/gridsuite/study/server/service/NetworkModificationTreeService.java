@@ -564,7 +564,7 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public Integer getNetworkModificationsCount(@NonNull UUID nodeUuid, boolean onlyStashed) {
-        return networkModificationService.getModificationsCount(getModificationGroupUuid(nodeUuid), onlyStashed);
+        return networkModificationService.getModificationsCount(self.getModificationGroupUuid(nodeUuid), onlyStashed);
     }
 
     @Transactional
