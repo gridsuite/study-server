@@ -169,8 +169,8 @@
         </dependency>
 
         <dependency>
-          <groupId>com.jayway.jsonpath</groupId>
-          <artifactId>json-path-assert</artifactId>
+            <groupId>com.jayway.jsonpath</groupId>
+            <artifactId>json-path-assert</artifactId>
         </dependency>
 
         <!-- jpa, crud repository -->
