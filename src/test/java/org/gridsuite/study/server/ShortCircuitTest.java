@@ -12,6 +12,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.shortcircuit.InitialVoltageProfileMode;
+import com.powsybl.shortcircuit.ShortCircuitParameters;
+import com.powsybl.shortcircuit.StudyType;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
@@ -19,6 +22,8 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.ShortCircuitParametersInfos;
+import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
@@ -86,9 +91,6 @@ public class ShortCircuitTest {
     private static final String SHORT_CIRCUIT_ANALYSIS_ERROR_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
 
     private static final String SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
-
-    public static final String SHORT_CIRCUIT_PARAMETERS_JSON = "{\"version\":\"1.2\",\"withLimitViolations\":true,\"withVoltageResult\":false,\"withFeederResult\":true,\"studyType\":\"TRANSIENT\",\"minVoltageDropProportionalThreshold\":20.0,\"withFortescueResult\":false,\"withLoads\":true,\"withShuntCompensators\":true,\"withVSCConverterStations\":true,\"withNeutralPosition\":false,\"initialVoltageProfileMode\":\"NOMINAL\"}";
-    public static final String SHORT_CIRCUIT_PARAMETERS_JSON2 = "{\"version\":\"1.2\",\"withLimitViolations\":false,\"withVoltageResult\":false,\"withFeederResult\":false,\"studyType\":\"SUB_TRANSIENT\",\"subTransientCoefficient\":0.7,\"minVoltageDropProportionalThreshold\":1.0,\"withFortescueResult\":true,\"withLoads\":true,\"withShuntCompensators\":true,\"withVSCConverterStations\":true,\"withNeutralPosition\":false,\"initialVoltageProfileMode\":\"NOMINAL\"}";
 
     private static final String SHORT_CIRCUIT_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"faults\":[]";
 
@@ -200,6 +202,9 @@ public class ShortCircuitTest {
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")) {
                     return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "&resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)) {
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop.*")
                         || path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID : SHORT_CIRCUIT_ANALYSIS_RESULT_UUID;
@@ -239,30 +244,25 @@ public class ShortCircuitTest {
         //get default ShortCircuitParameters
         mockMvc.perform(get("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
-                content().string(SHORT_CIRCUIT_PARAMETERS_JSON));
+                content().string(TestUtils.resourceToString("/short-circuit-parameters.json")));
 
-        //setting short-circuit analysis Parameters
-        //passing self made json because shortCircuitParameter serializer removes the parameters with default value
-        String shortCircuitParameterBodyJson = "{\n" +
-                "  \"version\" : \"1.2\",\n" +
-                "  \"studyType\" : \"SUB_TRANSIENT\",\n" +
-                "  \"minVoltageDropProportionalThreshold\" : 1.0,\n" +
-                "  \"withVoltageResult\" : false,\n" +
-                "  \"withFeederResult\" : false,\n" +
-                "  \"withLimitViolations\" : false,\n" +
-                "  \"withFortescueResult\": true\n" +
-                "}";
+        // change some short circuit parameters
+        ShortCircuitParameters shortCircuitParameters = ShortCircuitService.newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, true, true, true, true, InitialVoltageProfileMode.NOMINAL, null);
+        ShortCircuitParametersInfos shortCircuitParametersInfos = new ShortCircuitParametersInfos();
+        shortCircuitParametersInfos.setParameters(shortCircuitParameters);
+        shortCircuitParametersInfos.setPredefinedParameters(ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_CEI909);
+
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(shortCircuitParameterBodyJson)).andExpect(
+                        .content(objectWriter.writeValueAsString(shortCircuitParametersInfos))).andExpect(
                 status().isOk());
 
         //getting set values
         mockMvc.perform(get("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
-                content().string(SHORT_CIRCUIT_PARAMETERS_JSON2));
+                content().string(TestUtils.resourceToString("/short-circuit-updated-parameters.json")));
     }
 
     @Test
@@ -587,6 +587,61 @@ public class ShortCircuitTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)).andExpect(status().isOk());
     }
 
+    @Test
+    public void testInvalidateShortCircuitStatus() throws Exception {
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
+                modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
+        UUID modificationNode2Uuid = modificationNode2.getId();
+
+        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid,
+                modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
+        UUID modificationNode3Uuid = modificationNode3.getId();
+
+        //run a short circuit analysis
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
+                        .header("userId", "userId"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+
+        //run a one bus short circuit analysis
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
+                        .param("busId", "BUS_TEST_ID")
+                        .header("userId", "userId"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT);
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+
+        // invalidate status
+        mockMvc.perform(put("/v1/studies/{studyUuid}/short-circuit/invalidate-status", studyNameUserIdUuid)
+                .header("userId", "userId")).andExpect(status().isOk());
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "&resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
+
+    }
+
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
         LoadFlowParametersEntity defaultLoadflowParametersEntity = LoadFlowParametersEntity.builder()
                 .voltageInitMode(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES)
@@ -597,7 +652,7 @@ public class ShortCircuitTest {
                 .dcUseTransformerRatio(true)
                 .hvdcAcEmulation(true)
                 .build();
-        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
+        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         SensitivityAnalysisParametersEntity defaultSensitivityParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", "defaultLoadflowProvider",
                 defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, defaultSensitivityParametersEntity);
