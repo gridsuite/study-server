@@ -43,6 +43,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
+import org.gridsuite.study.server.service.client.filter.FilterClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -128,6 +129,7 @@ public class StudyService {
     private final DynamicSimulationService dynamicSimulationService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
+    private final FilterClient filterClient;
     private final ActionsService actionsService;
     private final CaseService caseService;
     private final ObjectMapper objectMapper;
@@ -168,7 +170,8 @@ public class StudyService {
             SensitivityAnalysisService sensitivityAnalysisService,
             DynamicSimulationService dynamicSimulationService,
             VoltageInitService voltageInitService,
-            DynamicSimulationEventService dynamicSimulationEventService) {
+            DynamicSimulationEventService dynamicSimulationEventService,
+            FilterClient filterClient) {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
         this.defaultSensitivityAnalysisProvider = defaultSensitivityAnalysisProvider;
@@ -197,6 +200,7 @@ public class StudyService {
         this.dynamicSimulationService = dynamicSimulationService;
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
+        this.filterClient = filterClient;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -722,6 +726,11 @@ public class StudyService {
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
         return networkMapService.getElementInfos(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 elementType, infoType, loadFlowParameters.getDcPowerFactor(), elementId);
+    }
+
+    public String getNetworkCountries(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        return networkMapService.getCountries(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn));
     }
 
     public String getVoltageLevelsAndEquipment(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
@@ -2188,5 +2197,10 @@ public class StudyService {
         invalidateShortCircuitStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+    }
+
+    public String evaluateFilter(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode, String filter) {
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        return filterClient.evaluateFilter(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn), filter);
     }
 }
