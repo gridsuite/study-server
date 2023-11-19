@@ -1123,10 +1123,10 @@ public class StudyService {
         return actionsService.getContingencyCount(networkuuid, variantId, contingencyListNames);
     }
 
+    // TO DELETE
     public static LimitViolationInfos toLimitViolationInfos(LimitViolation violation) {
         return LimitViolationInfos.builder()
                 .subjectId(violation.getSubjectId())
-                .acceptableDuration(violation.getAcceptableDuration())
                 .limit(violation.getLimit())
                 .limitName(violation.getLimitName())
                 .value(violation.getValue())

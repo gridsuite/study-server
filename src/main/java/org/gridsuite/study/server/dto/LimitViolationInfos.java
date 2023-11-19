@@ -28,8 +28,6 @@ public class LimitViolationInfos {
 
     private String limitName;
 
-    private Integer acceptableDuration;
-
     private Integer actualOverload;
 
     private Integer upComingOverload;
