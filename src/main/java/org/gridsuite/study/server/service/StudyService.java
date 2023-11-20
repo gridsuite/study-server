@@ -1395,7 +1395,7 @@ public class StudyService {
         checkStudyContainsNode(sourceStudyUuid, nodeToCopyUuid);
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
-        boolean invalidateBuild = networkModificationTreeService.getNetworkModificationsCount(nodeToCopyUuid, false) > 0;
+        boolean invalidateBuild = networkModificationTreeService.hasModifications(nodeToCopyUuid, false);
         notificationService.emitNodeInserted(targetStudyUuid, referenceNodeUuid, duplicatedNodeUuid, insertMode, referenceNodeUuid);
         updateStatuses(targetStudyUuid, duplicatedNodeUuid, true, invalidateBuild);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
@@ -1406,7 +1406,7 @@ public class StudyService {
         List<NodeEntity> oldChildren = null;
         checkStudyContainsNode(studyUuid, nodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
-        boolean shouldInvalidateChildren = networkModificationTreeService.getNetworkModificationsCount(nodeToMoveUuid, false) > 0;
+        boolean shouldInvalidateChildren = networkModificationTreeService.hasModifications(nodeToMoveUuid, false);
 
         //Invalidating previous children if necessary
         if (shouldInvalidateChildren) {
@@ -1590,7 +1590,7 @@ public class StudyService {
         startTime.set(System.nanoTime());
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
         deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
-        boolean invalidateChildrenBuild = !deleteChildren && networkModificationTreeService.getNetworkModificationsCount(nodeId, false) > 0;
+        boolean invalidateChildrenBuild = !deleteChildren && networkModificationTreeService.hasModifications(nodeId, false);
         List<NodeEntity> childrenNodes = networkModificationTreeService.getChildrenByParentUuid(nodeId);
         List<UUID> removedNodes = networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
 
@@ -1634,7 +1634,7 @@ public class StudyService {
     public void stashNode(UUID studyUuid, UUID nodeId, boolean stashChildren, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
-        boolean invalidateChildrenBuild = stashChildren || networkModificationTreeService.getNetworkModificationsCount(nodeId, false) > 0;
+        boolean invalidateChildrenBuild = stashChildren || networkModificationTreeService.hasModifications(nodeId, false);
         invalidateBuild(studyUuid, nodeId, false, !invalidateChildrenBuild);
         networkModificationTreeService.doStashNode(studyUuid, nodeId, stashChildren);
 

@@ -100,7 +100,7 @@ public class NetworkModificationService {
     public Integer getModificationsCount(UUID groupUUid, boolean stashedModifications) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_COUNT_PATH)
-            .queryParam(QUERY_PARAM_ONLY_STASHED, stashedModifications)
+            .queryParam(QUERY_PARAM_STASHED, stashedModifications)
             .buildAndExpand(groupUUid)
             .toUriString();
 
