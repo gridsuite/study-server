@@ -561,8 +561,9 @@ public class NetworkModificationTreeService {
         return networkModificationService.getModificationsCount(self.getModificationGroupUuid(nodeUuid), stashed);
     }
 
+    @Transactional(readOnly = true)
     public boolean hasModifications(@NonNull UUID nodeUuid, boolean stashed) {
-        return getNetworkModificationsCount(nodeUuid, stashed) > 0;
+        return self.getNetworkModificationsCount(nodeUuid, stashed) > 0;
     }
 
     @Transactional
