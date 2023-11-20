@@ -199,7 +199,7 @@ public class WireMockUtils {
     }
 
     public void verifyNetworkModificationCountsGet(UUID stubId, String groupUuid) {
-        verifyGetRequest(stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications-count", Map.of("stashed", WireMock.equalTo("false")));
+        verifyGetRequest(stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications-count", Map.of(QUERY_PARAM_STASHED, WireMock.equalTo("false")));
     }
 
     public void verifyNetworkModificationPost(UUID stubId, String requestBody, String networkUuid) {
