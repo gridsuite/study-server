@@ -2047,7 +2047,7 @@ public class StudyTest {
         checkElementUpdatedMessageSent(studyUuid, userId);
         wireMockUtils.verifyNetworkModificationCountsGet(stubUuid, nodeToCopy.getModificationGroupUuid().toString());
 
-        boolean nodeHasModifications = networkModificationTreeService.getNetworkModificationsCount(nodeToCopy.getId(), false) > 0;
+        boolean nodeHasModifications = networkModificationTreeService.hasModifications(nodeToCopy.getId(), false);
         wireMockUtils.verifyNetworkModificationCountsGet(stubUuid, nodeToCopy.getModificationGroupUuid().toString());
 
         /*
