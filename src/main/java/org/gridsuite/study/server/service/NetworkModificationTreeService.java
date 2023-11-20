@@ -562,7 +562,7 @@ public class NetworkModificationTreeService {
     }
 
     public boolean hasModifications(@NonNull UUID nodeUuid, boolean stashed) {
-        return getNetworkModificationsCount(nodeUuid, stashed) > 0 ? true : false;
+        return getNetworkModificationsCount(nodeUuid, stashed) > 0;
     }
 
     @Transactional
