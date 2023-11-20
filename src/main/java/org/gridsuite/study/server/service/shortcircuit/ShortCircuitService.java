@@ -9,12 +9,13 @@ package org.gridsuite.study.server.service.shortcircuit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.shortcircuit.InitialVoltageProfileMode;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.shortcircuit.StudyType;
+import com.powsybl.shortcircuit.VoltageRange;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ShortCircuitStatus;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -32,9 +33,7 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -47,6 +46,14 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  */
 @Service
 public class ShortCircuitService {
+
+    static final String RESULT_UUID = "resultUuid";
+
+    static final List<VoltageRange> CEI909_VOLTAGE_PROFILE = List.of(
+            new VoltageRange(10.0, 199.99, 1.1),
+            new VoltageRange(200.0, 299.99, 1.09),
+            new VoltageRange(300.0, 500.0, 1.05)
+    );
 
     private String shortCircuitServerBaseUri;
 
@@ -222,38 +229,51 @@ public class ShortCircuitService {
         return networkModificationTreeService.getReportUuid(nodeUuid);
     }
 
-    public static ShortCircuitParametersEntity toEntity(ShortCircuitParameters parameters) {
+    public static ShortCircuitParametersEntity toEntity(ShortCircuitParameters parameters, ShortCircuitPredefinedConfiguration shortCircuitPredefinedConfiguration) {
         Objects.requireNonNull(parameters);
         return new ShortCircuitParametersEntity(parameters.isWithLimitViolations(),
                 parameters.isWithVoltageResult(),
                 parameters.isWithFortescueResult(),
                 parameters.isWithFeederResult(),
                 parameters.getStudyType(),
-                parameters.getMinVoltageDropProportionalThreshold());
+                parameters.getMinVoltageDropProportionalThreshold(),
+                parameters.isWithLoads(),
+                parameters.isWithShuntCompensators(),
+                parameters.isWithVSCConverterStations(),
+                parameters.isWithNeutralPosition(),
+                parameters.getInitialVoltageProfileMode(),
+                shortCircuitPredefinedConfiguration);
     }
 
     public static ShortCircuitParameters fromEntity(ShortCircuitParametersEntity entity) {
         Objects.requireNonNull(entity);
-        return newShortCircuitParameters(entity.getStudyType(), entity.getMinVoltageDropProportionalThreshold(), entity.isWithFeederResult(), entity.isWithLimitViolations(), entity.isWithVoltageResult(), entity.isWithFortescueResult());
+        List<VoltageRange> voltageRanges = InitialVoltageProfileMode.CONFIGURED.equals(entity.getInitialVoltageProfileMode()) ? CEI909_VOLTAGE_PROFILE : null;
+        return newShortCircuitParameters(entity.getStudyType(), entity.getMinVoltageDropProportionalThreshold(), entity.isWithFeederResult(), entity.isWithLimitViolations(), entity.isWithVoltageResult(), entity.isWithFortescueResult(), entity.isWithLoads(), entity.isWithShuntCompensators(), entity.isWithVscConverterStations(), entity.isWithNeutralPosition(), entity.getInitialVoltageProfileMode(), voltageRanges);
     }
 
     public static ShortCircuitParameters copy(ShortCircuitParameters shortCircuitParameters) {
-        return newShortCircuitParameters(shortCircuitParameters.getStudyType(), shortCircuitParameters.getMinVoltageDropProportionalThreshold(), shortCircuitParameters.isWithFeederResult(), shortCircuitParameters.isWithLimitViolations(), shortCircuitParameters.isWithVoltageResult(), shortCircuitParameters.isWithFortescueResult());
+        return newShortCircuitParameters(shortCircuitParameters.getStudyType(), shortCircuitParameters.getMinVoltageDropProportionalThreshold(), shortCircuitParameters.isWithFeederResult(), shortCircuitParameters.isWithLimitViolations(), shortCircuitParameters.isWithVoltageResult(), shortCircuitParameters.isWithFortescueResult(), shortCircuitParameters.isWithLoads(), shortCircuitParameters.isWithShuntCompensators(), shortCircuitParameters.isWithVSCConverterStations(), shortCircuitParameters.isWithNeutralPosition(), shortCircuitParameters.getInitialVoltageProfileMode(), shortCircuitParameters.getVoltageRanges());
     }
 
-    private static ShortCircuitParameters newShortCircuitParameters(StudyType studyType, double minVoltageDropProportionalThreshold, boolean withFeederResult, boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult) {
-        ShortCircuitParameters shortCircuitParametersCopy = new ShortCircuitParameters()
+    public static ShortCircuitParameters newShortCircuitParameters(StudyType studyType, double minVoltageDropProportionalThreshold, boolean withFeederResult, boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult, boolean withLoads, boolean withShuntCompensators, boolean withVscConverterStations, boolean withNeutralPosition, InitialVoltageProfileMode initialVoltageProfileMode, List<VoltageRange> voltageRanges) {
+        return new ShortCircuitParameters()
                 .setStudyType(studyType)
                 .setMinVoltageDropProportionalThreshold(minVoltageDropProportionalThreshold)
                 .setWithFeederResult(withFeederResult)
                 .setWithLimitViolations(withLimitViolations)
                 .setWithVoltageResult(withVoltageResult)
-                .setWithFortescueResult(withFortescueResult);
-        return shortCircuitParametersCopy;
+                .setWithFortescueResult(withFortescueResult)
+                .setWithLoads(withLoads)
+                .setWithShuntCompensators(withShuntCompensators)
+                .setWithVSCConverterStations(withVscConverterStations)
+                .setWithNeutralPosition(withNeutralPosition)
+                .setInitialVoltageProfileMode(initialVoltageProfileMode)
+                // the voltageRanges is not taken in account when initialVoltageProfileMode=NOMINAL
+                .setVoltageRanges(voltageRanges);
     }
 
     public static ShortCircuitParameters getDefaultShortCircuitParameters() {
-        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false);
+        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, true, true, true, false, InitialVoltageProfileMode.NOMINAL, null);
     }
 
     public void setShortCircuitServerBaseUri(String shortCircuitServerBaseUri) {
@@ -291,4 +311,24 @@ public class ShortCircuitService {
             throw new StudyException(SHORT_CIRCUIT_ANALYSIS_RUNNING);
         }
     }
+
+    public static ShortCircuitParametersInfos toShortCircuitParametersInfo(ShortCircuitParametersEntity entity) {
+        Objects.requireNonNull(entity);
+        return ShortCircuitParametersInfos.builder()
+                .predefinedParameters(entity.getPredefinedParameters())
+                .parameters(fromEntity(entity))
+                .cei909VoltageRanges(CEI909_VOLTAGE_PROFILE)
+                .build();
+    }
+
+    public void invalidateShortCircuitStatus(List<UUID> uuids) {
+        if (!uuids.isEmpty()) {
+            String path = UriComponentsBuilder
+                    .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/invalidate-status")
+                    .queryParam(RESULT_UUID, uuids).build().toUriString();
+
+            restTemplate.put(shortCircuitServerBaseUri + path, Void.class);
+        }
+    }
+
 }

@@ -1,0 +1,34 @@
+{
+  "predefinedParameters":"ICC_MAX_WITH_CEI909",
+  "parameters":{
+    "version":"1.2",
+    "withLimitViolations":true,
+    "withVoltageResult":false,
+    "withFeederResult":true,
+    "studyType":"TRANSIENT",
+    "minVoltageDropProportionalThreshold":20.0,
+    "withFortescueResult":false,
+    "withLoads":true,
+    "withShuntCompensators":true,
+    "withVSCConverterStations":true,
+    "withNeutralPosition":true,
+    "initialVoltageProfileMode":"NOMINAL"
+  },
+  "cei909VoltageRanges":[
+    {
+      "minimumNominalVoltage":10.0,
+      "maximumNominalVoltage":199.99,
+      "voltageRangeCoefficient":1.1
+    },
+    {
+      "minimumNominalVoltage":200.0,
+      "maximumNominalVoltage":299.99,
+      "voltageRangeCoefficient":1.09
+    },
+    {
+      "minimumNominalVoltage":300.0,
+      "maximumNominalVoltage":500.0,
+      "voltageRangeCoefficient":1.05
+    }
+  ]
+}

@@ -260,18 +260,22 @@ public class SecurityAnalysisService {
 
     public static SecurityAnalysisParameters toSecurityAnalysisParameters(SecurityAnalysisParametersEntity entity) {
         if (entity == null) {
-            return SecurityAnalysisParameters.load();
+            return SecurityAnalysisParameters.load()
+                    // the default values are overloaded
+                    .setIncreasedViolationsParameters(getIncreasedViolationsParameters(DEFAULT_FLOW_PROPORTIONAL_THRESHOLD, DEFAULT_LOW_VOLTAGE_PROPORTIONAL_THRESHOLD, DEFAULT_LOW_VOLTAGE_ABSOLUTE_THRESHOLD, DEFAULT_HIGH_VOLTAGE_PROPORTIONAL_THRESHOLD, DEFAULT_HIGH_VOLTAGE_ABSOLUTE_THRESHOLD));
         }
-        SecurityAnalysisParameters.IncreasedViolationsParameters increasedViolationsParameters = new SecurityAnalysisParameters.IncreasedViolationsParameters();
-        increasedViolationsParameters.setFlowProportionalThreshold(entity.getFlowProportionalThreshold());
-        increasedViolationsParameters.setLowVoltageAbsoluteThreshold(entity.getLowVoltageAbsoluteThreshold());
-        increasedViolationsParameters.setLowVoltageProportionalThreshold(entity.getLowVoltageProportionalThreshold());
-        increasedViolationsParameters.setHighVoltageAbsoluteThreshold(entity.getHighVoltageAbsoluteThreshold());
-        increasedViolationsParameters.setHighVoltageProportionalThreshold(entity.getHighVoltageProportionalThreshold());
         SecurityAnalysisParameters securityAnalysisParameters = new SecurityAnalysisParameters();
-        securityAnalysisParameters.setIncreasedViolationsParameters(increasedViolationsParameters);
-
+        securityAnalysisParameters.setIncreasedViolationsParameters(getIncreasedViolationsParameters(entity.getFlowProportionalThreshold(), entity.getLowVoltageProportionalThreshold(), entity.getLowVoltageAbsoluteThreshold(), entity.getHighVoltageProportionalThreshold(), entity.getHighVoltageAbsoluteThreshold()));
         return securityAnalysisParameters;
     }
 
+    public static SecurityAnalysisParameters.IncreasedViolationsParameters getIncreasedViolationsParameters(double flowProportionalThreshold, double lowVoltageProportionalThreshold, double lowVoltageAbsoluteThreshold, double highVoltageProportionalThreshold, double highVoltageAbsoluteThreshold) {
+        SecurityAnalysisParameters.IncreasedViolationsParameters increasedViolationsParameters = new SecurityAnalysisParameters.IncreasedViolationsParameters();
+        increasedViolationsParameters.setFlowProportionalThreshold(flowProportionalThreshold);
+        increasedViolationsParameters.setLowVoltageAbsoluteThreshold(lowVoltageAbsoluteThreshold);
+        increasedViolationsParameters.setLowVoltageProportionalThreshold(lowVoltageProportionalThreshold);
+        increasedViolationsParameters.setHighVoltageAbsoluteThreshold(highVoltageAbsoluteThreshold);
+        increasedViolationsParameters.setHighVoltageProportionalThreshold(highVoltageProportionalThreshold);
+        return increasedViolationsParameters;
+    }
 }
