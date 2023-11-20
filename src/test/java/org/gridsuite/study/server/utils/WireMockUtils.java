@@ -131,7 +131,7 @@ public class WireMockUtils {
 
     public UUID stubNetworkModificationCountGet(String groupUuid, Integer expectedCount) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications-count"))
-            .withQueryParam("stashed", WireMock.equalTo("false"))
+            .withQueryParam(QUERY_PARAM_STASHED, WireMock.equalTo("false"))
             .willReturn(WireMock.ok()
                 .withHeader("Content-Type", "application/json; charset=utf-8")
                 .withBody(String.valueOf(expectedCount)))
