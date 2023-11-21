@@ -12,6 +12,7 @@ import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelDeserializer;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
 import lombok.NonNull;
+import org.apache.poi.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -65,14 +66,14 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "subreports" + DELIMITER;
     }
 
-    public ReporterModel getReport(@NonNull UUID id, @NonNull String defaultName, String taskKeyFilter, StudyService.TaskKeyFilterMatchingType filterMatchingType, Set<String> severityLevels) {
+    public ReporterModel getReport(@NonNull UUID id, @NonNull String defaultName, String reportNameFilter, StudyService.ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels) {
         var uriBuilder = UriComponentsBuilder.fromPath("{id}")
                 .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
                 .queryParam(QUERY_PARAM_REPORT_WITH_ELEMENTS, true)
                 .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
-        if (taskKeyFilter != null && !taskKeyFilter.isEmpty()) {
-            uriBuilder.queryParam(QUERY_PARAM_REPORT_TASKKEY_FILTER, taskKeyFilter);
-            uriBuilder.queryParam(QUERY_PARAM_REPORT_TASKKEY_FILTER_MATCHING_TYPE, filterMatchingType);
+        if (!StringUtil.isBlank(reportNameFilter)) {
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_NAME_FILTER, reportNameFilter);
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_NAME_MATCHING_TYPE, reportNameMatchingType);
         }
         return reportServerCall(id, this.getReportsServerURI(), uriBuilder);
     }

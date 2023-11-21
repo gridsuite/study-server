@@ -53,9 +53,12 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_REPORT_DEFAULT_NAME = "defaultName";
     public static final String QUERY_PARAM_REPORT_SEVERITY_LEVEL = "severityLevels";
     public static final String QUERY_PARAM_REPORT_WITH_ELEMENTS = "withElements";
-    public static final String QUERY_PARAM_REPORT_TASKKEY_FILTER = "taskKeyFilter";
-    public static final String QUERY_PARAM_REPORT_TASKKEY_FILTER_MATCHING_TYPE = "taskKeyFilterMatchingType";
+    public static final String QUERY_PARAM_REPORT_NAME_FILTER = "reportNameFilter";
+    public static final String QUERY_PARAM_REPORT_NAME_MATCHING_TYPE = "reportNameMatchingType";
     public static final String QUERY_PARAM_RECEIVER = "receiver";
+    public static final String QUERY_PARAM_REPORT_UUID = "reportUuid";
+    public static final String QUERY_PARAM_REPORTER_ID = "reporterId";
+    public static final String QUERY_PARAM_REPORT_TYPE = "reportType";
     public static final String HEADER_RECEIVER = "receiver";
     public static final String HEADER_BUS_ID = "busId";
     public static final String HEADER_IMPORT_PARAMETERS = "importParameters";
