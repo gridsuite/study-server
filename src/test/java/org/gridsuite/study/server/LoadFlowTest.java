@@ -162,9 +162,9 @@ public class LoadFlowTest {
         String loadFlowErrorResultUuidStr = objectMapper.writeValueAsString(LOADFLOW_ERROR_RESULT_UUID);
         String loadflowResult = TestUtils.resourceToString("/loadflow-result.json");
 
-        List<LimitViolationInfos> limitViolations = List.of(new LimitViolationInfos("lineId1", 200., "lineName1", 60, 150., Branch.Side.ONE.name(), LimitViolationType.CURRENT),
-            new LimitViolationInfos("lineId2", 100., "lineName2", 300, 80., Branch.Side.TWO.name(), LimitViolationType.CURRENT),
-            new LimitViolationInfos("genId1", 500., "genName1", 120, 370., null, LimitViolationType.HIGH_VOLTAGE));
+        List<LimitViolationInfos> limitViolations = List.of(new LimitViolationInfos("lineId1", 200., "lineName1", null, 60, 150., Branch.Side.ONE.name(), LimitViolationType.CURRENT),
+            new LimitViolationInfos("lineId2", 100., "lineName2", null, 300, 80., Branch.Side.TWO.name(), LimitViolationType.CURRENT),
+            new LimitViolationInfos("genId1", 500., "genName1", null, null, 370., null, LimitViolationType.HIGH_VOLTAGE));
         LIMIT_VIOLATIONS_JSON = objectMapper.writeValueAsString(limitViolations);
 
         final Dispatcher dispatcher = new Dispatcher() {
