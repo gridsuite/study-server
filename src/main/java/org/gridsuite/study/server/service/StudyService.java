@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.TypedValue;
 import com.powsybl.iidm.network.*;
-import com.powsybl.security.LimitViolation;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.security.SecurityAnalysisParameters;
@@ -1145,17 +1144,6 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
         return actionsService.getContingencyCount(networkuuid, variantId, contingencyListNames);
-    }
-
-    public static LimitViolationInfos toLimitViolationInfos(LimitViolation violation) {
-        return LimitViolationInfos.builder()
-                .subjectId(violation.getSubjectId())
-                .acceptableDuration(violation.getAcceptableDuration())
-                .limit(violation.getLimit())
-                .limitName(violation.getLimitName())
-                .value(violation.getValue())
-                .side(violation.getSide() != null ? violation.getSide().name() : "")
-                .limitType(violation.getLimitType()).build();
     }
 
     public List<LimitViolationInfos> getLimitViolations(UUID studyUuid, UUID nodeUuid) {
