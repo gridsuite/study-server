@@ -9,9 +9,8 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Builder;
-import lombok.Getter;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.dto.ServiceStatusInfos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,14 +28,6 @@ import java.util.concurrent.CompletableFuture;
  */
 @Service
 public class RemoteServices {
-
-    @Builder
-    @Getter
-    public static class ServiceStatusInfos {
-        private String name;
-        private String status;
-    }
-
     private static final Logger LOGGER = LoggerFactory.getLogger(RemoteServices.class);
 
     private static final String ACTUATOR_HEALTH_STATUS_JSON_FIELD = "status";
