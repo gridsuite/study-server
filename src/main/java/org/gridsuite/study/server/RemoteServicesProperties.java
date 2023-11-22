@@ -6,9 +6,11 @@
  */
 package org.gridsuite.study.server;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 import java.util.Objects;
@@ -16,6 +18,7 @@ import java.util.Objects;
 /**
  * @author David Braquart <david.braquart at rte-france.com>
  */
+@Validated
 @Component
 @ConfigurationProperties(prefix = "gridsuite")
 @Data
@@ -25,9 +28,9 @@ public class RemoteServicesProperties {
 
     @Data
     public static class Service {
-        private String name;
-        private String baseUri;
-        private Boolean optional = false;
+        @NotBlank private String name;
+        @NotBlank private String baseUri;
+        private boolean optional = false;
     }
 
     public String getServiceUri(String serviceName) {
