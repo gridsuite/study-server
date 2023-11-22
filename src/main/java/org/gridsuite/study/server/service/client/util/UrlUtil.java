@@ -39,7 +39,10 @@ public final class UrlUtil {
                 sb.append(apiVersion).append(DELIMITER);
             }
             if (Strings.isNotBlank(endPoint)) {
-                sb.append(endPoint).append(DELIMITER);
+                sb.append(endPoint);
+                if (!endPoint.contains(DELIMITER)) {
+                    sb.append(DELIMITER);
+                }
             }
             var url = sb.toString();
 

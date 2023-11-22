@@ -3,6 +3,9 @@ package org.gridsuite.study.server.service.client.filter.impl;
 import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.filter.FilterClient;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -32,7 +35,11 @@ public class FilterClientImpl extends AbstractRestClient implements FilterClient
         var uriComponent = uriComponentsBuilder
                 .build();
 
+        var headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> request = new HttpEntity<>(filter, headers);
+
         // call filter-server REST API
-        return getRestTemplate().postForObject(uriComponent.toUriString(), filter, String.class);
+        return getRestTemplate().postForObject(uriComponent.toUriString(), request, String.class);
     }
 }
