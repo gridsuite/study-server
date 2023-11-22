@@ -59,16 +59,16 @@ public class ShortCircuitParametersEntity {
     @Enumerated(EnumType.STRING)
     private ShortCircuitPredefinedConfiguration predefinedParameters;
 
-    @Column(name = "withLoads", columnDefinition = "boolean default true")
+    @Column(name = "withLoads", columnDefinition = "boolean default false")
     private boolean withLoads;
 
-    @Column(name = "withShuntCompensators", columnDefinition = "boolean default true")
+    @Column(name = "withShuntCompensators", columnDefinition = "boolean default false")
     private boolean withShuntCompensators;
 
     @Column(name = "withVscConverterStations", columnDefinition = "boolean default true")
     private boolean withVscConverterStations;
 
-    @Column(name = "withNeutralPosition", columnDefinition = "boolean default false")
+    @Column(name = "withNeutralPosition", columnDefinition = "boolean default true")
     private boolean withNeutralPosition;
 
     @Column(name = "initialVoltageProfileMode")

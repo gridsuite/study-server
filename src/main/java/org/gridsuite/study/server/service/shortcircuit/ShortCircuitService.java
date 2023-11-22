@@ -273,7 +273,7 @@ public class ShortCircuitService {
     }
 
     public static ShortCircuitParameters getDefaultShortCircuitParameters() {
-        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, true, true, true, false, InitialVoltageProfileMode.NOMINAL, null);
+        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, false, false, true, true, InitialVoltageProfileMode.NOMINAL, null);
     }
 
     public void setShortCircuitServerBaseUri(String shortCircuitServerBaseUri) {
