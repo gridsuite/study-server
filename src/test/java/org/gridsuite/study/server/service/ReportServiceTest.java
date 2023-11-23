@@ -49,7 +49,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_DEFAULT_NAME;
+import static org.gridsuite.study.server.service.ReportService.QUERY_PARAM_REPORT_DEFAULT_NAME;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.Assert.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
