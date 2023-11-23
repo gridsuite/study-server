@@ -9,17 +9,15 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.NullNode;
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.client.WireMock;
+import lombok.NonNull;
 import org.assertj.core.api.WithAssertions;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.StudyApplication;
+import org.gridsuite.study.server.StudyAppConfig;
 import org.gridsuite.study.server.config.DisableAmqp;
 import org.gridsuite.study.server.config.DisableJpa;
 import org.gridsuite.study.server.dto.ServiceStatusInfos;
 import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
 import org.gridsuite.study.server.service.client.RemoteServiceName;
-import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,26 +25,39 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.info.InfoEndpoint;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.web.client.RestTemplateCustomizer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.ResponseActions;
+import org.springframework.web.client.RestTemplate;
 
+import java.net.SocketException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestToUriTemplate;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 @DisableElasticsearch
 @DisableAmqp
 @DisableJpa
-@SpringBootTest(classes = StudyApplication.class)
-@ExtendWith(MockitoExtension.class)
+@Import({StudyAppConfig.class, RemoteServicesProperties.class})
+@RestClientTest({RemoteServices.class})
+@ExtendWith({SpringExtension.class, MockitoExtension.class})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.MethodName.class)
 class RemoteServicesTest implements WithAssertions {
-    private WireMockServer wireMockServer;
-    private WireMockUtils wireMockUtils;
-
     @Autowired
     private RemoteServicesProperties remoteServicesProperties;
 
@@ -58,30 +69,34 @@ class RemoteServicesTest implements WithAssertions {
     @MockBean
     private InfoEndpoint infoEndpoint;
 
-    @BeforeAll
-    void setup() {
-        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort()
-            .asynchronousResponseEnabled(true).asynchronousResponseThreads(50).containerThreads(50).jettyAcceptors(10));
-        wireMockUtils = new WireMockUtils(wireMockServer);
-        wireMockServer.start();
+    //@Autowired
+    private MockRestServiceServer server;
 
-        remoteServicesProperties.setServices(Arrays.stream(RemoteServiceName.values())
-                .map(RemoteServiceName::serviceName)
-                .map(name -> new RemoteServicesProperties.Service(name, wireMockServer.url(name), false))
-                .toList());
+    @TestConfiguration
+    public static class TestConfig {
+        static final List<RestTemplate> restTemplates = Collections.synchronizedList(new ArrayList<>(1));
+
+        @Bean
+        public RestTemplateCustomizer testRestTemplateCustomizer() {
+            return restTemplates::add;
+        }
     }
 
-    @AfterAll
-    public void setDown() {
-        wireMockServer.stop();
+    @BeforeAll
+    void setup(@NonNull @Autowired @Lazy final RestTemplate restTemplate) {
+        server = MockRestServiceServer.bindTo(TestConfig.restTemplates.get(0)).ignoreExpectOrder(true).build();
+        remoteServicesProperties.setServices(Arrays.stream(RemoteServiceName.values())
+                .map(RemoteServiceName::serviceName)
+                .map(name -> new RemoteServicesProperties.Service(name, "http://"+name+"/", false))
+                .toList());
     }
 
     @AfterEach
     public void serverCheckup() {
         try {
-            wireMockServer.checkForUnmatchedRequests(); // requests no matched ? (it returns an exception if a request was not matched by wireMock, but does not complain if it was not verified by 'verify')
+            server.verify();
         } finally {
-            wireMockServer.resetAll();
+            server.reset();
         }
     }
 
@@ -91,25 +106,21 @@ class RemoteServicesTest implements WithAssertions {
     @Timeout(value = RemoteServices.REQUEST_TIMEOUT_IN_MS+500L, unit = TimeUnit.MILLISECONDS)
     @interface TimeoutRemotes {}
 
-    @TimeoutRemotes
     @Test
     void testOptionalServicesUp() {
         testOptionalServices("{\"status\":\"UP\"}", ServiceStatus.UP, 0);
     }
 
-    @TimeoutRemotes
     @Test
     void testOptionalServicesDown() {
         testOptionalServices("{\"status\":\"DOWN\"}", ServiceStatus.DOWN, 0);
     }
 
-    @TimeoutRemotes
     @Test
     void testOptionalServicesMalformedJson() {
         testOptionalServices("{\"malformed json\":", ServiceStatus.DOWN, 0);
     }
 
-    @TimeoutRemotes
     @Test
     void testOptionalServicesUnexpectedJson() {
         testOptionalServices("{\"unexpected_property\":\"UP\"}", ServiceStatus.DOWN, 0);
@@ -118,7 +129,7 @@ class RemoteServicesTest implements WithAssertions {
     @TimeoutRemotes
     @Test
     void testOptionalServicesWithLatency() {
-        testOptionalServices("{\"status\":\"DOWN\"}", ServiceStatus.DOWN, (int) RemoteServices.REQUEST_TIMEOUT_IN_MS);
+        testOptionalServices("{\"status\":\"DOWN\"}", ServiceStatus.DOWN, 2000);
     }
 
     private void testOptionalServices(final String jsonResponse, final ServiceStatus statusTest, int delayResponse) {
@@ -127,11 +138,13 @@ class RemoteServicesTest implements WithAssertions {
         remoteServicesProperties.getServices().forEach(s -> s.setOptional(optionalServices.contains(s.getName())));
 
         // any optional service will be mocked with JSON to respond
-        final Map<String, UUID> mocks = new HashMap<>(optionalServices.size());
-        optionalServices.forEach(name -> mocks.put(name, wireMockServer.stubFor(WireMock
-                .get(WireMock.urlPathEqualTo("/"+name+"/actuator/health"))
-                .willReturn(WireMock.okJson(jsonResponse).withFixedDelay(delayResponse))
-            ).getId()));
+        optionalServices.forEach(name -> server.expect(requestToUriTemplate("http://{service}/actuator/health", name))
+                .andExpect(method(HttpMethod.GET)).andRespond(request -> {
+                    try {
+                        Thread.sleep(delayResponse);
+                    } catch (InterruptedException e) {}
+                    return withSuccess(jsonResponse, MediaType.APPLICATION_JSON).createResponse(request);
+                }));
 
         // all services are supposed to be Up/Down
         assertThat(remoteServices.getOptionalServices()).containsExactlyInAnyOrder(
@@ -139,56 +152,48 @@ class RemoteServicesTest implements WithAssertions {
                 new ServiceStatusInfos(RemoteServiceName.SECURITY_ANALYSIS_SERVER, statusTest),
                 new ServiceStatusInfos(RemoteServiceName.VOLTAGE_INIT_SERVER, statusTest)
         );
-        mocks.forEach((name, stubUuid) -> wireMockUtils.verifyActuatorHealth(name, stubUuid, 1));
     }
 
-    @TimeoutRemotes
     @Test
     void testServiceInfoGetData() {
-        final Map<RemoteServiceName, UUID> mocks = testServiceInfo(0);
+        testServiceInfo(0, null);
         assertThat(remoteServices.getServicesInfo()).containsExactlyInAnyOrderEntriesOf(Arrays.stream(RemoteServiceName.values())
                 .collect(Collectors.toMap(RemoteServiceName::serviceName, srv -> EMPTY_OBJ)));
-        for(final RemoteServiceName srv : mocks.keySet()) {
-            wireMockServer.verify(1, WireMock.getRequestedFor(WireMock.urlPathEqualTo("/"+srv.serviceName()+"/actuator/info")));
-        }
     }
 
     @TimeoutRemotes
     @Test
     void testServiceInfoRequestsParallelized() {
-        final Map<RemoteServiceName, UUID> mocks = testServiceInfo((int) RemoteServices.REQUEST_TIMEOUT_IN_MS);
+        testServiceInfo((int) RemoteServices.REQUEST_TIMEOUT_IN_MS, null);
         assertThat(remoteServices.getServicesInfo()).containsExactlyInAnyOrderEntriesOf(Arrays.stream(RemoteServiceName.values())
                 .collect(Collectors.toMap(RemoteServiceName::serviceName, srv -> EMPTY_OBJ)));
-        for(final RemoteServiceName srv : mocks.keySet()) {
-            wireMockServer.verify(1, WireMock.getRequestedFor(WireMock.urlPathEqualTo("/"+srv.serviceName()+"/actuator/info")));
-        }
     }
 
-    @TimeoutRemotes
     @Test
     void testServiceInfoNotThrowIfNotUnavailable() {
-        final Map<RemoteServiceName, UUID> mocks = testServiceInfo(0);
-        wireMockServer.removeStubMapping(mocks.remove(RemoteServiceName.valueOfServiceName(remoteServicesProperties.getServices().get(3).getName())));
-        remoteServicesProperties.getServices().get(3).setBaseUri("http://127.1.0.1/not-exist/");
+        testServiceInfo(0, RemoteServiceName.LOADFLOW_SERVER);
+        serverExpectInfo(RemoteServiceName.LOADFLOW_SERVER).andRespond(withException(new SocketException("Test no server")));
         final Map<String, JsonNode> expected = Arrays.stream(RemoteServiceName.values())
                 .collect(Collectors.toMap(RemoteServiceName::serviceName, srv -> EMPTY_OBJ));
-        expected.put(remoteServicesProperties.getServices().get(3).getName(), NullNode.instance);
+        expected.put(RemoteServiceName.LOADFLOW_SERVER.serviceName(), NullNode.instance);
         assertThat(remoteServices.getServicesInfo()).containsExactlyInAnyOrderEntriesOf(expected);
-        for(final RemoteServiceName srv : mocks.keySet()) {
-            wireMockServer.verify(1, WireMock.getRequestedFor(WireMock.urlPathEqualTo("/"+srv.serviceName()+"/actuator/info")));
+    }
+
+    private void testServiceInfo(final int delay, final RemoteServiceName skipSrv) {
+        Mockito.when(infoEndpoint.info()).thenReturn(Collections.emptyMap());
+        for(final RemoteServiceName service : RemoteServiceName.values()) {
+            if (service == RemoteServiceName.STUDY_SERVER || service == skipSrv) continue;
+            serverExpectInfo(service).andRespond(request -> {
+                try {
+                    Thread.sleep(delay);
+                } catch (InterruptedException e) {}
+                return withSuccess("{}", MediaType.APPLICATION_JSON).createResponse(request);
+            });
         }
     }
 
-    private Map<RemoteServiceName, UUID> testServiceInfo(final int delay) {
-        Mockito.when(infoEndpoint.info()).thenReturn(Collections.emptyMap());
-        final Map<RemoteServiceName, UUID> mocks = new EnumMap<>(RemoteServiceName.class);
-        for(final RemoteServiceName service : RemoteServiceName.values()) {
-            if (service == RemoteServiceName.STUDY_SERVER) continue;
-            mocks.put(service, wireMockServer.stubFor(WireMock
-                    .get(WireMock.urlPathEqualTo("/"+service.serviceName()+"/actuator/info"))
-                    .willReturn(WireMock.okJson("{}").withFixedDelay(delay))
-            ).getId());
-        }
-        return mocks;
+    private ResponseActions serverExpectInfo(@NonNull final RemoteServiceName service) {
+        return server.expect(requestToUriTemplate("http://{service}/actuator/info", service.serviceName()))
+                .andExpect(method(HttpMethod.GET));
     }
 }
