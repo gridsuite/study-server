@@ -37,7 +37,6 @@ import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -130,8 +129,33 @@ public class StudyService {
     private final CaseService caseService;
     private final ObjectMapper objectMapper;
 
-    enum ComputationUsingLoadFlow {
+    public enum ComputationUsingLoadFlow {
         LOAD_FLOW, SECURITY_ANALYSIS, SENSITIVITY_ANALYSIS
+    }
+
+    public enum ReportNameMatchingType {
+        EXACT_MATCHING, ENDS_WITH
+    }
+
+    // TODO remove ComputationType (and use ReportType instead) after short-circuit logs have been invalidaded with admin-tool
+    public enum ReportType {
+        NETWORK_MODIFICATION("NetworkModification"),
+        LOADFLOW("LoadFlow"),
+        SECURITY_ANALYSIS("SecurityAnalysis"),
+        SHORT_CIRCUIT_ANALYSIS("ShortCircuitAnalysis"),
+        ALL_BUSES_SHORTCIRCUIT_ANALYSIS("AllBusesShortCircuitAnalysis"),
+        ONE_BUS_SHORTCIRCUIT_ANALYSIS("OneBusShortCircuitAnalysis"),
+        SENSITIVITY_ANALYSIS("SensitivityAnalysis");
+        private final String name;
+
+        ReportType(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
     }
 
     @Autowired
@@ -1751,18 +1775,29 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReporterModel> getNodeReport(UUID nodeUuid, String reportId, Set<String> severityLevels) {
-        // Hack: filtering Root node with its nodeId in report db does not work
-        // TODO : Remove this hack when the taskKey of the root node will be replaced by the node uuid
-        AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
-        String taskKeyFilter = nodeInfos.getType() == NodeType.ROOT ? null : nodeUuid.toString();
-        return getSubReporters(nodeUuid, UUID.fromString(reportId), severityLevels, taskKeyFilter);
+    public List<ReporterModel> getNodeReport(UUID nodeUuid, String reportId, ReportType reportType, Set<String> severityLevels) {
+        return getSubReporters(nodeUuid, UUID.fromString(reportId), nodeUuid + "@" + reportType, ReportNameMatchingType.EXACT_MATCHING, severityLevels);
+    }
+
+    private Pair<String, ReportNameMatchingType> getFiltersParamaters(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType) {
+        String reportNameFilter;
+        ReportNameMatchingType reportNameMatchingType;
+        if (nodeOnlyReport) {
+            reportNameFilter = nodeUuid + "@" + reportType;
+            reportNameMatchingType = ReportNameMatchingType.EXACT_MATCHING;
+        } else {
+            // in "all logs/nodes" mode, we have to filter only on the report type (ex: anything ending with "@NetWorkModification")
+            reportNameFilter = "@" + reportType;
+            reportNameMatchingType = ReportNameMatchingType.ENDS_WITH;
+        }
+        return Pair.of(reportNameFilter, reportNameMatchingType);
     }
 
     @Transactional(readOnly = true)
-    public List<ReporterModel> getParentNodesReport(UUID nodeUuid, boolean nodeOnlyReport, Set<String> severityLevels) {
+    public List<ReporterModel> getParentNodesReport(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType, Set<String> severityLevels) {
+        Pair<String, ReportNameMatchingType> filtersParameters = getFiltersParamaters(nodeUuid, nodeOnlyReport, reportType);
         AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
-        List<ReporterModel> subReporters = getSubReporters(nodeUuid, nodeInfos.getReportUuid(), severityLevels, null);
+        List<ReporterModel> subReporters = getSubReporters(nodeUuid, nodeInfos.getReportUuid(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
         if (subReporters.isEmpty()) {
             return subReporters;
         } else if (nodeOnlyReport) {
@@ -1775,13 +1810,13 @@ public class StudyService {
             if (parentUuid.isEmpty()) {
                 return subReporters;
             }
-            List<ReporterModel> parentReporters = self.getParentNodesReport(parentUuid.get(), false, severityLevels);
+            List<ReporterModel> parentReporters = self.getParentNodesReport(parentUuid.get(), false, reportType, severityLevels);
             return Stream.concat(parentReporters.stream(), subReporters.stream()).collect(Collectors.toList());
         }
     }
 
-    private List<ReporterModel> getSubReporters(UUID nodeUuid, UUID reportUuid, Set<String> severityLevels, String taskKeyfilter) {
-        ReporterModel reporter = reportService.getReport(reportUuid, nodeUuid.toString(), taskKeyfilter, severityLevels);
+    private List<ReporterModel> getSubReporters(UUID nodeUuid, UUID reportUuid, String reportNameFilter, ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels) {
+        ReporterModel reporter = reportService.getReport(reportUuid, nodeUuid.toString(), reportNameFilter, reportNameMatchingType, severityLevels);
         Map<String, List<ReporterModel>> subReportersByNode = new LinkedHashMap<>();
         reporter.getSubReporters().forEach(subReporter -> subReportersByNode.putIfAbsent(getNodeIdFromReportKey(subReporter), new ArrayList<>()));
         reporter.getSubReporters().forEach(subReporter ->

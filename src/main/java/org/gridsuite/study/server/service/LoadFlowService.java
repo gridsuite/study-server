@@ -87,8 +87,9 @@ public class LoadFlowService {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
-                .queryParam("reportUuid", reportUuid.toString())
-                .queryParam("reporterId", nodeUuid.toString());
+                .queryParam(QUERY_PARAM_REPORT_UUID, reportUuid.toString())
+                .queryParam(QUERY_PARAM_REPORTER_ID, nodeUuid.toString())
+                .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.LOADFLOW.toString());
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
