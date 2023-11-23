@@ -262,6 +262,18 @@ public class NetworkModificationTreeTest {
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/network-modifications.*")) {
                     return new MockResponse().setResponseCode(HttpStatus.OK.value());
+                } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                        .addHeader("Content-Type", "application/json; charset=utf-8")
+                        .setBody(objectMapper.writeValueAsString(0));
+                } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_2 + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                        .addHeader("Content-Type", "application/json; charset=utf-8")
+                        .setBody(objectMapper.writeValueAsString(2));
+                } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_3 + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                        .addHeader("Content-Type", "application/json; charset=utf-8")
+                        .setBody(objectMapper.writeValueAsString(0));
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID + "/.*") && request.getMethod().equals("GET")) {
                     return new MockResponse().setResponseCode(HttpStatus.OK.value())
                         .addHeader("Content-Type", "application/json; charset=utf-8")
