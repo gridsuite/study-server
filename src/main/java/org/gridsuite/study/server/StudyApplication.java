@@ -9,12 +9,14 @@ package org.gridsuite.study.server;
 import com.powsybl.ws.commons.Utils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@EnableConfigurationProperties
 @SpringBootApplication
 public class StudyApplication {
 

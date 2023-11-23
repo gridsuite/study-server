@@ -7,7 +7,6 @@
 package org.gridsuite.study.server;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
-import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
