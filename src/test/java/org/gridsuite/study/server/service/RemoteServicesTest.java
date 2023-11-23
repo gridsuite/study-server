@@ -1,14 +1,16 @@
+/**
+ * Copyright (c) 2023, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package org.gridsuite.study.server.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.http.ContentTypeHeader;
-import okhttp3.MediaType;
 import org.assertj.core.api.WithAssertions;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyApplication;
@@ -27,14 +29,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.info.InfoEndpoint;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpHeaders;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 @DisableElasticsearch
 @DisableAmqp
@@ -53,17 +53,15 @@ class RemoteServicesTest implements WithAssertions {
     @Autowired
     private RemoteServices remoteServices;
 
-    @Autowired
-    private ObjectMapper objectMapper;
     private static final JsonNode EMPTY_OBJ = JsonNodeFactory.instance.objectNode();
 
     @MockBean
     private InfoEndpoint infoEndpoint;
 
     @BeforeAll
-    void setup() throws JsonProcessingException {
-
-        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
+    void setup() {
+        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort()
+            .asynchronousResponseEnabled(true).asynchronousResponseThreads(50).containerThreads(50).jettyAcceptors(10));
         wireMockUtils = new WireMockUtils(wireMockServer);
         wireMockServer.start();
 
@@ -96,28 +94,34 @@ class RemoteServicesTest implements WithAssertions {
     @TimeoutRemotes
     @Test
     void testOptionalServicesUp() {
-        testOptionalServices("{\"status\":\"UP\"}", ServiceStatus.UP);
+        testOptionalServices("{\"status\":\"UP\"}", ServiceStatus.UP, 0);
     }
 
     @TimeoutRemotes
     @Test
     void testOptionalServicesDown() {
-        testOptionalServices("{\"status\":\"DOWN\"}", ServiceStatus.DOWN);
+        testOptionalServices("{\"status\":\"DOWN\"}", ServiceStatus.DOWN, 0);
     }
 
     @TimeoutRemotes
     @Test
     void testOptionalServicesMalformedJson() {
-        testOptionalServices("{\"malformed json\":", ServiceStatus.DOWN);
+        testOptionalServices("{\"malformed json\":", ServiceStatus.DOWN, 0);
     }
 
     @TimeoutRemotes
     @Test
     void testOptionalServicesUnexpectedJson() {
-        testOptionalServices("{\"unexpected_property\":\"UP\"}", ServiceStatus.DOWN);
+        testOptionalServices("{\"unexpected_property\":\"UP\"}", ServiceStatus.DOWN, 0);
     }
 
-    private void testOptionalServices(final String jsonResponse, final ServiceStatus statusTest) {
+    @TimeoutRemotes
+    @Test
+    void testOptionalServicesWithLatency() {
+        testOptionalServices("{\"status\":\"DOWN\"}", ServiceStatus.DOWN, (int) RemoteServices.REQUEST_TIMEOUT_IN_MS);
+    }
+
+    private void testOptionalServices(final String jsonResponse, final ServiceStatus statusTest, int delayResponse) {
         // select 3 services to be optional
         final List<String> optionalServices = List.of(RemoteServiceName.LOADFLOW_SERVER.serviceName(), RemoteServiceName.SECURITY_ANALYSIS_SERVER.serviceName(), RemoteServiceName.VOLTAGE_INIT_SERVER.serviceName());
         remoteServicesProperties.getServices().forEach(s -> s.setOptional(optionalServices.contains(s.getName())));
@@ -126,7 +130,7 @@ class RemoteServicesTest implements WithAssertions {
         final Map<String, UUID> mocks = new HashMap<>(optionalServices.size());
         optionalServices.forEach(name -> mocks.put(name, wireMockServer.stubFor(WireMock
                 .get(WireMock.urlPathEqualTo("/"+name+"/actuator/health"))
-                .willReturn(WireMock.ok().withBody(jsonResponse))
+                .willReturn(WireMock.okJson(jsonResponse).withFixedDelay(delayResponse))
             ).getId()));
 
         // all services are supposed to be Up/Down

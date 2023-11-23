@@ -47,20 +47,17 @@ public class RemoteServices {
 
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
-    private final StudyServerExecutionService executionService;
     private final RemoteServicesProperties remoteServicesProperties;
     private final InfoEndpoint infoEndpoint;
-    private RemoteServices asyncSelf; //we need to use spring proxy-based bean
+    private final RemoteServices asyncSelf; //we need to use spring proxy-based bean
 
     @Autowired
     public RemoteServices(ObjectMapper objectMapper,
-                          StudyServerExecutionService executionService,
                           RemoteServicesProperties remoteServicesProperties,
                           @Lazy RemoteServices asyncRemoteServices,
                           RestTemplateBuilder restTemplateBuilder,
                           InfoEndpoint infoEndpoint) {
         this.objectMapper = objectMapper;
-        this.executionService = executionService;
         this.remoteServicesProperties = remoteServicesProperties;
         this.restTemplate = restTemplateBuilder
                 .setConnectTimeout(Duration.ofMillis(REQUEST_TIMEOUT_IN_MS))
@@ -72,33 +69,33 @@ public class RemoteServices {
 
     public List<ServiceStatusInfos> getOptionalServices() {
         // parallel health status check for all services marked as "optional: true" in application.yaml
-        return remoteServicesProperties.getServices().stream()
+        List<CompletableFuture<ServiceStatusInfos>> results = remoteServicesProperties.getServices().stream()
             .filter(RemoteServicesProperties.Service::isOptional)
-            .map(service -> executionService.supplyAsync(() -> ServiceStatusInfos.builder()
+            .map(service -> asyncSelf.isServerUp(service).thenApply(isUp -> ServiceStatusInfos.builder()
                     .name(service.getName())
-                    .status(isServerUp(service) ? ServiceStatus.UP : ServiceStatus.DOWN)
+                    .status(isUp ? ServiceStatus.UP : ServiceStatus.DOWN)
                     .build()))
-            .map(CompletableFuture::join)
             .toList();
+        CompletableFuture.allOf(results.toArray(CompletableFuture[]::new)).join();
+        return results.stream().map(CompletableFuture::join).toList();
     }
 
-    private boolean isServerUp(RemoteServicesProperties.Service service) {
+    @Async
+    public CompletableFuture<Boolean> isServerUp(RemoteServicesProperties.Service service) {
         try {
             final String result = restTemplate.getForObject(service.getBaseUri() + "/actuator/health", String.class);
             final JsonNode node = objectMapper.readTree(result).path(ACTUATOR_HEALTH_STATUS_JSON_FIELD);
             if (node.isMissingNode()) {
                 LOGGER.error("Cannot find {} json node while testing '{}'", ACTUATOR_HEALTH_STATUS_JSON_FIELD, service.getName());
-                return false;
             } else {
-                return "UP".equalsIgnoreCase(node.asText());
+                return CompletableFuture.completedFuture("UP".equalsIgnoreCase(node.asText()));
             }
         } catch (RestClientException e) {
-            LOGGER.error(String.format("Network error while testing '%s': %s", service.getName(), e.getMessage()), e);
-            return false;
+            LOGGER.error("Network error while testing "+service.getName(), e);
         } catch (JsonProcessingException e) {
-            LOGGER.error(String.format("Json parsing error while testing '%s': %s", service.getName(), e.getMessage()), e);
-            return false;
+            LOGGER.error("Json parsing error while testing "+service.getName(), e);
         }
+        return CompletableFuture.completedFuture(false);
     }
 
     /**
