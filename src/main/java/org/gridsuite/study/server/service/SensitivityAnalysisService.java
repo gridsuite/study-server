@@ -86,7 +86,8 @@ public class SensitivityAnalysisService {
         var uriComponentsBuilder = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
             .queryParam("reportUuid", reportUuid.toString())
-            .queryParam("reporterId", nodeUuid.toString());
+            .queryParam("reporterId", nodeUuid.toString())
+            .queryParam("reportType", StudyService.ReportType.SENSITIVITY_ANALYSIS.toString());
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
