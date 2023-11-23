@@ -9,6 +9,7 @@ package org.gridsuite.study.server.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.springframework.data.annotation.AccessType;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
@@ -29,14 +30,23 @@ import java.util.UUID;
 @Schema(description = "Basic equipment infos")
 public class BasicEquipmentInfos {
     @Id
-    protected String uniqueId;
+    @AccessType(AccessType.Type.PROPERTY)
+    @SuppressWarnings("unused")
+    public String getUniqueId() {
+        return networkUuid + "_" + variantId + "_" + id;
+    }
+
+    @SuppressWarnings("unused")
+    public void setUniqueId(String uniqueId) {
+        // No setter because it a composite value
+    }
 
     @MultiField(
-            mainField = @Field(name = "equipmentId", type = FieldType.Text),
-            otherFields = {
-                @InnerField(suffix = "fullascii", type = FieldType.Keyword, normalizer = "fullascii"),
-                @InnerField(suffix = "raw", type = FieldType.Keyword)
-            }
+        mainField = @Field(name = "equipmentId", type = FieldType.Text),
+        otherFields = {
+            @InnerField(suffix = "fullascii", type = FieldType.Keyword, normalizer = "fullascii"),
+            @InnerField(suffix = "raw", type = FieldType.Keyword)
+        }
     )
     protected String id;
 
