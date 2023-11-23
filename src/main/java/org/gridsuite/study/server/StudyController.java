@@ -1716,7 +1716,7 @@ public class StudyController {
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/filters/evaluate")
-    @Operation(summary = "Export matched elements to JSON format")
+    @Operation(summary = "Evaluate a filter to get matched elements")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched elements")})
     public ResponseEntity<String> evaluateFilter(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
