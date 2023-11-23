@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ServiceStatusInfos;
+import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,8 +32,6 @@ public class RemoteServices {
     private static final Logger LOGGER = LoggerFactory.getLogger(RemoteServices.class);
 
     private static final String ACTUATOR_HEALTH_STATUS_JSON_FIELD = "status";
-    private static final String ACTUATOR_HEALTH_STATUS_UP = "UP";
-    private static final String ACTUATOR_HEALTH_STATUS_DOWN = "DOWN";
     private static final long ACTUATOR_HEALTH_TIMEOUT_IN_MS = 2000L;
 
     private final ObjectMapper objectMapper;
@@ -63,7 +62,7 @@ public class RemoteServices {
             .filter(RemoteServicesProperties.Service::isOptional)
             .map(service -> executionService.supplyAsync(() -> ServiceStatusInfos.builder()
                     .name(service.getName())
-                    .status(isServerUp(service) ? ACTUATOR_HEALTH_STATUS_UP : ACTUATOR_HEALTH_STATUS_DOWN)
+                    .status(isServerUp(service) ? ServiceStatus.UP : ServiceStatus.DOWN)
                     .build()))
             .map(CompletableFuture::join)
             .toList();
@@ -77,7 +76,7 @@ public class RemoteServices {
                 LOGGER.error("Cannot find {} json node while testing '{}'", ACTUATOR_HEALTH_STATUS_JSON_FIELD, service.getName());
                 return false;
             } else {
-                return ACTUATOR_HEALTH_STATUS_UP.equalsIgnoreCase(node.asText());
+                return "UP".equalsIgnoreCase(node.asText());
             }
         } catch (RestClientException e) {
             LOGGER.error(String.format("Network error while testing '%s': %s", service.getName(), e.getMessage()), e);
