@@ -87,13 +87,17 @@ public class EquipmentInfosServiceTests {
         EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id").name("name").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
         equipmentInfosService.addEquipmentInfos(loadInfos);
         assertEquals(1, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
-        assertEquals(loadInfos, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).get(0));
+        EquipmentInfos loadInfosDB = equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).get(0);
+        assertEquals(loadInfos, loadInfosDB);
+        assertEquals(loadInfos.getNetworkUuid() + "_" + loadInfos.getVariantId() + "_" + loadInfos.getId(), loadInfosDB.getUniqueId());
         assertEquals(1, equipmentInfosService.getEquipmentInfosCount(NETWORK_UUID));
 
         EquipmentInfos loadInfos2 = EquipmentInfos.builder().networkUuid(NETWORK_UUID_2).id("id").name("name").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
         equipmentInfosService.addEquipmentInfos(loadInfos2);
         assertEquals(1, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID_2).size());
-        assertEquals(loadInfos2, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID_2).get(0));
+        EquipmentInfos loadInfosDB2 = equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID_2).get(0);
+        assertEquals(loadInfos2, loadInfosDB2);
+        assertEquals(loadInfos2.getNetworkUuid() + "_" + loadInfos2.getVariantId() + "_" + loadInfos2.getId(), loadInfosDB2.getUniqueId());
         assertEquals(1, equipmentInfosService.getEquipmentInfosCount(NETWORK_UUID_2));
 
         assertEquals(2, equipmentInfosService.getEquipmentInfosCount());
@@ -102,7 +106,9 @@ public class EquipmentInfosServiceTests {
         loadInfos2 = EquipmentInfos.builder().networkUuid(NETWORK_UUID_2).id("id").name("newName").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
         equipmentInfosService.addEquipmentInfos(loadInfos2);
         assertEquals(1, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID_2).size());
-        assertEquals(loadInfos2, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID_2).get(0));
+        loadInfosDB2 = equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID_2).get(0);
+        assertEquals(loadInfos2, loadInfosDB2);
+        assertEquals(loadInfos2.getNetworkUuid() + "_" + loadInfos2.getVariantId() + "_" + loadInfos2.getId(), loadInfosDB2.getUniqueId());
         assertEquals(1, equipmentInfosService.getEquipmentInfosCount(NETWORK_UUID_2));
 
         assertEquals(2, equipmentInfosService.getEquipmentInfosCount());
@@ -291,10 +297,7 @@ public class EquipmentInfosServiceTests {
     public ErrorCollector pbsc = new ErrorCollector();
 
     private void testNameFullAscii(String pat) {
-        assertEquals(1,
-            studyService.searchEquipments(NETWORK_UUID, NODE_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, false)
-                .size()
-        );
+        assertEquals(1, studyService.searchEquipments(NETWORK_UUID, NODE_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, false).size());
     }
 
     private void testNameFullAsciis() {
