@@ -55,12 +55,10 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
-
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
 @Tag(name = "Study server")
 public class StudyController {
-
     private final StudyService studyService;
     private final NetworkService networkStoreService;
     private final NetworkModificationTreeService networkModificationTreeService;
@@ -1701,5 +1699,15 @@ public class StudyController {
     public ResponseEntity<Void> invalidateShortCircuitStatus(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
         studyService.invalidateShortCircuitStatus(studyUuid);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/servers/infos")
+    @Operation(summary = "Get the informations of all backend servers")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The informations on all known servers"),
+            @ApiResponse(responseCode = "207", description = "Partial result because some servers haven't respond or throw an error"),
+            @ApiResponse(responseCode = "424", description = "All requests have failed, no informations retreive")})
+    public ResponseEntity<Map<String, ?>> getServersInformations() { //Map<String, Info> from springboot-actuator
+        return ResponseEntity.ok().body(remoteServices.getServicesInfo());
     }
 }

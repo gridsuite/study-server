@@ -7,8 +7,11 @@
 package org.gridsuite.study.server;
 
 import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.web.context.WebServerApplicationContext;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
 
@@ -21,11 +24,15 @@ import java.util.Objects;
 @Validated
 @Component
 @ConfigurationProperties(prefix = "gridsuite")
+@AllArgsConstructor
+@NoArgsConstructor
 @Data
 public class RemoteServicesProperties {
-
+    private WebServerApplicationContext webSrvAppCtxt;
     private List<Service> services;
 
+    @AllArgsConstructor
+    @NoArgsConstructor
     @Data
     public static class Service {
         @NotBlank private String name;
@@ -33,7 +40,14 @@ public class RemoteServicesProperties {
         private boolean optional = false;
     }
 
+    public String getLocalUri() {
+        return "http://localhost:"+this.webSrvAppCtxt.getWebServer().getPort();
+    }
+
     public String getServiceUri(String serviceName) {
+        /*if ("study-server".equalsIgnoreCase(serviceName)) {
+            return getLocalUri();
+        }*/
         String defaultUri = "http://" + serviceName + "/";
         return Objects.isNull(services) ? defaultUri : services.stream()
                 .filter(s -> s.getName().equalsIgnoreCase(serviceName))
