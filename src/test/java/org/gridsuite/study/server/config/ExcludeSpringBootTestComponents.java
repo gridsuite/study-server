@@ -42,12 +42,12 @@ import java.util.Set;
  * @see DisableJpa
  * @see DisableAmqp
  */
-@NoArgsConstructor(onConstructor_={ @Autowired })
+@NoArgsConstructor(onConstructor_ = { @Autowired })
 @ToString(onlyExplicitlyIncluded = true)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Slf4j
 public class ExcludeSpringBootTestComponents implements AutoConfigurationImportFilter, EnvironmentAware {
-    @Setter(onMethod_={@Override})
+    @Setter(onMethod_ = {@Override})
     private Environment environment;
 
     /**

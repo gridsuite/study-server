@@ -24,7 +24,7 @@ import java.lang.annotation.*;
 @MockBean(EquipmentInfosRepository.class)
 @MockBean(StudyInfosRepository.class)
 @MockBean(TombstonedEquipmentInfosRepository.class)
-@TestPropertySource(properties = DisableElasticsearch.PROPERTY_NAME+"=true")
+@TestPropertySource(properties = DisableElasticsearch.PROPERTY_NAME + "=true")
 public @interface DisableElasticsearch {
     String PROPERTY_NAME = "test.disable.elasticsearch";
 }

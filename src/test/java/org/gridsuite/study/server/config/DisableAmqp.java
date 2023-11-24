@@ -16,7 +16,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @MockBean(StreamBridge.class) //use by NotificationService
-@TestPropertySource(properties = DisableAmqp.PROPERTY_NAME+"=true")
+@TestPropertySource(properties = DisableAmqp.PROPERTY_NAME + "=true")
 public @interface DisableAmqp {
     String PROPERTY_NAME = "test.disable.amqp";
 }
