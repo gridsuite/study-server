@@ -29,7 +29,7 @@ import java.lang.annotation.*;
 @MockBean(NodeRepository.class)
 @MockBean(RootNodeInfoRepository.class)
 //@MockBean(NetworkModificationTreeService.class) //TODO mockBean NetworkModificationNodeInfoRepository not found ?
-@TestPropertySource(properties = DisableJpa.PROPERTY_NAME + "=true") //can't have multiple @EnableAutoConfiguration(exclude)
+@TestPropertySource(properties = DisableJpa.PROPERTY_NAME + "=false") //can't have multiple @EnableAutoConfiguration(exclude)
 public @interface DisableJpa {
-    String PROPERTY_NAME = "test.disable.jpa";
+    String PROPERTY_NAME = "test.enable.jpa";
 }

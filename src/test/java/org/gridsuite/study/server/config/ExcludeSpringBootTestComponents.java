@@ -56,21 +56,21 @@ public class ExcludeSpringBootTestComponents implements AutoConfigurationImportF
     @Override
     public boolean[] match(final String[] autoConfigurationClasses, final AutoConfigurationMetadata autoConfigurationMetadata) {
         final Set<String> autoConfigDisable = new HashSet<>();
-        if (environment.getProperty(DisableJpa.PROPERTY_NAME, Boolean.class, Boolean.FALSE)) {
+        if (!environment.getProperty(DisableJpa.PROPERTY_NAME, Boolean.class, Boolean.TRUE)) {
             log.debug("Disabling SQL & JPA Autoconfiguration");
             autoConfigDisable.add(DataSourceAutoConfiguration.class.getName());
             autoConfigDisable.add(JpaRepositoriesAutoConfiguration.class.getName());
             autoConfigDisable.add(HibernateJpaAutoConfiguration.class.getName());
             autoConfigDisable.add(LiquibaseAutoConfiguration.class.getName());
         }
-        if (environment.getProperty(DisableElasticsearch.PROPERTY_NAME, Boolean.class, Boolean.FALSE)) {
+        if (!environment.getProperty(DisableElasticsearch.PROPERTY_NAME, Boolean.class, Boolean.TRUE)) {
             log.debug("Disabling ElasticSearch Autoconfiguration");
             autoConfigDisable.add(ElasticsearchClientAutoConfiguration.class.getName());
             autoConfigDisable.add(ElasticsearchDataAutoConfiguration.class.getName());
             autoConfigDisable.add(ElasticsearchRestClientAutoConfiguration.class.getName());
             autoConfigDisable.add(ElasticsearchRepositoriesAutoConfiguration.class.getName());
         }
-        if (environment.getProperty(DisableAmqp.PROPERTY_NAME, Boolean.class, Boolean.FALSE)) {
+        if (!environment.getProperty(DisableAmqp.PROPERTY_NAME, Boolean.class, Boolean.TRUE)) {
             log.debug("Disabling AMQP Autoconfiguration");
             autoConfigDisable.add(RabbitAutoConfiguration.class.getName());
             autoConfigDisable.add(FunctionConfiguration.class.getName());
