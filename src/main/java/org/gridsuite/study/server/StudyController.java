@@ -1004,10 +1004,11 @@ public class StudyController {
     public ResponseEntity<List<ReporterModel>> getParentNodesReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                     @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                     @Parameter(description = "Node only report") @RequestParam(value = "nodeOnlyReport", required = false, defaultValue = "true") boolean nodeOnlyReport,
+                                                                    @Parameter(description = "The report Type") @RequestParam(name = "reportType") StudyService.ReportType reportType,
                                                                     @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels,
                                                                     @Parameter(description = "Pagination parameters") Pageable pageable) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReport(nodeUuid, nodeOnlyReport, severityLevels, pageable));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReport(nodeUuid, nodeOnlyReport, reportType, severityLevels, pageable));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -1016,10 +1017,11 @@ public class StudyController {
     public ResponseEntity<List<ReporterModel>> getNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @Parameter(description = "The report Id") @RequestParam(name = "reportId", required = false) String reportId,
+                                                             @Parameter(description = "The report Type") @RequestParam(name = "reportType") StudyService.ReportType reportType,
                                                              @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels,
                                                              @Parameter(description = "Pagination parameters") Pageable pageable) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(nodeUuid, reportId, severityLevels, pageable));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(nodeUuid, reportId, reportType, severityLevels, pageable));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/subreport", produces = MediaType.APPLICATION_JSON_VALUE)

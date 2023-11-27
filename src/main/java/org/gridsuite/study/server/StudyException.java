@@ -57,6 +57,7 @@ public class StudyException extends RuntimeException {
         UNKNOWN_NOTIFICATION_TYPE,
         BAD_MODIFICATION_TYPE,
         GET_MODIFICATIONS_FAILED,
+        GET_MODIFICATIONS_COUNT_FAILED,
         GET_NETWORK_ELEMENT_FAILED,
         BAD_JSON_FORMAT,
         UNKNOWN_ACTION_TYPE,
