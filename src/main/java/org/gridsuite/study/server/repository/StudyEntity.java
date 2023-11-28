@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.repository;
 
 import lombok.*;
+import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -116,7 +117,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     public ShortCircuitParametersEntity getShortCircuitParameters() {
         if (this.shortCircuitParameters == null) {
-            this.setShortCircuitParameters(ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters()));
+            this.setShortCircuitParameters(ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP));
         }
         return this.shortCircuitParameters;
     }
