@@ -6,8 +6,8 @@
  */
 package org.gridsuite.study.server.config;
 
+import org.gridsuite.study.server.notification.NotificationService;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.test.context.TestPropertySource;
 
 import java.lang.annotation.*;
@@ -15,8 +15,8 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@MockBean(StreamBridge.class) //use by NotificationService
-@TestPropertySource(properties = DisableAmqp.PROPERTY_NAME + "=true")
-public @interface DisableAmqp {
-    String PROPERTY_NAME = "test.disable.amqp";
+@MockBean(NotificationService.class)
+@TestPropertySource(properties = DisableCloudStream.DISABLE_PROPERTY_NAME + "=true")
+public @interface DisableCloudStream {
+    String DISABLE_PROPERTY_NAME = "test.disable.cloud-stream";
 }
