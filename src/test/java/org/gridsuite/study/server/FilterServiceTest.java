@@ -90,6 +90,7 @@ public class FilterServiceTest {
         // mock base url of filter server as one of wire mock server
         Mockito.doAnswer(invocation -> wireMockServer.baseUrl()).when(filterService).getBaseUri();
     }
+
     private void cleanDB() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
