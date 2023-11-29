@@ -370,6 +370,12 @@ public class WireMockUtils {
         ).getId();
     }
 
+    public UUID stubCountriesGetNotFoundError(String networkUuid) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/countries"))
+                .willReturn(WireMock.notFound().withBody("Network not found"))
+        ).getId();
+    }
+
     public UUID stubCountriesGetError(String networkUuid) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/countries"))
                 .willReturn(WireMock.serverError().withBody("Internal Server Error"))
@@ -384,6 +390,13 @@ public class WireMockUtils {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate"))
                 .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
                 .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
+    public UUID stubFilterEvaluateNotFoundError(String networkUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate"))
+                .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
+                .willReturn(WireMock.notFound().withBody("Network not found"))
         ).getId();
     }
 

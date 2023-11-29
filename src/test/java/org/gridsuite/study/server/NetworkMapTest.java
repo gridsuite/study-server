@@ -629,6 +629,23 @@ public class NetworkMapTest {
     }
 
     @Test
+    public void testGetCountriesNotFoundError() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+        UUID stubUuid = wireMockUtils.stubCountriesGetNotFoundError(NETWORK_UUID_STRING);
+
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/countries",
+                        studyNameUserIdUuid, rootNodeUuid))
+                .andExpect(status().is5xxServerError())
+                .andReturn();
+
+        wireMockUtils.verifyCountriesGet(stubUuid, NETWORK_UUID_STRING);
+    }
+
+    @Test
     public void testGetCountriesError() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         UUID stubUuid = wireMockUtils.stubCountriesGetError(NETWORK_UUID_STRING);

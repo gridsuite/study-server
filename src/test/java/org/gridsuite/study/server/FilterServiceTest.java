@@ -172,6 +172,42 @@ public class FilterServiceTest {
     }
 
     @Test
+    public void testEvaluateFilterNotFoundError() throws Exception {
+        UUID stubUuid = wireMockUtils.stubFilterEvaluateNotFoundError(NETWORK_UUID_STRING);
+
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        final String sendBody = """
+                    {
+                      "type": "EXPERT",
+                      "equipmentType": "GENERATOR",
+                      "rules": {
+                        "combinator": "AND",
+                        "dataType": "COMBINATOR",
+                        "rules": [
+                          {
+                            "field": "ID",
+                            "operator": "IN",
+                            "values": ["GEN"],
+                            "dataType": "STRING"
+                          }
+                        ]
+                      }
+                    }
+                """;
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/filters/evaluate",
+                        studyNameUserIdUuid, rootNodeUuid)
+                        .content(sendBody).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().is5xxServerError())
+                .andReturn();
+
+        wireMockUtils.verifyFilterEvaluate(stubUuid, NETWORK_UUID_STRING);
+    }
+
+    @Test
     public void testEvaluateFilterError() throws Exception {
         UUID stubUuid = wireMockUtils.stubFilterEvaluateError(NETWORK_UUID_STRING);
 
