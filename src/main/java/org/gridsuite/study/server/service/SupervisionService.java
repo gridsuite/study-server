@@ -176,7 +176,10 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
-        nodes.stream().forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
+        nodes.stream().forEach(node -> {
+            node.setShortCircuitAnalysisResultUuid(null);
+            node.setOneBusShortCircuitAnalysisResultUuid(null);
+        });
         Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SHORT_CIRCUIT.subReporterKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         shortCircuitService.deleteShortCircuitAnalysisResults();
