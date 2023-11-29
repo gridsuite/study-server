@@ -363,4 +363,39 @@ public class WireMockUtils {
         wireMock.verify(nbServer, requestBuilder);
         removeRequestForStub(stubUuid, nbServer);
     }
+
+    public UUID stubCountriesGet(String networkUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/countries"))
+                .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
+    public UUID stubCountriesGetError(String networkUuid) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/countries"))
+                .willReturn(WireMock.serverError().withBody("Internal Server Error"))
+        ).getId();
+    }
+
+    public void verifyCountriesGet(UUID stubUuid, String networkUuid) {
+        verifyGetRequest(stubUuid, "/v1/networks/" + networkUuid + "/countries", Map.of());
+    }
+
+    public UUID stubFilterEvaluate(String networkUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate"))
+                .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
+                .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
+    public UUID stubFilterEvaluateError(String networkUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate"))
+                .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
+                .willReturn(WireMock.serverError().withBody("Internal Server Error"))
+        ).getId();
+    }
+
+    public void verifyFilterEvaluate(UUID stubUuid, String networkUuid) {
+        verifyPostRequest(stubUuid, "/v1/filters/evaluate",
+                Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid)));
+    }
 }

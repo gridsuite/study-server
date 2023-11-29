@@ -186,5 +186,4 @@ public class NetworkMapService {
     public void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {
         this.networkMapServerBaseUri = networkMapServerBaseUri;
     }
-
 }
