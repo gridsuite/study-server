@@ -1,8 +1,8 @@
-package org.gridsuite.study.server.service.client.filter.impl;
+package org.gridsuite.study.server.service;
 
-import org.gridsuite.study.server.service.RemoteServicesProperties;
-import org.gridsuite.study.server.service.client.AbstractRestClient;
-import org.gridsuite.study.server.service.client.filter.FilterClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -13,19 +13,29 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.Objects;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
+import static org.gridsuite.study.server.StudyConstants.DELIMITER;
+import static org.gridsuite.study.server.StudyConstants.FILTER_API_VERSION;
 
 @Service
-public class FilterClientImpl extends AbstractRestClient implements FilterClient {
+public class FilterService {
 
-    public FilterClientImpl(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
-        super(remoteServicesProperties.getServiceUri("filter-server"), restTemplate);
+    public static final String FILTER_END_POINT_EVALUATE = "/filters/evaluate";
+
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    private final RestTemplate restTemplate;
+
+    private final String baseUri;
+
+    @Autowired
+    public FilterService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
+        this.baseUri = remoteServicesProperties.getServiceUri("filter-server");
+        this.restTemplate = restTemplate;
     }
 
-    @Override
     public String evaluateFilter(UUID networkUuid, String variantId, String filter) {
         Objects.requireNonNull(networkUuid);
-        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, FILTER_END_POINT_EVALUATE);
+        String endPointUrl = baseUri + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EVALUATE;
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
         uriComponentsBuilder.queryParam("networkUuid", networkUuid);
@@ -40,6 +50,6 @@ public class FilterClientImpl extends AbstractRestClient implements FilterClient
         HttpEntity<String> request = new HttpEntity<>(filter, headers);
 
         // call filter-server REST API
-        return getRestTemplate().postForObject(uriComponent.toUriString(), request, String.class);
+        return restTemplate.postForObject(uriComponent.toUriString(), request, String.class);
     }
 }

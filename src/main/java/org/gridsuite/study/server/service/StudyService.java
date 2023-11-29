@@ -41,7 +41,6 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
-import org.gridsuite.study.server.service.client.filter.FilterClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -126,7 +125,7 @@ public class StudyService {
     private final DynamicSimulationService dynamicSimulationService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
-    private final FilterClient filterClient;
+    private final FilterService filterService;
     private final ActionsService actionsService;
     private final CaseService caseService;
     private final ObjectMapper objectMapper;
@@ -193,7 +192,7 @@ public class StudyService {
             DynamicSimulationService dynamicSimulationService,
             VoltageInitService voltageInitService,
             DynamicSimulationEventService dynamicSimulationEventService,
-            FilterClient filterClient) {
+            FilterService filterService) {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
         this.defaultSensitivityAnalysisProvider = defaultSensitivityAnalysisProvider;
@@ -222,7 +221,7 @@ public class StudyService {
         this.dynamicSimulationService = dynamicSimulationService;
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
-        this.filterClient = filterClient;
+        this.filterService = filterService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -2223,6 +2222,6 @@ public class StudyService {
 
     public String evaluateFilter(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode, String filter) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
-        return filterClient.evaluateFilter(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn), filter);
+        return filterService.evaluateFilter(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn), filter);
     }
 }
