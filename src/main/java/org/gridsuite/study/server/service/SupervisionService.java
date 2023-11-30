@@ -7,6 +7,8 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
@@ -15,8 +17,6 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationSer
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
 
 /**
@@ -176,7 +177,10 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
-        nodes.stream().forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
+        nodes.stream().forEach(node -> {
+            node.setShortCircuitAnalysisResultUuid(null);
+            node.setOneBusShortCircuitAnalysisResultUuid(null);
+        });
         Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SHORT_CIRCUIT.subReporterKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         shortCircuitService.deleteShortCircuitAnalysisResults();

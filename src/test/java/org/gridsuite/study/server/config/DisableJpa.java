@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.config;
 
-import jakarta.persistence.EntityManagerFactory;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.dynamicsimulation.EventRepository;
@@ -21,15 +20,13 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@MockBean(classes = EntityManagerFactory.class, name = "jpaSharedEM_entityManagerFactory")
 @MockBean(StudyRepository.class)
 @MockBean(StudyCreationRequestRepository.class)
 @MockBean(EventRepository.class)
 @MockBean(NetworkModificationNodeInfoRepository.class)
 @MockBean(NodeRepository.class)
 @MockBean(RootNodeInfoRepository.class)
-//@MockBean(NetworkModificationTreeService.class) //TODO mockBean NetworkModificationNodeInfoRepository not found ?
-@TestPropertySource(properties = DisableJpa.PROPERTY_NAME+"=true") //can't have multiple @EnableAutoConfiguration(exclude)
+@TestPropertySource(properties = DisableJpa.DISABLE_PROPERTY_NAME + "=true")
 public @interface DisableJpa {
-    String PROPERTY_NAME = "test.disable.jpa";
+    String DISABLE_PROPERTY_NAME = "test.disable.data-jpa";
 }

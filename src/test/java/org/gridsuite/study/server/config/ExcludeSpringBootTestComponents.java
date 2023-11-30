@@ -7,16 +7,16 @@
 package org.gridsuite.study.server.config;
 
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfigurationImportFilter;
 import org.springframework.boot.autoconfigure.AutoConfigurationMetadata;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
+import org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration;
 import org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration;
 import org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchRepositoriesAutoConfiguration;
 import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration;
@@ -40,14 +40,14 @@ import java.util.Set;
  *
  * @see org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch
  * @see DisableJpa
- * @see DisableAmqp
+ * @see DisableCloudStream
  */
-@NoArgsConstructor(onConstructor_={ @Autowired })
-@ToString(onlyExplicitlyIncluded = true)
+@ToString(onlyExplicitlyIncluded = true) //create a beautiful toString() with only the class-name
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@Slf4j
 public class ExcludeSpringBootTestComponents implements AutoConfigurationImportFilter, EnvironmentAware {
-    @Setter(onMethod_={@Override})
+    private static final Logger LOGGER = LoggerFactory.getLogger(ExcludeSpringBootTestComponents.class);
+
+    @Setter
     private Environment environment;
 
     /**
@@ -56,32 +56,33 @@ public class ExcludeSpringBootTestComponents implements AutoConfigurationImportF
     @Override
     public boolean[] match(final String[] autoConfigurationClasses, final AutoConfigurationMetadata autoConfigurationMetadata) {
         final Set<String> autoConfigDisable = new HashSet<>();
-        if (environment.getProperty(DisableJpa.PROPERTY_NAME, Boolean.class, Boolean.FALSE)) {
-            log.debug("Disabling SQL & JPA Autoconfiguration");
+        if (environment.getProperty(DisableJpa.DISABLE_PROPERTY_NAME, Boolean.class, Boolean.FALSE)) {
+            LOGGER.debug("Disabling SQL & JPA Autoconfiguration");
             autoConfigDisable.add(DataSourceAutoConfiguration.class.getName());
             autoConfigDisable.add(JpaRepositoriesAutoConfiguration.class.getName());
             autoConfigDisable.add(HibernateJpaAutoConfiguration.class.getName());
             autoConfigDisable.add(LiquibaseAutoConfiguration.class.getName());
+            autoConfigDisable.add(CacheAutoConfiguration.class.getName());
         }
-        if (environment.getProperty(DisableElasticsearch.PROPERTY_NAME, Boolean.class, Boolean.FALSE)) {
-            log.debug("Disabling ElasticSearch Autoconfiguration");
+        if (environment.getProperty(DisableElasticsearch.DISABLE_PROPERTY_NAME, Boolean.class, Boolean.FALSE)) {
+            LOGGER.debug("Disabling ElasticSearch Autoconfiguration");
             autoConfigDisable.add(ElasticsearchClientAutoConfiguration.class.getName());
             autoConfigDisable.add(ElasticsearchDataAutoConfiguration.class.getName());
             autoConfigDisable.add(ElasticsearchRestClientAutoConfiguration.class.getName());
             autoConfigDisable.add(ElasticsearchRepositoriesAutoConfiguration.class.getName());
         }
-        if (environment.getProperty(DisableAmqp.PROPERTY_NAME, Boolean.class, Boolean.FALSE)) {
-            log.debug("Disabling AMQP Autoconfiguration");
+        if (environment.getProperty(DisableCloudStream.DISABLE_PROPERTY_NAME, Boolean.class, Boolean.FALSE)) {
+            LOGGER.debug("Disabling AMQP Autoconfiguration");
             autoConfigDisable.add(RabbitAutoConfiguration.class.getName());
             autoConfigDisable.add(FunctionConfiguration.class.getName());
             autoConfigDisable.add(BindingServiceConfiguration.class.getName());
         }
-        log.trace("Classes not allowed for autoconfiguration: {}", autoConfigDisable);
+        LOGGER.trace("Classes not allowed for autoconfiguration: {}", autoConfigDisable);
         boolean[] passed = new boolean[autoConfigurationClasses.length];
         for (int i = 0; i < autoConfigurationClasses.length; i++) {
             passed[i] = !autoConfigDisable.contains(autoConfigurationClasses[i]);
         }
-        log.trace("Result filtering classes {} → {}", autoConfigurationClasses, passed);
+        LOGGER.trace("Result filtering classes {} → {}", autoConfigurationClasses, passed);
         return passed;
     }
 }

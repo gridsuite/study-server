@@ -48,6 +48,7 @@ public class NetworkModificationService {
     private static final String DELIMITER = "/";
     private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
+    private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
     private static final String NETWORK_UUID = "networkUuid";
     private static final String REPORT_UUID = "reportUuid";
     private static final String REPORTER_ID = "reporterId";
@@ -94,6 +95,20 @@ public class NetworkModificationService {
             return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, GET_MODIFICATIONS_FAILED);
+        }
+    }
+
+    public Integer getModificationsCount(UUID groupUUid, boolean stashedModifications) {
+        Objects.requireNonNull(groupUUid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_COUNT_PATH)
+            .queryParam(QUERY_PARAM_STASHED, stashedModifications)
+            .buildAndExpand(groupUUid)
+            .toUriString();
+
+        try {
+            return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, Integer.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, GET_MODIFICATIONS_COUNT_FAILED);
         }
     }
 
