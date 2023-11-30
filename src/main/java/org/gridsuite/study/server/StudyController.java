@@ -1706,9 +1706,9 @@ public class StudyController {
     @GetMapping(value = "/servers/infos")
     @Operation(summary = "Get the informations of all backend servers")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The informations on all known servers"),
-            @ApiResponse(responseCode = "207", description = "Partial result because some servers haven't respond or throw an error"),
-            @ApiResponse(responseCode = "424", description = "All requests have failed, no informations retreive")})
+        @ApiResponse(responseCode = "200", description = "The informations on all known servers"),
+        @ApiResponse(responseCode = "207", description = "Partial result because some servers haven't respond or throw an error"),
+        @ApiResponse(responseCode = "424", description = "All requests have failed, no informations retreive")})
     public ResponseEntity<Map<String, ?>> getServersInformations() { //Map<String, Info> from springboot-actuator
         return ResponseEntity.ok().body(remoteServices.getServicesInfo());
     }

@@ -16,7 +16,6 @@ import org.gridsuite.study.server.service.RemoteServices;
 import org.gridsuite.study.server.service.client.RemoteServiceName;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.ExtendWith;

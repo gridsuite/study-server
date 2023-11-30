@@ -74,20 +74,20 @@ class RemoteServicesTest implements WithAssertions {
 
     @TestConfiguration
     public static class TestConfig {
-        static final List<RestTemplate> restTemplates = Collections.synchronizedList(new ArrayList<>(1));
+        static final List<RestTemplate> REST_TEMPLATES = Collections.synchronizedList(new ArrayList<>(1));
 
         @Bean
         public RestTemplateCustomizer testRestTemplateCustomizer() {
-            return restTemplates::add;
+            return REST_TEMPLATES::add;
         }
     }
 
     @BeforeAll
     void setup(@NonNull @Autowired @Lazy final RestTemplate restTemplate) {
-        server = MockRestServiceServer.bindTo(TestConfig.restTemplates.get(0)).ignoreExpectOrder(true).build();
+        server = MockRestServiceServer.bindTo(TestConfig.REST_TEMPLATES.get(0)).ignoreExpectOrder(true).build();
         remoteServicesProperties.setServices(Arrays.stream(RemoteServiceName.values())
                 .map(RemoteServiceName::serviceName)
-                .map(name -> new RemoteServicesProperties.Service(name, "http://"+name+"/", false))
+                .map(name -> new RemoteServicesProperties.Service(name, "http://" + name + "/", false))
                 .toList());
     }
 
@@ -103,8 +103,8 @@ class RemoteServicesTest implements WithAssertions {
     /**
      * Test timeout (with a little range) for testing methods doing request in parallel
      */
-    @Timeout(value = RemoteServices.REQUEST_TIMEOUT_IN_MS+500L, unit = TimeUnit.MILLISECONDS)
-    @interface TimeoutRemotes {}
+    @Timeout(value = RemoteServices.REQUEST_TIMEOUT_IN_MS + 500L, unit = TimeUnit.MILLISECONDS)
+    @interface TimeoutRemotes { }
 
     @Test
     void testOptionalServicesUp() {
@@ -142,7 +142,7 @@ class RemoteServicesTest implements WithAssertions {
                 .andExpect(method(HttpMethod.GET)).andRespond(request -> {
                     try {
                         Thread.sleep(delayResponse);
-                    } catch (InterruptedException e) {}
+                    } catch (InterruptedException e) { }
                     return withSuccess(jsonResponse, MediaType.APPLICATION_JSON).createResponse(request);
                 }));
 
@@ -181,12 +181,14 @@ class RemoteServicesTest implements WithAssertions {
 
     private void testServiceInfo(final int delay, final RemoteServiceName skipSrv) {
         Mockito.when(infoEndpoint.info()).thenReturn(Collections.emptyMap());
-        for(final RemoteServiceName service : RemoteServiceName.values()) {
-            if (service == RemoteServiceName.STUDY_SERVER || service == skipSrv) continue;
+        for (final RemoteServiceName service : RemoteServiceName.values()) {
+            if (service == RemoteServiceName.STUDY_SERVER || service == skipSrv) {
+                continue;
+            }
             serverExpectInfo(service).andRespond(request -> {
                 try {
                     Thread.sleep(delay);
-                } catch (InterruptedException e) {}
+                } catch (InterruptedException e) { }
                 return withSuccess("{}", MediaType.APPLICATION_JSON).createResponse(request);
             });
         }

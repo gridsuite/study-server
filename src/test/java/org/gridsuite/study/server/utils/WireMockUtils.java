@@ -354,7 +354,7 @@ public class WireMockUtils {
     }
 
     public void verifyActuatorHealth(@NonNull final String serviceName, final UUID stubUuid, final int nbServer) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/"+serviceName+"/actuator/health"));
+        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/" + serviceName + "/actuator/health"));
         wireMock.verify(nbServer, requestBuilder);
         removeRequestForStub(stubUuid, nbServer);
     }

@@ -91,9 +91,9 @@ public class RemoteServices {
                 return CompletableFuture.completedFuture("UP".equalsIgnoreCase(node.asText()));
             }
         } catch (RestClientException e) {
-            LOGGER.error("Network error while testing "+service.getName(), e);
+            LOGGER.error("Network error while testing " + service.getName(), e);
         } catch (JsonProcessingException e) {
-            LOGGER.error("Json parsing error while testing "+service.getName(), e);
+            LOGGER.error("Json parsing error while testing " + service.getName(), e);
         }
         return CompletableFuture.completedFuture(false);
     }
@@ -129,7 +129,7 @@ public class RemoteServices {
                 return CompletableFuture.completedFuture(objectMapper.valueToTree(infoEndpoint.info()));
             } else {
                 final String rawJson = this.restTemplate.getForObject(
-                    URI.create(this.remoteServicesProperties.getServiceUri(service.serviceName())+"/actuator/info")
+                    URI.create(this.remoteServicesProperties.getServiceUri(service.serviceName()) + "/actuator/info")
                         .normalize(), String.class);
                 return CompletableFuture.completedFuture(this.objectMapper.readTree(rawJson));
             }

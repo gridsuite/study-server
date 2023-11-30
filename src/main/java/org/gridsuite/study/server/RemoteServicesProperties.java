@@ -41,7 +41,7 @@ public class RemoteServicesProperties {
     }
 
     public String getLocalUri() {
-        return "http://localhost:"+this.webSrvAppCtxt.getWebServer().getPort();
+        return "http://localhost:" + this.webSrvAppCtxt.getWebServer().getPort();
     }
 
     public String getServiceUri(String serviceName) {
