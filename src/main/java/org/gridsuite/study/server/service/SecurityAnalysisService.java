@@ -120,7 +120,8 @@ public class SecurityAnalysisService {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam("reportUuid", reportUuid.toString())
-                .queryParam("reporterId", nodeUuid.toString());
+                .queryParam("reporterId", nodeUuid.toString())
+                .queryParam("reportType", StudyService.ReportType.SECURITY_ANALYSIS.toString());
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
