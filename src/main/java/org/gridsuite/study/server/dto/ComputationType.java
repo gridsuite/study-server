@@ -4,6 +4,7 @@ public enum ComputationType {
     LOAD_FLOW("LoadFlow"),
     SECURITY_ANALYSIS("SecurityAnalysis"),
     SENSITIVITY_ANALYSIS("SensitivityAnalysis"),
+    NON_EVACUATED_ENERGY_ANALYSIS("NonEvacuatedEnergyAnalysis"),
     SHORT_CIRCUIT("ShortCircuitAnalysis"),
     VOLTAGE_INITIALIZATION(""),
     DYNAMIC_SIMULATION("");

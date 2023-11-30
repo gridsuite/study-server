@@ -138,9 +138,6 @@ public class SensitivityAnalysisTest {
     private SensitivityAnalysisService sensitivityAnalysisService;
 
     @Autowired
-    private NonEvacuatedEnergyService nonEvacuatedEnergyService;
-
-    @Autowired
     private ActionsService actionsService;
 
     @Autowired
@@ -182,7 +179,6 @@ public class SensitivityAnalysisTest {
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
-        nonEvacuatedEnergyService.setSensitivityAnalysisServerBaseUri(baseUrl);
         actionsService.setActionsServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
 
@@ -271,7 +267,7 @@ public class SensitivityAnalysisTest {
                            || path.matches("/v1/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID)) {
                     return new MockResponse().setResponseCode(200).addHeader("Content-Type",
                         "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results") || path.matches("/v1/non-evacuated-energy-results")) {
+                } else if (path.matches("/v1/results")) {
                     return new MockResponse().setResponseCode(200).addHeader("Content-Type",
                         "application/json; charset=utf-8");
                 } else if (path.matches("/v1/treereports")) {
@@ -413,19 +409,17 @@ public class SensitivityAnalysisTest {
             .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
 
-        //Delete Security analysis results
+        //Delete Sensitivity analysis results
         assertEquals(1, networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", String.valueOf(ComputationType.SENSITIVITY_ANALYSIS))
                 .queryParam("dryRun", String.valueOf(false)))
             .andExpect(status().isOk());
 
-        var requests = TestUtils.getRequestsDone(4, server);
+        var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
-        assertTrue(requests.contains("/v1/non-evacuated-energy-results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull().size());
 
         String baseUrlWireMock = wireMock.baseUrl();
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrlWireMock);

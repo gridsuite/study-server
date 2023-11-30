@@ -986,6 +986,7 @@ public class StudyService {
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
+        invalidateNonEvacuatedEnergyAnalysisStatusOnAllNodes(studyUuid);
         invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
@@ -1207,6 +1208,10 @@ public class StudyService {
 
     public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
         sensitivityAnalysisService.invalidateSensitivityAnalysisStatus(networkModificationTreeService.getStudySensitivityAnalysisResultUuids(studyUuid));
+        nonEvacuatedEnergyService.invalidateNonEvacuatedEnergyStatus(networkModificationTreeService.getStudyNonEvacuatedEnergyResultUuids(studyUuid));
+    }
+
+    public void invalidateNonEvacuatedEnergyAnalysisStatusOnAllNodes(UUID studyUuid) {
         nonEvacuatedEnergyService.invalidateNonEvacuatedEnergyStatus(networkModificationTreeService.getStudyNonEvacuatedEnergyResultUuids(studyUuid));
     }
 

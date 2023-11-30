@@ -50,11 +50,10 @@ public class NonEvacuatedEnergyStageDefinitionEntity {
     @Enumerated(EnumType.STRING)
     private EnergySource energySource;
 
-    @Column(name = "pmax_percent")
     @ElementCollection
     @CollectionTable(
         name = "nonEvacuatedEnergyStageDefinitionPmaxPercent",
         joinColumns = @JoinColumn(name = "non_evacuated_energy_stage_definition_id")
     )
-    List<Float> pMaxPercents;
+    private List<Float> pMaxPercents;
 }

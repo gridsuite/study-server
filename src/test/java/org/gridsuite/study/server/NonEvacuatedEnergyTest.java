@@ -24,6 +24,7 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.LoadFlowSpecificParameterInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
@@ -96,6 +97,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -263,7 +265,7 @@ public class NonEvacuatedEnergyTest {
                 } else if (path.matches("/v1/treereports")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/supervision/results-count")) {
+                } else if (path.matches("/v1/supervision/non-evacuated-energy-results-count")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("1");
@@ -380,6 +382,25 @@ public class NonEvacuatedEnergyTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/non-evacuated-energy.*?receiver=.*nodeUuid.*")));
 
+        //Test result count
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS))
+                .queryParam("dryRun", String.valueOf(true)))
+            .andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/non-evacuated-energy-results-count")));
+
+        //Delete sensitivity analysis results
+        assertEquals(1, networkModificationNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull().size());
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                .queryParam("type", String.valueOf(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS))
+                .queryParam("dryRun", String.valueOf(false)))
+            .andExpect(status().isOk());
+
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.contains("/v1/non-evacuated-energy-results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
+        assertEquals(0, networkModificationNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull().size());
+
         String baseUrlWireMock = wireMock.baseUrl();
         nonEvacuatedEnergyService.setSensitivityAnalysisServerBaseUri(baseUrlWireMock);
 
@@ -438,9 +459,6 @@ public class NonEvacuatedEnergyTest {
             return resultUuid;
         }).when(studyService).runNonEvacuatedEnergy(any(), any());
         studyService.runNonEvacuatedEnergy(studyEntity.getId(), modificationNode.getId());
-
-        // Test reset uuid result in the database
-        assertTrue(networkModificationTreeService.getNonEvacuatedEnergyResultUuid(modificationNode.getId()).isEmpty());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));

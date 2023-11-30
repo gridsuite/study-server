@@ -89,6 +89,8 @@ public class SupervisionService {
                 return dryRun ? securityAnalysisService.getSecurityAnalysisResultsCount() : deleteSecurityAnalysisResults();
             case SENSITIVITY_ANALYSIS:
                 return dryRun ? sensitivityAnalysisService.getSensitivityAnalysisResultsCount() : deleteSensitivityAnalysisResults();
+            case NON_EVACUATED_ENERGY_ANALYSIS:
+                return dryRun ? nonEvacuatedEnergyService.getNonEvacuatedEnergyAnalysisResultsCount() : deleteNonEvacuatedEnergyAnalysisResults();
             case SHORT_CIRCUIT:
                 return dryRun ? shortCircuitService.getShortCircuitResultsCount() : deleteShortcircuitResults();
             case VOLTAGE_INITIALIZATION:
@@ -172,12 +174,21 @@ public class SupervisionService {
         reportService.deleteTreeReports(subreportToDelete);
         sensitivityAnalysisService.deleteSensitivityAnalysisResults();
 
-        nodes = networkModificationNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull();
+        LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.SENSITIVITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+
+        return nodes.size();
+    }
+
+    private Integer deleteNonEvacuatedEnergyAnalysisResults() {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+
+        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull();
         nodes.stream().forEach(node -> node.setNonEvacuatedEnergyResultUuid(null));
-        subreportToDelete = formatSubreportMap(ComputationType.SENSITIVITY_ANALYSIS.subReporterKey, nodes);
+        Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.subReporterKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResults();
-        LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.SENSITIVITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.NON_EVACUATED_ENERGY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
 
         return nodes.size();
     }

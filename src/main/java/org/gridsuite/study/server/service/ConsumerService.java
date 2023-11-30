@@ -524,7 +524,7 @@ public class ConsumerService {
                     LOGGER.info("Sensitivity analysis non evacuated energy failed for node '{}'", receiverObj.getNodeUuid());
 
                     // delete sensitivity analysis non evacuated energy result in database
-                    updateNonEvacuatedEnergyResultUuid(receiverObj.getNodeUuid(), null);
+                    //updateNonEvacuatedEnergyResultUuid(receiverObj.getNodeUuid(), null);
 
                     // send notification for failed computation
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());

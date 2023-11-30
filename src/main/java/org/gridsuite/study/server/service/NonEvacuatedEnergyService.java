@@ -222,6 +222,12 @@ public class NonEvacuatedEnergyService {
         }
     }
 
+    public Integer getNonEvacuatedEnergyAnalysisResultsCount() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/supervision/non-evacuated-energy-results-count").toUriString();
+        return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, Integer.class);
+    }
+
     public static NonEvacuatedEnergyParametersEntity toEntity(NonEvacuatedEnergyParametersInfos parameters) {
         Objects.requireNonNull(parameters);
 
