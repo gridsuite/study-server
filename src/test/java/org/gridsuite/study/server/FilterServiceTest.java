@@ -133,6 +133,7 @@ public class FilterServiceTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
+        // whatever string is allowed but given here a json string for more expressive
         final String sendBody = """
                     {
                       "type": "EXPERT",
@@ -152,6 +153,7 @@ public class FilterServiceTest {
                     }
                 """;
 
+        // whatever string is allowed but given here a json string for more expressive
         String responseBody = """
                 [
                     {"id": "GEN", "type":"GENERATOR"}
@@ -179,6 +181,7 @@ public class FilterServiceTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
+        // whatever string is allowed but given here a json string for more expressive
         final String sendBody = """
                     {
                       "type": "EXPERT",
@@ -215,6 +218,7 @@ public class FilterServiceTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
+        // whatever string is allowed but given here a json string for more expressive
         final String sendBody = """
                     {
                       "type": "EXPERT",
