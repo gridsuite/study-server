@@ -62,6 +62,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -127,11 +128,15 @@ public class StudyService {
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final ActionsService actionsService;
     private final CaseService caseService;
+
+    private final FilterService filterService;
     private final ObjectMapper objectMapper;
 
     public enum ComputationUsingLoadFlow {
         LOAD_FLOW, SECURITY_ANALYSIS, SENSITIVITY_ANALYSIS
     }
+
+    public static final int MAX_COMPUTATION = 500000;
 
     public enum ReportNameMatchingType {
         EXACT_MATCHING, ENDS_WITH
@@ -188,6 +193,7 @@ public class StudyService {
             ActionsService actionsService,
             CaseService caseService,
             SensitivityAnalysisService sensitivityAnalysisService,
+            FilterService filterService,
             DynamicSimulationService dynamicSimulationService,
             VoltageInitService voltageInitService,
             DynamicSimulationEventService dynamicSimulationEventService) {
@@ -214,6 +220,7 @@ public class StudyService {
         this.geoDataService = geoDataService;
         this.networkMapService = networkMapService;
         this.securityAnalysisService = securityAnalysisService;
+        this.filterService = filterService;
         this.actionsService = actionsService;
         this.caseService = caseService;
         this.dynamicSimulationService = dynamicSimulationService;
@@ -2187,6 +2194,42 @@ public class StudyService {
                 SensitivityAnalysisService.toEntity(parameters != null ? parameters :
                         SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues()));
         notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    public Integer storeSensitivityAnalysisParametersValues(UUID studyUuid, SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues, String userId) {
+        List<UUID> filterIds = new ArrayList<>();
+        AtomicInteger injectionsCount = new AtomicInteger(1);
+        filterIdsBuilder(sensitivityAnalysisParametersValues, filterIds, injectionsCount);
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        Integer count = filterService.fetchfiltersComplexity(filterIds, networkUuid);
+        count = count.intValue() * injectionsCount.intValue();
+        if(count < MAX_COMPUTATION) {
+            setSensitivityAnalysisParametersValues(studyUuid, sensitivityAnalysisParametersValues, userId);
+        }
+        return count.intValue() * injectionsCount.intValue();
+    }
+
+    private static void filterIdsBuilder(SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues, List<UUID> filterIds, AtomicInteger injectionsCount) {
+        sensitivityAnalysisParametersValues.getSensitivityInjectionsSet().forEach(sensitivityInjectionsSet -> {
+            sensitivityInjectionsSet.getMonitoredBranches().forEach(monBranch -> filterIds.add(monBranch.getContainerId()));
+            injectionsCount.set(injectionsCount.get() + sensitivityInjectionsSet.getInjections().size());
+            sensitivityInjectionsSet.getContingencies().forEach(contingency -> filterIds.add(contingency.getContainerId()));
+        });
+        sensitivityAnalysisParametersValues.getSensitivityInjection().forEach(sensitivityInjection -> {
+            sensitivityInjection.getMonitoredBranches().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            sensitivityInjection.getInjections().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            sensitivityInjection.getContingencies().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+        });
+        sensitivityAnalysisParametersValues.getSensitivityHVDC().forEach(sensitivityHVDC -> {
+            sensitivityHVDC.getMonitoredBranches().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            sensitivityHVDC.getHvdcs().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            sensitivityHVDC.getContingencies().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+        });
+        sensitivityAnalysisParametersValues.getSensitivityPST().forEach(sensitivityPST -> {
+            sensitivityPST.getMonitoredBranches().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            sensitivityPST.getPsts().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            sensitivityPST.getContingencies().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+        });
     }
 
     public void updateSensitivityAnalysisParameters(UUID studyUuid, SensitivityAnalysisParametersEntity sensitivityParametersEntity) {

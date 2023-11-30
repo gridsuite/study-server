@@ -44,6 +44,7 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_SUBSTATIONS_IDS = "substationsIds";
     public static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
     public static final String QUERY_PARAM_DC_POWERFACTOR = "dcPowerFactor";
+    public static final String QUERY_PARAM_FILTERS_IDS = "ids";
 
     public static final String GROUP_UUID = "groupUuid";
     public static final String REPORT_UUID = "reportUuid";

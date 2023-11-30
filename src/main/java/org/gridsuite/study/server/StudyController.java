@@ -1677,12 +1677,11 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
     @Operation(summary = "set sensitivity analysis parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set")})
-    public ResponseEntity<Void> setSensitivityAnalysisParametersValues(
+    public ResponseEntity<Integer> setSensitivityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setSensitivityAnalysisParametersValues(studyUuid, sensitivityAnalysisParametersValues, userId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok().body(studyService.storeSensitivityAnalysisParametersValues(studyUuid, sensitivityAnalysisParametersValues, userId) );
     }
 
     @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")
