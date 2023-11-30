@@ -15,6 +15,7 @@ import lombok.NonNull;
 import org.apache.poi.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -37,6 +38,15 @@ import static org.gridsuite.study.server.StudyConstants.*;
 public class ReportService {
 
     private static final String DELIMITER = "/";
+
+    public static final String QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND = "errorOnReportNotFound";
+    public static final String QUERY_PARAM_REPORT_DEFAULT_NAME = "defaultName";
+    public static final String QUERY_PARAM_REPORT_SEVERITY_LEVEL = "severityLevels";
+    public static final String QUERY_PARAM_REPORT_WITH_ELEMENTS = "withElements";
+    public static final String QUERY_PARAM_REPORT_TASK_KEY_FILTER = "taskKeyFilter";
+    public static final String QUERY_PARAM_REPORT_PAGE_NUMBER = "page";
+    public static final String QUERY_PARAM_REPORT_PAGE_SIZE = "size";
+    public static final String REPORTER_ID_VALUE_KEY = "id";
 
     private String reportServerBaseUri;
 
@@ -66,11 +76,13 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "subreports" + DELIMITER;
     }
 
-    public ReporterModel getReport(@NonNull UUID id, @NonNull String defaultName, String reportNameFilter, StudyService.ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels) {
+    public ReporterModel getReport(@NonNull UUID id, @NonNull String defaultName, String reportNameFilter, StudyService.ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels, Pageable pageable) {
         var uriBuilder = UriComponentsBuilder.fromPath("{id}")
-                .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
-                .queryParam(QUERY_PARAM_REPORT_WITH_ELEMENTS, true)
-                .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
+            .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
+            .queryParam(QUERY_PARAM_REPORT_WITH_ELEMENTS, true)
+            .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels)
+            .queryParam(QUERY_PARAM_REPORT_PAGE_NUMBER, pageable.getPageNumber())
+            .queryParam(QUERY_PARAM_REPORT_PAGE_SIZE, pageable.getPageSize());
         if (!StringUtil.isBlank(reportNameFilter)) {
             uriBuilder.queryParam(QUERY_PARAM_REPORT_NAME_FILTER, reportNameFilter);
             uriBuilder.queryParam(QUERY_PARAM_REPORT_NAME_MATCHING_TYPE, reportNameMatchingType);
@@ -78,9 +90,11 @@ public class ReportService {
         return reportServerCall(id, this.getReportsServerURI(), uriBuilder);
     }
 
-    public ReporterModel getSubReport(@NonNull UUID id, Set<String> severityLevels) {
+    public ReporterModel getSubReport(@NonNull UUID id, Set<String> severityLevels, Pageable pageable) {
         var uriBuilder = UriComponentsBuilder.fromPath("{id}")
-                .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
+            .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels)
+            .queryParam(QUERY_PARAM_REPORT_PAGE_NUMBER, pageable.getPageNumber())
+            .queryParam(QUERY_PARAM_REPORT_PAGE_SIZE, pageable.getPageSize());
         return reportServerCall(id, this.getSubReportsServerURI(), uriBuilder);
     }
 

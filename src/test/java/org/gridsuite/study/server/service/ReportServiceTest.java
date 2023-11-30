@@ -49,7 +49,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_DEFAULT_NAME;
+import static org.gridsuite.study.server.service.ReportService.QUERY_PARAM_REPORT_DEFAULT_NAME;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.Assert.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -306,7 +306,7 @@ public class ReportServiceTest {
     private ReporterModel getNodeSimpleReport(String reportUuid, String nodeUuid) {
         ReporterModel reporter = new ReporterModel(reportUuid, reportUuid);
         Map<String, TypedValue> taskValues = new HashMap<>();
-        taskValues.put("id", new TypedValue(reportUuid, "ID"));
+        taskValues.put("id", new TypedValue(reportUuid, TypedValue.UNTYPED));
         reporter.addSubReporter(new ReporterModel(nodeUuid, nodeUuid, taskValues));
         return reporter;
     }
@@ -314,14 +314,14 @@ public class ReportServiceTest {
     private ReporterModel getRootNodeSimpleReport(String reportUuid) {
         ReporterModel reporter = new ReporterModel(reportUuid, reportUuid);
         Map<String, TypedValue> taskValues = new HashMap<>();
-        taskValues.put("id", new TypedValue(reportUuid, "ID"));
+        taskValues.put("id", new TypedValue(reportUuid, TypedValue.UNTYPED));
         reporter.addSubReporter(new ReporterModel("Root", "Root", taskValues));
         return reporter;
     }
 
     private ReporterModel getNodeMultipleReport(String reportUuid, String nodeUuid) {
         ReporterModel reporter = new ReporterModel(reportUuid, reportUuid);
-        Map<String, TypedValue> taskValues = Map.of("id", new TypedValue(reportUuid, "ID"));
+        Map<String, TypedValue> taskValues = Map.of("id", new TypedValue(reportUuid, TypedValue.UNTYPED));
         ReporterModel subReporter = new ReporterModel(MODIFICATION_NODE_UUID.toString(), MODIFICATION_NODE_UUID.toString(), taskValues);
         subReporter.addSubReporter(new ReporterModel("test" + nodeUuid, "test" + nodeUuid));
         reporter.addSubReporter(subReporter);

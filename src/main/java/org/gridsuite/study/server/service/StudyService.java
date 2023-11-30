@@ -50,6 +50,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.client.elc.QueryBuilders;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -70,6 +71,7 @@ import java.util.stream.Stream;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.elasticsearch.EquipmentInfosService.EQUIPMENT_TYPE_SCORES;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
+import static org.gridsuite.study.server.service.ReportService.REPORTER_ID_VALUE_KEY;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -1769,13 +1771,13 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public ReporterModel getSubReport(String subReportId, Set<String> severityLevels) {
-        return reportService.getSubReport(UUID.fromString(subReportId), severityLevels);
+    public ReporterModel getSubReport(String subReportId, Set<String> severityLevels, Pageable pageable) {
+        return reportService.getSubReport(UUID.fromString(subReportId), severityLevels, pageable);
     }
 
     @Transactional(readOnly = true)
-    public List<ReporterModel> getNodeReport(UUID nodeUuid, String reportId, ReportType reportType, Set<String> severityLevels) {
-        return getSubReporters(nodeUuid, UUID.fromString(reportId), nodeUuid + "@" + reportType, ReportNameMatchingType.EXACT_MATCHING, severityLevels);
+    public List<ReporterModel> getNodeReport(UUID nodeUuid, String reportId, ReportType reportType, Set<String> severityLevels, Pageable pageable) {
+        return getSubReporters(nodeUuid, UUID.fromString(reportId), nodeUuid + "@" + reportType, ReportNameMatchingType.EXACT_MATCHING, severityLevels, pageable);
     }
 
     private Pair<String, ReportNameMatchingType> getFiltersParamaters(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType) {
@@ -1793,10 +1795,10 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReporterModel> getParentNodesReport(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType, Set<String> severityLevels) {
+    public List<ReporterModel> getParentNodesReport(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType, Set<String> severityLevels, Pageable pageable) {
         Pair<String, ReportNameMatchingType> filtersParameters = getFiltersParamaters(nodeUuid, nodeOnlyReport, reportType);
         AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
-        List<ReporterModel> subReporters = getSubReporters(nodeUuid, nodeInfos.getReportUuid(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
+        List<ReporterModel> subReporters = getSubReporters(nodeUuid, nodeInfos.getReportUuid(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels, pageable);
         if (subReporters.isEmpty()) {
             return subReporters;
         } else if (nodeOnlyReport) {
@@ -1809,13 +1811,13 @@ public class StudyService {
             if (parentUuid.isEmpty()) {
                 return subReporters;
             }
-            List<ReporterModel> parentReporters = self.getParentNodesReport(parentUuid.get(), false, reportType, severityLevels);
+            List<ReporterModel> parentReporters = self.getParentNodesReport(parentUuid.get(), false, reportType, severityLevels, pageable);
             return Stream.concat(parentReporters.stream(), subReporters.stream()).collect(Collectors.toList());
         }
     }
 
-    private List<ReporterModel> getSubReporters(UUID nodeUuid, UUID reportUuid, String reportNameFilter, ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels) {
-        ReporterModel reporter = reportService.getReport(reportUuid, nodeUuid.toString(), reportNameFilter, reportNameMatchingType, severityLevels);
+    private List<ReporterModel> getSubReporters(UUID nodeUuid, UUID reportUuid, String reportNameFilter, ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels, Pageable pageable) {
+        ReporterModel reporter = reportService.getReport(reportUuid, nodeUuid.toString(), reportNameFilter, reportNameMatchingType, severityLevels, pageable);
         Map<String, List<ReporterModel>> subReportersByNode = new LinkedHashMap<>();
         reporter.getSubReporters().forEach(subReporter -> subReportersByNode.putIfAbsent(getNodeIdFromReportKey(subReporter), new ArrayList<>()));
         reporter.getSubReporters().forEach(subReporter ->
@@ -1823,7 +1825,7 @@ public class StudyService {
         );
         return subReportersByNode.keySet().stream().map(nodeId -> {
             // For a node report, pass the reportId to the Front as taskValues, to allow direct access
-            Map<String, TypedValue> taskValues = Map.of("id", new TypedValue(reportUuid.toString(), "ID"));
+            Map<String, TypedValue> taskValues = Map.of(REPORTER_ID_VALUE_KEY, new TypedValue(reportUuid.toString(), TypedValue.UNTYPED));
             ReporterModel newSubReporter = new ReporterModel(nodeId, nodeId, taskValues);
             subReportersByNode.get(nodeId).forEach(newSubReporter::addSubReporter);
             return newSubReporter;
