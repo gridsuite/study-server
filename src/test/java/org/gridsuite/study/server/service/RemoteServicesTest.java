@@ -10,10 +10,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.NullNode;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.WithAssertions;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyAppConfig;
-import org.gridsuite.study.server.config.DisableAmqp;
+import org.gridsuite.study.server.config.DisableCloudStream;
 import org.gridsuite.study.server.config.DisableJpa;
 import org.gridsuite.study.server.dto.ServiceStatusInfos;
 import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
@@ -49,8 +50,9 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+@Slf4j
 @DisableElasticsearch
-@DisableAmqp
+@DisableCloudStream
 @DisableJpa
 @Import({StudyAppConfig.class, RemoteServicesProperties.class})
 @RestClientTest({RemoteServices.class})
@@ -142,7 +144,9 @@ class RemoteServicesTest implements WithAssertions {
                 .andExpect(method(HttpMethod.GET)).andRespond(request -> {
                     try {
                         Thread.sleep(delayResponse);
-                    } catch (InterruptedException e) { }
+                    } catch (InterruptedException ex) {
+                        log.error("wait before request interrupted", ex);
+                    }
                     return withSuccess(jsonResponse, MediaType.APPLICATION_JSON).createResponse(request);
                 }));
 
@@ -188,7 +192,9 @@ class RemoteServicesTest implements WithAssertions {
             serverExpectInfo(service).andRespond(request -> {
                 try {
                     Thread.sleep(delay);
-                } catch (InterruptedException e) { }
+                } catch (InterruptedException ex) {
+                    log.error("wait before request interrupted", ex);
+                }
                 return withSuccess("{}", MediaType.APPLICATION_JSON).createResponse(request);
             });
         }

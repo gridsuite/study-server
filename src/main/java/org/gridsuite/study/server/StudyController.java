@@ -83,7 +83,7 @@ public class StudyController {
             VoltageInitService voltageInitService,
             LoadFlowService loadflowService,
             CaseService caseService,
-            ActuatorHealthService actuatorHealthService) {
+            RemoteServices remoteServices) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -95,7 +95,7 @@ public class StudyController {
         this.voltageInitService = voltageInitService;
         this.loadflowService = loadflowService;
         this.caseService = caseService;
-        this.actuatorHealthService = actuatorHealthService;
+        this.remoteServices = remoteServices;
     }
 
     @InitBinder

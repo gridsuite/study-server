@@ -7,7 +7,7 @@
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.gridsuite.study.server.config.DisableAmqp;
+import org.gridsuite.study.server.config.DisableCloudStream;
 import org.gridsuite.study.server.config.DisableJpa;
 import org.gridsuite.study.server.dto.ServiceStatusInfos;
 import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
@@ -41,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @AutoConfigureMockMvc
 @DisableElasticsearch
-@DisableAmqp
+@DisableCloudStream
 @DisableJpa
 @MockBean(NetworkModificationTreeService.class) //strange error during bean initialization
 @SpringBootTest(classes = StudyApplication.class)
