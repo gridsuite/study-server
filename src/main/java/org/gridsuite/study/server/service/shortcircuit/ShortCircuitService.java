@@ -21,6 +21,7 @@ import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.RemoteServicesProperties;
+import org.gridsuite.study.server.service.StudyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
@@ -95,7 +96,9 @@ public class ShortCircuitService {
                 .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam("reportUuid", reportUuid.toString())
-                .queryParam("reporterId", nodeUuid.toString());
+                .queryParam("reporterId", nodeUuid.toString())
+                .queryParam("reportType", StringUtils.isBlank(busId) ? StudyService.ReportType.ALL_BUSES_SHORTCIRCUIT_ANALYSIS.toString() :
+                        StudyService.ReportType.ONE_BUS_SHORTCIRCUIT_ANALYSIS.toString());
 
         if (!StringUtils.isBlank(busId)) {
             uriComponentsBuilder.queryParam("busId", busId);
@@ -273,7 +276,7 @@ public class ShortCircuitService {
     }
 
     public static ShortCircuitParameters getDefaultShortCircuitParameters() {
-        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, true, true, true, false, InitialVoltageProfileMode.NOMINAL, null);
+        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, false, false, true, true, InitialVoltageProfileMode.NOMINAL, null);
     }
 
     public void setShortCircuitServerBaseUri(String shortCircuitServerBaseUri) {

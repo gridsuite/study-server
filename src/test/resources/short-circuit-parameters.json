@@ -8,10 +8,10 @@
     "studyType":"TRANSIENT",
     "minVoltageDropProportionalThreshold":20.0,
     "withFortescueResult":false,
-    "withLoads":true,
-    "withShuntCompensators":true,
+    "withLoads":false,
+    "withShuntCompensators":false,
     "withVSCConverterStations":true,
-    "withNeutralPosition":false,
+    "withNeutralPosition":true,
     "initialVoltageProfileMode":"NOMINAL"
   },
   "cei909VoltageRanges":[
