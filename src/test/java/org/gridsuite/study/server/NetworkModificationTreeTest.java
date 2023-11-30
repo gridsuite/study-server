@@ -669,7 +669,7 @@ public class NetworkModificationTreeTest {
 
     private void deleteNode(UUID studyUuid, AbstractNode child, boolean deleteChildren, Set<AbstractNode> expectedDeletion, boolean nodeWithModification, String userId) throws Exception {
         List<UUID> children = child.getChildren().stream().map(AbstractNode::getId).collect(Collectors.toList());
-        mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", studyUuid, child.getId(), deleteChildren).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes?deleteChildren={delete}&ids={id}", studyUuid, deleteChildren, child.getId()).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
 
         checkElementUpdatedMessageSent(studyUuid, userId);
@@ -713,7 +713,7 @@ public class NetworkModificationTreeTest {
     }
 
     private void restoreNode(UUID studyUuid, UUID nodeId, UUID anchorNodeId, Set<UUID> expectedIdRestored, String userId) throws Exception {
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{nodeId}/restore?anchorNodeId={anchorNodeId}", studyUuid, nodeId, anchorNodeId).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}&ids={nodeId}", studyUuid, anchorNodeId, nodeId).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
 
         for (int i = 0; i < expectedIdRestored.size(); i++) {
