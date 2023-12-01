@@ -1153,15 +1153,15 @@ public class StudyController {
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/tree/nodes")
-    @Operation(summary = "Delete node with given id")
+    @Operation(summary = "Delete node with given ids")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted"),
-        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
+        @ApiResponse(responseCode = "404", description = "The study or the nodes not found")})
     public ResponseEntity<Void> deleteNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                           @Parameter(description = "id of child to remove") @RequestParam("ids") List<UUID> nodeIds,
+                                           @Parameter(description = "ids of children to remove") @RequestParam("ids") List<UUID> nodeIds,
                                            @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.deleteNode(studyUuid, nodeIds, deleteChildren, userId);
+        studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1187,13 +1187,13 @@ public class StudyController {
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/restore")
-    @Operation(summary = "restore node below the given anchor node")
+    @Operation(summary = "restore nodes below the given anchor node")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
-    public ResponseEntity<Void> restoreNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                            @Parameter(description = "id of node to restore") @RequestParam("ids") List<UUID> nodeIds,
+    public ResponseEntity<Void> restoreNodes(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                            @Parameter(description = "ids of nodes to restore") @RequestParam("ids") List<UUID> nodeIds,
                                             @Parameter(description = "id of node below which the node will be restored") @RequestParam("anchorNodeId") UUID anchorNodeId) {
-        studyService.restoreNode(studyUuid, nodeIds, anchorNodeId);
+        studyService.restoreNodes(studyUuid, nodeIds, anchorNodeId);
         return ResponseEntity.ok().build();
     }
 

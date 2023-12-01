@@ -1596,7 +1596,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void deleteNode(UUID studyUuid, List<UUID> nodeIds, boolean deleteChildren, String userId) {
+    public void deleteNodes(UUID studyUuid, List<UUID> nodeIds, boolean deleteChildren, String userId) {
 
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
         deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
@@ -1666,7 +1666,7 @@ public class StudyService {
         return networkModificationTreeService.getStashedNodes(studyId);
     }
 
-    public void restoreNode(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId) {
+    public void restoreNodes(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId) {
         networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId);
     }
 
