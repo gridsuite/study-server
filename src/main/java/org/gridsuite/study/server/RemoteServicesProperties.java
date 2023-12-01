@@ -45,9 +45,6 @@ public class RemoteServicesProperties {
     }
 
     public String getServiceUri(String serviceName) {
-        /*if ("study-server".equalsIgnoreCase(serviceName)) {
-            return getLocalUri();
-        }*/
         String defaultUri = "http://" + serviceName + "/";
         return Objects.isNull(services) ? defaultUri : services.stream()
                 .filter(s -> s.getName().equalsIgnoreCase(serviceName))

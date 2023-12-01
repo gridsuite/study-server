@@ -71,7 +71,6 @@ class RemoteServicesTest implements WithAssertions {
     @MockBean
     private InfoEndpoint infoEndpoint;
 
-    //@Autowired
     private MockRestServiceServer server;
 
     @TestConfiguration
