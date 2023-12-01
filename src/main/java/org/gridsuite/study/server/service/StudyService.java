@@ -2211,24 +2211,32 @@ public class StudyService {
 
     private static void filterIdsBuilder(SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues, List<UUID> filterIds, AtomicInteger injectionsCount) {
         sensitivityAnalysisParametersValues.getSensitivityInjectionsSet().forEach(sensitivityInjectionsSet -> {
-            sensitivityInjectionsSet.getMonitoredBranches().forEach(monBranch -> filterIds.add(monBranch.getContainerId()));
-            injectionsCount.set(injectionsCount.get() + sensitivityInjectionsSet.getInjections().size());
-            sensitivityInjectionsSet.getContingencies().forEach(contingency -> filterIds.add(contingency.getContainerId()));
+            if(sensitivityInjectionsSet.isActivated()) {
+                sensitivityInjectionsSet.getMonitoredBranches().forEach(monBranch -> filterIds.add(monBranch.getContainerId()));
+                injectionsCount.set(injectionsCount.get() + sensitivityInjectionsSet.getInjections().size());
+                sensitivityInjectionsSet.getContingencies().forEach(contingency -> filterIds.add(contingency.getContainerId()));
+            }
         });
         sensitivityAnalysisParametersValues.getSensitivityInjection().forEach(sensitivityInjection -> {
-            sensitivityInjection.getMonitoredBranches().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
-            sensitivityInjection.getInjections().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
-            sensitivityInjection.getContingencies().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            if(sensitivityInjection.isActivated()) {
+                sensitivityInjection.getMonitoredBranches().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+                sensitivityInjection.getInjections().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+                sensitivityInjection.getContingencies().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            }
         });
         sensitivityAnalysisParametersValues.getSensitivityHVDC().forEach(sensitivityHVDC -> {
-            sensitivityHVDC.getMonitoredBranches().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
-            sensitivityHVDC.getHvdcs().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
-            sensitivityHVDC.getContingencies().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            if(sensitivityHVDC.isActivated()) {
+                sensitivityHVDC.getMonitoredBranches().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+                sensitivityHVDC.getHvdcs().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+                sensitivityHVDC.getContingencies().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            }
         });
         sensitivityAnalysisParametersValues.getSensitivityPST().forEach(sensitivityPST -> {
-            sensitivityPST.getMonitoredBranches().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
-            sensitivityPST.getPsts().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
-            sensitivityPST.getContingencies().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            if(sensitivityPST.isActivated()) {
+                sensitivityPST.getMonitoredBranches().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+                sensitivityPST.getPsts().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+                sensitivityPST.getContingencies().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            }
         });
     }
 
