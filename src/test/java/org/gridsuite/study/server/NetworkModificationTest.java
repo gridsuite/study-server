@@ -439,6 +439,13 @@ public class NetworkModificationTest {
     }
 
     @Test
+    public void testUnbuildFailed() throws Exception {
+        // build unexisting node
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/unbuild", UUID.randomUUID(), UUID.randomUUID()))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
     public void testLocalBuildValue() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();

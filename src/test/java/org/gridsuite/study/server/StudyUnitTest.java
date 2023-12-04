@@ -183,9 +183,7 @@ public class StudyUnitTest {
         SensitivityAnalysisParametersEntity defaultSensitivityParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider,
             defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, defaultSensitivityParametersEntity);
-        var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity, null);
-        return study;
+        return studyRepository.save(studyEntity);
     }
 
     private NodeEntity insertNode(StudyEntity study, UUID nodeId, NodeEntity parentNode, BuildStatus buildStatus) {
