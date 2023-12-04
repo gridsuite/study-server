@@ -60,6 +60,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "sensitivityAnalysisProvider")
     private String sensitivityAnalysisProvider;
 
+    @Column(name = "nonEvacuatedEnergyProvider")
+    private String nonEvacuatedEnergyProvider;
+
     @Column(name = "dynamicSimulationProvider")
     private String dynamicSimulationProvider;
 

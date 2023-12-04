@@ -1767,4 +1767,21 @@ public class StudyController {
         studyService.setNonEvacuatedEnergyParametersValues(studyUuid, nonEvacuatedEnergyParametersValues, userId);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping(value = "/studies/{studyUuid}/non-evacuated-energy/provider")
+    @Operation(summary = "set sensitivity analysis non evacuated energy provider for the specified study, no body means reset to default provider")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy provider is set")})
+    public ResponseEntity<Void> setNonEvacuatedEnergyProvider(@PathVariable("studyUuid") UUID studyUuid,
+                                                               @RequestBody(required = false) String provider,
+                                                               @RequestHeader("userId") String userId) {
+        studyService.updateNonEvacuatedEnergyProvider(studyUuid, provider, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/non-evacuated-energy/provider")
+    @Operation(summary = "Get sensitivity analysis non evacuated energy provider for a specified study, empty string means default provider")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy provider is returned")})
+    public ResponseEntity<String> getNonEvacuatedEnergyProvider(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getNonEvacuatedEnergyProvider(studyUuid));
+    }
 }

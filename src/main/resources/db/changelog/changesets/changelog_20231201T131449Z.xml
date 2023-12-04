@@ -142,6 +142,11 @@
             <column name="non_evacuated_energy_result_uuid" type="uuid"/>
         </addColumn>
     </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701436513032-30">
+        <addColumn tableName="study">
+            <column name="non_evacuated_energy_provider" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
     <changeSet author="lecuyerfra (generated)" id="1701436513032-37">
         <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_stages_selection_id" baseTableName="non_evacuated_energy_stages_selection_definition_index" constraintName="FK8fl4tq030br4bbklva1mm58n0" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_stages_selection" validate="true"/>
     </changeSet>

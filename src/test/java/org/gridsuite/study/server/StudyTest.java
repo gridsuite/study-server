@@ -2275,8 +2275,11 @@ public class StudyTest {
                 .andExpectAll(status().isOk(),
                         content().string(defaultSecurityAnalysisProvider));
         mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid))
-                .andExpectAll(status().isOk(),
-                        content().string(defaultSensitivityAnalysisProvider));
+            .andExpectAll(status().isOk(),
+                content().string(defaultSensitivityAnalysisProvider));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
+            .andExpectAll(status().isOk(),
+                content().string(defaultSensitivityAnalysisProvider));  // same default provider as for sensitivity analysis
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/provider", studyUuid)
                         .content("SuperLF")
@@ -2306,6 +2309,13 @@ public class StudyTest {
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(message);
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid)
+                .content("SuperNEE")
+                .contentType(MediaType.TEXT_PLAIN)
+                .header(USER_ID_HEADER, USER_ID_HEADER))
+            .andExpect(status().isOk());
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(message);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
@@ -2320,6 +2330,9 @@ public class StudyTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid))
                 .andExpectAll(status().isOk(),
                         content().string("SuperSE"));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
+            .andExpectAll(status().isOk(),
+                content().string("SuperNEE"));
     }
 
     @Test
