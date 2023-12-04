@@ -43,7 +43,7 @@ public class FilterService {
         filterServerBaseUri = remoteServicesProperties.getServiceUri("filter-server");
     }
 
-    public Integer fetchFiltersComplexity(Map<Integer, Map<String, List<UUID>>> containerIdsMap, UUID networkUuid) {
+    public Integer fetchFiltersComplexity(Map<Integer, List<Map<String, List<UUID>>>> containerIdsMap, UUID networkUuid) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/complexity")
                 .queryParam(NETWORK_UUID, networkUuid);
@@ -55,7 +55,7 @@ public class FilterService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<Map<Integer, Map<String, List<UUID>>>> httpEntity = new HttpEntity<>(containerIdsMap, headers);
+        HttpEntity<Map<Integer, List<Map<String, List<UUID>>>>> httpEntity = new HttpEntity<>(containerIdsMap, headers);
 
         return restTemplate.exchange(filterServerBaseUri + path, HttpMethod.POST, httpEntity,
                 Integer.class).getBody();

@@ -1681,8 +1681,18 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setSensitivityAnalysisParametersValues(studyUuid, sensitivityAnalysisParametersValues, userId);
-        return ResponseEntity.ok().body(studyService.fetchFiltersComplexity(studyUuid, sensitivityAnalysisParametersValues, userId));
+        try {
+            studyService.setSensitivityAnalysisParametersValues(studyUuid, sensitivityAnalysisParametersValues, userId);
+        } catch (Exception e) {
+            return ResponseEntity.unprocessableEntity().build();
+        }
+        int count;
+        try {
+            count = studyService.fetchFiltersComplexity(studyUuid, sensitivityAnalysisParametersValues);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().body(count);
     }
 
     @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")
