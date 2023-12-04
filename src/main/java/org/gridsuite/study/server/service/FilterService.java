@@ -6,13 +6,10 @@
  */
 package org.gridsuite.study.server.service;
 
-import com.powsybl.contingency.Contingency;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -21,13 +18,10 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.service.NetworkMapService.QUERY_PARAM_LINE_ID;
 
 /**
  * @author Ghazwa REHILI <ghazwa.rehili at rte-france.com>
@@ -49,22 +43,22 @@ public class FilterService {
         filterServerBaseUri = remoteServicesProperties.getServiceUri("filter-server");
     }
 
-    public Integer fetchfiltersComplexity(List<UUID> filtersUuids, UUID networkUuid) {
-
+    public Integer fetchFiltersComplexity(Map<Integer, Map<String, List<UUID>>> containerIdsMap, UUID networkUuid) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/complexity")
-                .queryParam(QUERY_PARAM_FILTERS_IDS, filtersUuids)
                 .queryParam(NETWORK_UUID, networkUuid);
 
         var path = uriComponentsBuilder
                 .build()
                 .toUriString();
 
-        return restTemplate.exchange(filterServerBaseUri + path, HttpMethod.GET, null,
-                new ParameterizedTypeReference<Integer>() {
-                }).getBody();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<Integer, Map<String, List<UUID>>>> httpEntity = new HttpEntity<>(containerIdsMap, headers);
+
+        return restTemplate.exchange(filterServerBaseUri + path, HttpMethod.POST, httpEntity,
+                Integer.class).getBody();
     }
-
-
 }
 

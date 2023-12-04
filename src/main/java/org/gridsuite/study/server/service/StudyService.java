@@ -62,7 +62,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -93,6 +92,12 @@ public class StudyService {
     static final String VARIANT_ID = "variantId.keyword";
 
     static final String EQUIPMENT_TYPE = "equipmentType.keyword";
+
+    public static final String INJECTIONS = "injections";
+
+    public static final String MONITORED_BRANCHS = "monitoredBranchs";
+
+    public static final String CONTINGENCIES = "contingencies";
 
     NotificationService notificationService;
 
@@ -2196,46 +2201,69 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public Integer storeSensitivityAnalysisParametersValues(UUID studyUuid, SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues, String userId) {
-        List<UUID> filterIds = new ArrayList<>();
-        AtomicInteger injectionsCount = new AtomicInteger(1);
-        filterIdsBuilder(sensitivityAnalysisParametersValues, filterIds, injectionsCount);
+    public Integer fetchFiltersComplexity(UUID studyUuid, SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues, String userId) {
+        Map<Integer, Map<String, List<UUID>>> containerIdsMap = idsMapInitializer();
+        filterIdsBuilder(sensitivityAnalysisParametersValues, containerIdsMap);
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        Integer count = filterService.fetchfiltersComplexity(filterIds, networkUuid);
-        count = count.intValue() * injectionsCount.intValue();
-        if(count < MAX_COMPUTATION) {
-            setSensitivityAnalysisParametersValues(studyUuid, sensitivityAnalysisParametersValues, userId);
-        }
-        return count.intValue() * injectionsCount.intValue();
+        return filterService.fetchFiltersComplexity(containerIdsMap, networkUuid);
     }
 
-    private static void filterIdsBuilder(SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues, List<UUID> filterIds, AtomicInteger injectionsCount) {
+    private Map<Integer, Map<String, List<UUID>>> idsMapInitializer() {
+        Map<Integer, Map<String, List<UUID>>> containerIdsMap = new HashMap<>();
+
+        containerIdsMap.put(0, mapInit(new HashMap<>()));
+        containerIdsMap.put(1, mapInit(new HashMap<>()));
+        containerIdsMap.put(2, mapInit(new HashMap<>()));
+        containerIdsMap.put(3, mapInit(new HashMap<>()));
+        return containerIdsMap;
+    }
+
+    private Map<String, List<UUID>> mapInit(Map<String, List<UUID>> identifierIdsMap) {
+        identifierIdsMap.put(MONITORED_BRANCHS, new ArrayList<>());
+        identifierIdsMap.put(INJECTIONS, new ArrayList<>());
+        identifierIdsMap.put(CONTINGENCIES, new ArrayList<>());
+        return identifierIdsMap;
+    }
+
+    private static void filterIdsBuilder(SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues, Map<Integer, Map<String, List<UUID>>> containersIds) {
         sensitivityAnalysisParametersValues.getSensitivityInjectionsSet().forEach(sensitivityInjectionsSet -> {
-            if(sensitivityInjectionsSet.isActivated()) {
-                sensitivityInjectionsSet.getMonitoredBranches().forEach(monBranch -> filterIds.add(monBranch.getContainerId()));
-                injectionsCount.set(injectionsCount.get() + sensitivityInjectionsSet.getInjections().size());
-                sensitivityInjectionsSet.getContingencies().forEach(contingency -> filterIds.add(contingency.getContainerId()));
+            if (sensitivityInjectionsSet.isActivated()) {
+                sensitivityInjectionsSet.getMonitoredBranches().forEach(monBranch ->
+                        containersIds.get(0).get(MONITORED_BRANCHS).add(monBranch.getContainerId()));
+                sensitivityInjectionsSet.getInjections().forEach(monBranch ->
+                        containersIds.get(0).get(INJECTIONS).add(monBranch.getContainerId()));
+                sensitivityInjectionsSet.getContingencies().forEach(contingency ->
+                        containersIds.get(0).get(CONTINGENCIES).add(contingency.getContainerId()));
             }
         });
         sensitivityAnalysisParametersValues.getSensitivityInjection().forEach(sensitivityInjection -> {
-            if(sensitivityInjection.isActivated()) {
-                sensitivityInjection.getMonitoredBranches().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
-                sensitivityInjection.getInjections().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
-                sensitivityInjection.getContingencies().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            if (sensitivityInjection.isActivated()) {
+                sensitivityInjection.getMonitoredBranches().forEach(monBranch ->
+                        containersIds.get(1).get(MONITORED_BRANCHS).add(monBranch.getContainerId()));
+                sensitivityInjection.getInjections().forEach(monBranch ->
+                        containersIds.get(1).get(INJECTIONS).add(monBranch.getContainerId()));
+                sensitivityInjection.getContingencies().forEach(contingency ->
+                        containersIds.get(1).get(CONTINGENCIES).add(contingency.getContainerId()));
             }
         });
         sensitivityAnalysisParametersValues.getSensitivityHVDC().forEach(sensitivityHVDC -> {
-            if(sensitivityHVDC.isActivated()) {
-                sensitivityHVDC.getMonitoredBranches().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
-                sensitivityHVDC.getHvdcs().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
-                sensitivityHVDC.getContingencies().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            if (sensitivityHVDC.isActivated()) {
+                sensitivityHVDC.getMonitoredBranches().forEach(monBranch ->
+                        containersIds.get(2).get(MONITORED_BRANCHS).add(monBranch.getContainerId()));
+                sensitivityHVDC.getHvdcs().forEach(monBranch ->
+                        containersIds.get(2).get(INJECTIONS).add(monBranch.getContainerId()));
+                sensitivityHVDC.getContingencies().forEach(contingency ->
+                        containersIds.get(2).get(CONTINGENCIES).add(contingency.getContainerId()));
             }
         });
         sensitivityAnalysisParametersValues.getSensitivityPST().forEach(sensitivityPST -> {
-            if(sensitivityPST.isActivated()) {
-                sensitivityPST.getMonitoredBranches().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
-                sensitivityPST.getPsts().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
-                sensitivityPST.getContingencies().forEach(equipmentsContainer -> filterIds.add(equipmentsContainer.getContainerId()));
+            if (sensitivityPST.isActivated()) {
+                sensitivityPST.getMonitoredBranches().forEach(monBranch ->
+                        containersIds.get(3).get(MONITORED_BRANCHS).add(monBranch.getContainerId()));
+                sensitivityPST.getPsts().forEach(monBranch ->
+                        containersIds.get(3).get(INJECTIONS).add(monBranch.getContainerId()));
+                sensitivityPST.getContingencies().forEach(contingency ->
+                        containersIds.get(3).get(CONTINGENCIES).add(contingency.getContainerId()));
             }
         });
     }
