@@ -1677,22 +1677,22 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
     @Operation(summary = "set sensitivity analysis parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set")})
-    public ResponseEntity<Integer> setSensitivityAnalysisParametersValues(
+    public ResponseEntity<Void> setSensitivityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        try {
             studyService.setSensitivityAnalysisParametersValues(studyUuid, sensitivityAnalysisParametersValues, userId);
-        } catch (Exception e) {
-            return ResponseEntity.unprocessableEntity().build();
-        }
-        int count;
-        try {
-            count = studyService.fetchFiltersComplexity(studyUuid, sensitivityAnalysisParametersValues);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok().body(count);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/complexity")
+    @Operation(summary = "set sensitivity analysis parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set")})
+    public ResponseEntity<Integer> fetchFiltersComplexity(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+      return ResponseEntity.ok().body(studyService.fetchFiltersComplexity(studyUuid, sensitivityAnalysisParametersValues));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")
