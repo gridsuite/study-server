@@ -468,6 +468,17 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementInfos(studyUuid, nodeUuid, elementType, infoType, elementId, inUpstreamBuiltParentNode));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/countries")
+    @Operation(summary = "Get network countries")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of countries")})
+    public ResponseEntity<String> getNetworkCountries(
+            @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkCountries(studyUuid, nodeUuid, inUpstreamBuiltParentNode));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}")
     @Operation(summary = "Get specific line or 2WT or 3WT description")
     @ApiResponses(value = {
@@ -1702,5 +1713,17 @@ public class StudyController {
     public ResponseEntity<Void> invalidateShortCircuitStatus(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
         studyService.invalidateShortCircuitStatus(studyUuid);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/filters/evaluate")
+    @Operation(summary = "Evaluate a filter to get matched elements")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched elements")})
+    public ResponseEntity<String> evaluateFilter(
+            @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
+            @RequestBody String filter) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFilter(studyUuid, nodeUuid, inUpstreamBuiltParentNode, filter));
     }
 }
