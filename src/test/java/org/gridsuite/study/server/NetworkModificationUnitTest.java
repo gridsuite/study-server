@@ -35,12 +35,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-class StudyUnitTest {
+class NetworkModificationUnitTest {
     @Autowired
     NodeRepository nodeRepository;
     @Autowired
@@ -50,7 +50,7 @@ class StudyUnitTest {
     @Autowired
     StudyRepository studyRepository;
     @Autowired
-    StudyService studyService;
+    StudyController studyController;
     @MockBean
     ReportService reportService;
     @MockBean
@@ -110,7 +110,7 @@ class StudyUnitTest {
         assertEquals(BuildStatus.BUILT, node2Infos.getNodeBuildStatus().getLocalBuildStatus());
         assertEquals(BuildStatus.NOT_BUILT, node3Infos.getNodeBuildStatus().getLocalBuildStatus());
 
-        studyService.unbuildNode(studyUuid, node1Uuid);
+        studyController.unbuildNode(studyUuid, node1Uuid);
 
         /**
          *       rootNode
