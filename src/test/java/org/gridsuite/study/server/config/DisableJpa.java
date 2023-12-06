@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.config;
 
+import jakarta.persistence.EntityManagerFactory;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.dynamicsimulation.EventRepository;
@@ -26,6 +27,8 @@ import java.lang.annotation.*;
 @MockBean(NetworkModificationNodeInfoRepository.class)
 @MockBean(NodeRepository.class)
 @MockBean(RootNodeInfoRepository.class)
+@MockBean(value = EntityManagerFactory.class, name = "jpaSharedEM_entityManagerFactory") //because of SpringBoot @EnableJpaRepositories...
+//TODO found how to disable @EnableJpaRepositories when in SpringBootTest
 @TestPropertySource(properties = DisableJpa.DISABLE_PROPERTY_NAME + "=true")
 public @interface DisableJpa {
     String DISABLE_PROPERTY_NAME = "test.disable.data-jpa";
