@@ -11,7 +11,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.web.context.WebServerApplicationContext;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
 
@@ -28,7 +27,6 @@ import java.util.Objects;
 @NoArgsConstructor
 @Data
 public class RemoteServicesProperties {
-    private WebServerApplicationContext webSrvAppCtxt;
     private List<Service> services;
 
     @AllArgsConstructor
@@ -38,10 +36,6 @@ public class RemoteServicesProperties {
         @NotBlank private String name;
         @NotBlank private String baseUri;
         private boolean optional = false;
-    }
-
-    public String getLocalUri() {
-        return "http://localhost:" + this.webSrvAppCtxt.getWebServer().getPort();
     }
 
     public String getServiceUri(String serviceName) {
