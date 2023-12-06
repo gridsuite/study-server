@@ -41,8 +41,6 @@ public class NonEvacuatedEnergyParametersEntity {
     @Column(name = "id")
     private UUID id;
 
-    private String provider;
-
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "non_Evacuated_Energy_Parameters_id")
     private List<NonEvacuatedEnergyStageDefinitionEntity> stagesDefinition;

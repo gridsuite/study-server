@@ -68,8 +68,6 @@ public class NonEvacuatedEnergyService {
 
     static final String RESULT_UUID = "resultUuid";
 
-    private static final String PROVIDER_DEFAULT_VALUE = "OpenLoadFlow";
-
     private String sensitivityAnalysisServerBaseUri;
 
     @Autowired
@@ -102,6 +100,7 @@ public class NonEvacuatedEnergyService {
     public UUID runNonEvacuatedEnergy(UUID nodeUuid, UUID networkUuid,
                                       String variantId,
                                       UUID reportUuid,
+                                      String provider,
                                       NonEvacuatedEnergyInputData nonEvacuatedEnergyInputData) {
         String receiver;
         try {
@@ -113,6 +112,9 @@ public class NonEvacuatedEnergyService {
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/non-evacuated-energy")
             .queryParam("reportUuid", reportUuid.toString())
             .queryParam("reporterId", nodeUuid.toString());
+        if (!provider.isEmpty()) {
+            uriComponentsBuilder.queryParam("provider", provider);
+        }
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -292,7 +294,7 @@ public class NonEvacuatedEnergyService {
             }
         }
 
-        return new NonEvacuatedEnergyParametersEntity(null, parameters.getProvider(), stageDefinitionEntities, stagesSelectionEntities,
+        return new NonEvacuatedEnergyParametersEntity(null, stageDefinitionEntities, stagesSelectionEntities,
             generatorsLimitEntity, monitoredBranchesEntities, contingenciesEntities);
     }
 
@@ -332,13 +334,12 @@ public class NonEvacuatedEnergyService {
             new NonEvacuatedEnergyContingencies(EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(contingenciesEntity.getContingencies()), contingenciesEntity.isActivated())
         ).forEach(contingenciesParam::add);
 
-        return new NonEvacuatedEnergyParametersInfos(entity.getProvider(), stageDefinitionParam, stagesSelectionParam, generatorsLimitParam,
+        return new NonEvacuatedEnergyParametersInfos(stageDefinitionParam, stagesSelectionParam, generatorsLimitParam,
             monitoredBranchesParam, contingenciesParam);
     }
 
     public static NonEvacuatedEnergyParametersInfos getDefaultNonEvacuatedEnergyParametersValues() {
         return NonEvacuatedEnergyParametersInfos.builder()
-                .provider(PROVIDER_DEFAULT_VALUE)
                 .stagesDefinition(List.of())
                 .stagesSelection(List.of())
                 .generatorsLimit(new NonEvacuatedEnergyGeneratorsLimit(0., List.of()))

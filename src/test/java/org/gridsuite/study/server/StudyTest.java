@@ -177,6 +177,9 @@ public class StudyTest {
     @Value("${sensitivity-analysis.default-provider}")
     String defaultSensitivityAnalysisProvider;
 
+    @Value("${sensitivity-analysis.default-provider}")
+    String defaultNonEvacuatedEnergyProvider;
+
     @Autowired
     private OutputDestination output;
 
@@ -2177,6 +2180,13 @@ public class StudyTest {
         mockMvc.perform(get("/v1/sensitivity-analysis-default-provider")).andExpectAll(
                 status().isOk(),
                 content().string(defaultSensitivityAnalysisProvider));
+    }
+
+    @Test
+    public void getDefaultNonEvacuatedEnergyProvider() throws Exception {
+        mockMvc.perform(get("/v1/non-evacuated-energy-default-provider")).andExpectAll(
+            status().isOk(),
+            content().string(defaultNonEvacuatedEnergyProvider));
     }
 
     private void checkSubtreeMovedMessageSent(UUID studyUuid, UUID movedNodeUuid, UUID referenceNodeUuid) {

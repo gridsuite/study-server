@@ -25,8 +25,6 @@ import java.util.Map;
 @Setter
 @Schema(description = "Sensitivity analysis non evacuated energy input data")
 public class NonEvacuatedEnergyInputData {
-    private String provider;
-
     private List<NonEvacuatedEnergyStageDefinition> nonEvacuatedEnergyStagesDefinition;
 
     private List<NonEvacuatedEnergyStagesSelection> nonEvacuatedEnergyStagesSelection;

@@ -24,8 +24,6 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 public class NonEvacuatedEnergyParametersInfos {
-    String provider;
-
     @Builder.Default
     List<NonEvacuatedEnergyStageDefinition> stagesDefinition = new ArrayList<>();
 

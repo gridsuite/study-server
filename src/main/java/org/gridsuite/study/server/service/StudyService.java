@@ -112,6 +112,8 @@ public class StudyService {
 
     private final String defaultSensitivityAnalysisProvider;
 
+    private final String defaultNonEvacuatedEnergyProvider;
+
     private final String defaultDynamicSimulationProvider;
 
     private final StudyRepository studyRepository;
@@ -174,6 +176,7 @@ public class StudyService {
             @Value("${loadflow.default-provider}") String defaultLoadflowProvider,
             @Value("${security-analysis.default-provider}") String defaultSecurityAnalysisProvider,
             @Value("${sensitivity-analysis.default-provider}") String defaultSensitivityAnalysisProvider,
+            @Value("${non-evacuated-energy.default-provider}") String defaultNonEvacuatedEnergyProvider,
             @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
             StudyRepository studyRepository,
             StudyCreationRequestRepository studyCreationRequestRepository,
@@ -203,6 +206,7 @@ public class StudyService {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
         this.defaultSensitivityAnalysisProvider = defaultSensitivityAnalysisProvider;
+        this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
@@ -1067,6 +1071,10 @@ public class StudyService {
         return defaultSensitivityAnalysisProvider;
     }
 
+    public String getDefaultNonEvacuatedEnergyProvider() {
+        return defaultNonEvacuatedEnergyProvider;
+    }
+
     public String getSensitivityAnalysisProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(StudyEntity::getSensitivityAnalysisProvider)
@@ -1251,7 +1259,7 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, null, importParameters, StudyIndexationStatus.INDEXED);
+                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, null, importParameters, StudyIndexationStatus.INDEXED);
         return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
     }
 
@@ -2272,6 +2280,7 @@ public class StudyService {
         prevResultUuidOpt.ifPresent(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult);
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        String provider = getNonEvacuatedEnergyProvider(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
@@ -2284,7 +2293,6 @@ public class StudyService {
         sensitivityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
 
         NonEvacuatedEnergyInputData nonEvacuatedEnergyInputData = new NonEvacuatedEnergyInputData();
-        nonEvacuatedEnergyInputData.setProvider(nonEvacuatedEnergyParametersValues.getProvider());
         nonEvacuatedEnergyInputData.setParameters(sensitivityAnalysisParameters);
         nonEvacuatedEnergyInputData.setLoadFlowSpecificParameters(specificParameters == null ?
             Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)));
@@ -2313,7 +2321,7 @@ public class StudyService {
             .filter(NonEvacuatedEnergyContingencies::isActivated)
             .collect(Collectors.toList()));
 
-        UUID result = nonEvacuatedEnergyService.runNonEvacuatedEnergy(nodeUuid, networkUuid, variantId, reportUuid, nonEvacuatedEnergyInputData);
+        UUID result = nonEvacuatedEnergyService.runNonEvacuatedEnergy(nodeUuid, networkUuid, variantId, reportUuid, provider, nonEvacuatedEnergyInputData);
 
         updateNonEvacuatedEnergyResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
@@ -2323,7 +2331,7 @@ public class StudyService {
     @Transactional
     public void updateNonEvacuatedEnergyProvider(UUID studyUuid, String provider, String userId) {
         updateProvider(studyUuid, userId, studyEntity -> {
-            studyEntity.setNonEvacuatedEnergyProvider(provider != null ? provider : defaultSensitivityAnalysisProvider);
+            studyEntity.setNonEvacuatedEnergyProvider(provider != null ? provider : defaultNonEvacuatedEnergyProvider);
             invalidateNonEvacuatedEnergyAnalysisStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         });

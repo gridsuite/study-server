@@ -646,7 +646,6 @@ public class NonEvacuatedEnergyTest {
 
         // get non evacuated energy analysis parameters
         NonEvacuatedEnergyParametersInfos defaultNonEvacuatedEnergyParametersValues = NonEvacuatedEnergyParametersInfos.builder()
-            .provider("OpenLoadFlow")
             .stagesDefinition(List.of())
             .stagesSelection(List.of())
             .generatorsLimit(new NonEvacuatedEnergyGeneratorsLimit(0.0, List.of()))
@@ -704,7 +703,6 @@ public class NonEvacuatedEnergyTest {
         NonEvacuatedEnergyContingencies contingencies3 = new NonEvacuatedEnergyContingencies(List.of(contingenciesContainer3), true);
 
         NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersValues = NonEvacuatedEnergyParametersInfos.builder()
-            .provider("Hades2")
             .stagesDefinition(List.of(stageDefinition1, stageDefinition2, stageDefinition3))
             .stagesSelection(List.of(stagesSelection1, stagesSelection2, stagesSelection3, stagesSelection4))
             .generatorsLimit(generatorsLimit)

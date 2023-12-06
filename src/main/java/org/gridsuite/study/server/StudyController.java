@@ -1784,4 +1784,11 @@ public class StudyController {
     public ResponseEntity<String> getNonEvacuatedEnergyProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getNonEvacuatedEnergyProvider(studyUuid));
     }
+
+    @GetMapping(value = "/non-evacuated-energy-default-provider")
+    @Operation(summary = "get sensitivity analysis non evacuated energy default provider value")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "the sensitivity analysis non evacuated energy default provider has been found"))
+    public ResponseEntity<String> getDefaultNonEvacuatedEnergyProvider() {
+        return ResponseEntity.ok().body(studyService.getDefaultNonEvacuatedEnergyProvider());
+    }
 }
