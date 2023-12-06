@@ -39,8 +39,8 @@ import java.util.concurrent.CompletableFuture;
  * @author David Braquart <david.braquart at rte-france.com>
  */
 @Service
-public class Inspector {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Inspector.class);
+public class RemoteServicesInspector {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RemoteServicesInspector.class);
 
     private static final String ACTUATOR_HEALTH_STATUS_JSON_FIELD = "status";
     static final long REQUEST_TIMEOUT_IN_MS = 2000L;
@@ -49,14 +49,14 @@ public class Inspector {
     private final RestTemplate restTemplate;
     private final RemoteServicesProperties remoteServicesProperties;
     private final InfoEndpoint infoEndpoint;
-    private final Inspector asyncSelf; //we need to use spring proxy-based bean
+    private final RemoteServicesInspector asyncSelf; //we need to use spring proxy-based bean
 
     @Autowired
-    public Inspector(ObjectMapper objectMapper,
-                     RemoteServicesProperties remoteServicesProperties,
-                     @Lazy Inspector asyncInspector,
-                     RestTemplateBuilder restTemplateBuilder,
-                     InfoEndpoint infoEndpoint) {
+    public RemoteServicesInspector(ObjectMapper objectMapper,
+                                   RemoteServicesProperties remoteServicesProperties,
+                                   @Lazy RemoteServicesInspector asyncRemoteServicesInspector,
+                                   RestTemplateBuilder restTemplateBuilder,
+                                   InfoEndpoint infoEndpoint) {
         this.objectMapper = objectMapper;
         this.remoteServicesProperties = remoteServicesProperties;
         this.restTemplate = restTemplateBuilder
@@ -64,7 +64,7 @@ public class Inspector {
                 .setReadTimeout(Duration.ofMillis(REQUEST_TIMEOUT_IN_MS))
                 .build();
         this.infoEndpoint = infoEndpoint;
-        this.asyncSelf = asyncInspector;
+        this.asyncSelf = asyncRemoteServicesInspector;
     }
 
     public List<ServiceStatusInfos> getOptionalServices() {
