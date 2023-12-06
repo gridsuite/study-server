@@ -39,8 +39,8 @@ import java.util.concurrent.CompletableFuture;
  * @author David Braquart <david.braquart at rte-france.com>
  */
 @Service
-public class RemoteServices {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RemoteServices.class);
+public class Inspector {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Inspector.class);
 
     private static final String ACTUATOR_HEALTH_STATUS_JSON_FIELD = "status";
     static final long REQUEST_TIMEOUT_IN_MS = 2000L;
@@ -49,14 +49,14 @@ public class RemoteServices {
     private final RestTemplate restTemplate;
     private final RemoteServicesProperties remoteServicesProperties;
     private final InfoEndpoint infoEndpoint;
-    private final RemoteServices asyncSelf; //we need to use spring proxy-based bean
+    private final Inspector asyncSelf; //we need to use spring proxy-based bean
 
     @Autowired
-    public RemoteServices(ObjectMapper objectMapper,
-                          RemoteServicesProperties remoteServicesProperties,
-                          @Lazy RemoteServices asyncRemoteServices,
-                          RestTemplateBuilder restTemplateBuilder,
-                          InfoEndpoint infoEndpoint) {
+    public Inspector(ObjectMapper objectMapper,
+                     RemoteServicesProperties remoteServicesProperties,
+                     @Lazy Inspector asyncInspector,
+                     RestTemplateBuilder restTemplateBuilder,
+                     InfoEndpoint infoEndpoint) {
         this.objectMapper = objectMapper;
         this.remoteServicesProperties = remoteServicesProperties;
         this.restTemplate = restTemplateBuilder
@@ -64,7 +64,7 @@ public class RemoteServices {
                 .setReadTimeout(Duration.ofMillis(REQUEST_TIMEOUT_IN_MS))
                 .build();
         this.infoEndpoint = infoEndpoint;
-        this.asyncSelf = asyncRemoteServices;
+        this.asyncSelf = asyncInspector;
     }
 
     public List<ServiceStatusInfos> getOptionalServices() {

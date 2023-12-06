@@ -70,7 +70,7 @@ public class StudyController {
     private final VoltageInitService voltageInitService;
     private final LoadFlowService loadflowService;
     private final CaseService caseService;
-    private final RemoteServices remoteServices;
+    private final Inspector inspector;
 
     public StudyController(StudyService studyService,
             NetworkService networkStoreService,
@@ -83,7 +83,7 @@ public class StudyController {
             VoltageInitService voltageInitService,
             LoadFlowService loadflowService,
             CaseService caseService,
-            RemoteServices remoteServices) {
+            Inspector inspector) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -95,7 +95,7 @@ public class StudyController {
         this.voltageInitService = voltageInitService;
         this.loadflowService = loadflowService;
         this.caseService = caseService;
-        this.remoteServices = remoteServices;
+        this.inspector = inspector;
     }
 
     @InitBinder
@@ -1626,7 +1626,7 @@ public class StudyController {
     @Operation(summary = "Get all the optional services and their status")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of optional services")})
     public ResponseEntity<List<ServiceStatusInfos>> getOptionalServices() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(remoteServices.getOptionalServices());
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(inspector.getOptionalServices());
     }
 
     enum UpdateModificationAction {
@@ -1710,6 +1710,6 @@ public class StudyController {
         @ApiResponse(responseCode = "207", description = "Partial result because some servers haven't respond or throw an error"),
         @ApiResponse(responseCode = "424", description = "All requests have failed, no informations retreive")})
     public ResponseEntity<Map<String, ?>> getServersInformations() { //Map<String, Info> from springboot-actuator
-        return ResponseEntity.ok().body(remoteServices.getServicesInfo());
+        return ResponseEntity.ok().body(inspector.getServicesInfo());
     }
 }

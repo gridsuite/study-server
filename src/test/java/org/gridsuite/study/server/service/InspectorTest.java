@@ -55,16 +55,16 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 @DisableCloudStream
 @DisableJpa
 @Import({StudyAppConfig.class, RemoteServicesProperties.class})
-@RestClientTest({RemoteServices.class})
+@RestClientTest({Inspector.class})
 @ExtendWith({SpringExtension.class, MockitoExtension.class})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.MethodName.class)
-class RemoteServicesTest implements WithAssertions {
+class InspectorTest implements WithAssertions {
     @Autowired
     private RemoteServicesProperties remoteServicesProperties;
 
     @Autowired
-    private RemoteServices remoteServices;
+    private Inspector inspector;
 
     private static final JsonNode EMPTY_OBJ = JsonNodeFactory.instance.objectNode();
 
@@ -104,7 +104,7 @@ class RemoteServicesTest implements WithAssertions {
     /**
      * Test timeout (with a little range) for testing methods doing request in parallel
      */
-    @Timeout(value = RemoteServices.REQUEST_TIMEOUT_IN_MS + 500L, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = Inspector.REQUEST_TIMEOUT_IN_MS + 500L, unit = TimeUnit.MILLISECONDS)
     @interface TimeoutRemotes { }
 
     @Test
@@ -150,7 +150,7 @@ class RemoteServicesTest implements WithAssertions {
                 }));
 
         // all services are supposed to be Up/Down
-        assertThat(remoteServices.getOptionalServices()).containsExactlyInAnyOrder(
+        assertThat(inspector.getOptionalServices()).containsExactlyInAnyOrder(
                 new ServiceStatusInfos(RemoteServiceName.LOADFLOW_SERVER, statusTest),
                 new ServiceStatusInfos(RemoteServiceName.SECURITY_ANALYSIS_SERVER, statusTest),
                 new ServiceStatusInfos(RemoteServiceName.VOLTAGE_INIT_SERVER, statusTest)
@@ -160,15 +160,15 @@ class RemoteServicesTest implements WithAssertions {
     @Test
     void testServiceInfoGetData() {
         testServiceInfo(0, null);
-        assertThat(remoteServices.getServicesInfo()).containsExactlyInAnyOrderEntriesOf(Arrays.stream(RemoteServiceName.values())
+        assertThat(inspector.getServicesInfo()).containsExactlyInAnyOrderEntriesOf(Arrays.stream(RemoteServiceName.values())
                 .collect(Collectors.toMap(RemoteServiceName::serviceName, srv -> EMPTY_OBJ)));
     }
 
     @TimeoutRemotes
     @Test
     void testServiceInfoRequestsParallelized() {
-        testServiceInfo((int) RemoteServices.REQUEST_TIMEOUT_IN_MS, null);
-        assertThat(remoteServices.getServicesInfo()).containsExactlyInAnyOrderEntriesOf(Arrays.stream(RemoteServiceName.values())
+        testServiceInfo((int) Inspector.REQUEST_TIMEOUT_IN_MS, null);
+        assertThat(inspector.getServicesInfo()).containsExactlyInAnyOrderEntriesOf(Arrays.stream(RemoteServiceName.values())
                 .collect(Collectors.toMap(RemoteServiceName::serviceName, srv -> EMPTY_OBJ)));
     }
 
@@ -179,7 +179,7 @@ class RemoteServicesTest implements WithAssertions {
         final Map<String, JsonNode> expected = Arrays.stream(RemoteServiceName.values())
                 .collect(Collectors.toMap(RemoteServiceName::serviceName, srv -> EMPTY_OBJ));
         expected.put(RemoteServiceName.LOADFLOW_SERVER.serviceName(), NullNode.instance);
-        assertThat(remoteServices.getServicesInfo()).containsExactlyInAnyOrderEntriesOf(expected);
+        assertThat(inspector.getServicesInfo()).containsExactlyInAnyOrderEntriesOf(expected);
     }
 
     private void testServiceInfo(final int delay, final RemoteServiceName skipSrv) {

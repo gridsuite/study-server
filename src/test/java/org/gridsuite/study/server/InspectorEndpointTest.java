@@ -12,7 +12,7 @@ import org.gridsuite.study.server.config.DisableJpa;
 import org.gridsuite.study.server.dto.ServiceStatusInfos;
 import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.RemoteServices;
+import org.gridsuite.study.server.service.Inspector;
 import org.gridsuite.study.server.service.client.RemoteServiceName;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.MethodOrderer;
@@ -47,7 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(classes = StudyApplication.class)
 @ExtendWith(MockitoExtension.class)
 @TestMethodOrder(MethodOrderer.MethodName.class)
-class RemoteServicesEndpointTest {
+class InspectorEndpointTest {
     @Autowired
     private MockMvc mockMvc;
 
@@ -55,7 +55,7 @@ class RemoteServicesEndpointTest {
     private RemoteServicesProperties remoteServicesProperties;
 
     @MockBean
-    private RemoteServices remoteServices;
+    private Inspector inspector;
 
     @Test
     void testActuatorHealthUp() throws Exception {
@@ -67,7 +67,7 @@ class RemoteServicesEndpointTest {
         remoteServicesProperties.getServices().forEach(s -> s.setOptional(optionalServices.contains(s.getName())));
 
         // any optional service will be mocked as UP
-        Mockito.when(remoteServices.getOptionalServices()).thenReturn(List.of(
+        Mockito.when(inspector.getOptionalServices()).thenReturn(List.of(
             new ServiceStatusInfos(RemoteServiceName.LOADFLOW_SERVER, ServiceStatus.UP),
             new ServiceStatusInfos(RemoteServiceName.SECURITY_ANALYSIS_SERVER, ServiceStatus.UP),
             new ServiceStatusInfos(RemoteServiceName.VOLTAGE_INIT_SERVER, ServiceStatus.UP)
@@ -78,7 +78,7 @@ class RemoteServicesEndpointTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(content().json("[{\"name\":\"loadflow-server\",\"status\":\"UP\"},{\"name\":\"security-analysis-server\",\"status\":\"UP\"},{\"name\":\"voltage-init-server\",\"status\":\"UP\"}]", true));
-        Mockito.verify(remoteServices, Mockito.times(1)).getOptionalServices();
+        Mockito.verify(inspector, Mockito.times(1)).getOptionalServices();
     }
 
     @Test
@@ -90,7 +90,7 @@ class RemoteServicesEndpointTest {
                 RemoteServiceName.SHORTCIRCUIT_SERVER.serviceName());
         remoteServicesProperties.getServices().forEach(s -> s.setOptional(optionalServices.contains(s.getName())));
 
-        Mockito.when(remoteServices.getOptionalServices()).thenReturn(List.of(
+        Mockito.when(inspector.getOptionalServices()).thenReturn(List.of(
                 new ServiceStatusInfos(RemoteServiceName.SENSITIVITY_ANALYSIS_SERVER, ServiceStatus.DOWN),
                 new ServiceStatusInfos(RemoteServiceName.SHORTCIRCUIT_SERVER, ServiceStatus.DOWN)));
 
@@ -99,18 +99,18 @@ class RemoteServicesEndpointTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(content().json("[{\"name\":\"sensitivity-analysis-server\",\"status\":\"DOWN\"},{\"name\":\"shortcircuit-server\",\"status\":\"DOWN\"}]", true));
-        Mockito.verify(remoteServices, Mockito.times(1)).getOptionalServices();
+        Mockito.verify(inspector, Mockito.times(1)).getOptionalServices();
     }
 
     @Test
     void testServiceIsCalledWhenRequestingServicesInfoEndpoint() throws Exception {
         final Map<String, JsonNode> returnResult = new HashMap<>(0);
-        Mockito.doReturn(returnResult).when(remoteServices).getServicesInfo();
+        Mockito.doReturn(returnResult).when(inspector).getServicesInfo();
         mockMvc.perform(get("/v1/servers/infos"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(content().json("{}", true));
-        Mockito.verify(remoteServices, Mockito.times(1)).getServicesInfo();
-        Mockito.verifyNoMoreInteractions(remoteServices);
+        Mockito.verify(inspector, Mockito.times(1)).getServicesInfo();
+        Mockito.verifyNoMoreInteractions(inspector);
     }
 }
