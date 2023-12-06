@@ -30,7 +30,7 @@ public class NonEvacuatedEnergyParametersInfos {
     @Builder.Default
     List<NonEvacuatedEnergyStagesSelection> stagesSelection = new ArrayList<>();
 
-    NonEvacuatedEnergyGeneratorsLimit generatorsLimit;
+    NonEvacuatedEnergyGeneratorsLimit generatorsLimit = new NonEvacuatedEnergyGeneratorsLimit();
 
     @Builder.Default
     List<NonEvacuatedEnergyMonitoredBranches> monitoredBranches = new ArrayList<>();

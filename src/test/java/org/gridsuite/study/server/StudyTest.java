@@ -1289,6 +1289,7 @@ public class StudyTest {
         assertEquals(study.getLoadFlowProvider(), defaultLoadflowProvider);
         assertEquals(study.getSecurityAnalysisProvider(), defaultSecurityAnalysisProvider);
         assertEquals(study.getSensitivityAnalysisProvider(), defaultSensitivityAnalysisProvider);
+        assertEquals(study.getNonEvacuatedEnergyProvider(), defaultNonEvacuatedEnergyProvider);
     }
 
     @Test
