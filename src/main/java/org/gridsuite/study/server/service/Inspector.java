@@ -73,7 +73,7 @@ public class Inspector {
             .filter(RemoteServicesProperties.Service::isOptional)
             .map(service -> asyncSelf.isServerUp(service).thenApply(isUp -> ServiceStatusInfos.builder()
                     .name(service.getName())
-                    .status(isUp ? ServiceStatus.UP : ServiceStatus.DOWN)
+                    .status(Boolean.TRUE.equals(isUp) ? ServiceStatus.UP : ServiceStatus.DOWN)
                     .build()))
             .toList();
         CompletableFuture.allOf(results.toArray(CompletableFuture[]::new)).join();
