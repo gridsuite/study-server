@@ -40,7 +40,7 @@ import static org.junit.Assert.assertEquals;
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-public class StudyUnitTest {
+class StudyUnitTest {
     @Autowired
     NodeRepository nodeRepository;
     @Autowired
@@ -93,7 +93,7 @@ public class StudyUnitTest {
     }
 
     @Test
-    public void unbuildNode() {
+    void unbuildNode() {
         /**
          *       rootNode
          *          |
