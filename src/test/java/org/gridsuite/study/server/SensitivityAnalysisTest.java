@@ -151,6 +151,9 @@ public class SensitivityAnalysisTest {
     @Autowired
     private ReportService reportService;
 
+    @Autowired
+    private FilterService filterService;
+
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String sensitivityAnalysisResultDestination = "sensitivityanalysis.result";
@@ -180,6 +183,7 @@ public class SensitivityAnalysisTest {
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         actionsService.setActionsServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
+        filterService.setFilterServerBaseUri(baseUrl);
 
         SensitivityAnalysisInputData sensitivityAnalysisInputData = SensitivityAnalysisInputData.builder()
             .sensitivityInjectionsSets(List.of(SensitivityAnalysisInputData.SensitivityInjectionsSet.builder()
@@ -276,6 +280,9 @@ public class SensitivityAnalysisTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("1");
+                } else if (path.matches("/v1/filters/complexity\\?networkUuid=.*")) {
+                    return new MockResponse().setResponseCode(200).setBody("4")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -689,6 +696,8 @@ public class SensitivityAnalysisTest {
 
     @Test
     public void testSensitivityAnalysisParameters() throws Exception {
+        MvcResult mvcResult;
+        String resultAsString;
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         UUID studyNameUserIdUuid = studyEntity.getId();
         //get sensitivity analysis parameters
@@ -719,14 +728,17 @@ public class SensitivityAnalysisTest {
                 .build();
         String mnBodyJson = objectWriter.writeValueAsString(sensitivityAnalysisParametersValues);
 
-        MvcResult mvcResult = mockMvc.perform(
+        mvcResult = mockMvc.perform(
                 post("/v1/studies/{studyUuid}/sensitivity-analysis/complexity", studyNameUserIdUuid)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mnBodyJson)).andExpect(
-                status().isOk()).andReturn();
-        String resultAsString = mvcResult.getResponse().getContentAsString();
-        assertEquals("4", resultAsString);
+                        .content(mnBodyJson)).andExpect(status().isOk()).andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        String count = mapper.readValue(resultAsString, String.class);
+
+        assertEquals("4", count);
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/filters/complexity.*")));
 
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)

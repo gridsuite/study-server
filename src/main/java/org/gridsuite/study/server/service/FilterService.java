@@ -6,8 +6,6 @@
  */
 package org.gridsuite.study.server.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -29,7 +27,6 @@ import static org.gridsuite.study.server.StudyConstants.*;
 @Service
 public class FilterService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FilterService.class);
     private static final String FILTER_SERVER_API_VERSION = "v1";
 
     private static final String DELIMITER = "/";
@@ -40,7 +37,11 @@ public class FilterService {
 
     @Autowired
     public FilterService(RemoteServicesProperties remoteServicesProperties) {
-        filterServerBaseUri = remoteServicesProperties.getServiceUri("filter-server");
+        setFilterServerBaseUri(remoteServicesProperties.getServiceUri("filter-server"));
+    }
+
+    public static void setFilterServerBaseUri(String filterServerBaseUri) {
+        FilterService.filterServerBaseUri = filterServerBaseUri;
     }
 
     public Integer fetchFiltersComplexity(Map<Integer, List<Map<String, List<UUID>>>> containerIdsMap, UUID networkUuid) {
