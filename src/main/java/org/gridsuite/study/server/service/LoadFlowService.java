@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.loadflow.LoadFlowParameters;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -28,11 +29,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -60,10 +57,10 @@ public class LoadFlowService {
 
     @Autowired
     public LoadFlowService(RemoteServicesProperties remoteServicesProperties,
-            NetworkModificationTreeService networkModificationTreeService,
-            NetworkService networkStoreService, ObjectMapper objectMapper,
-            NotificationService notificationService,
-            RestTemplate restTemplate) {
+                           NetworkModificationTreeService networkModificationTreeService,
+                           NetworkService networkStoreService, ObjectMapper objectMapper,
+                           NotificationService notificationService,
+                           RestTemplate restTemplate) {
         this.loadFlowServerBaseUri = remoteServicesProperties.getServiceUri("loadflow-server");
         this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
