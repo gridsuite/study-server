@@ -12,6 +12,7 @@ package org.gridsuite.study.server.service;
  */
 
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +28,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyException.Type.EQUIPMENT_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.GET_NETWORK_ELEMENT_FAILED;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
