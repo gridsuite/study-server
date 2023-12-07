@@ -145,7 +145,8 @@ public class StudyService {
         SHORT_CIRCUIT_ANALYSIS("ShortCircuitAnalysis"),
         ALL_BUSES_SHORTCIRCUIT_ANALYSIS("AllBusesShortCircuitAnalysis"),
         ONE_BUS_SHORTCIRCUIT_ANALYSIS("OneBusShortCircuitAnalysis"),
-        SENSITIVITY_ANALYSIS("SensitivityAnalysis");
+        SENSITIVITY_ANALYSIS("SensitivityAnalysis"),
+        VOLTAGE_INIT("VoltageInit");
         private final String name;
 
         ReportType(String name) {
