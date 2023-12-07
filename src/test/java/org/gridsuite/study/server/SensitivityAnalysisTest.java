@@ -719,6 +719,15 @@ public class SensitivityAnalysisTest {
                 .build();
         String mnBodyJson = objectWriter.writeValueAsString(sensitivityAnalysisParametersValues);
 
+        MvcResult mvcResult = mockMvc.perform(
+                post("/v1/studies/{studyUuid}/sensitivity-analysis/complexity", studyNameUserIdUuid)
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mnBodyJson)).andExpect(
+                status().isOk()).andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        assertEquals("4", resultAsString);
+
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)
                         .header("userId", "userId")
