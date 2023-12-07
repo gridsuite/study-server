@@ -146,12 +146,6 @@
             <column name="non_evacuated_energy_result_uuid" type="uuid"/>
         </addColumn>
     </changeSet>
-    <changeSet author="lecuyerfra (generated)" id="1701878575342-31">
-        <addUniqueConstraint columnNames="non_evacuated_energy_parameters_id" constraintName="UC_NON_EVACUATED_ENERGY_PARAMETERSNON_EVACUATED_ENERGY_PARAMETE" tableName="non_evacuated_energy_parameters"/>
-    </changeSet>
-    <changeSet author="lecuyerfra (generated)" id="1701878575342-34">
-        <addUniqueConstraint columnNames="non_evacuated_energy_parameters_entity_id" constraintName="UC_STUDYNON_EVACUATED_ENERGY_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
-    </changeSet>
     <changeSet author="lecuyerfra (generated)" id="1701878575342-38">
         <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_stages_selection_id" baseTableName="non_evacuated_energy_stages_selection_definition_index" constraintName="FK8fl4tq030br4bbklva1mm58n0" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_stages_selection" validate="true"/>
     </changeSet>
