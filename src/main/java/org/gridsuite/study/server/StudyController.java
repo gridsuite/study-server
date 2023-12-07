@@ -1708,7 +1708,7 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The informations on all known servers"),
         @ApiResponse(responseCode = "207", description = "Partial result because some servers haven't responded or threw an error"),
-        @ApiResponse(responseCode = "424", description = "All requests have failed, no informations retrieve")})
+        @ApiResponse(responseCode = "424", description = "All requests have failed, no informations retrieved")})
     public ResponseEntity<Map<String, ?>> getServersInformations() { //Map<String, Info> from springboot-actuator
         return ResponseEntity.ok().body(remoteServicesInspector.getServicesInfo());
     }
