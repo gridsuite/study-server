@@ -1876,7 +1876,7 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runSensitivityAnalysis(UUID studyUuid, UUID nodeUuid) {
+    public UUID runSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
@@ -1906,25 +1906,26 @@ public class StudyService {
         sensitivityAnalysisInputData.setSensitivityInjectionsSets(sensitivityAnalysisParametersValues.getSensitivityInjectionsSet()
                 .stream()
                 .filter(SensitivityAnalysisInputData.SensitivityInjectionsSet::isActivated)
-                .collect(Collectors.toList()));
+                .toList());
         sensitivityAnalysisInputData.setSensitivityInjections(sensitivityAnalysisParametersValues.getSensitivityInjection()
                 .stream()
                 .filter(SensitivityAnalysisInputData.SensitivityInjection::isActivated)
-                .collect(Collectors.toList()));
+                .toList());
         sensitivityAnalysisInputData.setSensitivityHVDCs(sensitivityAnalysisParametersValues.getSensitivityHVDC()
                 .stream()
                 .filter(SensitivityAnalysisInputData.SensitivityHVDC::isActivated)
-                .collect(Collectors.toList()));
+                .toList());
         sensitivityAnalysisInputData.setSensitivityPSTs(sensitivityAnalysisParametersValues.getSensitivityPST()
                 .stream()
                 .filter(SensitivityAnalysisInputData.SensitivityPST::isActivated)
-                .collect(Collectors.toList()));
+                .toList());
         sensitivityAnalysisInputData.setSensitivityNodes(sensitivityAnalysisParametersValues.getSensitivityNodes()
                 .stream()
                 .filter(SensitivityAnalysisInputData.SensitivityNodes::isActivated)
-                .collect(Collectors.toList()));
+                .toList());
 
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider, sensitivityAnalysisInputData);
+        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(
+                nodeUuid, networkUuid, variantId, reportUuid, provider, sensitivityAnalysisInputData, userId);
 
         updateSensitivityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
