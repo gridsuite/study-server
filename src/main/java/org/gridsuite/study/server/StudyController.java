@@ -754,11 +754,12 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has started")})
     public ResponseEntity<UUID> runSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                          @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames) {
+                                                          @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames,
+                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         List<String> nonNullcontingencyListNames = contingencyListNames != null ? contingencyListNames : Collections.emptyList();
         studyService.assertIsNodeNotReadOnly(nodeUuid);
 
-        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid));
+        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid, userId));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result")

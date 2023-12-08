@@ -1096,7 +1096,7 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, UUID nodeUuid) {
+    public UUID runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, UUID nodeUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(contingencyListNames);
         Objects.requireNonNull(nodeUuid);
@@ -1129,7 +1129,7 @@ public class StudyService {
                     Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)))
                 .build();
 
-        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, nodeUuid, variantId, provider, contingencyListNames, params, receiver);
+        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, nodeUuid, variantId, provider, contingencyListNames, params, receiver, userId);
 
         updateSecurityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
