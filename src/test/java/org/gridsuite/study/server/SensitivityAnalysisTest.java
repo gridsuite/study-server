@@ -151,9 +151,6 @@ public class SensitivityAnalysisTest {
     @Autowired
     private ReportService reportService;
 
-    @Autowired
-    private FilterService filterService;
-
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String sensitivityAnalysisResultDestination = "sensitivityanalysis.result";
@@ -183,7 +180,6 @@ public class SensitivityAnalysisTest {
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         actionsService.setActionsServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
-        filterService.setFilterServerBaseUri(baseUrl);
 
         SensitivityAnalysisInputData sensitivityAnalysisInputData = SensitivityAnalysisInputData.builder()
             .sensitivityInjectionsSets(List.of(SensitivityAnalysisInputData.SensitivityInjectionsSet.builder()
@@ -280,9 +276,6 @@ public class SensitivityAnalysisTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("1");
-                } else if (path.matches("/v1/filters/complexity\\?networkUuid=.*")) {
-                    return new MockResponse().setResponseCode(200).setBody("4")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());

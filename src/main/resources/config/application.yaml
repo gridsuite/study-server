@@ -151,6 +151,4 @@ gridsuite:
     -
       name: voltage-init-server
       base-uri: http://voltage-init-server/
-    -
-      name: filter-server
-      base-uri: http://filter-server/
+
