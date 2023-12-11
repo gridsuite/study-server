@@ -157,6 +157,8 @@ public class NetworkModificationTreeService {
         newNetworkModificationNodeInfoEntity.setReportUuid(newReportUuid);
         networkModificationNodeInfoRepository.save(newNetworkModificationNodeInfoEntity);
 
+        notificationService.emitNodeInserted(studyUuid, parent.getIdNode(), node.getIdNode(), insertMode, anchorNodeUuid);
+
         return node.getIdNode();
     }
 
@@ -179,8 +181,10 @@ public class NetworkModificationTreeService {
         if (nodeToMoveUuid.equals(anchorNodeUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
+        var anchorNode = nodesRepository.findById(anchorNodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        var parent = insertMode == InsertMode.BEFORE ? anchorNode.getParentNode() : anchorNode;
         UUID studyUuid = moveNode(nodeToMoveUuid, anchorNodeUuid, insertMode);
-        notificationService.emitNodeMoved(studyUuid, anchorNodeUuid, nodeToMoveUuid, insertMode);
+        notificationService.emitNodeMoved(studyUuid, parent.getIdNode(), nodeToMoveUuid, insertMode, anchorNodeUuid);
     }
 
     @Transactional
