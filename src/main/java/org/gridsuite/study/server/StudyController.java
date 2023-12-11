@@ -1690,9 +1690,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set")})
     public ResponseEntity<Integer> fetchFiltersComplexity(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.fetchFiltersComplexity(studyUuid, sensitivityAnalysisParametersValues));
+            @Parameter(description = "Is Injections Set") @RequestParam(name = "isInjectionsSet", required = false) Boolean isInjectionsSet,
+            @RequestBody Map<String, List<UUID>> containersIdsMap) {
+        return ResponseEntity.ok().body(studyService.fetchFiltersComplexity(studyUuid, containersIdsMap, isInjectionsSet));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")

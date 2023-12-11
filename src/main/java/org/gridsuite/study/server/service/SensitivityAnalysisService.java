@@ -28,11 +28,7 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -376,5 +372,23 @@ public class SensitivityAnalysisService {
                 .sensitivityPST(List.of())
                 .sensitivityNodes(List.of())
                 .build();
+    }
+
+    public Integer fetchFiltersComplexity(Map<String, List<UUID>> containerIdsMap, UUID networkUuid, Boolean isInjectionsSet) {
+        var uriComponentsBuilder = UriComponentsBuilder
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/count")
+                .queryParam("isInjectionsSet", isInjectionsSet);
+
+        var path = uriComponentsBuilder
+                .buildAndExpand(networkUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<String, List<UUID>>> httpEntity = new HttpEntity<>(containerIdsMap, headers);
+
+        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity,
+                Integer.class).getBody();
     }
 }

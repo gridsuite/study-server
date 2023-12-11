@@ -134,7 +134,6 @@ public class StudyService {
     private final ActionsService actionsService;
     private final CaseService caseService;
 
-    private final FilterService filterService;
     private final ObjectMapper objectMapper;
 
     public enum ComputationUsingLoadFlow {
@@ -198,7 +197,6 @@ public class StudyService {
             ActionsService actionsService,
             CaseService caseService,
             SensitivityAnalysisService sensitivityAnalysisService,
-            FilterService filterService,
             DynamicSimulationService dynamicSimulationService,
             VoltageInitService voltageInitService,
             DynamicSimulationEventService dynamicSimulationEventService) {
@@ -225,7 +223,6 @@ public class StudyService {
         this.geoDataService = geoDataService;
         this.networkMapService = networkMapService;
         this.securityAnalysisService = securityAnalysisService;
-        this.filterService = filterService;
         this.actionsService = actionsService;
         this.caseService = caseService;
         this.dynamicSimulationService = dynamicSimulationService;
@@ -2201,16 +2198,11 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public Integer fetchFiltersComplexity(UUID studyUuid, SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues) {
-        Map<Integer, List<Map<String, List<UUID>>>> containerIdsMap = idsMapInitializer();
-        filterIdsBuilder(sensitivityAnalysisParametersValues, containerIdsMap);
+    public Integer fetchFiltersComplexity(UUID studyUuid, Map<String, List<UUID>> containersIdsMap, Boolean isInjectionsSet) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        return filterService.fetchFiltersComplexity(containerIdsMap, networkUuid);
+        return sensitivityAnalysisService.fetchFiltersComplexity(containersIdsMap, networkUuid, isInjectionsSet);
     }
 
-    private Map<Integer, List<Map<String, List<UUID>>>> idsMapInitializer() {
-        return Map.of(0, new ArrayList(), 1, new ArrayList(), 2, new ArrayList(), 3, new ArrayList());
-    }
 
     private Map<String, List<UUID>> mapInit() {
         return Map.of(MONITORED_BRANCHS, new ArrayList<>(), INJECTIONS, new ArrayList<>(), CONTINGENCIES, new ArrayList<>());
