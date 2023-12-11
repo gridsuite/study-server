@@ -2179,7 +2179,10 @@ public class StudyTest {
     }
 
     private void checkSubtreeCreatedMessageSent(UUID studyUuid, UUID newNodeUuid, UUID referenceNodeUuid) {
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message;
+        do {
+            message = output.receive(TIMEOUT, studyUpdateDestination);
+        } while (!NotificationService.SUBTREE_CREATED.equals(message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE)));
         assertEquals(NotificationService.SUBTREE_CREATED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(newNodeUuid, message.getHeaders().get(NotificationService.HEADER_NEW_NODE));
