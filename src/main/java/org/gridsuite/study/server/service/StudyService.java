@@ -93,12 +93,6 @@ public class StudyService {
 
     static final String EQUIPMENT_TYPE = "equipmentType.keyword";
 
-    public static final String INJECTIONS = "injections";
-
-    public static final String MONITORED_BRANCHS = "monitoredBranchs";
-
-    public static final String CONTINGENCIES = "contingencies";
-
     NotificationService notificationService;
 
     NetworkModificationTreeService networkModificationTreeService;
@@ -139,8 +133,6 @@ public class StudyService {
     public enum ComputationUsingLoadFlow {
         LOAD_FLOW, SECURITY_ANALYSIS, SENSITIVITY_ANALYSIS
     }
-
-    public static final int MAX_COMPUTATION = 500000;
 
     public enum ReportNameMatchingType {
         EXACT_MATCHING, ENDS_WITH
@@ -2198,9 +2190,9 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public Integer fetchFiltersComplexity(UUID studyUuid, Map<String, List<UUID>> containersIdsMap, Boolean isInjectionsSet) {
+    public Integer getComputationCount(UUID studyUuid, Map<String, List<UUID>> ids, Boolean isInjectionsSet) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        return sensitivityAnalysisService.fetchFiltersComplexity(containersIdsMap, networkUuid, isInjectionsSet);
+        return sensitivityAnalysisService.getComputationCount(ids, networkUuid, isInjectionsSet);
     }
 
     public void updateSensitivityAnalysisParameters(UUID studyUuid, SensitivityAnalysisParametersEntity sensitivityParametersEntity) {

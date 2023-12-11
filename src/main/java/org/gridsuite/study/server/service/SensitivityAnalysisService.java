@@ -374,9 +374,9 @@ public class SensitivityAnalysisService {
                 .build();
     }
 
-    public Integer fetchFiltersComplexity(Map<String, List<UUID>> containerIdsMap, UUID networkUuid, Boolean isInjectionsSet) {
+    public Integer getComputationCount(Map<String, List<UUID>> ids, UUID networkUuid, Boolean isInjectionsSet) {
         var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/count")
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/computation-count")
                 .queryParam("isInjectionsSet", isInjectionsSet);
 
         var path = uriComponentsBuilder
@@ -386,7 +386,7 @@ public class SensitivityAnalysisService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<Map<String, List<UUID>>> httpEntity = new HttpEntity<>(containerIdsMap, headers);
+        HttpEntity<Map<String, List<UUID>>> httpEntity = new HttpEntity<>(ids, headers);
 
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity,
                 Integer.class).getBody();

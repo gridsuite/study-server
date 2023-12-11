@@ -1685,14 +1685,14 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/complexity")
-    @Operation(summary = "set sensitivity analysis parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set")})
-    public ResponseEntity<Integer> fetchFiltersComplexity(
+    @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/computation-count")
+    @Operation(summary = "Get the computing result of sensitivity parameters")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The computing result of sensitivity parameters")})
+    public ResponseEntity<Integer> getComputationCount(
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "Is Injections Set") @RequestParam(name = "isInjectionsSet", required = false) Boolean isInjectionsSet,
-            @RequestBody Map<String, List<UUID>> containersIdsMap) {
-        return ResponseEntity.ok().body(studyService.fetchFiltersComplexity(studyUuid, containersIdsMap, isInjectionsSet));
+            @RequestBody Map<String, List<UUID>> ids) {
+        return ResponseEntity.ok().body(studyService.getComputationCount(studyUuid, ids, isInjectionsSet));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")
