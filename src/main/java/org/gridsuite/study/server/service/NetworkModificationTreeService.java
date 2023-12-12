@@ -102,7 +102,11 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
-        return duplicateNode(nodeToCopyUuid, anchorNodeUuid, insertMode);
+        var anchorNode = nodesRepository.findById(anchorNodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        var parent = insertMode == InsertMode.BEFORE ? anchorNode.getParentNode() : anchorNode;
+        UUID newNodeUUID = duplicateNode(nodeToCopyUuid, anchorNodeUuid, insertMode);
+        notificationService.emitNodeInserted(anchorNode.getStudy().getId(), parent.getIdNode(), newNodeUUID, insertMode, anchorNodeUuid);
+        return newNodeUUID;
     }
 
     @Transactional
@@ -156,8 +160,6 @@ public class NetworkModificationTreeService {
         newNetworkModificationNodeInfoEntity.setIdNode(node.getIdNode());
         newNetworkModificationNodeInfoEntity.setReportUuid(newReportUuid);
         networkModificationNodeInfoRepository.save(newNetworkModificationNodeInfoEntity);
-
-        notificationService.emitNodeInserted(studyUuid, parent.getIdNode(), node.getIdNode(), insertMode, anchorNodeUuid);
 
         return node.getIdNode();
     }
