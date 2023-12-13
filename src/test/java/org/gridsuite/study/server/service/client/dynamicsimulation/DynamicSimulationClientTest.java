@@ -10,19 +10,20 @@ package org.gridsuite.study.server.service.client.dynamicsimulation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
-import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
-import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.client.dynamicsimulation.impl.DynamicSimulationClientImpl;
+import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient.*;
