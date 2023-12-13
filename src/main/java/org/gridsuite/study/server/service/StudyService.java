@@ -2190,9 +2190,9 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public Integer getComputationCount(UUID studyUuid, Map<String, List<UUID>> ids, Boolean isInjectionsSet) {
+    public Integer getSensitivityAnalysisFactorsCount(UUID studyUuid, Map<String, List<UUID>> ids, Boolean isInjectionsSet) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        return sensitivityAnalysisService.getComputationCount(ids, networkUuid, isInjectionsSet);
+        return sensitivityAnalysisService.getSensitivityAnalysisFactorsCount(ids, networkUuid, isInjectionsSet);
     }
 
     public void updateSensitivityAnalysisParameters(UUID studyUuid, SensitivityAnalysisParametersEntity sensitivityParametersEntity) {

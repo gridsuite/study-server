@@ -374,7 +374,7 @@ public class SensitivityAnalysisService {
                 .build();
     }
 
-    public Integer getComputationCount(Map<String, List<UUID>> ids, UUID networkUuid, Boolean isInjectionsSet) {
+    public Integer getSensitivityAnalysisFactorsCount(Map<String, List<UUID>> ids, UUID networkUuid, Boolean isInjectionsSet) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/computation-count")
                 .queryParam("isInjectionsSet", isInjectionsSet);

@@ -1692,7 +1692,7 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "Is Injections Set") @RequestParam(name = "isInjectionsSet", required = false) Boolean isInjectionsSet,
             @RequestBody Map<String, List<UUID>> ids) {
-        return ResponseEntity.ok().body(studyService.getComputationCount(studyUuid, ids, isInjectionsSet));
+        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisFactorsCount(studyUuid, ids, isInjectionsSet));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")
