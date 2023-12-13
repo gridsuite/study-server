@@ -104,7 +104,7 @@ public class NetworkModificationTreeService {
     public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
         NodeEntity anchorNode = nodesRepository.findById(anchorNodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         NodeEntity parent = insertMode == InsertMode.BEFORE ? anchorNode.getParentNode() : anchorNode;
-        UUID newNodeUUID = duplicateNode(nodeToCopyUuid, anchorNodeUuid, insertMode);
+        UUID newNodeUUID = self.duplicateNode(nodeToCopyUuid, anchorNodeUuid, insertMode);
         notificationService.emitNodeInserted(anchorNode.getStudy().getId(), parent.getIdNode(), newNodeUUID, insertMode, anchorNodeUuid);
         return newNodeUUID;
     }
@@ -197,7 +197,7 @@ public class NetworkModificationTreeService {
         } else {
             parent = anchorNode;
         }
-        UUID studyUuid = moveNode(nodeToMoveUuid, anchorNodeUuid, insertMode);
+        UUID studyUuid = self.moveNode(nodeToMoveUuid, anchorNodeUuid, insertMode);
         notificationService.emitNodeMoved(studyUuid, parent.getIdNode(), nodeToMoveUuid, insertMode, anchorNodeUuid);
     }
 
