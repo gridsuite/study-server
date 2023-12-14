@@ -275,7 +275,7 @@ public class SensitivityAnalysisTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("1");
-                } else if (path.matches("/v1/networks/" + ".*" + "/computation-count\\?isInjectionsSet")) {
+                } else if (path.matches("/v1/networks/" + ".*" + "/factors-count\\?isInjectionsSet")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("4");
@@ -738,18 +738,18 @@ public class SensitivityAnalysisTest {
     }
 
     @Test
-    public void testGetComputationCount() throws Exception {
+    public void testGetSensitivityAnalysisFactorsCount() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         UUID studyNameUserIdUuid = studyEntity.getId();
         String mnBodyJson = objectWriter.writeValueAsString(IDS);
         MvcResult mvcResult = mockMvc.perform(
-                post("/v1/studies/{studyUuid}/sensitivity-analysis/computation-count", studyNameUserIdUuid)
+                post("/v1/studies/{studyUuid}/sensitivity-analysis/factors-count", studyNameUserIdUuid)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mnBodyJson)).andExpect(status().isOk()).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         assertEquals("4", resultAsString);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + ".*" + "/computation-count.*")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + ".*" + "/factors-count.*")));
     }
 }
