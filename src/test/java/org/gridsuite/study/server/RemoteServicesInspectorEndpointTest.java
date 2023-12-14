@@ -9,8 +9,11 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.gridsuite.study.server.config.DisableCloudStream;
 import org.gridsuite.study.server.config.DisableJpa;
+import org.gridsuite.study.server.dto.AboutInfo;
 import org.gridsuite.study.server.dto.ServiceStatusInfos;
 import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
+import org.gridsuite.study.server.exception.PartialResultException;
+import org.gridsuite.study.server.service.FrontService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.client.RemoteServiceName;
@@ -19,6 +22,7 @@ import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisableJpa
 @MockBean(NetworkModificationTreeService.class) //strange error during bean initialization
 @SpringBootTest(classes = StudyApplication.class)
-@ExtendWith(MockitoExtension.class)
+@ExtendWith({MockitoExtension.class})
 @TestMethodOrder(MethodOrderer.MethodName.class)
 class RemoteServicesInspectorEndpointTest {
     @Autowired
@@ -105,12 +109,52 @@ class RemoteServicesInspectorEndpointTest {
     @Test
     void testServiceIsCalledWhenRequestingServicesInfoEndpoint() throws Exception {
         final Map<String, JsonNode> returnResult = new HashMap<>(0);
-        Mockito.doReturn(returnResult).when(remoteServicesInspector).getServicesInfo();
+        Mockito.doReturn(returnResult).when(remoteServicesInspector).getServicesInfo(Mockito.nullable(FrontService.class));
         mockMvc.perform(get("/v1/servers/infos"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(content().json("{}", true));
-        Mockito.verify(remoteServicesInspector, Mockito.times(1)).getServicesInfo();
+        Mockito.verify(remoteServicesInspector, Mockito.times(1)).getServicesInfo(null);
+        Mockito.verifyNoMoreInteractions(remoteServicesInspector);
+    }
+
+    @Test
+    void testWhenServicesInfoEndpointReturnPartialResult() throws Exception {
+        final HashMap<String, JsonNode> returnResult = new HashMap<>(0);
+        Mockito.doThrow(new PartialResultException(returnResult)).when(remoteServicesInspector).getServicesInfo(Mockito.nullable(FrontService.class));
+        mockMvc.perform(get("/v1/servers/infos"))
+                .andExpect(status().isMultiStatus())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(content().json("{}", true));
+        Mockito.verify(remoteServicesInspector, Mockito.times(1)).getServicesInfo(null);
+        Mockito.verifyNoMoreInteractions(remoteServicesInspector);
+    }
+
+    @Test
+    void testServiceIsCalledWhenRequestingServicesInfoEndpointWithFilter() throws Exception {
+        final Map<String, JsonNode> returnResult = new HashMap<>(0);
+        Mockito.doReturn(returnResult).when(remoteServicesInspector).getServicesInfo(Mockito.nullable(FrontService.class));
+        mockMvc.perform(get("/v1/servers/infos").queryParam("view", "study"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(content().json("{}", true));
+        Mockito.verify(remoteServicesInspector, Mockito.times(1)).getServicesInfo(FrontService.STUDY);
+        Mockito.verifyNoMoreInteractions(remoteServicesInspector);
+    }
+
+    @Test
+    void testServiceIsCalledWhenRequestingServicesAboutInfosEndpoint() throws Exception {
+        final Map<String, JsonNode> returnResult = new HashMap<>(0);
+        Mockito.doReturn(returnResult).when(remoteServicesInspector).getServicesInfo(Mockito.nullable(FrontService.class));
+        final AboutInfo[] returnConv = new AboutInfo[0];
+        Mockito.doReturn(returnConv).when(remoteServicesInspector).convertServicesInfoToAboutInfo(Mockito.anyMap());
+        mockMvc.perform(get("/v1/servers/about").queryParam("view", "STUDY"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(content().json("[]", true));
+        final InOrder inOrder = Mockito.inOrder(remoteServicesInspector);
+        inOrder.verify(remoteServicesInspector, Mockito.times(1)).getServicesInfo(FrontService.STUDY);
+        inOrder.verify(remoteServicesInspector, Mockito.times(1)).convertServicesInfoToAboutInfo(returnResult);
         Mockito.verifyNoMoreInteractions(remoteServicesInspector);
     }
 }

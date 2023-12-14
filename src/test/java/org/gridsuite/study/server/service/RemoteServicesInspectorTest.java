@@ -6,18 +6,24 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.NullNode;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.assertj.core.api.WithAssertions;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyAppConfig;
 import org.gridsuite.study.server.config.DisableCloudStream;
 import org.gridsuite.study.server.config.DisableJpa;
+import org.gridsuite.study.server.dto.AboutInfo;
+import org.gridsuite.study.server.dto.AboutInfo.ModuleType;
 import org.gridsuite.study.server.dto.ServiceStatusInfos;
 import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
+import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.service.client.RemoteServiceName;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.*;
@@ -32,7 +38,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.web.client.RestTemplateCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -66,6 +71,9 @@ class RemoteServicesInspectorTest implements WithAssertions {
     @Autowired
     private RemoteServicesInspector remoteServicesInspector;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     private static final JsonNode EMPTY_OBJ = JsonNodeFactory.instance.objectNode();
 
     @MockBean
@@ -84,12 +92,18 @@ class RemoteServicesInspectorTest implements WithAssertions {
     }
 
     @BeforeAll
-    void setup(@NonNull @Autowired @Lazy final RestTemplate restTemplate) {
+    void setup() {
         server = MockRestServiceServer.bindTo(TestConfig.REST_TEMPLATES.get(0)).ignoreExpectOrder(true).build();
         remoteServicesProperties.setServices(Arrays.stream(RemoteServiceName.values())
                 .map(RemoteServiceName::serviceName)
                 .map(name -> new RemoteServicesProperties.Service(name, "http://" + name + "/", false))
                 .toList());
+    }
+
+    @BeforeEach
+    void prepareCleanEnv() {
+        remoteServicesProperties.getRemoteServiceViewFilter().clear();
+        remoteServicesProperties.setRemoteServiceViewDefault(EnumSet.allOf(RemoteServiceName.class));
     }
 
     @AfterEach
@@ -158,36 +172,96 @@ class RemoteServicesInspectorTest implements WithAssertions {
     }
 
     @Test
-    void testServiceInfoGetData() {
-        testServiceInfo(0, null);
-        assertThat(remoteServicesInspector.getServicesInfo()).containsExactlyInAnyOrderEntriesOf(Arrays.stream(RemoteServiceName.values())
+    void testServiceInfoGetData() throws Exception {
+        testServiceInfo(0, (RemoteServiceName) null);
+        assertThat(remoteServicesInspector.getServicesInfo(null)).containsExactlyInAnyOrderEntriesOf(Arrays.stream(RemoteServiceName.values())
                 .collect(Collectors.toMap(RemoteServiceName::serviceName, srv -> EMPTY_OBJ)));
     }
 
     @TimeoutRemotes
     @Test
-    void testServiceInfoRequestsParallelized() {
-        testServiceInfo((int) RemoteServicesInspector.REQUEST_TIMEOUT_IN_MS, null);
-        assertThat(remoteServicesInspector.getServicesInfo()).containsExactlyInAnyOrderEntriesOf(Arrays.stream(RemoteServiceName.values())
+    void testServiceInfoRequestsParallelized() throws Exception {
+        testServiceInfo((int) RemoteServicesInspector.REQUEST_TIMEOUT_IN_MS, (RemoteServiceName) null);
+        assertThat(remoteServicesInspector.getServicesInfo(null)).containsExactlyInAnyOrderEntriesOf(Arrays.stream(RemoteServiceName.values())
                 .collect(Collectors.toMap(RemoteServiceName::serviceName, srv -> EMPTY_OBJ)));
     }
 
     @Test
-    void testServiceInfoNotThrowIfNotUnavailable() {
+    void testServiceInfoReturnPartialResultIfNotUnavailable() {
         testServiceInfo(0, RemoteServiceName.LOADFLOW_SERVER);
         serverExpectInfo(RemoteServiceName.LOADFLOW_SERVER).andRespond(withException(new SocketException("Test no server")));
         final Map<String, JsonNode> expected = Arrays.stream(RemoteServiceName.values())
                 .collect(Collectors.toMap(RemoteServiceName::serviceName, srv -> EMPTY_OBJ));
         expected.put(RemoteServiceName.LOADFLOW_SERVER.serviceName(), NullNode.instance);
-        assertThat(remoteServicesInspector.getServicesInfo()).containsExactlyInAnyOrderEntriesOf(expected);
+        assertThatThrownBy(() -> remoteServicesInspector.getServicesInfo(null))
+            .asInstanceOf(InstanceOfAssertFactories.throwable(PartialResultException.class))
+            .extracting(PartialResultException::getResult, InstanceOfAssertFactories.map(String.class, JsonNode.class)).as("result")
+            .containsExactlyInAnyOrderEntriesOf(expected);
+    }
+
+    @Test
+    void testServiceInfoExistingFilter() throws Exception {
+        final EnumSet<RemoteServiceName> studyView = EnumSet.of(
+            RemoteServiceName.STUDY_SERVER,
+            RemoteServiceName.STUDY_NOTIFICATION_SERVER,
+            RemoteServiceName.CONFIG_SERVER,
+            RemoteServiceName.CONFIG_NOTIFICATION_SERVER
+        );
+        remoteServicesProperties.getRemoteServiceViewFilter().put(FrontService.STUDY, studyView);
+        testServiceInfo(0, EnumSet.of(
+                // STUDY_SERVER is done locally
+                RemoteServiceName.STUDY_NOTIFICATION_SERVER,
+                RemoteServiceName.CONFIG_SERVER,
+                RemoteServiceName.CONFIG_NOTIFICATION_SERVER
+        ));
+        assertThat(remoteServicesInspector.getServicesInfo(FrontService.STUDY)).containsExactlyInAnyOrderEntriesOf(
+            studyView.stream().collect(Collectors.toMap(RemoteServiceName::serviceName, srv -> EMPTY_OBJ))
+        );
+    }
+
+    @Test
+    void testServiceInfoNonExistingFilter() throws Exception {
+        testServiceInfo(0, (RemoteServiceName) null);
+        assertThat(remoteServicesInspector.getServicesInfo(FrontService.STUDY)).containsExactlyInAnyOrderEntriesOf(
+            Arrays.stream(RemoteServiceName.values())
+                  .collect(Collectors.toMap(RemoteServiceName::serviceName, srv -> EMPTY_OBJ)));
+    }
+
+    @Test
+    void testServiceInfoDefaultFilter() throws Exception {
+        final EnumSet<RemoteServiceName> services = EnumSet.of(
+                RemoteServiceName.SECURITY_ANALYSIS_SERVER,
+                RemoteServiceName.SENSITIVITY_ANALYSIS_SERVER,
+                RemoteServiceName.SHORTCIRCUIT_SERVER,
+                RemoteServiceName.VOLTAGE_INIT_SERVER
+        );
+        remoteServicesProperties.setRemoteServiceViewDefault(services);
+        testServiceInfo(0, services);
+        assertThat(remoteServicesInspector.getServicesInfo(null)).containsExactlyInAnyOrderEntriesOf(
+            services.stream().collect(Collectors.toMap(RemoteServiceName::serviceName, srv -> EMPTY_OBJ)));
+    }
+
+    @Test
+    void testServiceInfoDefaultIfNonExistingFilter() throws Exception {
+        final EnumSet<RemoteServiceName> services = EnumSet.of(
+                RemoteServiceName.CONFIG_SERVER,
+                RemoteServiceName.EXPLORE_SERVER,
+                RemoteServiceName.VOLTAGE_INIT_SERVER
+        );
+        remoteServicesProperties.setRemoteServiceViewDefault(services);
+        testServiceInfo(0, services);
+        assertThat(remoteServicesInspector.getServicesInfo(FrontService.STUDY)).containsExactlyInAnyOrderEntriesOf(
+            services.stream().collect(Collectors.toMap(RemoteServiceName::serviceName, srv -> EMPTY_OBJ)));
     }
 
     private void testServiceInfo(final int delay, final RemoteServiceName skipSrv) {
+        testServiceInfo(delay, EnumSet.complementOf(EnumSet.of(RemoteServiceName.STUDY_SERVER,
+                skipSrv == null ? RemoteServiceName.STUDY_SERVER : skipSrv)));
+    }
+
+    private void testServiceInfo(final int delay, final EnumSet<RemoteServiceName> mockSrv) {
         Mockito.when(infoEndpoint.info()).thenReturn(Collections.emptyMap());
-        for (final RemoteServiceName service : RemoteServiceName.values()) {
-            if (service == RemoteServiceName.STUDY_SERVER || service == skipSrv) {
-                continue;
-            }
+        for (final RemoteServiceName service : mockSrv) {
             serverExpectInfo(service).andRespond(request -> {
                 try {
                     Thread.sleep(delay);
@@ -202,5 +276,33 @@ class RemoteServicesInspectorTest implements WithAssertions {
     private ResponseActions serverExpectInfo(@NonNull final RemoteServiceName service) {
         return server.expect(requestToUriTemplate("http://{service}/actuator/info", service.serviceName()))
                 .andExpect(method(HttpMethod.GET));
+    }
+
+    @Test
+    void testServiceAboutInfosNotNull() {
+        assertThatNullPointerException().isThrownBy(() -> remoteServicesInspector.convertServicesInfoToAboutInfo(null))
+                .withMessage("infos is marked non-null but is null");
+    }
+
+    @Test
+    void testServiceAboutInfosWithEmpty() {
+        assertThat(remoteServicesInspector.convertServicesInfoToAboutInfo(Map.of())).isEmpty();
+    }
+
+    @Test
+    void testServiceAboutInfosWithNullJson() {
+        assertThat(remoteServicesInspector.convertServicesInfoToAboutInfo(Map.of("test", NullNode.instance))).containsExactly(
+                new AboutInfo(ModuleType.SERVER, "test", null, null)
+        );
+    }
+
+    @Test
+    void testServiceAboutInfosConvert() throws Exception {
+        final Map<String, JsonNode> rawInfos = objectMapper.readValue(this.getClass().getClassLoader().getResource("servers_infos_short.json"), new TypeReference<>() {});
+        assertThat(remoteServicesInspector.convertServicesInfoToAboutInfo(rawInfos)).containsExactlyInAnyOrder(
+                new AboutInfo(ModuleType.SERVER, "Study Server", "1.0.0-SNAPSHOT", "v1.0.0-1"),
+                new AboutInfo(ModuleType.SERVER, "Explore server", "1.0.0-SNAPSHOT", "v0.18.0"),
+                new AboutInfo(ModuleType.SERVER, "Multiple tags", "1.0.0-SNAPSHOT", "v3")
+        );
     }
 }

@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.powsybl.contingency.json.ContingencyJsonModule;
@@ -50,6 +51,7 @@ public class RestTemplateConfig {
     private ObjectMapper createObjectMapper() {
         var objectMapper = Jackson2ObjectMapperBuilder.json().build();
         objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        objectMapper.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
         objectMapper.registerModule(new ContingencyJsonModule());
         objectMapper.registerModule(new LoadFlowResultJsonModule());
         objectMapper.registerModule(new LoadFlowParametersJsonModule());
@@ -57,7 +59,6 @@ public class RestTemplateConfig {
         objectMapper.registerModule(new ShortCircuitAnalysisJsonModule());
         objectMapper.registerModule(new SensitivityJsonModule());
         objectMapper.registerModule(new TimeSeriesJsonModule());
-
         return objectMapper;
     }
 
