@@ -2190,7 +2190,7 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public Integer getSensitivityAnalysisFactorsCount(UUID studyUuid, Map<String, List<UUID>> ids, Boolean isInjectionsSet) {
+    public Long getSensitivityAnalysisFactorsCount(UUID studyUuid, Map<String, List<UUID>> ids, Boolean isInjectionsSet) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         return sensitivityAnalysisService.getSensitivityAnalysisFactorsCount(ids, networkUuid, isInjectionsSet);
     }

@@ -374,7 +374,7 @@ public class SensitivityAnalysisService {
                 .build();
     }
 
-    public Integer getSensitivityAnalysisFactorsCount(Map<String, List<UUID>> ids, UUID networkUuid, Boolean isInjectionsSet) {
+    public Long getSensitivityAnalysisFactorsCount(Map<String, List<UUID>> ids, UUID networkUuid, Boolean isInjectionsSet) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/factors-count")
                 .queryParam("isInjectionsSet", isInjectionsSet);
@@ -389,6 +389,6 @@ public class SensitivityAnalysisService {
         HttpEntity<Map<String, List<UUID>>> httpEntity = new HttpEntity<>(ids, headers);
 
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity,
-                Integer.class).getBody();
+                Long.class).getBody();
     }
 }
