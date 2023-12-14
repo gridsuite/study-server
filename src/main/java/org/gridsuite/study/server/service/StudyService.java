@@ -146,7 +146,8 @@ public class StudyService {
         SHORT_CIRCUIT_ANALYSIS("ShortCircuitAnalysis"),
         ALL_BUSES_SHORTCIRCUIT_ANALYSIS("AllBusesShortCircuitAnalysis"),
         ONE_BUS_SHORTCIRCUIT_ANALYSIS("OneBusShortCircuitAnalysis"),
-        SENSITIVITY_ANALYSIS("SensitivityAnalysis");
+        SENSITIVITY_ANALYSIS("SensitivityAnalysis"),
+        VOLTAGE_INIT("VoltageInit");
         private final String name;
 
         ReportType(String name) {
@@ -1388,7 +1389,6 @@ public class StudyService {
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid);
         networkModificationTreeService.updateNodeBuildStatus(nodeUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
-        reportService.deleteReport(buildInfos.getReportUuid());
 
         try {
             networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
@@ -1397,6 +1397,11 @@ public class StudyService {
             throw new StudyException(NODE_BUILD_ERROR, e.getMessage());
         }
 
+    }
+
+    public void unbuildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+        invalidateBuild(studyUuid, nodeUuid, false, true);
+        emitAllComputationStatusChanged(studyUuid, nodeUuid);
     }
 
     public void stopBuild(@NonNull UUID nodeUuid) {
@@ -1409,7 +1414,6 @@ public class StudyService {
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = networkModificationTreeService.hasModifications(nodeToCopyUuid, false);
-        notificationService.emitNodeInserted(targetStudyUuid, referenceNodeUuid, duplicatedNodeUuid, insertMode, referenceNodeUuid);
         updateStatuses(targetStudyUuid, duplicatedNodeUuid, true, invalidateBuild);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
@@ -1521,13 +1525,7 @@ public class StudyService {
         if (invalidateBuild) {
             invalidateBuild(studyUuid, nodeUuid, invalidateOnlyChildrenBuildStatus, false);
         }
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        emitAllComputationStatusChanged(studyUuid, nodeUuid);
     }
 
     @Transactional
@@ -2216,5 +2214,15 @@ public class StudyService {
         invalidateShortCircuitStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+    }
+
+    private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid) {
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 }

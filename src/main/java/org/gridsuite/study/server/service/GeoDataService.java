@@ -12,6 +12,7 @@ package org.gridsuite.study.server.service;
  */
 
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;

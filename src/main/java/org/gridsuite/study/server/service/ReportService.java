@@ -13,6 +13,7 @@ import com.powsybl.commons.reporter.ReporterModelDeserializer;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
 import lombok.NonNull;
 import org.apache.poi.util.StringUtil;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
