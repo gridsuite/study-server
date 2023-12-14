@@ -1683,6 +1683,16 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/factors-count")
+    @Operation(summary = "Get the factors count of sensitivity parameters")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The factors count of sensitivity parameters")})
+    public ResponseEntity<Long> getSensitivityAnalysisFactorsCount(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Is Injections Set") @RequestParam(name = "isInjectionsSet", required = false) Boolean isInjectionsSet,
+            @RequestBody Map<String, List<UUID>> ids) {
+        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisFactorsCount(studyUuid, ids, isInjectionsSet));
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")
     @Operation(summary = "Invalidate loadflow status on study nodes")
     @ApiResponses(value = {

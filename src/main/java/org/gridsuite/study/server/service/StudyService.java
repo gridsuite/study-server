@@ -127,6 +127,7 @@ public class StudyService {
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final ActionsService actionsService;
     private final CaseService caseService;
+
     private final ObjectMapper objectMapper;
 
     public enum ComputationUsingLoadFlow {
@@ -2185,6 +2186,11 @@ public class StudyService {
                 SensitivityAnalysisService.toEntity(parameters != null ? parameters :
                         SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues()));
         notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    public Long getSensitivityAnalysisFactorsCount(UUID studyUuid, Map<String, List<UUID>> ids, Boolean isInjectionsSet) {
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        return sensitivityAnalysisService.getSensitivityAnalysisFactorsCount(ids, networkUuid, isInjectionsSet);
     }
 
     public void updateSensitivityAnalysisParameters(UUID studyUuid, SensitivityAnalysisParametersEntity sensitivityParametersEntity) {
