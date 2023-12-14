@@ -102,7 +102,11 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
-        return duplicateNode(nodeToCopyUuid, anchorNodeUuid, insertMode);
+        NodeEntity anchorNode = nodesRepository.findById(anchorNodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        NodeEntity parent = insertMode == InsertMode.BEFORE ? anchorNode.getParentNode() : anchorNode;
+        UUID newNodeUUID = self.duplicateNode(nodeToCopyUuid, anchorNodeUuid, insertMode);
+        notificationService.emitNodeInserted(anchorNode.getStudy().getId(), parent.getIdNode(), newNodeUUID, insertMode, anchorNodeUuid);
+        return newNodeUUID;
     }
 
     @Transactional
@@ -179,8 +183,22 @@ public class NetworkModificationTreeService {
         if (nodeToMoveUuid.equals(anchorNodeUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
-        UUID studyUuid = moveNode(nodeToMoveUuid, anchorNodeUuid, insertMode);
-        notificationService.emitNodeMoved(studyUuid, anchorNodeUuid, nodeToMoveUuid, insertMode);
+        NodeEntity anchorNode = nodesRepository.findById(anchorNodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        NodeEntity parent;
+        if (insertMode == InsertMode.BEFORE) {
+            if (anchorNode.getType() == NodeType.ROOT) {
+                throw new StudyException(NOT_ALLOWED);
+            }
+            parent = anchorNode.getParentNode();
+            if (parent.getIdNode().equals(nodeToMoveUuid)) {
+                // If anchor's previous parent is the node to move, we use anchor's grandparent.
+                parent = parent.getParentNode();
+            }
+        } else {
+            parent = anchorNode;
+        }
+        UUID studyUuid = self.moveNode(nodeToMoveUuid, anchorNodeUuid, insertMode);
+        notificationService.emitNodeMoved(studyUuid, parent.getIdNode(), nodeToMoveUuid, insertMode, anchorNodeUuid);
     }
 
     @Transactional
