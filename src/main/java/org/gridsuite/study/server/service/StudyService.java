@@ -1399,7 +1399,7 @@ public class StudyService {
     }
 
     public void unbuildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
-        invalidateBuild(studyUuid, nodeUuid, false, true);
+        invalidateBuild(studyUuid, nodeUuid, false, true, true);
         emitAllComputationStatusChanged(studyUuid, nodeUuid);
     }
 
