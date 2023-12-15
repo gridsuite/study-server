@@ -214,13 +214,14 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitNodeMoved(UUID studyUuid, UUID parentNode, UUID nodeMoved, InsertMode insertMode) {
+    public void emitNodeMoved(UUID studyUuid, UUID parentNode, UUID nodeMoved, InsertMode insertMode, UUID referenceNodeUuid) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_UPDATE_TYPE, NODE_MOVED)
                 .setHeader(HEADER_PARENT_NODE, parentNode)
                 .setHeader(HEADER_MOVED_NODE, nodeMoved)
                 .setHeader(HEADER_INSERT_MODE, insertMode.name())
+                .setHeader(HEADER_REFERENCE_NODE_UUID, referenceNodeUuid)
                 .build()
         );
     }

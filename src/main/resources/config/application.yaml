@@ -163,3 +163,4 @@ gridsuite:
     -
       name: voltage-init-server
       base-uri: http://voltage-init-server/
+
