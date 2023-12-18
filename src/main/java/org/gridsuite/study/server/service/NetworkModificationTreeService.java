@@ -622,21 +622,23 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void restoreNode(UUID studyId, UUID nodeId, UUID anchorNodeId) {
-        NodeEntity nodeToRestore = nodesRepository.findById(nodeId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
-        NodeEntity anchorNode = nodesRepository.findById(anchorNodeId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
-        NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeToRestore.getIdNode()).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
-        if (self.isNodeNameExists(studyId, modificationNodeToRestore.getName())) {
-            String newName = getSuffixedNodeName(studyId, modificationNodeToRestore.getName());
-            modificationNodeToRestore.setName(newName);
-            networkModificationNodeInfoRepository.save(modificationNodeToRestore);
+    public void restoreNode(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId) {
+        for (UUID nodeId : nodeIds) {
+            NodeEntity nodeToRestore = nodesRepository.findById(nodeId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+            NodeEntity anchorNode = nodesRepository.findById(anchorNodeId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+            NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeToRestore.getIdNode()).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+            if (self.isNodeNameExists(studyId, modificationNodeToRestore.getName())) {
+                String newName = getSuffixedNodeName(studyId, modificationNodeToRestore.getName());
+                modificationNodeToRestore.setName(newName);
+                networkModificationNodeInfoRepository.save(modificationNodeToRestore);
+            }
+            nodeToRestore.setParentNode(anchorNode);
+            nodeToRestore.setStashed(false);
+            nodeToRestore.setStashDate(null);
+            nodesRepository.save(nodeToRestore);
+            notificationService.emitNodeInserted(studyId, anchorNodeId, nodeId, InsertMode.AFTER, anchorNodeId);
+            self.restoreNodeChildren(studyId, nodeId);
         }
-        nodeToRestore.setParentNode(anchorNode);
-        nodeToRestore.setStashed(false);
-        nodeToRestore.setStashDate(null);
-        nodesRepository.save(nodeToRestore);
-        notificationService.emitNodeInserted(studyId, anchorNodeId, nodeId, InsertMode.AFTER, anchorNodeId);
-        self.restoreNodeChildren(studyId, nodeId);
     }
 
     @Transactional
