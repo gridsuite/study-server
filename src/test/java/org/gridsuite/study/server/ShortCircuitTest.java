@@ -266,7 +266,7 @@ public class ShortCircuitTest {
     }
 
     @Test
-    public void testShortCircuit() throws Exception {
+    public void testAllBusesShortCircuit() throws Exception {
         MvcResult mvcResult;
         String resultAsString;
         //insert a study
@@ -296,7 +296,7 @@ public class ShortCircuitTest {
                         .header("userId", "userId"))
                 .andExpect(status().isForbidden());
 
-        //run a short circuit analysis
+        //run an all-buses short circuit analysis
         mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
                         .header("userId", "userId"))
                 .andExpect(status().isOk())
@@ -357,14 +357,16 @@ public class ShortCircuitTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
 
-        //Test result count
+        // Test result count
+        // In short-circuit server there is no distinction between 1-bus and all-buses, so the count will return all kinds of short-circuit
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
                 .queryParam("dryRun", String.valueOf(true)))
-            .andExpect(status().isOk());
+                .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
 
-        //Delete Shortcircuit results
+        // Delete Shortcircuit results
+        // In short-circuit server there is no distinction between 1-bus and all-buses, so we remove all kinds of short-circuit
         assertEquals(1, networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
@@ -485,6 +487,8 @@ public class ShortCircuitTest {
         UUID uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
         assertEquals(uuidResponse, UUID.fromString(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
 
+        assertEquals(1, networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
+
         // get one bus short circuit result
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode3Uuid)
             .param("type", ShortcircuitAnalysisType.ONE_BUS.name()))
@@ -513,6 +517,13 @@ public class ShortCircuitTest {
             );
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
+
+        //Test result count
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                        .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
+                        .queryParam("dryRun", String.valueOf(true)))
+                .andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
     }
 
     @Test
