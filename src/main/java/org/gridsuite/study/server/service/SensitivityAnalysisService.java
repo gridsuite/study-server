@@ -13,6 +13,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.repository.EquipmentsContainerEmbeddable;
@@ -374,21 +375,15 @@ public class SensitivityAnalysisService {
                 .build();
     }
 
-    public Long getSensitivityAnalysisFactorsCount(Map<String, List<UUID>> ids, UUID networkUuid, Boolean isInjectionsSet) {
+    public Long getSensitivityAnalysisFactorsCount(UUID networkUuid, SensitivityFactorsIdsByGroup factorsIds, Boolean isInjectionsSet) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/factors-count")
                 .queryParam("isInjectionsSet", isInjectionsSet);
 
-        var path = uriComponentsBuilder
-                .buildAndExpand(networkUuid)
-                .toUriString();
+        factorsIds.getIds().forEach((key, value) -> uriComponentsBuilder.queryParam(String.format("ids[%s]", key), value));
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
 
-        HttpEntity<Map<String, List<UUID>>> httpEntity = new HttpEntity<>(ids, headers);
-
-        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity,
-                Long.class).getBody();
+        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.GET, null, Long.class).getBody();
     }
 }

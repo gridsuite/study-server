@@ -23,6 +23,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -1694,14 +1695,14 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/factors-count")
+    @GetMapping(value = "/studies/{studyUuid}/sensitivity-analysis/factors-count")
     @Operation(summary = "Get the factors count of sensitivity parameters")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The factors count of sensitivity parameters")})
     public ResponseEntity<Long> getSensitivityAnalysisFactorsCount(
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "Is Injections Set") @RequestParam(name = "isInjectionsSet", required = false) Boolean isInjectionsSet,
-            @RequestBody Map<String, List<UUID>> ids) {
-        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisFactorsCount(studyUuid, ids, isInjectionsSet));
+            SensitivityFactorsIdsByGroup factorsIds) {
+        return ResponseEntity.ok().body(sensitivityAnalysisService.getSensitivityAnalysisFactorsCount(networkStoreService.getNetworkUuid(studyUuid), factorsIds, isInjectionsSet));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")
