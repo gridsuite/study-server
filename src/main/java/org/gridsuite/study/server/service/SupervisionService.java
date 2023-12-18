@@ -210,7 +210,7 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
-        studyService.invalidateBuild(studyUuid, rootNode.getId(), false, false);
+        studyService.invalidateBuild(studyUuid, rootNode.getId(), false, false, true);
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 }
