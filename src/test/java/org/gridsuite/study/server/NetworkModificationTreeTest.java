@@ -383,7 +383,7 @@ public class NetworkModificationTreeTest {
         assertEquals(false, networkModificationNode.getNodeBuildStatus().isBuilt());
         assertEquals("not_built", networkModificationNode.getName());
         assertEquals("not built node", networkModificationNode.getDescription());
-        deleteNode(root.getStudyId(), children.get(0), false, Set.of(children.get(0)), true, userId);
+        deleteNode(root.getStudyId(), children, false, Set.of(children.get(0)), true, userId);
         // Check built status correctly initialized
         final NetworkModificationNode node2 = buildNetworkModificationNode("built", "built node", MODIFICATION_GROUP_UUID, VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node2, userId);
@@ -394,7 +394,7 @@ public class NetworkModificationTreeTest {
         assertEquals(true, networkModificationNode.getNodeBuildStatus().isBuilt());
         assertEquals("built", networkModificationNode.getName());
         assertEquals("built node", networkModificationNode.getDescription());
-        deleteNode(root.getStudyId(), children.get(0), false, Set.of(children.get(0)), userId);
+        deleteNode(root.getStudyId(), children, false, Set.of(children.get(0)), userId);
     }
 
     @Test
@@ -423,9 +423,9 @@ public class NetworkModificationTreeTest {
         assertTrue(getNode(studyId, root.getId()).getChildren().isEmpty());
 
         //create this tree
-        //     root
-        //      |
-        //      n1
+        //       root
+        //       /  \
+        //      n1  n4
         //     /  \
         //    n2  n3
         final NetworkModificationNode n1 = buildNetworkModificationNode("n1", "n1", UUID.randomUUID(), "variant1", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
@@ -435,8 +435,12 @@ public class NetworkModificationTreeTest {
         final NetworkModificationNode n3 = buildNetworkModificationNode("n3", "n3", UUID.randomUUID(), "variant3", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
         createNode(studyId, n1, n3, userId);
 
+        final NetworkModificationNode n4 = buildNetworkModificationNode("n4", "n4", UUID.randomUUID(), "variant4", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, root, n4, userId);
+
         //Try to stash the node n1 so it should stash n1 and its subtree (n2 and n3)
         stashNode(root.getStudyId(), n1, true, Set.of(n1, n2, n3), userId);
+        stashNode(root.getStudyId(), n4, true, Set.of(n4), userId);
 
         var stashedNode1 = nodeRepository.findById(n1.getId()).orElseThrow();
         assertTrue(stashedNode1.isStashed());
@@ -455,6 +459,10 @@ public class NetworkModificationTreeTest {
         assertEquals(n1.getId(), stashedNode3.getParentNode().getIdNode());
         assertNotNull(stashedNode3.getStashDate());
 
+        var stashedNode4 = nodeRepository.findById(n4.getId()).orElseThrow();
+        assertTrue(stashedNode4.isStashed());
+        assertNotNull(stashedNode4.getStashDate());
+
         var result = mockMvc.perform(get("/v1/studies/{studyUuid}/tree/nodes/stash", root.getStudyId())
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk())
@@ -464,9 +472,10 @@ public class NetworkModificationTreeTest {
         assertTrue(result.getResponse().getContentAsString().contains(n1.getId().toString()));
         assertFalse(result.getResponse().getContentAsString().contains(n2.getId().toString()));
         assertFalse(result.getResponse().getContentAsString().contains(n3.getId().toString()));
+        assertTrue(result.getResponse().getContentAsString().contains(n4.getId().toString()));
 
         //And now we restore the tree we just stashed
-        restoreNode(studyId, stashedNode1.getIdNode(), root.getId(), Set.of(n1.getId(), n2.getId(), n3.getId()), userId);
+        restoreNode(studyId, List.of(stashedNode1.getIdNode(), stashedNode4.getIdNode()), root.getId(), Set.of(n1.getId(), n2.getId(), n3.getId(), n4.getId()), userId);
 
         var restoredNode1 = nodeRepository.findById(n1.getId()).orElseThrow();
         assertFalse(restoredNode1.isStashed());
@@ -483,6 +492,11 @@ public class NetworkModificationTreeTest {
         assertEquals(n1.getId(), restoredNode3.getParentNode().getIdNode());
         assertNull(restoredNode3.getStashDate());
 
+        var restoredNode4 = nodeRepository.findById(n4.getId()).orElseThrow();
+        assertFalse(restoredNode4.isStashed());
+        assertNotNull(restoredNode4.getParentNode());
+        assertNull(restoredNode4.getStashDate());
+
         result = mockMvc.perform(get("/v1/studies/{studyUuid}/tree/nodes/stash", root.getStudyId())
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk())
@@ -491,6 +505,7 @@ public class NetworkModificationTreeTest {
         assertFalse(result.getResponse().getContentAsString().contains(n1.getId().toString()));
         assertFalse(result.getResponse().getContentAsString().contains(n2.getId().toString()));
         assertFalse(result.getResponse().getContentAsString().contains(n3.getId().toString()));
+        assertFalse(result.getResponse().getContentAsString().contains(n4.getId().toString()));
     }
 
     private UUID createNodeTree() throws Exception {
@@ -625,7 +640,7 @@ public class NetworkModificationTreeTest {
         children = child.getChildren();
         assertChildrenEquals(Set.of(node1, node2), children);
 
-        deleteNode(root.getStudyId(), child, false, Set.of(child), true, userId);
+        deleteNode(root.getStudyId(), List.of(child), false, Set.of(child), true, userId);
 
         /*  expected
               root
@@ -638,12 +653,12 @@ public class NetworkModificationTreeTest {
         child = root.getChildren().get(0);
         createNode(root.getStudyId(), child, node4, userId);
 
-        deleteNode(root.getStudyId(), child, true, Set.of(node4, child), userId);
+        deleteNode(root.getStudyId(), List.of(child), true, Set.of(child, node4), userId);
 
         /* expected
-            root
-            /   \
-          node  node
+             root
+              |
+             node
          */
         root = getRootNode(root.getStudyId());
         assertEquals(2, root.getChildren().size());
@@ -663,13 +678,19 @@ public class NetworkModificationTreeTest {
 
     }
 
-    private void deleteNode(UUID studyUuid, AbstractNode child, boolean deleteChildren, Set<AbstractNode> expectedDeletion, String userId) throws Exception {
+    private void deleteNode(UUID studyUuid, List<AbstractNode> child, boolean deleteChildren, Set<AbstractNode> expectedDeletion, String userId) throws Exception {
         deleteNode(studyUuid, child, deleteChildren, expectedDeletion, false, userId);
     }
 
-    private void deleteNode(UUID studyUuid, AbstractNode child, boolean deleteChildren, Set<AbstractNode> expectedDeletion, boolean nodeWithModification, String userId) throws Exception {
-        List<UUID> children = child.getChildren().stream().map(AbstractNode::getId).collect(Collectors.toList());
-        mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", studyUuid, child.getId(), deleteChildren).header(USER_ID_HEADER, "userId"))
+    private void deleteNode(UUID studyUuid, List<AbstractNode> child, boolean deleteChildren, Set<AbstractNode> expectedDeletion, boolean nodeWithModification, String userId) throws Exception {
+        List<UUID> children = child.stream()
+                .flatMap(e -> e.getChildren().stream())
+                .map(AbstractNode::getId)
+                .toList();
+
+        String deleteNodeUuid = child.stream().map(AbstractNode::getId).map(UUID::toString).reduce("", (a1, a2) -> a1 + "," + a2).substring(1);
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes?deleteChildren={delete}", studyUuid, deleteChildren).header(USER_ID_HEADER, "userId")
+                        .queryParam("ids", deleteNodeUuid))
             .andExpect(status().isOk());
 
         checkElementUpdatedMessageSent(studyUuid, userId);
@@ -712,8 +733,12 @@ public class NetworkModificationTreeTest {
                 assertTrue(expectedStash.stream().anyMatch(node -> node.getId().equals(id))));
     }
 
-    private void restoreNode(UUID studyUuid, UUID nodeId, UUID anchorNodeId, Set<UUID> expectedIdRestored, String userId) throws Exception {
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{nodeId}/restore?anchorNodeId={anchorNodeId}", studyUuid, nodeId, anchorNodeId).header(USER_ID_HEADER, "userId"))
+    private void restoreNode(UUID studyUuid, List<UUID> nodeId, UUID anchorNodeId, Set<UUID> expectedIdRestored, String userId) throws Exception {
+
+        String param = nodeId.stream().map(UUID::toString).reduce("", (a1, a2) -> a1 + "," + a2).substring(1);
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}", studyUuid, anchorNodeId).header(USER_ID_HEADER, "userId")
+                        .queryParam("ids", param))
                 .andExpect(status().isOk());
 
         for (int i = 0; i < expectedIdRestored.size(); i++) {
