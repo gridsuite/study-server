@@ -481,7 +481,6 @@ public class VoltageInitTest {
             .header("userId", "userId")).andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
-                r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID) ||
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
                 r.matches("/v1/groups/.*/duplications.*")
         ));
