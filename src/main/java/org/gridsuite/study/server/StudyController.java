@@ -754,11 +754,12 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has started")})
     public ResponseEntity<UUID> runSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                          @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames) {
+                                                          @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames,
+                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         List<String> nonNullcontingencyListNames = contingencyListNames != null ? contingencyListNames : Collections.emptyList();
         studyService.assertIsNodeNotReadOnly(nodeUuid);
 
-        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid));
+        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid, userId));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result")
@@ -1367,9 +1368,10 @@ public class StudyController {
     @Operation(summary = "run sensitivity analysis on study")
         @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has started"), @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
     public ResponseEntity<UUID> runSensitivityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                       @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runSensitivityAnalysis(studyUuid, nodeUuid));
+        return ResponseEntity.ok().body(studyService.runSensitivityAnalysis(studyUuid, nodeUuid, userId));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result")
@@ -1536,10 +1538,11 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation has started")})
     public ResponseEntity<UUID> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                     @RequestBody(required = false) DynamicSimulationParametersInfos parameters) {
+                                                     @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
+                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.runDynamicSimulation(studyUuid, nodeUuid, parameters));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.runDynamicSimulation(studyUuid, nodeUuid, parameters, userId));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries/metadata")
