@@ -1135,7 +1135,7 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, UUID nodeUuid) {
+    public UUID runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, UUID nodeUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(contingencyListNames);
         Objects.requireNonNull(nodeUuid);
@@ -1168,7 +1168,7 @@ public class StudyService {
                     Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)))
                 .build();
 
-        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, nodeUuid, variantId, provider, contingencyListNames, params, receiver);
+        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, nodeUuid, variantId, provider, contingencyListNames, params, receiver, userId);
 
         updateSecurityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
@@ -1925,7 +1925,7 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runSensitivityAnalysis(UUID studyUuid, UUID nodeUuid) {
+    public UUID runSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
@@ -1955,25 +1955,26 @@ public class StudyService {
         sensitivityAnalysisInputData.setSensitivityInjectionsSets(sensitivityAnalysisParametersValues.getSensitivityInjectionsSet()
                 .stream()
                 .filter(SensitivityAnalysisInputData.SensitivityInjectionsSet::isActivated)
-                .collect(Collectors.toList()));
+                .toList());
         sensitivityAnalysisInputData.setSensitivityInjections(sensitivityAnalysisParametersValues.getSensitivityInjection()
                 .stream()
                 .filter(SensitivityAnalysisInputData.SensitivityInjection::isActivated)
-                .collect(Collectors.toList()));
+                .toList());
         sensitivityAnalysisInputData.setSensitivityHVDCs(sensitivityAnalysisParametersValues.getSensitivityHVDC()
                 .stream()
                 .filter(SensitivityAnalysisInputData.SensitivityHVDC::isActivated)
-                .collect(Collectors.toList()));
+                .toList());
         sensitivityAnalysisInputData.setSensitivityPSTs(sensitivityAnalysisParametersValues.getSensitivityPST()
                 .stream()
                 .filter(SensitivityAnalysisInputData.SensitivityPST::isActivated)
-                .collect(Collectors.toList()));
+                .toList());
         sensitivityAnalysisInputData.setSensitivityNodes(sensitivityAnalysisParametersValues.getSensitivityNodes()
                 .stream()
                 .filter(SensitivityAnalysisInputData.SensitivityNodes::isActivated)
-                .collect(Collectors.toList()));
+                .toList());
 
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider, sensitivityAnalysisInputData);
+        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(
+                nodeUuid, networkUuid, variantId, reportUuid, provider, sensitivityAnalysisInputData, userId);
 
         updateSensitivityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
@@ -2120,7 +2121,7 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters) {
+    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
@@ -2165,7 +2166,7 @@ public class StudyService {
         }
 
         // launch dynamic simulation
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyUuid), receiver, networkUuid, "", mergeParameters);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyUuid), receiver, networkUuid, "", mergeParameters, userId);
 
         // update result uuid and notification
         updateDynamicSimulationResultUuid(nodeUuid, resultUuid);
