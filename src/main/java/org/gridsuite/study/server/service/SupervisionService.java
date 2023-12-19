@@ -203,8 +203,10 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull();
-        nodes.stream().forEach(node -> node.setVoltageInitResultUuid(null));
-        //TODO Add logs deletion once they are added
+        if (!nodes.isEmpty()) {
+            nodes.stream().forEach(node -> node.setVoltageInitResultUuid(null));
+            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.VOLTAGE_INIT.toString(), nodes));
+        }
         voltageInitService.deleteVoltageInitResults();
         LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.VOLTAGE_INITIALIZATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return nodes.size();
