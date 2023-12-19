@@ -39,25 +39,25 @@ gridsuite:
       base-uri: http://localhost:5007
     -
       name: loadflow-server
-      base-uri: http://172.17.0.1:5008
+      base-uri: http://localhost:5008
     -
       name: actions-server
       base-uri: http://localhost:5022
     -
       name: security-analysis-server
-      base-uri: http://172.17.0.1:5023
+      base-uri: http://localhost:5023
     -
       name: report-server
-      base-uri: http://172.17.0.1:5028
+      base-uri: http://localhost:5028
     -
       name: sensitivity-analysis-server
-      base-uri: http://172.17.0.1:5030
+      base-uri: http://localhost:5030
     -
       name: shortcircuit-server
-      base-uri: http://172.17.0.1:5031
+      base-uri: http://localhost:5031
     -
       name: dynamic-simulation-server
-      base-uri: http://172.17.0.1:5032
+      base-uri: http://localhost:5032
     -
       name: timeseries-server
       base-uri: http://localhost:5037
@@ -66,5 +66,5 @@ gridsuite:
       base-uri: http://localhost:5036
     -
       name: voltage-init-server
-      base-uri: http://172.17.0.1:5038
+      base-uri: http://localhost:5038
 
