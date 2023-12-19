@@ -52,6 +52,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyConstants.SENSITIVITY_ANALYSIS_API_VERSION;
@@ -102,7 +103,8 @@ public class NonEvacuatedEnergyService {
                                       String variantId,
                                       UUID reportUuid,
                                       String provider,
-                                      NonEvacuatedEnergyInputData nonEvacuatedEnergyInputData) {
+                                      NonEvacuatedEnergyInputData nonEvacuatedEnergyInputData,
+                                      String userId) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
@@ -125,6 +127,7 @@ public class NonEvacuatedEnergyService {
             .buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<NonEvacuatedEnergyInputData> httpEntity = new HttpEntity<>(nonEvacuatedEnergyInputData, headers);

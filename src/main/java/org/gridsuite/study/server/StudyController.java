@@ -1734,9 +1734,10 @@ public class StudyController {
     @Operation(summary = "run sensitivity analysis non evacuated energy on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy has started")})
     public ResponseEntity<UUID> runNonEvacuatedEnergy(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runNonEvacuatedEnergy(studyUuid, nodeUuid));
+        return ResponseEntity.ok().body(studyService.runNonEvacuatedEnergy(studyUuid, nodeUuid, userId));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/result")

@@ -536,6 +536,8 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeSensitivityAnalysisNonEvacuatedEnergyFailed() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
+            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
@@ -549,7 +551,7 @@ public class ConsumerService {
                     // send notification for failed computation
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_FAILED);
+                    notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_FAILED, errorMessage, userId);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }

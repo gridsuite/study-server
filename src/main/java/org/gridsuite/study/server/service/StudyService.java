@@ -2286,7 +2286,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
     }
 
-    public UUID runNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid) {
+    public UUID runNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
@@ -2335,7 +2335,7 @@ public class StudyService {
             .filter(NonEvacuatedEnergyContingencies::isActivated)
             .collect(Collectors.toList()));
 
-        UUID result = nonEvacuatedEnergyService.runNonEvacuatedEnergy(nodeUuid, networkUuid, variantId, reportUuid, provider, nonEvacuatedEnergyInputData);
+        UUID result = nonEvacuatedEnergyService.runNonEvacuatedEnergy(nodeUuid, networkUuid, variantId, reportUuid, provider, nonEvacuatedEnergyInputData, userId);
 
         updateNonEvacuatedEnergyResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);

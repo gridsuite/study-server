@@ -91,6 +91,7 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -217,12 +218,14 @@ public class NonEvacuatedEnergyTest {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_3 + ".*") ? NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID : NON_EVACUATED_ENERGY_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", resultUuid)
+                        .setHeader(HEADER_USER_ID, "userId")
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .build(), nonEvacuatedEnergyResultDestination);
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/non-evacuated-energy.*")) {
                     input.send(MessageBuilder.withPayload("")
+                        .setHeader(HEADER_USER_ID, "userId")
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .build(), nonEvacuatedEnergyFailedDestination);
                     return new MockResponse().setResponseCode(200).setBody("\"" + NON_EVACUATED_ENERGY_ERROR_NODE_RESULT_UUID + "\"")
@@ -288,7 +291,7 @@ public class NonEvacuatedEnergyTest {
 
         // run sensitivity analysis non evacuated energy
         mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/run", studyUuid, nodeUuid)
-            .contentType(MediaType.APPLICATION_JSON).header("userId", "userId")).andExpect(status().isOk())
+            .contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId")).andExpect(status().isOk())
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         UUID uuidResponse = mapper.readValue(resultAsString, UUID.class);
@@ -350,7 +353,7 @@ public class NonEvacuatedEnergyTest {
 
         // run sensitivity analysis non evacuated energy on root node (not allowed)
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/run", studyNameUserIdUuid, rootNodeUuid)
-            .contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+            .contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId"))
             .andExpect(status().isForbidden());
 
         testNonEvacuatedEnergyWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(NON_EVACUATED_ENERGY_RESULT_UUID));
@@ -362,7 +365,7 @@ public class NonEvacuatedEnergyTest {
 
         // run additional sensitivity analysis non evacuated energy for deletion test
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/run", studyNameUserIdUuid, modificationNode2Uuid)
-                .contentType(MediaType.APPLICATION_JSON).header("userId", "userId")).andExpect(status().isOk())
+                .contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId")).andExpect(status().isOk())
             .andReturn();
 
         Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
@@ -457,8 +460,8 @@ public class NonEvacuatedEnergyTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), nonEvacuatedEnergyFailedDestination);
             return resultUuid;
-        }).when(studyService).runNonEvacuatedEnergy(any(), any());
-        studyService.runNonEvacuatedEnergy(studyEntity.getId(), modificationNode.getId());
+        }).when(studyService).runNonEvacuatedEnergy(any(), any(), any());
+        studyService.runNonEvacuatedEnergy(studyEntity.getId(), modificationNode.getId(), "userId");
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -479,7 +482,7 @@ public class NonEvacuatedEnergyTest {
 
         // run failing sensitivity analysis non evacuated energy (because in network 2)
         mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/run", studyUuid, modificationNode1Uuid)
-            .contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+            .contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk()).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         String uuidResponse = mapper.readValue(resultAsString, String.class);
@@ -510,7 +513,7 @@ public class NonEvacuatedEnergyTest {
         UUID modificationNode1Uuid2 = modificationNode2.getId();
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/run", studyUuid2, modificationNode1Uuid2)
-            .contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+            .contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk());
 
         // failed sensitivity analysis non evacuated energy without receiver -> no failure message sent to frontend
@@ -604,7 +607,7 @@ public class NonEvacuatedEnergyTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
@@ -713,7 +716,7 @@ public class NonEvacuatedEnergyTest {
 
         mockMvc.perform(
             post("/v1/studies/{studyUuid}/sensitivity-analysis-non-evacuated-energy/parameters", studyNameUserIdUuid)
-                .header("userId", "userId")
+                .header(HEADER_USER_ID, "userId")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(myBodyJson)).andExpect(
             status().isOk());
