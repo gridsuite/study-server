@@ -525,6 +525,17 @@ public class ShortCircuitTest {
                         .queryParam("dryRun", String.valueOf(true)))
                 .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
+
+        // Delete Shortcircuit results
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                        .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
+                        .queryParam("dryRun", String.valueOf(false)))
+                .andExpect(status().isOk());
+
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.contains("/v1/results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
+        assertEquals(0, networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
     }
 
     @Test
