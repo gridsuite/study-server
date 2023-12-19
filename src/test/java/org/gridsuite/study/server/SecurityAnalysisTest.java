@@ -67,6 +67,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -278,7 +279,9 @@ public class SecurityAnalysisTest {
 
         // run security analysis on root node (not allowed)
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-                studyNameUserIdUuid, rootNodeUuid, CONTINGENCY_LIST_NAME).header("userId", "userId")).andExpect(status().isForbidden());
+                studyNameUserIdUuid, rootNodeUuid, CONTINGENCY_LIST_NAME)
+                .header(HEADER_USER_ID, "testUserId"))
+                .andExpect(status().isForbidden());
 
         testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID), SECURITY_ANALYSIS_PARAMETERS);
         testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID), null);
@@ -289,7 +292,7 @@ public class SecurityAnalysisTest {
 
         requestBuilder.contentType(MediaType.APPLICATION_JSON)
             .content(objectWriter.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS))
-            .header("userId", "userId");
+            .header(HEADER_USER_ID, "testUserId");
         mockMvc.perform(requestBuilder).andExpect(status().isOk());
 
         Message<byte[]> securityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
@@ -347,8 +350,8 @@ public class SecurityAnalysisTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), saFailedDestination);
             return resultUuid;
-        }).when(studyService).runSecurityAnalysis(any(), any(), any());
-        studyService.runSecurityAnalysis(studyEntity.getId(), List.of(), modificationNode.getId());
+        }).when(studyService).runSecurityAnalysis(any(), any(), any(), any());
+        studyService.runSecurityAnalysis(studyEntity.getId(), List.of(), modificationNode.getId(), "");
 
         // Test reset uuid result in the database
         assertTrue(networkModificationTreeService.getSecurityAnalysisResultUuid(modificationNode.getId()).isEmpty());
@@ -373,8 +376,9 @@ public class SecurityAnalysisTest {
 
         //run failing security analysis (because in network 2)
         mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-                studyUuid, modificationNode1Uuid, CONTINGENCY_LIST_NAME).header("userId", "userId"))
-            .andExpect(status().isOk()).andReturn();
+                studyUuid, modificationNode1Uuid, CONTINGENCY_LIST_NAME)
+                        .header(HEADER_USER_ID, "testUserId"))
+                        .andExpect(status().isOk()).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         String uuidResponse = mapper.readValue(resultAsString, String.class);
 
@@ -404,8 +408,9 @@ public class SecurityAnalysisTest {
         UUID modificationNode1Uuid2 = modificationNode2.getId();
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-                studyUuid2, modificationNode1Uuid2, CONTINGENCY_LIST_NAME).header("userId", "userId"))
-            .andExpect(status().isOk());
+                studyUuid2, modificationNode1Uuid2, CONTINGENCY_LIST_NAME)
+                        .header(HEADER_USER_ID, "testUserId"))
+                        .andExpect(status().isOk());
 
         // failed security analysis without receiver -> no failure message sent to frontend
 
@@ -430,9 +435,9 @@ public class SecurityAnalysisTest {
                 studyUuid, nodeUuid, CONTINGENCY_LIST_NAME);
         if (securityAnalysisParameters != null) {
             requestBuilder.contentType(MediaType.APPLICATION_JSON)
-                        .content(objectWriter.writeValueAsString(securityAnalysisParameters))
-                        .header("userId", "userId");
+                        .content(objectWriter.writeValueAsString(securityAnalysisParameters));
         }
+        requestBuilder.header(HEADER_USER_ID, "testUserId");
         mvcResult = mockMvc.perform(requestBuilder).andExpect(status().isOk())
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
