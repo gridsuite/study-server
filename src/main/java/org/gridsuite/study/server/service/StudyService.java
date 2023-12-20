@@ -814,7 +814,7 @@ public class StudyService {
         boolean exists = getStudies().stream()
                 .anyMatch(study -> studyUuid.equals(study.getId()));
         if (!exists) {
-            throw new StudyException(NODE_NOT_FOUND);
+            throw new StudyException(STUDY_NOT_FOUND);
         }
     }
 
