@@ -83,6 +83,9 @@ public class NetworkMapService {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(EQUIPMENT_NOT_FOUND);
             } else {
+                if (HttpStatus.NOT_IMPLEMENTED.equals(e.getStatusCode())) {
+                    throw new StudyException(StudyException.Type.NOT_IMPLEMENTED, e.getMessage());
+                }
                 throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
             }
         }
