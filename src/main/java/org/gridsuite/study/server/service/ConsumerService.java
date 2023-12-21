@@ -135,6 +135,8 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeDsFailed() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
+            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
             if (!Strings.isBlank(receiver)) {
                 NodeReceiver receiverObj;
                 try {
@@ -147,7 +149,12 @@ public class ConsumerService {
                     updateDynamicSimulationResultUuid(receiverObj.getNodeUuid(), null);
                     // send notification for failed computation
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED);
+                    notificationService.emitStudyError(
+                            studyUuid,
+                            receiverObj.getNodeUuid(),
+                            NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED,
+                            errorMessage,
+                            userId);
 
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
@@ -212,6 +219,8 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeSaFailed() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
+            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
@@ -224,7 +233,11 @@ public class ConsumerService {
                     updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
                     // send notification for failed computation
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_FAILED);
+                    notificationService.emitStudyError(studyUuid,
+                            receiverObj.getNodeUuid(),
+                            NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_FAILED,
+                            errorMessage,
+                            userId);
 
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
@@ -440,6 +453,8 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeSensitivityAnalysisFailed() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
+            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
@@ -453,7 +468,12 @@ public class ConsumerService {
                     // send notification for failed computation
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED);
+                    notificationService.emitStudyError(
+                            studyUuid,
+                            receiverObj.getNodeUuid(),
+                            NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED,
+                            errorMessage,
+                            userId);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }

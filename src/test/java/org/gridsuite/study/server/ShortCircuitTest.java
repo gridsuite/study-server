@@ -63,6 +63,7 @@ import java.io.IOException;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -254,7 +255,7 @@ public class ShortCircuitTest {
 
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)
-                        .header("userId", "userId")
+                        .header(HEADER_USER_ID, "testUserId")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectWriter.writeValueAsString(shortCircuitParametersInfos))).andExpect(
                 status().isOk());
@@ -344,7 +345,7 @@ public class ShortCircuitTest {
 
         // short circuit analysis failed
         mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode2Uuid)
-                        .header("userId", "userId"))
+                .header(HEADER_USER_ID, "testUserId"))
                 .andExpect(status().isOk()).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
@@ -393,7 +394,7 @@ public class ShortCircuitTest {
 
         //run a short circuit analysis
         mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode1Uuid)
-                        .header("userId", "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk())
                 .andReturn();
 
