@@ -142,20 +142,15 @@ public class StudyService {
         NETWORK_MODIFICATION("NetworkModification"),
         LOADFLOW("LoadFlow"),
         SECURITY_ANALYSIS("SecurityAnalysis"),
-        SHORT_CIRCUIT_ANALYSIS("ShortCircuitAnalysis"),
         ALL_BUSES_SHORTCIRCUIT_ANALYSIS("AllBusesShortCircuitAnalysis"),
         ONE_BUS_SHORTCIRCUIT_ANALYSIS("OneBusShortCircuitAnalysis"),
         SENSITIVITY_ANALYSIS("SensitivityAnalysis"),
         VOLTAGE_INIT("VoltageInit");
-        private final String name;
 
-        ReportType(String name) {
-            this.name = name;
-        }
+        public final String reportKey;
 
-        @Override
-        public String toString() {
-            return name;
+        ReportType(String reportKey) {
+            this.reportKey = reportKey;
         }
     }
 

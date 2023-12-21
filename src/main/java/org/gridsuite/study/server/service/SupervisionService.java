@@ -133,7 +133,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         nodes.stream().forEach(node -> node.setLoadFlowResultUuid(null));
-        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.LOADFLOW.toString(), nodes);
+        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.LOADFLOW.reportKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         loadFlowService.deleteLoadFlowResults();
         LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.LOAD_FLOW, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
@@ -156,7 +156,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull();
         nodes.stream().forEach(node -> node.setSecurityAnalysisResultUuid(null));
-        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.SECURITY_ANALYSIS.toString(), nodes);
+        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.SECURITY_ANALYSIS.reportKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         securityAnalysisService.deleteSecurityAnalysisResults();
         LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.SECURITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
@@ -168,7 +168,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull();
         nodes.stream().forEach(node -> node.setSensitivityAnalysisResultUuid(null));
-        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.SENSITIVITY_ANALYSIS.toString(), nodes);
+        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.SENSITIVITY_ANALYSIS.reportKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         sensitivityAnalysisService.deleteSensitivityAnalysisResults();
         LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.SENSITIVITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
@@ -181,13 +181,13 @@ public class SupervisionService {
         // Reset result uuid and remove logs, for all-buses computations, then for 1-bus ones
         List<NetworkModificationNodeInfoEntity> allBusesNodes = networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
         if (!allBusesNodes.isEmpty()) {
-            allBusesNodes.stream().forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
-            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.ALL_BUSES_SHORTCIRCUIT_ANALYSIS.toString(), allBusesNodes));
+            allBusesNodes.forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
+            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.ALL_BUSES_SHORTCIRCUIT_ANALYSIS.reportKey, allBusesNodes));
         }
         List<NetworkModificationNodeInfoEntity> oneBusNodes = networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull();
         if (!oneBusNodes.isEmpty()) {
-            oneBusNodes.stream().forEach(node -> node.setOneBusShortCircuitAnalysisResultUuid(null));
-            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.ONE_BUS_SHORTCIRCUIT_ANALYSIS.toString(), oneBusNodes));
+            oneBusNodes.forEach(node -> node.setOneBusShortCircuitAnalysisResultUuid(null));
+            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.ONE_BUS_SHORTCIRCUIT_ANALYSIS.reportKey, oneBusNodes));
         }
         // Then delete all results (1-bus and all-buses), cause short-circuit-server cannot make the difference
         shortCircuitService.deleteShortCircuitAnalysisResults();
@@ -204,8 +204,8 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull();
         if (!nodes.isEmpty()) {
-            nodes.stream().forEach(node -> node.setVoltageInitResultUuid(null));
-            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.VOLTAGE_INIT.toString(), nodes));
+            nodes.forEach(node -> node.setVoltageInitResultUuid(null));
+            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.VOLTAGE_INIT.reportKey, nodes));
         }
         voltageInitService.deleteVoltageInitResults();
         LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.VOLTAGE_INITIALIZATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
