@@ -6,7 +6,7 @@ public enum ComputationType {
     SENSITIVITY_ANALYSIS("SensitivityAnalysis", "Sensitivity analysis"),
     SHORT_CIRCUIT("ShortCircuitAnalysis", "Short circuit analysis"),
     VOLTAGE_INITIALIZATION("", "Voltage init"),
-    DYNAMIC_SIMULATION("","Dynamic simulation");
+    DYNAMIC_SIMULATION("", "Dynamic simulation");
 
     public final String subReporterKey;
     public final String label;

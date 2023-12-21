@@ -275,15 +275,15 @@ public class ConsumerService {
                     } break;
                     case SHORT_CIRCUIT : {
                         String busId = msg.getHeaders().get(HEADER_BUS_ID, String.class);
-                        ShortcircuitAnalysisType analysisType = ( busId == null) ?
+                        ShortcircuitAnalysisType analysisType = (busId == null) ?
                                 ShortcircuitAnalysisType.ALL_BUSES :
                                 ShortcircuitAnalysisType.ONE_BUS;
                         if (analysisType == ShortcircuitAnalysisType.ALL_BUSES) {
                             networkModificationTreeService.updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-                            updateType =  NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED;
+                            updateType = NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED;
                         } else {
                             networkModificationTreeService.updateOneBusShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-                            updateType =  NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_FAILED;
+                            updateType = NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_FAILED;
                         }
                     } break;
                     case VOLTAGE_INITIALIZATION : {
@@ -396,7 +396,7 @@ public class ConsumerService {
                     } break;
                     case SHORT_CIRCUIT: {
                         String busId = msg.getHeaders().get(HEADER_BUS_ID, String.class);
-                        ShortcircuitAnalysisType analysisType = ( busId == null) ?
+                        ShortcircuitAnalysisType analysisType = (busId == null) ?
                                 ShortcircuitAnalysisType.ALL_BUSES :
                                 ShortcircuitAnalysisType.ONE_BUS;
                         if (analysisType == ShortcircuitAnalysisType.ALL_BUSES) {
