@@ -1774,18 +1774,18 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public List<ReporterModel> getNodeReport(UUID nodeUuid, String reportId, ReportType reportType, Set<String> severityLevels) {
-        return getSubReporters(nodeUuid, UUID.fromString(reportId), nodeUuid + "@" + reportType, ReportNameMatchingType.EXACT_MATCHING, severityLevels);
+        return getSubReporters(nodeUuid, UUID.fromString(reportId), nodeUuid + "@" + reportType.reportKey, ReportNameMatchingType.EXACT_MATCHING, severityLevels);
     }
 
     private Pair<String, ReportNameMatchingType> getFiltersParamaters(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType) {
         String reportNameFilter;
         ReportNameMatchingType reportNameMatchingType;
         if (nodeOnlyReport) {
-            reportNameFilter = nodeUuid + "@" + reportType;
+            reportNameFilter = nodeUuid + "@" + reportType.reportKey;
             reportNameMatchingType = ReportNameMatchingType.EXACT_MATCHING;
         } else {
             // in "all logs/nodes" mode, we have to filter only on the report type (ex: anything ending with "@NetWorkModification")
-            reportNameFilter = "@" + reportType;
+            reportNameFilter = "@" + reportType.reportKey;
             reportNameMatchingType = ReportNameMatchingType.ENDS_WITH;
         }
         return Pair.of(reportNameFilter, reportNameMatchingType);
