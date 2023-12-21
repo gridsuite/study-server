@@ -79,10 +79,32 @@ public class ReportService {
         return reportServerCall(id, this.getReportsServerURI(), uriBuilder);
     }
 
+    public List<String> getReportSeverity(@NonNull UUID id, String reportNameFilter, StudyService.ReportNameMatchingType reportNameMatchingType) {
+        var uriBuilder = UriComponentsBuilder.fromPath("{id}/severityLevel")
+                .queryParam(QUERY_PARAM_REPORT_WITH_ELEMENTS, true);
+        if (!StringUtil.isBlank(reportNameFilter)) {
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_NAME_FILTER, reportNameFilter);
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_NAME_MATCHING_TYPE, reportNameMatchingType);
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return restTemplate.exchange(this.getReportsServerURI() + uriBuilder.buildAndExpand(id).toUriString(), HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<String>>() {
+        }).getBody();
+    }
+
     public ReporterModel getSubReport(@NonNull UUID id, Set<String> severityLevels) {
         var uriBuilder = UriComponentsBuilder.fromPath("{id}")
                 .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
         return reportServerCall(id, this.getSubReportsServerURI(), uriBuilder);
+    }
+
+    public List<String> getSubReportSeverity(@NonNull UUID id) {
+        var uriBuilder = UriComponentsBuilder.fromPath("{id}/severityLevel");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return restTemplate.exchange(this.getSubReportsServerURI() + uriBuilder.buildAndExpand(id).toUriString(), HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<String>>() {
+        }).getBody();
     }
 
     private ReporterModel reportServerCall(UUID id, String serverUri, UriComponentsBuilder uriBuilder) {

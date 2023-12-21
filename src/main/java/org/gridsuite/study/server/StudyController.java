@@ -1025,6 +1025,17 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(nodeUuid, reportId, reportType, severityLevels));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report/severity-levels", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get node report with its parent nodes")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<List<String>> getNodesReportPresentSecutityLevel(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                           @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                           @Parameter(description = "The report Id") @RequestParam(name = "reportId", required = false) String reportId,
+                                                                           @Parameter(description = "The report Type") @RequestParam(name = "reportType") StudyService.ReportType reportType) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportSecurityLevel(nodeUuid, reportId, reportType));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/subreport", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get node sub-report")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node subreport"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
@@ -1034,6 +1045,16 @@ public class StudyController {
                                                       @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubReport(reportId, severityLevels));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/subreport/severity-levels", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get node report with its parent nodes")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<List<String>> getNodesSubReportPresentSecutityLevel(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                              @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                              @Parameter(description = "The report Id") @RequestParam(name = "reportId") String reportId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubReportSeverity(reportId));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report")

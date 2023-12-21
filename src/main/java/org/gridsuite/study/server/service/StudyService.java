@@ -1773,8 +1773,19 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
+    public List<String> getSubReportSeverity(String subReportId) {
+
+        return reportService.getSubReportSeverity(UUID.fromString(subReportId));
+    }
+
+    @Transactional(readOnly = true)
     public List<ReporterModel> getNodeReport(UUID nodeUuid, String reportId, ReportType reportType, Set<String> severityLevels) {
         return getSubReporters(nodeUuid, UUID.fromString(reportId), nodeUuid + "@" + reportType.reportKey, ReportNameMatchingType.EXACT_MATCHING, severityLevels);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getReportSecurityLevel(UUID nodeUuid, String reportId, ReportType reportType) {
+        return reportService.getReportSeverity(UUID.fromString(reportId), nodeUuid + "@" + reportType, ReportNameMatchingType.EXACT_MATCHING);
     }
 
     private Pair<String, ReportNameMatchingType> getFiltersParamaters(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType) {
