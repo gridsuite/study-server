@@ -255,7 +255,7 @@ public class ConsumerService {
             try {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
-                LOGGER.info("{} failed for node '{}'", computationType, receiverObj.getNodeUuid());
+                LOGGER.info("{} failed for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
 
                 String updateType = "";
                 // delete computtion results from the databases
@@ -317,7 +317,7 @@ public class ConsumerService {
             try {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
-                LOGGER.info("{} stopped for node '{}'", computationType, receiverObj.getNodeUuid());
+                LOGGER.info("{} stopped for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
 
                 String updateType = "";
                 // delete computation results from the database
@@ -371,7 +371,7 @@ public class ConsumerService {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
                 LOGGER.info("{} result '{}' available for node '{}'",
-                        computationType,
+                        computationType.getLabel(),
                         resultUuid,
                         receiverObj.getNodeUuid());
 

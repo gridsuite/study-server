@@ -16,8 +16,7 @@ public enum ComputationType {
         this.label = label;
     }
 
-    @Override
-    public String toString() {
+    public String getLabel() {
         return this.label;
     }
 }
