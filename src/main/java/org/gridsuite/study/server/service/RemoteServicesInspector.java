@@ -119,8 +119,8 @@ public class RemoteServicesInspector {
      * @implNote retrieve data in parallel to optimize requests time
      */
     @SuppressWarnings("unchecked") //.toArray(...) generics cause "Generic array creation) problem
-    public Map<String, JsonNode> getServicesInfo(@Nullable FrontService filter) throws PartialResultException {
-        final CompletableFuture<Entry<String, JsonNode>>[] resultsAsync = Optional.ofNullable(filter)
+    public Map<String, JsonNode> getServicesInfo(@Nullable FrontService viewFilter) throws PartialResultException {
+        final CompletableFuture<Entry<String, JsonNode>>[] resultsAsync = Optional.ofNullable(viewFilter)
                 .map(srv -> remoteServicesProperties.getRemoteServiceViewFilter().get(srv))
                 .orElse(remoteServicesProperties.getRemoteServiceViewDefault())
                 .parallelStream()
