@@ -137,6 +137,10 @@ public class ReportServiceTest {
                         return new MockResponse().setResponseCode(HttpStatus.OK.value())
                                 .setBody(mapper.writeValueAsString(getRootNodeSimpleReport(reportId).getSubReporters()))
                                 .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                } else if (path.matches("/v1/reports/.*/severityLevel.*") || path.matches("/v1/subreports/.*/severityLevel.*")) {
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                            .setBody("[\"INFO\", \"WARN\"]")
+                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(HttpStatus.I_AM_A_TEAPOT.value()).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -284,6 +288,18 @@ public class ReportServiceTest {
 
     @SneakyThrows
     @Test
+    public void testSubReportSeverity() {
+        RootNode rootNode = createRoot();
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/subreport/severity-levels?reportId={id}",
+                                rootNode.getStudyId(), rootNode.getId(), ROOT_NODE_REPORT_UUID.toString()))
+                        .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                        .andReturn();
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/subreports/.*")));
+    }
+
+    @SneakyThrows
+    @Test
     public void testNodeReport() {
         RootNode rootNode = createRoot();
         ReporterModel expectedRootReporter = getNodeReport(ROOT_NODE_REPORT_UUID.toString(), rootNode.getId().toString());
@@ -295,6 +311,18 @@ public class ReportServiceTest {
         List<ReporterModel> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
         assertEquals(mapper.writeValueAsString(expectedRootReporter.getSubReporters()), mapper.writeValueAsString(reports));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+    }
+
+    @SneakyThrows
+    @Test
+    public void testNodeReportSeverity() {
+        RootNode rootNode = createRoot();
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report/severity-levels?reportId={id}&reportType=NETWORK_MODIFICATION",
+                        rootNode.getStudyId(), rootNode.getId(), ROOT_NODE_REPORT_UUID.toString()))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
 

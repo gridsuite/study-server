@@ -997,7 +997,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
     public ResponseEntity<Void> stopSecurityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        securityAnalysisService.stopSecurityAnalysis(studyUuid, nodeUuid); 
+        securityAnalysisService.stopSecurityAnalysis(studyUuid, nodeUuid);
         return ResponseEntity.ok().build();
     }
 
