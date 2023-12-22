@@ -52,11 +52,11 @@ public class RemoteServicesInspector {
     private static final String ACTUATOR_HEALTH_STATUS_JSON_FIELD = "status";
     static final long REQUEST_TIMEOUT_IN_MS = 2000L;
 
-    private final static JsonPointer ACTUATOR_INFO_BUILD_NAME = JsonPointer.compile("/build/name");
-    private final static JsonPointer ACTUATOR_INFO_BUILD_ARTIFACT = JsonPointer.compile("/build/artifact");
-    private final static JsonPointer ACTUATOR_INFO_BUILD_VERSION = JsonPointer.compile("/build/version");
-    private final static JsonPointer ACTUATOR_INFO_GIT_TAGS = JsonPointer.compile("/git/tags");
-    private final static JsonPointer ACTUATOR_INFO_GIT_COMMIT_DESCRIBE = JsonPointer.compile("/git/commit/id/describe-short");
+    private static final JsonPointer ACTUATOR_INFO_BUILD_NAME = JsonPointer.compile("/build/name");
+    private static final JsonPointer ACTUATOR_INFO_BUILD_ARTIFACT = JsonPointer.compile("/build/artifact");
+    private static final JsonPointer ACTUATOR_INFO_BUILD_VERSION = JsonPointer.compile("/build/version");
+    private static final JsonPointer ACTUATOR_INFO_GIT_TAGS = JsonPointer.compile("/git/tags");
+    private static final JsonPointer ACTUATOR_INFO_GIT_COMMIT_DESCRIBE = JsonPointer.compile("/git/commit/id/describe-short");
 
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
@@ -131,12 +131,12 @@ public class RemoteServicesInspector {
         final Map<String, JsonNode> result = Map.ofEntries(Arrays.stream(resultsAsync)
                 .map(CompletableFuture::join)
                 .peek(e -> {
-                    if(NullNode.instance.equals(e.getValue())) {
+                    if (NullNode.instance.equals(e.getValue())) {
                         isPartial.lazySet(true);
                     }
                 })
                 .toArray(size -> (Entry<String, JsonNode>[]) new Entry[size]));
-        if(isPartial.get()) {
+        if (isPartial.get()) {
             throw new PartialResultException(new HashMap<>(result), "Didn't get response from some servers");
         } else {
             return result;

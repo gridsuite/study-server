@@ -18,7 +18,7 @@ public final class JsonUtils {
      * @param pointers the paths to search from the {@code node}
      * @return the first found path
      */
-    public static JsonNode nodeAt(@NonNull final JsonNode node, final Predicate<JsonNode> validator, @NonNull final JsonPointer ...pointers) {
+    public static JsonNode nodeAt(@NonNull final JsonNode node, final Predicate<JsonNode> validator, @NonNull final JsonPointer... pointers) {
         if (pointers.length < 1) {
             throw new NullPointerException("No JsonPointer argument(s)");
         }
@@ -39,7 +39,7 @@ public final class JsonUtils {
      * @param pointers the paths to search from the {@code node}
      * @return the first found path
      */
-    public static JsonNode nodeAt(@NonNull final JsonNode node, @NonNull final JsonPointer ...pointers) {
+    public static JsonNode nodeAt(@NonNull final JsonNode node, @NonNull final JsonPointer... pointers) {
         return nodeAt(node, jsonNode -> !jsonNode.isMissingNode(), pointers);
     }
 }

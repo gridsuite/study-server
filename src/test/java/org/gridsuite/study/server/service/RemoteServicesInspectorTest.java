@@ -298,7 +298,7 @@ class RemoteServicesInspectorTest implements WithAssertions {
 
     @Test
     void testServiceAboutInfosConvert() throws Exception {
-        final Map<String, JsonNode> rawInfos = objectMapper.readValue(this.getClass().getClassLoader().getResource("servers_infos_short.json"), new TypeReference<>() {});
+        final Map<String, JsonNode> rawInfos = objectMapper.readValue(this.getClass().getClassLoader().getResource("servers_infos_short.json"), new TypeReference<>() { });
         assertThat(remoteServicesInspector.convertServicesInfoToAboutInfo(rawInfos)).containsExactlyInAnyOrder(
                 new AboutInfo(ModuleType.SERVER, "Study Server", "1.0.0-SNAPSHOT", "v1.0.0-1"),
                 new AboutInfo(ModuleType.SERVER, "Explore server", "1.0.0-SNAPSHOT", "v0.18.0"),
