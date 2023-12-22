@@ -175,11 +175,16 @@ public class RemoteServicesInspector {
                 final JsonNode root = Objects.requireNonNullElse(e.getValue(), MissingNode.getInstance());
                 final String tag = JsonUtils.nodeAt(root, jn -> StringUtils.isNotBlank(jn.asText(null)),
                         ACTUATOR_INFO_GIT_TAGS, ACTUATOR_INFO_GIT_COMMIT_DESCRIBE).asText(null);
-                return new AboutInfo(ModuleType.SERVER,
-                        JsonUtils.nodeAt(root, jn -> StringUtils.isNotBlank(jn.asText(null)),
-                                ACTUATOR_INFO_BUILD_NAME, ACTUATOR_INFO_BUILD_ARTIFACT).asText(e.getKey()),
-                        root.at(ACTUATOR_INFO_BUILD_VERSION).asText(null),
-                        tag != null && tag.indexOf(',') >= 0 ? StringUtils.substringAfterLast(tag, ",") : tag);
+                return new AboutInfo(
+                        /*type*/ ModuleType.SERVER,
+                        /*name*/ JsonUtils.nodeAt(root,
+                                jn -> StringUtils.isNotBlank(jn.asText(null)),
+                                ACTUATOR_INFO_BUILD_NAME,
+                                ACTUATOR_INFO_BUILD_ARTIFACT
+                            ).asText(e.getKey()),
+                        /*version*/ root.at(ACTUATOR_INFO_BUILD_VERSION).asText(null),
+                        /*last gitTag*/ tag != null && tag.indexOf(',') >= 0 ? StringUtils.substringAfterLast(tag, ",") : tag
+                );
             })
             .toArray(AboutInfo[]::new);
     }
