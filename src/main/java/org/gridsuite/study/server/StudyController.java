@@ -1753,7 +1753,7 @@ public class StudyController {
             @Parameter(description = "filter services returned for specific front") @RequestParam final Optional<FrontService> view
     ) {
         final ResponseEntity<Map<String, JsonNode>> serversInfos = this.getServersInformations(view);
-        return ResponseEntity.status(serversInfos.getStatusCode())
-                             .body(remoteServicesInspector.convertServicesInfoToAboutInfo(serversInfos.getBody()));
+        return ResponseEntity.status(serversInfos.getStatusCode()).body(
+                remoteServicesInspector.convertServicesInfoToAboutInfo(Objects.requireNonNullElseGet(serversInfos.getBody(), Map::of)));
     }
 }

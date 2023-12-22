@@ -23,7 +23,6 @@ import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.service.client.RemoteServiceName;
 import org.gridsuite.study.server.utils.JsonUtils;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -170,8 +169,7 @@ public class RemoteServicesInspector {
      * Aggregate result of {@link #getServicesInfo(FrontService)} into map of {@link AboutInfo}s for fronts
      * @return a map for all services contacted
      */
-    public AboutInfo[] convertServicesInfoToAboutInfo(@NotNull final Map<String, JsonNode> infos) {
-        Objects.requireNonNull(infos);
+    public AboutInfo[] convertServicesInfoToAboutInfo(@NonNull final Map<String, JsonNode> infos) {
         return infos.entrySet().stream()
             .map(e -> {
                 final JsonNode root = Objects.requireNonNullElse(e.getValue(), MissingNode.getInstance());
