@@ -113,15 +113,16 @@ public class RemoteServicesInspector {
 
     /**
      * Get all {@link RemoteServiceName services} actuator information and aggregate them
+     * @param view the view to use to filter the services returned
      * @return a map for all services contacted
      *
      * @apiNote contact {@code /actuator/info} endpoint of the services
      * @implNote retrieve data in parallel to optimize requests time
      */
     @SuppressWarnings("unchecked") //.toArray(...) generics cause "Generic array creation) problem
-    public Map<String, JsonNode> getServicesInfo(@Nullable FrontService viewFilter) throws PartialResultException {
-        final CompletableFuture<Entry<String, JsonNode>>[] resultsAsync = Optional.ofNullable(viewFilter)
-                .map(srv -> remoteServicesProperties.getRemoteServiceViewFilter().get(srv))
+    public Map<String, JsonNode> getServicesInfo(@Nullable FrontService view) throws PartialResultException {
+        final CompletableFuture<Entry<String, JsonNode>>[] resultsAsync = Optional.ofNullable(view)
+                .map(viewFilter -> remoteServicesProperties.getRemoteServiceViewFilter().get(viewFilter))
                 .orElse(remoteServicesProperties.getRemoteServiceViewDefault())
                 .parallelStream()
                 .map(srv -> asyncSelf.getServiceInfo(srv).thenApply(json -> Map.entry(srv.serviceName(), json)))
