@@ -278,6 +278,9 @@ public class VoltageInitTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("1");
+                } else if (path.matches("/v1/treereports")) {
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -602,7 +605,9 @@ public class VoltageInitTest {
                 .queryParam("dryRun", String.valueOf(false)))
             .andExpect(status().isOk());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results")));
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.contains("/v1/results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
     }
 
