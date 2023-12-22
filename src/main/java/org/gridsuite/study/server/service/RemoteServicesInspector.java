@@ -174,18 +174,16 @@ public class RemoteServicesInspector {
         return infos.entrySet().stream()
             .map(e -> {
                 final JsonNode root = Objects.requireNonNullElse(e.getValue(), MissingNode.getInstance());
-                final String tag = JsonUtils.nodeAt(root, jn -> StringUtils.isNotBlank(jn.asText(null)),
+                final String tags = JsonUtils.nodeAt(root, jn -> StringUtils.isNotBlank(jn.asText(null)),
                         ACTUATOR_INFO_GIT_TAGS, ACTUATOR_INFO_GIT_COMMIT_DESCRIBE).asText(null);
-                return new AboutInfo(
-                        /*type*/ ModuleType.SERVER,
-                        /*name*/ JsonUtils.nodeAt(root,
-                                jn -> StringUtils.isNotBlank(jn.asText(null)),
-                                ACTUATOR_INFO_BUILD_NAME,
-                                ACTUATOR_INFO_BUILD_ARTIFACT
-                            ).asText(e.getKey()),
-                        /*version*/ root.at(ACTUATOR_INFO_BUILD_VERSION).asText(null),
-                        /*last gitTag*/ tag != null && tag.indexOf(',') >= 0 ? StringUtils.substringAfterLast(tag, ",") : tag
-                );
+                final String name = JsonUtils.nodeAt(root,
+                        jn -> StringUtils.isNotBlank(jn.asText(null)),
+                        ACTUATOR_INFO_BUILD_NAME,
+                        ACTUATOR_INFO_BUILD_ARTIFACT
+                    ).asText(e.getKey());
+                final String version = root.at(ACTUATOR_INFO_BUILD_VERSION).asText(null);
+                return new AboutInfo(ModuleType.SERVER, name, version,
+                        tags != null && tags.indexOf(',') >= 0 ? StringUtils.substringAfterLast(tags, ",") : tags);
             })
             .toArray(AboutInfo[]::new);
     }
