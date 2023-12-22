@@ -9,7 +9,7 @@ import java.util.function.Predicate;
 
 public final class JsonUtils {
     private JsonUtils() {
-        throw new UnsupportedOperationException("Utility class haven't instance");
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
     /**
