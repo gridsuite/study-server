@@ -878,18 +878,20 @@ public class StudyService {
         return loadflowService.getLoadFlowParameters(studyEntity.getLoadFlowParametersUuid());
     }
 
-    private Map<String, String> getSpecificLoadFlowParameters(UUID studyUuid, ComputationUsingLoadFlow computation) {
-        StudyEntity study = studyRepository.findById(studyUuid).orElse(null);
-        LoadFlowParametersValues params = getLoadFlowParametersValues(studyUuid);
+    private LoadFlowParametersInfos getLoadFlowParametersInfos(StudyEntity studyEntity, ComputationUsingLoadFlow computation) {
+        LoadFlowParametersValues params = loadflowService.getLoadFlowParameters(studyEntity.getLoadFlowParametersUuid());
         String lfProvider;
         if (computation == ComputationUsingLoadFlow.SECURITY_ANALYSIS) {
-            lfProvider = study.getSecurityAnalysisProvider();
+            lfProvider = studyEntity.getSecurityAnalysisProvider();
         } else if (computation == ComputationUsingLoadFlow.SENSITIVITY_ANALYSIS) {
-            lfProvider = study.getSensitivityAnalysisProvider();
+            lfProvider = studyEntity.getSensitivityAnalysisProvider();
         } else {
-            lfProvider = study.getLoadFlowProvider();
+            lfProvider = studyEntity.getLoadFlowProvider();
         }
-        return params.getSpecificParametersPerProvider().get(lfProvider);
+        return LoadFlowParametersInfos.builder()
+                .commonParameters(params.getCommonParameters())
+                .specificParameters(params.getSpecificParametersPerProvider().getOrDefault(lfProvider, Map.of()))
+                .build(); 
     }
 
     private void deleteLoadFlowResult(UUID studyUuid) {
@@ -1047,6 +1049,7 @@ public class StudyService {
         String provider = getSecurityAnalysisProvider(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
         String receiver;
         try {
@@ -1059,16 +1062,13 @@ public class StudyService {
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(securityAnalysisService::deleteSaResult);
 
-        Map<String, String> specificParameters = null;
         SecurityAnalysisParameters securityAnalysisParameters = getSecurityAnalysisParameters(studyUuid);
-        specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SECURITY_ANALYSIS);
-        LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
-        securityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
+        LoadFlowParametersInfos loadFlowParameters = getLoadFlowParametersInfos(study, ComputationUsingLoadFlow.SECURITY_ANALYSIS);
+        securityAnalysisParameters.setLoadFlowParameters(loadFlowParameters.getCommonParameters());
 
         SecurityAnalysisParametersInfos params = SecurityAnalysisParametersInfos.builder()
                 .parameters(securityAnalysisParameters)
-                .loadFlowSpecificParameters(specificParameters == null ?
-                    Map.of() : specificParameters)
+                .loadFlowSpecificParameters(loadFlowParameters.getSpecificParameters())
                 .build();
 
         UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, nodeUuid, variantId, provider, contingencyListNames, params, receiver, userId);
@@ -1830,7 +1830,7 @@ public class StudyService {
 
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(sensitivityAnalysisService::deleteSensitivityAnalysisResult);
-
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String provider = getSensitivityAnalysisProvider(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
@@ -1842,14 +1842,12 @@ public class StudyService {
         sensitivityAnalysisParameters.setFlowFlowSensitivityValueThreshold(sensitivityAnalysisParametersValues.getFlowFlowSensitivityValueThreshold());
         sensitivityAnalysisParameters.setFlowVoltageSensitivityValueThreshold(sensitivityAnalysisParametersValues.getFlowVoltageSensitivityValueThreshold());
 
-        LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
-        Map<String, String> specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SENSITIVITY_ANALYSIS);
-        sensitivityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
+        LoadFlowParametersInfos loadFlowParameters = getLoadFlowParametersInfos(study, ComputationUsingLoadFlow.SENSITIVITY_ANALYSIS);
+        sensitivityAnalysisParameters.setLoadFlowParameters(loadFlowParameters.getCommonParameters());
 
         SensitivityAnalysisInputData sensitivityAnalysisInputData = new SensitivityAnalysisInputData();
         sensitivityAnalysisInputData.setParameters(sensitivityAnalysisParameters);
-        sensitivityAnalysisInputData.setLoadFlowSpecificParameters(specificParameters == null ?
-                Map.of() : specificParameters);
+        sensitivityAnalysisInputData.setLoadFlowSpecificParameters(loadFlowParameters.getSpecificParameters());
 
         sensitivityAnalysisInputData.setSensitivityInjectionsSets(sensitivityAnalysisParametersValues.getSensitivityInjectionsSet()
                 .stream()
