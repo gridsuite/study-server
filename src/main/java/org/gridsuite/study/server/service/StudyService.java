@@ -138,25 +138,19 @@ public class StudyService {
         EXACT_MATCHING, ENDS_WITH
     }
 
-    // TODO remove ComputationType (and use ReportType instead) after short-circuit logs have been invalidaded with admin-tool
     public enum ReportType {
         NETWORK_MODIFICATION("NetworkModification"),
         LOADFLOW("LoadFlow"),
         SECURITY_ANALYSIS("SecurityAnalysis"),
-        SHORT_CIRCUIT_ANALYSIS("ShortCircuitAnalysis"),
         ALL_BUSES_SHORTCIRCUIT_ANALYSIS("AllBusesShortCircuitAnalysis"),
         ONE_BUS_SHORTCIRCUIT_ANALYSIS("OneBusShortCircuitAnalysis"),
         SENSITIVITY_ANALYSIS("SensitivityAnalysis"),
         VOLTAGE_INIT("VoltageInit");
-        private final String name;
 
-        ReportType(String name) {
-            this.name = name;
-        }
+        public final String reportKey;
 
-        @Override
-        public String toString() {
-            return name;
+        ReportType(String reportKey) {
+            this.reportKey = reportKey;
         }
     }
 
@@ -741,11 +735,11 @@ public class StudyService {
                 substationsIds, elementType, infoType, loadFlowParameters.getDcPowerFactor());
     }
 
-    public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, String elementType, String infoType, String elementId, boolean inUpstreamBuiltParentNode) {
+    public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, String elementType, String infoType, String elementId, String operation, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
         return networkMapService.getElementInfos(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
-                elementType, infoType, loadFlowParameters.getDcPowerFactor(), elementId);
+                elementType, infoType, operation, loadFlowParameters.getDcPowerFactor(), elementId);
     }
 
     public String getVoltageLevelsAndEquipment(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
@@ -1780,18 +1774,18 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public List<ReporterModel> getNodeReport(UUID nodeUuid, String reportId, ReportType reportType, Set<String> severityLevels) {
-        return getSubReporters(nodeUuid, UUID.fromString(reportId), nodeUuid + "@" + reportType, ReportNameMatchingType.EXACT_MATCHING, severityLevels);
+        return getSubReporters(nodeUuid, UUID.fromString(reportId), nodeUuid + "@" + reportType.reportKey, ReportNameMatchingType.EXACT_MATCHING, severityLevels);
     }
 
     private Pair<String, ReportNameMatchingType> getFiltersParamaters(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType) {
         String reportNameFilter;
         ReportNameMatchingType reportNameMatchingType;
         if (nodeOnlyReport) {
-            reportNameFilter = nodeUuid + "@" + reportType;
+            reportNameFilter = nodeUuid + "@" + reportType.reportKey;
             reportNameMatchingType = ReportNameMatchingType.EXACT_MATCHING;
         } else {
             // in "all logs/nodes" mode, we have to filter only on the report type (ex: anything ending with "@NetWorkModification")
-            reportNameFilter = "@" + reportType;
+            reportNameFilter = "@" + reportType.reportKey;
             reportNameMatchingType = ReportNameMatchingType.ENDS_WITH;
         }
         return Pair.of(reportNameFilter, reportNameMatchingType);
