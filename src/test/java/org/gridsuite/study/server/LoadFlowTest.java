@@ -234,7 +234,6 @@ public class LoadFlowTest {
     @Test
     public void testLoadFlow() throws Exception {
         MvcResult mvcResult;
-        String resultAsString;
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -257,10 +256,9 @@ public class LoadFlowTest {
                 .andExpect(status().isForbidden());
 
         //run a loadflow
-        mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNode3Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNode3Uuid)
                         .header("userId", "userId"))
-                .andExpect(status().isOk())
-                .andReturn();
+                .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
 
@@ -269,10 +267,6 @@ public class LoadFlowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
-
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        UUID uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
-        assertEquals(uuidResponse, UUID.fromString(LOADFLOW_RESULT_UUID));
 
         // get loadflow result
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/result", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
@@ -297,13 +291,9 @@ public class LoadFlowTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
 
         // loadflow failed
-        mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNode2Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNode2Uuid)
                         .header("userId", "userId"))
-                .andExpect(status().isOk()).andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
-
-        assertEquals(LOADFLOW_ERROR_RESULT_UUID, uuidResponse.toString());
+                .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_FAILED);
 
@@ -374,8 +364,6 @@ public class LoadFlowTest {
 
     @Test
     public void testDeleteLoadFlowResults() throws Exception {
-        MvcResult mvcResult;
-        String resultAsString;
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -393,20 +381,15 @@ public class LoadFlowTest {
         UUID modificationNode3Uuid = modificationNode3.getId();
 
         //run a loadflow
-        mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNode3Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNode3Uuid)
                 .header("userId", "userId"))
-            .andExpect(status().isOk())
-            .andReturn();
+            .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        UUID uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
-        assertEquals(uuidResponse, UUID.fromString(LOADFLOW_RESULT_UUID));
-
         //Test result count
         testResultCount();
         //Delete Voltage init results
