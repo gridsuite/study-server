@@ -62,13 +62,8 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "dynamicSimulationProvider")
     private String dynamicSimulationProvider;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "loadFlowParametersEntity_id",
-            referencedColumnName = "id",
-            foreignKey = @ForeignKey(
-                    name = "loadFlowParameters_id_fk"
-            ), nullable = false)
-    private LoadFlowParametersEntity loadFlowParameters;
+    @Column(name = "loadFlowParametersUuid")
+    private UUID loadFlowParametersUuid;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "shortCircuitParametersEntity_id",

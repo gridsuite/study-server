@@ -604,9 +604,9 @@ public class StudyService {
     }
 
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
-                                              UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
+                                              UUID caseUuid, String caseName, UUID loadFlowParametersUuid,
                                               ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, UUID voltageInitParametersUuid, Map<String, String> importParameters, UUID importReportUuid) {
-        StudyEntity studyEntity = insertStudyEntity(studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersUuid, importParameters);
+        StudyEntity studyEntity = insertStudyEntity(studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParametersUuid, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersUuid, importParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
@@ -641,8 +641,7 @@ public class StudyService {
 
         Map<String, String> newImportParameters = Map.copyOf(sourceStudy.getImportParameters());
 
-        LoadFlowParameters newLoadFlowParameters = LoadFlowService.fromEntity(sourceStudy.getLoadFlowParameters()).copy();
-        List<LoadFlowSpecificParameterInfos> sourceSpecificLoadFlowParameters = getAllSpecificLoadFlowParameters(sourceStudy);
+        UUID copiedLoadFlowParametersUuid = sourceStudy.getLoadFlowParametersUuid();
 
         SecurityAnalysisParametersValues securityAnalysisParametersValues = sourceStudy.getSecurityAnalysisParameters() == null ? SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues() : SecurityAnalysisService.fromEntity(sourceStudy.getSecurityAnalysisParameters());
 
@@ -661,7 +660,7 @@ public class StudyService {
                 .networkUuid(clonedNetworkUuid).networkId(sourceStudy.getNetworkId())
                 .caseFormat(sourceStudy.getCaseFormat()).caseUuid(clonedCaseUuid).caseName(sourceStudy.getCaseName())
                 .loadFlowProvider(sourceStudy.getLoadFlowProvider())
-                .loadFlowParameters(LoadFlowService.toEntity(newLoadFlowParameters, sourceSpecificLoadFlowParameters))
+                .loadFlowParametersUuid(copiedLoadFlowParametersUuid)
                 .securityAnalysisProvider(sourceStudy.getSecurityAnalysisProvider())
                 .securityAnalysisParameters(SecurityAnalysisService.toEntity(securityAnalysisParametersValues))
                 .sensitivityAnalysisProvider(sourceStudy.getSensitivityAnalysisProvider())
@@ -784,8 +783,8 @@ public class StudyService {
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getLoadFlowResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(loadflowService::deleteLoadFlowResult);
 
-        LoadFlowParametersInfos lfParameters = getLoadFlowParametersInfos(studyEntity);
-        UUID result = loadflowService.runLoadFlow(studyUuid, nodeUuid, lfParameters, studyEntity.getLoadFlowProvider(), userId, limitReduction);
+        UUID lfParametersUuid = studyEntity.getLoadFlowParametersUuid();
+        UUID result = loadflowService.runLoadFlow(studyUuid, nodeUuid, lfParametersUuid, studyEntity.getLoadFlowProvider(), userId, limitReduction);
 
         updateLoadFlowResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
@@ -862,40 +861,26 @@ public class StudyService {
         }
     }
 
-    private LoadFlowParameters getLoadFlowParameters(StudyEntity studyEntity) {
-        return LoadFlowService.fromEntity(studyEntity.getLoadFlowParameters());
-    }
-
     public LoadFlowParameters getLoadFlowParameters(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(this::getLoadFlowParameters)
-                .orElse(null);
-    }
-
-    public LoadFlowParametersInfos getLoadFlowParametersInfos(StudyEntity study) {
-        LoadFlowParameters commonParameters = getLoadFlowParameters(study);
-        List<LoadFlowSpecificParameterInfos> specificParameters = getSpecificLoadFlowParameters(study, ComputationUsingLoadFlow.LOAD_FLOW);
-        return LoadFlowParametersInfos.builder()
-                .commonParameters(commonParameters)
-                .specificParameters(specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)))
-                .build();
+        LoadFlowParametersValues lfParameters = getLoadFlowParametersValues(studyUuid);
+        return lfParameters.getCommonParameters();
     }
 
     public LoadFlowParametersValues getLoadFlowParametersValues(UUID studyUuid) {
-        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        LoadFlowParameters commonParameters = getLoadFlowParameters(study);
-        List<LoadFlowSpecificParameterInfos> specificParameters = getAllSpecificLoadFlowParameters(study);
-        Map<String, Map<String, Object>> specificParametersPerProvider = specificParameters.stream()
-            .collect(Collectors.groupingBy(LoadFlowSpecificParameterInfos::getProvider,
-                Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)));
-        return LoadFlowParametersValues.builder()
-                .commonParameters(commonParameters)
-                .specificParametersPerProvider(specificParametersPerProvider)
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID loadFlowParametersUuid = studyEntity.getLoadFlowParametersUuid();
+        if (loadFlowParametersUuid == null) {
+            return LoadFlowParametersValues.builder()
+                .commonParameters(LoadFlowParameters.load())
+                .specificParametersPerProvider(Map.of())
                 .build();
+        }
+        return loadflowService.getLoadFlowParameters(studyEntity.getLoadFlowParametersUuid());
     }
 
-    private List<LoadFlowSpecificParameterInfos> getSpecificLoadFlowParameters(StudyEntity study, ComputationUsingLoadFlow computation) {
-        List<LoadFlowSpecificParameterEntity> params = study.getLoadFlowParameters().getSpecificParameters();
+    private Map<String, String> getSpecificLoadFlowParameters(UUID studyUuid, ComputationUsingLoadFlow computation) {
+        StudyEntity study = studyRepository.findById(studyUuid).orElse(null);
+        LoadFlowParametersValues params = getLoadFlowParametersValues(studyUuid);
         String lfProvider;
         if (computation == ComputationUsingLoadFlow.SECURITY_ANALYSIS) {
             lfProvider = study.getSecurityAnalysisProvider();
@@ -904,50 +889,7 @@ public class StudyService {
         } else {
             lfProvider = study.getLoadFlowProvider();
         }
-        return params.stream()
-                .filter(p -> p.getProvider().equalsIgnoreCase(lfProvider))
-                .map(LoadFlowSpecificParameterEntity::toLoadFlowSpecificParameterInfos)
-                .collect(Collectors.toList());
-    }
-
-    private List<LoadFlowSpecificParameterInfos> getAllSpecificLoadFlowParameters(StudyEntity study) {
-        List<LoadFlowSpecificParameterEntity> params = study.getLoadFlowParameters().getSpecificParameters();
-        return params.stream()
-                .map(LoadFlowSpecificParameterEntity::toLoadFlowSpecificParameterInfos)
-                .collect(Collectors.toList());
-    }
-
-    private List<LoadFlowSpecificParameterInfos> getSpecificLoadFlowParameters(UUID studyUuid, ComputationUsingLoadFlow computation) {
-        return studyRepository.findById(studyUuid)
-                .map(study -> getSpecificLoadFlowParameters(study, computation))
-                .orElse(List.of());
-    }
-
-    private LoadFlowParametersEntity createParametersEntity(LoadFlowParametersValues parameters) {
-        LoadFlowParameters allCommonValues;
-        List<LoadFlowSpecificParameterInfos> allSpecificValues = new ArrayList<>(List.of());
-        if (parameters == null) {
-            allCommonValues = LoadFlowParameters.load();
-        } else {
-            allCommonValues = parameters.getCommonParameters();
-            if (parameters.getSpecificParametersPerProvider() != null) {
-                parameters.getSpecificParametersPerProvider().forEach((provider, paramsMap) -> {
-                    if (paramsMap != null) {
-                        paramsMap.forEach((paramName, paramValue) -> {
-                                if (paramValue != null) {
-                                    allSpecificValues.add(LoadFlowSpecificParameterInfos.builder()
-                                            .provider(provider)
-                                            .value(Objects.toString(paramValue))
-                                            .name(paramName)
-                                            .build());
-                                }
-                            }
-                        );
-                    }
-                });
-            }
-        }
-        return LoadFlowService.toEntity(allCommonValues, allSpecificValues);
+        return params.getSpecificParametersPerProvider().get(lfProvider);
     }
 
     private void deleteLoadFlowResult(UUID studyUuid) {
@@ -979,8 +921,8 @@ public class StudyService {
     }
 
     @Transactional
-    public void setLoadFlowParameters(UUID studyUuid, LoadFlowParametersValues parameters, String userId) {
-        updateLoadFlowParameters(studyUuid, createParametersEntity(parameters));
+    public void setLoadFlowParameters(UUID studyUuid, String parameters, String userId) {
+        createOrUpdateLoadFlowParameters(studyUuid, parameters);
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
@@ -1117,7 +1059,7 @@ public class StudyService {
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(securityAnalysisService::deleteSaResult);
 
-        List<LoadFlowSpecificParameterInfos> specificParameters = null;
+        Map<String, String> specificParameters = null;
         SecurityAnalysisParameters securityAnalysisParameters = getSecurityAnalysisParameters(studyUuid);
         specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SECURITY_ANALYSIS);
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
@@ -1126,7 +1068,7 @@ public class StudyService {
         SecurityAnalysisParametersInfos params = SecurityAnalysisParametersInfos.builder()
                 .parameters(securityAnalysisParameters)
                 .loadFlowSpecificParameters(specificParameters == null ?
-                    Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)))
+                    Map.of() : specificParameters)
                 .build();
 
         UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, nodeUuid, variantId, provider, contingencyListNames, params, receiver, userId);
@@ -1207,7 +1149,7 @@ public class StudyService {
     }
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
-                                          String caseFormat, UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
+                                          String caseFormat, UUID caseUuid, String caseName, UUID loadFlowParametersUuid,
                                           UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, UUID voltageInitParametersUuid, Map<String, String> importParameters) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
@@ -1215,12 +1157,12 @@ public class StudyService {
         Objects.requireNonNull(networkId);
         Objects.requireNonNull(caseFormat);
         Objects.requireNonNull(caseUuid);
-        Objects.requireNonNull(loadFlowParameters);
+        Objects.requireNonNull(loadFlowParametersUuid);
         Objects.requireNonNull(shortCircuitParameters);
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, importParameters, StudyIndexationStatus.INDEXED);
+                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParametersUuid, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, importParameters, StudyIndexationStatus.INDEXED);
         return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
     }
 
@@ -1298,9 +1240,15 @@ public class StudyService {
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
     }
 
-    public void updateLoadFlowParameters(UUID studyUuid, LoadFlowParametersEntity loadFlowParametersEntity) {
-        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowParameters(loadFlowParametersEntity));
+    public void createOrUpdateLoadFlowParameters(UUID studyUuid, String parameters) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID loadFlowParametersUuid = studyEntity.getLoadFlowParametersUuid();
+        if (loadFlowParametersUuid == null) {
+            loadFlowParametersUuid = loadflowService.createLoadFlowParameters(parameters);
+            studyEntity.setLoadFlowParametersUuid(loadFlowParametersUuid);
+        } else {
+            loadflowService.updateLoadFlowParameters(loadFlowParametersUuid, parameters);
+        }
     }
 
     public void updateShortCircuitParameters(UUID studyUuid, ShortCircuitParametersEntity shortCircuitParametersEntity) {
@@ -1895,13 +1843,13 @@ public class StudyService {
         sensitivityAnalysisParameters.setFlowVoltageSensitivityValueThreshold(sensitivityAnalysisParametersValues.getFlowVoltageSensitivityValueThreshold());
 
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
-        List<LoadFlowSpecificParameterInfos> specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SENSITIVITY_ANALYSIS);
+        Map<String, String> specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SENSITIVITY_ANALYSIS);
         sensitivityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
 
         SensitivityAnalysisInputData sensitivityAnalysisInputData = new SensitivityAnalysisInputData();
         sensitivityAnalysisInputData.setParameters(sensitivityAnalysisParameters);
         sensitivityAnalysisInputData.setLoadFlowSpecificParameters(specificParameters == null ?
-                Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)));
+                Map.of() : specificParameters);
 
         sensitivityAnalysisInputData.setSensitivityInjectionsSets(sensitivityAnalysisParametersValues.getSensitivityInjectionsSet()
                 .stream()

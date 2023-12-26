@@ -9,15 +9,11 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.iidm.network.Country;
-import com.powsybl.loadflow.LoadFlowParameters;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
-import org.gridsuite.study.server.repository.LoadFlowSpecificParameterEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -30,7 +26,6 @@ import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -69,7 +64,7 @@ public class LoadFlowService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, LoadFlowParametersInfos loadflowParameters, String provider, String userId, Float limitReduction) {
+    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID parametersUuid, String provider, String userId, Float limitReduction) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
         UUID reportUuid = getReportUuid(nodeUuid);
@@ -90,6 +85,9 @@ public class LoadFlowService {
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
+        if (parametersUuid != null) {
+            uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
+        }
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -102,9 +100,7 @@ public class LoadFlowService {
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<LoadFlowParametersInfos> httpEntity = new HttpEntity<>(loadflowParameters, headers);
-
-        return restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
     }
 
     public void deleteLoadFlowResult(UUID uuid) {
@@ -210,48 +206,6 @@ public class LoadFlowService {
         return networkModificationTreeService.getReportUuid(nodeUuid);
     }
 
-    public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters, List<LoadFlowSpecificParameterInfos> allLoadFlowSpecificParameters) {
-        Objects.requireNonNull(parameters);
-        return new LoadFlowParametersEntity(parameters.getVoltageInitMode(),
-                parameters.isTransformerVoltageControlOn(),
-                parameters.isUseReactiveLimits(),
-                parameters.isPhaseShifterRegulationOn(),
-                parameters.isTwtSplitShuntAdmittance(),
-                parameters.isShuntCompensatorVoltageControlOn(),
-                parameters.isReadSlackBus(),
-                parameters.isWriteSlackBus(),
-                parameters.isDc(),
-                parameters.isDistributedSlack(),
-                parameters.getBalanceType(),
-                parameters.isDcUseTransformerRatio(),
-                parameters.getCountriesToBalance().stream().map(Country::toString).collect(Collectors.toSet()),
-                parameters.getConnectedComponentMode(),
-                parameters.isHvdcAcEmulation(),
-                parameters.getDcPowerFactor(),
-                LoadFlowSpecificParameterEntity.toLoadFlowSpecificParameters(allLoadFlowSpecificParameters));
-    }
-
-    public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
-        Objects.requireNonNull(entity);
-        return LoadFlowParameters.load()
-                .setVoltageInitMode(entity.getVoltageInitMode())
-                .setTransformerVoltageControlOn(entity.isTransformerVoltageControlOn())
-                .setUseReactiveLimits(entity.isUseReactiveLimits())
-                .setPhaseShifterRegulationOn(entity.isPhaseShifterRegulationOn())
-                .setTwtSplitShuntAdmittance(entity.isTwtSplitShuntAdmittance())
-                .setShuntCompensatorVoltageControlOn(entity.isShuntCompensatorVoltageControlOn())
-                .setReadSlackBus(entity.isReadSlackBus())
-                .setWriteSlackBus(entity.isWriteSlackBus())
-                .setDc(entity.isDc())
-                .setDistributedSlack(entity.isDistributedSlack())
-                .setBalanceType(entity.getBalanceType())
-                .setDcUseTransformerRatio(entity.isDcUseTransformerRatio())
-                .setCountriesToBalance(entity.getCountriesToBalance().stream().map(Country::valueOf).collect(Collectors.toSet()))
-                .setConnectedComponentMode(entity.getConnectedComponentMode())
-                .setHvdcAcEmulation(entity.isHvdcAcEmulation())
-                .setDcPowerFactor(entity.getDcPowerFactor());
-    }
-
     public void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
     }
@@ -281,5 +235,67 @@ public class LoadFlowService {
             }
         }
         return result;
+    }
+
+    public LoadFlowParametersValues getLoadFlowParameters(UUID parametersUuid) {
+        LoadFlowParametersValues parameters;
+
+        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/{parametersUuid}")
+            .buildAndExpand(parametersUuid).toUriString();
+        try {
+            parameters = restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowParametersValues.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(VOLTAGE_INIT_PARAMETERS_NOT_FOUND);
+            }
+            throw e;
+        }
+        return parameters;
+    }
+
+    public UUID createLoadFlowParameters(String parameters) {
+
+        Objects.requireNonNull(parameters);
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters")
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+
+        UUID parametersUuid;
+
+        try {
+            parametersUuid = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_VOLTAGE_INIT_PARAMETERS_FAILED);
+        }
+
+        return parametersUuid;
+    }
+
+    public void updateLoadFlowParameters(UUID parametersUuid, String parameters) {
+
+        Objects.requireNonNull(parameters);
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/{parametersUuid}")
+                .buildAndExpand(parametersUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+
+        try {
+            restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT, httpEntity, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED);
+        }
     }
 }
