@@ -278,6 +278,27 @@ public class LoadFlowService {
         return parametersUuid;
     }
 
+    public UUID duplicateLoadFlowParameters(UUID sourceParametersUuid) {
+
+        Objects.requireNonNull(sourceParametersUuid);
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters")
+                .queryParam("duplicateFrom", sourceParametersUuid)
+                .buildAndExpand()
+                .toUriString();
+
+        UUID parametersUuid;
+
+        try {
+            parametersUuid = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_VOLTAGE_INIT_PARAMETERS_FAILED);
+        }
+
+        return parametersUuid;
+    }
+
     public void updateLoadFlowParameters(UUID parametersUuid, String parameters) {
 
         Objects.requireNonNull(parameters);

@@ -641,7 +641,7 @@ public class StudyService {
 
         Map<String, String> newImportParameters = Map.copyOf(sourceStudy.getImportParameters());
 
-        UUID copiedLoadFlowParametersUuid = sourceStudy.getLoadFlowParametersUuid();
+        UUID copiedLoadFlowParametersUuid = loadflowService.duplicateLoadFlowParameters(sourceStudy.getLoadFlowParametersUuid());
 
         SecurityAnalysisParametersValues securityAnalysisParametersValues = sourceStudy.getSecurityAnalysisParameters() == null ? SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues() : SecurityAnalysisService.fromEntity(sourceStudy.getSecurityAnalysisParameters());
 
@@ -1157,7 +1157,6 @@ public class StudyService {
         Objects.requireNonNull(networkId);
         Objects.requireNonNull(caseFormat);
         Objects.requireNonNull(caseUuid);
-        Objects.requireNonNull(loadFlowParametersUuid);
         Objects.requireNonNull(shortCircuitParameters);
         Objects.requireNonNull(importParameters);
 
