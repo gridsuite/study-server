@@ -7,15 +7,23 @@
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JacksonException;
+import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.MissingNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import lombok.NonNull;
+import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.dto.AboutInfo;
+import org.gridsuite.study.server.dto.AboutInfo.ModuleType;
 import org.gridsuite.study.server.dto.ServiceStatusInfos;
 import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
+import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.service.client.RemoteServiceName;
+import org.gridsuite.study.server.utils.JsonUtils;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,11 +37,10 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
@@ -44,6 +51,12 @@ public class RemoteServicesInspector {
 
     private static final String ACTUATOR_HEALTH_STATUS_JSON_FIELD = "status";
     static final long REQUEST_TIMEOUT_IN_MS = 2000L;
+
+    private static final JsonPointer ACTUATOR_INFO_BUILD_NAME = JsonPointer.compile("/build/name");
+    private static final JsonPointer ACTUATOR_INFO_BUILD_ARTIFACT = JsonPointer.compile("/build/artifact");
+    private static final JsonPointer ACTUATOR_INFO_BUILD_VERSION = JsonPointer.compile("/build/version");
+    private static final JsonPointer ACTUATOR_INFO_GIT_TAGS = JsonPointer.compile("/git/tags");
+    private static final JsonPointer ACTUATOR_INFO_GIT_COMMIT_DESCRIBE = JsonPointer.compile("/git/commit/id/describe-short");
 
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
@@ -100,21 +113,36 @@ public class RemoteServicesInspector {
 
     /**
      * Get all {@link RemoteServiceName services} actuator information and aggregate them
+     * @param view the view to use to filter the services returned
      * @return a map for all services contacted
      *
      * @apiNote contact {@code /actuator/info} endpoint of the services
      * @implNote retrieve data in parallel to optimize requests time
      */
     @SuppressWarnings("unchecked") //.toArray(...) generics cause "Generic array creation) problem
-    public Map<String, JsonNode> getServicesInfo() {
-        final CompletableFuture<Entry<String, JsonNode>>[] resultsAsync = Arrays.stream(RemoteServiceName.values())
-                .parallel()
+    public Map<String, JsonNode> getServicesInfo(@Nullable FrontService view) throws PartialResultException {
+        final CompletableFuture<Entry<String, JsonNode>>[] resultsAsync = Optional.ofNullable(view)
+                .map(viewFilter -> remoteServicesProperties.getRemoteServiceViewFilter().get(viewFilter))
+                .orElse(remoteServicesProperties.getRemoteServiceViewDefault())
+                .parallelStream()
                 .map(srv -> asyncSelf.getServiceInfo(srv).thenApply(json -> Map.entry(srv.serviceName(), json)))
                 .toArray(size -> (CompletableFuture<Entry<String, JsonNode>>[]) new CompletableFuture<?>[size]);
         CompletableFuture.allOf(resultsAsync).join();
-        return Map.ofEntries(Arrays.stream(resultsAsync)
+        final AtomicBoolean isPartial = new AtomicBoolean(false); //need effectively final for lambda
+        final Map<String, JsonNode> result = Map.ofEntries(Arrays.stream(resultsAsync)
                 .map(CompletableFuture::join)
+                .map(e -> {
+                    if (NullNode.instance.equals(e.getValue())) {
+                        isPartial.lazySet(true);
+                    }
+                    return e;
+                })
                 .toArray(size -> (Entry<String, JsonNode>[]) new Entry[size]));
+        if (isPartial.get()) {
+            throw new PartialResultException(new HashMap<>(result), "Didn't get response from some servers");
+        } else {
+            return result;
+        }
     }
 
     /**
@@ -137,5 +165,27 @@ public class RemoteServicesInspector {
             LOGGER.debug("Error while retrieving informations for " + service, ex);
             return CompletableFuture.completedFuture(NullNode.instance);
         }
+    }
+
+    /**
+     * Aggregate result of {@link #getServicesInfo(FrontService)} into map of {@link AboutInfo}s for fronts
+     * @return a map for all services contacted
+     */
+    public AboutInfo[] convertServicesInfoToAboutInfo(@NonNull final Map<String, JsonNode> infos) {
+        return infos.entrySet().stream()
+            .map(e -> {
+                final JsonNode root = Objects.requireNonNullElse(e.getValue(), MissingNode.getInstance());
+                final String tags = JsonUtils.nodeAt(root, jn -> StringUtils.isNotBlank(jn.asText(null)),
+                        ACTUATOR_INFO_GIT_TAGS, ACTUATOR_INFO_GIT_COMMIT_DESCRIBE).asText(null);
+                final String name = JsonUtils.nodeAt(root,
+                        jn -> StringUtils.isNotBlank(jn.asText(null)),
+                        ACTUATOR_INFO_BUILD_NAME,
+                        ACTUATOR_INFO_BUILD_ARTIFACT
+                    ).asText(e.getKey());
+                final String version = root.at(ACTUATOR_INFO_BUILD_VERSION).asText(null);
+                return new AboutInfo(ModuleType.SERVER, name, version,
+                        tags != null && tags.indexOf(',') >= 0 ? StringUtils.substringAfterLast(tags, ",") : tags);
+            })
+            .toArray(AboutInfo[]::new);
     }
 }

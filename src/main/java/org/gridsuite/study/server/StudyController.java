@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
@@ -26,6 +27,7 @@ import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -37,10 +39,7 @@ import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.util.Pair;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
@@ -1733,12 +1732,32 @@ public class StudyController {
     }
 
     @GetMapping(value = "/servers/infos")
-    @Operation(summary = "Get the informations of all backend servers")
+    @Operation(summary = "Get the information of all backend servers (if not filter with view parameter)")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The informations on all known servers"),
+        @ApiResponse(responseCode = "200", description = "The information on all known servers"),
         @ApiResponse(responseCode = "207", description = "Partial result because some servers haven't responded or threw an error"),
-        @ApiResponse(responseCode = "424", description = "All requests have failed, no informations retrieved")})
-    public ResponseEntity<Map<String, ?>> getServersInformations() { //Map<String, Info> from springboot-actuator
-        return ResponseEntity.ok().body(remoteServicesInspector.getServicesInfo());
+        @ApiResponse(responseCode = "424", description = "All requests have failed, no information retrieved")})
+    public ResponseEntity<Map<String, JsonNode>> getSuiteServersInformation(
+            @Parameter(description = "the view which will be used to filter the returned services") @RequestParam final Optional<FrontService> view
+    ) { //Map<String, Info> from springboot-actuator
+        try {
+            return ResponseEntity.ok(remoteServicesInspector.getServicesInfo(view.orElse(null)));
+        } catch (final PartialResultException e) {
+            return ResponseEntity.status(HttpStatus.MULTI_STATUS).body((Map<String, JsonNode>) e.getResult());
+        }
+    }
+
+    @GetMapping(value = "/servers/about")
+    @Operation(summary = "Get the aggregated about information from all (if not filter with view parameter) backend servers")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The information on all known servers"),
+        @ApiResponse(responseCode = "207", description = "Partial result because some servers haven't responded or threw an error"),
+        @ApiResponse(responseCode = "424", description = "All requests have failed, no information retrieved")})
+    public ResponseEntity<AboutInfo[]> getSuiteAboutInformation(
+            @Parameter(description = "the view which will be used to filter the returned services") @RequestParam final Optional<FrontService> view
+    ) {
+        final ResponseEntity<Map<String, JsonNode>> suiteServersInfo = this.getSuiteServersInformation(view);
+        return ResponseEntity.status(suiteServersInfo.getStatusCode()).body(
+                remoteServicesInspector.convertServicesInfoToAboutInfo(Objects.requireNonNullElseGet(suiteServersInfo.getBody(), Map::of)));
     }
 }
