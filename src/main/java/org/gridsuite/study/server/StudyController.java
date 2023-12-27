@@ -1728,13 +1728,13 @@ public class StudyController {
     }
 
     @GetMapping(value = "/servers/infos")
-    @Operation(summary = "Get the information of all backend servers")
+    @Operation(summary = "Get the information of all backend servers (if not filter with view parameter)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The information on all known servers"),
         @ApiResponse(responseCode = "207", description = "Partial result because some servers haven't responded or threw an error"),
         @ApiResponse(responseCode = "424", description = "All requests have failed, no information retrieved")})
     public ResponseEntity<Map<String, JsonNode>> getSuiteServersInformation(
-            @Parameter(description = "filter services returned for specific front") @RequestParam final Optional<FrontService> view
+            @Parameter(description = "the view which will be used to filter the returned services") @RequestParam final Optional<FrontService> view
     ) { //Map<String, Info> from springboot-actuator
         try {
             return ResponseEntity.ok(remoteServicesInspector.getServicesInfo(view.orElse(null)));
@@ -1750,7 +1750,7 @@ public class StudyController {
         @ApiResponse(responseCode = "207", description = "Partial result because some servers haven't responded or threw an error"),
         @ApiResponse(responseCode = "424", description = "All requests have failed, no information retrieved")})
     public ResponseEntity<AboutInfo[]> getSuiteAboutInformation(
-            @Parameter(description = "filter services returned for specific front") @RequestParam final Optional<FrontService> view
+            @Parameter(description = "the view which will be used to filter the returned services") @RequestParam final Optional<FrontService> view
     ) {
         final ResponseEntity<Map<String, JsonNode>> suiteServersInfo = this.getSuiteServersInformation(view);
         return ResponseEntity.status(suiteServersInfo.getStatusCode()).body(
