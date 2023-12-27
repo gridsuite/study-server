@@ -131,10 +131,11 @@ public class RemoteServicesInspector {
         final AtomicBoolean isPartial = new AtomicBoolean(false); //need effectively final for lambda
         final Map<String, JsonNode> result = Map.ofEntries(Arrays.stream(resultsAsync)
                 .map(CompletableFuture::join)
-                .peek(e -> {
+                .map(e -> {
                     if (NullNode.instance.equals(e.getValue())) {
                         isPartial.lazySet(true);
                     }
+                    return e;
                 })
                 .toArray(size -> (Entry<String, JsonNode>[]) new Entry[size]));
         if (isPartial.get()) {

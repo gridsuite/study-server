@@ -49,9 +49,10 @@ public class RestTemplateConfig {
     }
 
     private ObjectMapper createObjectMapper() {
-        var objectMapper = Jackson2ObjectMapperBuilder.json().build();
-        objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        objectMapper.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
+        var objectMapper = Jackson2ObjectMapperBuilder.json()
+                .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .featuresToEnable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
+                .build();
         objectMapper.registerModule(new ContingencyJsonModule());
         objectMapper.registerModule(new LoadFlowResultJsonModule());
         objectMapper.registerModule(new LoadFlowParametersJsonModule());
