@@ -1785,7 +1785,7 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public List<String> getReportSecurityLevel(UUID nodeUuid, String reportId, ReportType reportType) {
-        return reportService.getReportSeverity(UUID.fromString(reportId), nodeUuid + "@" + reportType, ReportNameMatchingType.EXACT_MATCHING);
+        return reportService.getReportSeverity(UUID.fromString(reportId), nodeUuid + "@" + reportType.reportKey, ReportNameMatchingType.EXACT_MATCHING);
     }
 
     private Pair<String, ReportNameMatchingType> getFiltersParamaters(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType) {
