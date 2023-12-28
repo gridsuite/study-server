@@ -45,7 +45,6 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -1035,11 +1034,14 @@ public class StudyService {
     }
 
     @Transactional
-    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParametersInfos shortCircuitParametersInfos, String userId) {
-        Objects.requireNonNull(shortCircuitParametersInfos);
-        Objects.requireNonNull(shortCircuitParametersInfos.getParameters());
-        ShortCircuitParametersEntity shortCircuitParametersEntity = ShortCircuitService.toEntity(shortCircuitParametersInfos.getParameters(), shortCircuitParametersInfos.getPredefinedParameters());
-        studyRepository.findById(studyUuid).ifPresent(studyEntity -> studyEntity.setShortCircuitParametersUuid(shortCircuitParametersEntity));
+    public void setShortCircuitParameters(UUID studyUuid, String jsonShortCircuitParametersInfos, String userId) {
+        Objects.requireNonNull(jsonShortCircuitParametersInfos);
+        final StudyEntity studyEntity = studyRepository.getReferenceById(studyUuid);
+        if (studyEntity.getShortCircuitParametersUuid() == null) {
+            studyEntity.setShortCircuitParametersUuid(shortCircuitService.createParameters(jsonShortCircuitParametersInfos));
+        } else {
+            shortCircuitService.setParametersInfo(studyEntity.getShortCircuitParametersUuid(), jsonShortCircuitParametersInfos);
+        }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 

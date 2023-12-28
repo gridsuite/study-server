@@ -277,6 +277,17 @@ public class ShortCircuitService {
     }
 
     /**
+     * Create or update parameters with the specified UUID
+     * @param parametersUuid the UUID to use to create or update parameters
+     * @param jsonParametersInfo the parameters to use, or use defaults ones if {@code null}
+     */
+    public void setParametersInfo(final UUID parametersUuid, @Nullable final String jsonParametersInfo) {
+        restTemplate.put(UriComponentsBuilder.fromHttpUrl(shortCircuitServerBaseUri)
+                .pathSegment(SHORT_CIRCUIT_API_VERSION, "parameters", "{parametersUuid}")
+                .build(Map.of("parametersUuid", parametersUuid)), jsonParametersInfo);
+    }
+
+    /**
      * duplicate existing parameters
      * @param parametersUuid the parameters to duplicate
      * @return the UUID of the duplicated instance

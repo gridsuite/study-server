@@ -889,13 +889,14 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getDynamicSimulationProvider(studyUuid));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
+    @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "set short-circuit analysis parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")})
     public ResponseEntity<Void> setShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) ShortCircuitParametersInfos shortCircuitParametersInfos,
+            @RequestBody(required = false) String shortCircuitParametersInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyExist(studyUuid);
         studyService.setShortCircuitParameters(studyUuid, shortCircuitParametersInfos, userId);
         return ResponseEntity.ok().build();
     }
