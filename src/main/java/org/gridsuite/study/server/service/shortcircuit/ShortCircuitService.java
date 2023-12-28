@@ -20,23 +20,20 @@ import org.gridsuite.study.server.service.StudyService.ReportType;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.SerializationUtils;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -248,6 +245,33 @@ public class ShortCircuitService {
                     .queryParam("resultUuid", uuids).build().toUriString();
 
             restTemplate.put(shortCircuitServerBaseUri + path, Void.class);
+        }
+    }
+
+    /**
+     * Create new parameters instance using defaults
+     * @return the UUID of saved parameters
+     */
+    public UUID createParameters() {
+        return this.createParameters(null);
+    }
+
+    /**
+     * Create new parameters instance
+     * @param jsonParametersInfo the parameter to use instead of defaults
+     * @return the UUID of saved parameters
+     */
+    public UUID createParameters(@Nullable final String jsonParametersInfo) {
+        final ResponseEntity<UUID> response = restTemplate.exchange(UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri)
+                .pathSegment(SHORT_CIRCUIT_API_VERSION, "parameters")
+                .build().toUri(), HttpMethod.PUT, jsonParametersInfo == null ? null : new HttpEntity<>(jsonParametersInfo), UUID.class);
+        if (response.getStatusCode().isError()) {
+            throw new ResponseStatusException(HttpStatus.FAILED_DEPENDENCY, "Request to short-circuit failed", new HttpClientErrorException(
+                    response.getStatusCode(),
+                    Optional.ofNullable(HttpStatus.resolve(response.getStatusCode().value())).map(HttpStatus::getReasonPhrase).orElseGet(() -> response.getStatusCode().toString()),
+                    response.getHeaders(), SerializationUtils.serialize(response.getBody()), StandardCharsets.UTF_16));
+        } else {
+            return response.getBody();
         }
     }
 }

@@ -10,7 +10,6 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.shortcircuit.ShortCircuitParameters;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.NetworkInfos;
@@ -62,6 +61,7 @@ public class ConsumerService {
     private final StudyService studyService;
     private final CaseService caseService;
     private final NetworkModificationTreeService networkModificationTreeService;
+    private final ShortCircuitService shortCircuitService;
     private final StudyRepository studyRepository;
 
     @Autowired
@@ -70,12 +70,14 @@ public class ConsumerService {
                            StudyService studyService,
                            CaseService caseService,
                            NetworkModificationTreeService networkModificationTreeService,
+                           ShortCircuitService shortCircuitService,
                            StudyRepository studyRepository) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
         this.caseService = caseService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.shortCircuitService = shortCircuitService;
         this.studyRepository = studyRepository;
     }
 
@@ -349,20 +351,19 @@ public class ConsumerService {
 
                 StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
                 try {
-                    LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                    ShortCircuitParameters shortCircuitParameters = ShortCircuitService.getDefaultShortCircuitParameters();
-                    DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
                     if (studyEntity != null) {
                         // if studyEntity is not null, it means we are recreating network for existing study
                         // we only update network infos sent by network conversion server
                         studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
                     } else {
-                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadFlowService.toEntity(loadFlowParameters, List.of()), ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, importParameters, importReportUuid);
+                        final LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                        final UUID shortCircuitParameters = shortCircuitService.createParameters();
+                        final DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
+                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadFlowService.toEntity(loadFlowParameters, List.of()), shortCircuitParameters, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, importParameters, importReportUuid);
                     }
-
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
-                    LOGGER.error(e.toString(), e);
+                    LOGGER.error("Error while consuming CaseImportSucceeded message", e);
                 } finally {
                     // if studyEntity is already existing, we don't delete anything in the end of the process
                     if (studyEntity == null) {
