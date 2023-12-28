@@ -14,6 +14,8 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.security.SecurityAnalysisParameters;
+import jakarta.servlet.http.HttpServletResponse;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
@@ -27,9 +29,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
+import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
@@ -106,6 +110,29 @@ public class SecurityAnalysisService {
         }
 
         return result;
+    }
+
+    public void getSecurityAnalysisResultCsv(UUID nodeUuid, SecurityAnalysisResultType resultType, HttpServletResponse response) {
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
+
+        if (resultUuidOpt.isEmpty()) {
+            return;
+        }
+
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getPathFromResultType(resultType) + "/csv");
+
+        String path = pathBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+
+
+        restTemplate.execute(
+            securityAnalysisServerBaseUri + path,
+            HttpMethod.GET,
+            (ClientHttpRequest requestCallback) -> {},
+            responseExtractor -> {
+                IOUtils.copy(responseExtractor.getBody(), response.getOutputStream());
+                return null;
+            }
+        );
     }
 
     private String getPathFromResultType(SecurityAnalysisResultType resultType) {
