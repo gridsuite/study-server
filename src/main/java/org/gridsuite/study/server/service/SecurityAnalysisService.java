@@ -4,24 +4,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
 package org.gridsuite.study.server.service;
-
-/**
- * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
- */
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.security.SecurityAnalysisParameters;
+import com.powsybl.loadflow.LoadFlowParameters;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.SecurityAnalysisParametersInfos;
-import org.gridsuite.study.server.dto.SecurityAnalysisParametersValues;
-import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
-import org.gridsuite.study.server.repository.SecurityAnalysisParametersEntity;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
@@ -35,15 +26,15 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+ */
 @Service
 public class SecurityAnalysisService {
 
@@ -57,12 +48,6 @@ public class SecurityAnalysisService {
     private String securityAnalysisServerBaseUri;
 
     private final NetworkModificationTreeService networkModificationTreeService;
-
-    private static final double DEFAULT_FLOW_PROPORTIONAL_THRESHOLD = 0.1; // meaning 10.0 %
-    private static final double DEFAULT_LOW_VOLTAGE_PROPORTIONAL_THRESHOLD = 0.01; // meaning 1.0 %
-    private static final double DEFAULT_HIGH_VOLTAGE_PROPORTIONAL_THRESHOLD = 0.01; // meaning 1.0 %
-    private static final double DEFAULT_LOW_VOLTAGE_ABSOLUTE_THRESHOLD = 1.0; // 1.0 kV
-    private static final double DEFAULT_HIGH_VOLTAGE_ABSOLUTE_THRESHOLD = 1.0; // 1.0 kV
 
     @Autowired
     public SecurityAnalysisService(RemoteServicesProperties remoteServicesProperties,
@@ -116,8 +101,8 @@ public class SecurityAnalysisService {
         };
     }
 
-    public UUID runSecurityAnalysis(UUID networkUuid, UUID reportUuid, UUID nodeUuid, String variantId, String provider, List<String> contingencyListNames, SecurityAnalysisParametersInfos securityAnalysisParameters,
-            String receiver, String userId) {
+    public UUID runSecurityAnalysis(UUID networkUuid, UUID reportUuid, UUID nodeUuid, String variantId, String provider, List<String> contingencyListNames,
+                                    UUID securityAnalysisParametersUuid, Map<String, String> specificParams, LoadFlowParameters loadFlowParameters, String receiver, String userId) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam("reportUuid", reportUuid.toString())
@@ -129,14 +114,19 @@ public class SecurityAnalysisService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
+        if (securityAnalysisParametersUuid != null) {
+            uriComponentsBuilder.queryParam("parametersUuid", securityAnalysisParametersUuid);
+        }
         var path = uriComponentsBuilder.queryParam("contingencyListName", contingencyListNames)
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
+
+        var additionalParameters = new SecurityAnalysisAdditionalParametersInfos(loadFlowParameters, specificParams);
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<SecurityAnalysisParametersInfos> httpEntity = new HttpEntity<>(securityAnalysisParameters, headers);
+        HttpEntity<SecurityAnalysisAdditionalParametersInfos> httpEntity = new HttpEntity<>(additionalParameters, headers);
 
         return restTemplate
                 .exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
@@ -235,50 +225,68 @@ public class SecurityAnalysisService {
         }
     }
 
-    public static SecurityAnalysisParametersEntity toEntity(SecurityAnalysisParametersValues parameters) {
-        Objects.requireNonNull(parameters);
-        return new SecurityAnalysisParametersEntity(parameters.getLowVoltageAbsoluteThreshold(), parameters.getLowVoltageProportionalThreshold(), parameters.getHighVoltageAbsoluteThreshold(), parameters.getHighVoltageProportionalThreshold(), parameters.getFlowProportionalThreshold());
-    }
+    public UUID updateSecurityAnalysisParameters(UUID parametersUuid, String parameters) {
 
-    public static SecurityAnalysisParametersValues fromEntity(SecurityAnalysisParametersEntity entity) {
-        Objects.requireNonNull(entity);
-        return SecurityAnalysisParametersValues.builder()
-                .lowVoltageAbsoluteThreshold(entity.getLowVoltageAbsoluteThreshold())
-                .lowVoltageProportionalThreshold(entity.getLowVoltageProportionalThreshold())
-                .highVoltageAbsoluteThreshold(entity.getHighVoltageAbsoluteThreshold())
-                .highVoltageProportionalThreshold(entity.getHighVoltageProportionalThreshold())
-                .flowProportionalThreshold(entity.getFlowProportionalThreshold())
-                .build();
-    }
-
-    public static SecurityAnalysisParametersValues getDefaultSecurityAnalysisParametersValues() {
-        return SecurityAnalysisParametersValues.builder()
-                .lowVoltageAbsoluteThreshold(DEFAULT_LOW_VOLTAGE_ABSOLUTE_THRESHOLD)
-                .lowVoltageProportionalThreshold(DEFAULT_LOW_VOLTAGE_PROPORTIONAL_THRESHOLD)
-                .highVoltageAbsoluteThreshold(DEFAULT_HIGH_VOLTAGE_ABSOLUTE_THRESHOLD)
-                .highVoltageProportionalThreshold(DEFAULT_HIGH_VOLTAGE_PROPORTIONAL_THRESHOLD)
-                .flowProportionalThreshold(DEFAULT_FLOW_PROPORTIONAL_THRESHOLD)
-                .build();
-    }
-
-    public static SecurityAnalysisParameters toSecurityAnalysisParameters(SecurityAnalysisParametersEntity entity) {
-        if (entity == null) {
-            return SecurityAnalysisParameters.load()
-                    // the default values are overloaded
-                    .setIncreasedViolationsParameters(getIncreasedViolationsParameters(DEFAULT_FLOW_PROPORTIONAL_THRESHOLD, DEFAULT_LOW_VOLTAGE_PROPORTIONAL_THRESHOLD, DEFAULT_LOW_VOLTAGE_ABSOLUTE_THRESHOLD, DEFAULT_HIGH_VOLTAGE_PROPORTIONAL_THRESHOLD, DEFAULT_HIGH_VOLTAGE_ABSOLUTE_THRESHOLD));
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters");
+        if (parametersUuid != null) {
+            uriBuilder.queryParam("uuid", parametersUuid);
         }
-        SecurityAnalysisParameters securityAnalysisParameters = new SecurityAnalysisParameters();
-        securityAnalysisParameters.setIncreasedViolationsParameters(getIncreasedViolationsParameters(entity.getFlowProportionalThreshold(), entity.getLowVoltageProportionalThreshold(), entity.getLowVoltageAbsoluteThreshold(), entity.getHighVoltageProportionalThreshold(), entity.getHighVoltageAbsoluteThreshold()));
-        return securityAnalysisParameters;
+        String path = uriBuilder.buildAndExpand().toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+
+        try {
+            return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.PUT, httpEntity, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SECURITY_ANALYSIS_PARAMETERS_FAILED);
+        }
     }
 
-    public static SecurityAnalysisParameters.IncreasedViolationsParameters getIncreasedViolationsParameters(double flowProportionalThreshold, double lowVoltageProportionalThreshold, double lowVoltageAbsoluteThreshold, double highVoltageProportionalThreshold, double highVoltageAbsoluteThreshold) {
-        SecurityAnalysisParameters.IncreasedViolationsParameters increasedViolationsParameters = new SecurityAnalysisParameters.IncreasedViolationsParameters();
-        increasedViolationsParameters.setFlowProportionalThreshold(flowProportionalThreshold);
-        increasedViolationsParameters.setLowVoltageAbsoluteThreshold(lowVoltageAbsoluteThreshold);
-        increasedViolationsParameters.setLowVoltageProportionalThreshold(lowVoltageProportionalThreshold);
-        increasedViolationsParameters.setHighVoltageAbsoluteThreshold(highVoltageAbsoluteThreshold);
-        increasedViolationsParameters.setHighVoltageProportionalThreshold(highVoltageProportionalThreshold);
-        return increasedViolationsParameters;
+    public UUID duplicateSecurityAnalysisParameters(UUID sourceParametersUuid) {
+        Objects.requireNonNull(sourceParametersUuid);
+
+        var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/duplicate")
+                .queryParam("duplicateFrom", sourceParametersUuid).buildAndExpand().toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
+
+        try {
+            return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_SECURITY_ANALYSIS_PARAMETERS_FAILED);
+        }
+    }
+
+    public String getSecurityAnalysisParameters(UUID parametersUuid) {
+        String parameters;
+
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters");
+        if (parametersUuid != null) {
+            uriBuilder.queryParam("uuid", parametersUuid);
+        }
+        String path = uriBuilder.buildAndExpand().toUriString();
+
+        try {
+            parameters = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND);
+            }
+            throw e;
+        }
+        return parameters;
+    }
+
+    public void deleteSecurityAnalysisParameters(UUID uuid) {
+        Objects.requireNonNull(uuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{parametersUuid}")
+                .buildAndExpand(uuid)
+                .toUriString();
+
+        restTemplate.delete(securityAnalysisServerBaseUri + path);
     }
 }

@@ -24,7 +24,6 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.SecurityAnalysisParametersValues;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -83,6 +82,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class SecurityAnalysisTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(SecurityAnalysisTest.class);
 
+    private static final UUID SECURITY_ANALYSIS_PARAMETERS_UUID = UUID.randomUUID();
     private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID = "11111111-9594-4e55-8ec7-07ea965d24eb";
     private static final String SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID = "22222222-9594-4e55-8ec7-07ea965d24eb";
@@ -95,8 +95,6 @@ public class SecurityAnalysisTest {
     private static final String CONTINGENCIES_JSON = "[{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]}]";
 
     public static final String SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":0.0,\"lowVoltageProportionalThreshold\":0.0,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1}";
-    public static final String SECURITY_ANALYSIS_UPDATED_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":90.0,\"lowVoltageProportionalThreshold\":0.6,\"highVoltageAbsoluteThreshold\":90.0,\"highVoltageProportionalThreshold\":0.1,\"flowProportionalThreshold\":0.2}";
-
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
     private static final String NETWORK_UUID_3_STRING = "22222222-bd31-43be-be46-e50296951e32";
@@ -186,6 +184,7 @@ public class SecurityAnalysisTest {
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
+                String method = Objects.requireNonNull(request.getMethod());
                 request.getBody();
 
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
@@ -254,6 +253,28 @@ public class SecurityAnalysisTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("1");
+                } else if (path.matches("/v1/parameters\\?uuid=" + SECURITY_ANALYSIS_PARAMETERS_UUID)) {
+                    if (method.equals("GET")) {
+                        return new MockResponse().setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8")
+                                .setBody(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
+                    } else {
+                        //Method PUT
+                        return new MockResponse().setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8")
+                                .setBody(objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
+                    }
+                } else if (path.matches("/v1/parameters")) {
+                    if (method.equals("GET")) {
+                        return new MockResponse().setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8")
+                                .setBody(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
+                    } else {
+                        //Method PUT
+                        return new MockResponse().setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8")
+                                .setBody(objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
+                    }
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -519,16 +540,8 @@ public class SecurityAnalysisTest {
             .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         SensitivityAnalysisParametersEntity defaultSensitivityParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
-        SecurityAnalysisParametersValues securityAnalysisParametersValues = SecurityAnalysisParametersValues.builder()
-                .lowVoltageAbsoluteThreshold(0.0)
-                .lowVoltageProportionalThreshold(0.0)
-                .highVoltageProportionalThreshold(0.0)
-                .highVoltageAbsoluteThreshold(0.0)
-                .flowProportionalThreshold(0.1)
-                .build();
-        SecurityAnalysisParametersEntity securityAnalysisParametersEntity = SecurityAnalysisService.toEntity(securityAnalysisParametersValues);
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider,
-                defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, securityAnalysisParametersEntity, defaultSensitivityParametersEntity);
+                defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, defaultSensitivityParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
@@ -576,32 +589,41 @@ public class SecurityAnalysisTest {
     public void testSecurityAnalysisParameters() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         UUID studyNameUserIdUuid = studyEntity.getId();
+        assertNotNull(studyNameUserIdUuid);
         //get security analysis parameters
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
                 content().string(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters")));
 
-        //create security analysis Parameters
-        SecurityAnalysisParametersValues securityAnalysisParametersValues = SecurityAnalysisParametersValues.builder()
-                .lowVoltageAbsoluteThreshold(90)
-                .lowVoltageProportionalThreshold(0.6)
-                .highVoltageProportionalThreshold(0.1)
-                .highVoltageAbsoluteThreshold(90)
-                .flowProportionalThreshold(0.2)
-                .build();
-        String mnBodyJson = objectWriter.writeValueAsString(securityAnalysisParametersValues);
+        String mnBodyJson = objectWriter.writeValueAsString(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
 
+        assertNull(studyEntity.getSecurityAnalysisParametersUuid());
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mnBodyJson)).andExpect(
                 status().isOk());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters")));
+        assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSecurityAnalysisParametersUuid());
 
-        //getting set values
+        //get security analysis parameters but with a registered securityAnalysisParametersUuid
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
-                content().string(SECURITY_ANALYSIS_UPDATED_PARAMETERS_JSON));
+                content().string(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters\\?uuid=" + SECURITY_ANALYSIS_PARAMETERS_UUID)));
+
+        //same with set parameters
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mnBodyJson)).andExpect(
+                status().isOk());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters\\?uuid=" + SECURITY_ANALYSIS_PARAMETERS_UUID)));
+        assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSecurityAnalysisParametersUuid());
+
     }
 
     private void cleanDB() {

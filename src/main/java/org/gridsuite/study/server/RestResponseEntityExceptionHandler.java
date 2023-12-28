@@ -32,6 +32,7 @@ public class RestResponseEntityExceptionHandler {
             case DYNAMIC_MAPPING_NOT_FOUND:
             case EQUIPMENT_NOT_FOUND:
             case VOLTAGE_INIT_PARAMETERS_NOT_FOUND:
+            case SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getType());
             case CASE_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(exception.getMessage());
@@ -64,6 +65,8 @@ public class RestResponseEntityExceptionHandler {
             case UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED:
             case STUDY_INDEXATION_FAILED:
             case STUDY_CHECK_INDEXATION_FAILED:
+            case UPDATE_SECURITY_ANALYSIS_PARAMETERS_FAILED:
+            case CREATE_SECURITY_ANALYSIS_PARAMETERS_FAILED:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
             case SVG_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getMessage());

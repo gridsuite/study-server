@@ -6,26 +6,24 @@
  */
 package org.gridsuite.study.server.dto;
 
+import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 /**
- * @author AJELLAL Ali <ali.ajellal@rte-france.com>
+ * @author Abdelsalem Hedhili <abdelsalem.hedhili@rte-france.com>
  */
 @Getter
 @AllArgsConstructor
-@Builder
 @NoArgsConstructor
-public class SecurityAnalysisParametersValues {
-    private double lowVoltageAbsoluteThreshold;
+@Builder
+public class SecurityAnalysisAdditionalParametersInfos {
 
-    private double lowVoltageProportionalThreshold;
+    LoadFlowParameters loadFlowParameters;
 
-    private double highVoltageAbsoluteThreshold;
-
-    private double highVoltageProportionalThreshold;
-
-    private double flowProportionalThreshold;
+    Map<String, String> specificLoadFlowParameters;
 }
