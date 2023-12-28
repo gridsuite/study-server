@@ -78,7 +78,7 @@ public final class TestUtils {
             .networkUuid(networkUuid)
             .loadFlowProvider(loadflowProvider)
             .loadFlowParameters(loadFlowParametersEntity)
-            .shortCircuitParameters(shortCircuitParametersEntity)
+            .shortCircuitParametersUuid(shortCircuitParametersEntity)
             .voltageInitParametersUuid(voltageInitParametersUuid)
             .securityAnalysisParameters(securityAnalysisParametersEntity)
             .sensitivityAnalysisParameters(sensitivityParametersEntity)
@@ -95,7 +95,7 @@ public final class TestUtils {
                 .networkUuid(networkUuid)
                 .loadFlowProvider(loadflowProvider)
                 .loadFlowParameters(loadFlowParametersEntity)
-                .shortCircuitParameters(shortCircuitParametersEntity)
+                .shortCircuitParametersUuid(shortCircuitParametersEntity)
                 .securityAnalysisParameters(securityAnalysisParametersEntity)
                 .sensitivityAnalysisParameters(sensitivityParametersEntity)
                 .build();
@@ -119,7 +119,7 @@ public final class TestUtils {
             .networkUuid(networkUuid)
             .loadFlowProvider(loadFlowProvider)
             .loadFlowParameters(loadFlowParametersEntity)
-            .shortCircuitParameters(defaultShortCircuitParametersEntity)
+            .shortCircuitParametersUuid(defaultShortCircuitParametersEntity)
             .build();
     }
 

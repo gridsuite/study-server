@@ -28,7 +28,6 @@ import java.util.UUID;
 @Builder
 @Table(name = "study")
 public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements BasicStudyEntity {
-
     @Id
     @Column(name = "id")
     private UUID id;
@@ -68,13 +67,8 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             ), nullable = false)
     private LoadFlowParametersEntity loadFlowParameters;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "shortCircuitParametersEntity_id",
-            referencedColumnName = "id",
-            foreignKey = @ForeignKey(
-                    name = "shortCircuitParameters_id_fk"
-            ))
-    private ShortCircuitParametersEntity shortCircuitParameters;
+    @Column(name = "shortCircuitParametersUuid")
+    private UUID shortCircuitParametersUuid;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "dynamicSimulationParametersEntity_id",
@@ -113,7 +107,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Builder.Default
     private StudyIndexationStatus indexationStatus = StudyIndexationStatus.NOT_INDEXED;
 
-    public ShortCircuitParametersEntity getShortCircuitParameters() {
+    public ShortCircuitParametersEntity getShortCircuitParameters_() {
         if (this.shortCircuitParameters == null) {
             this.setShortCircuitParameters(ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP));
         }

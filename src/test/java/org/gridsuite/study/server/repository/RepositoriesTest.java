@@ -84,7 +84,7 @@ public class RepositoriesTest {
                 .caseFormat("caseFormat")
                 .caseUuid(UUID.randomUUID())
                 .loadFlowParameters(loadFlowParametersEntity)
-                .shortCircuitParameters(shortCircuitParametersEntity)
+                .shortCircuitParametersUuid(shortCircuitParametersEntity)
                 .build();
 
         StudyEntity studyEntity2 = StudyEntity.builder()
@@ -94,7 +94,7 @@ public class RepositoriesTest {
                 .caseFormat("caseFormat2")
                 .caseUuid(UUID.randomUUID())
                 .loadFlowParameters(loadFlowParametersEntity2)
-                .shortCircuitParameters(shortCircuitParametersEntity2)
+                .shortCircuitParametersUuid(shortCircuitParametersEntity2)
                 .build();
 
         StudyEntity studyEntity3 = StudyEntity.builder()
@@ -104,7 +104,7 @@ public class RepositoriesTest {
                 .caseFormat("caseFormat3")
                 .caseUuid(UUID.randomUUID())
                 .loadFlowParameters(loadFlowParametersEntity3)
-                .shortCircuitParameters(shortCircuitParametersEntity3)
+                .shortCircuitParametersUuid(shortCircuitParametersEntity3)
                 .build();
 
         studyRepository.save(studyEntity1);
@@ -122,12 +122,12 @@ public class RepositoriesTest {
 
         // updates
         savedStudyEntity1.setLoadFlowParameters(loadFlowParametersEntity);
-        savedStudyEntity1.setShortCircuitParameters(shortCircuitParametersEntity);
+        savedStudyEntity1.setShortCircuitParametersUuid(shortCircuitParametersEntity);
         studyRepository.save(savedStudyEntity1);
 
         StudyEntity savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
         assertNotNull(savedStudyEntity1Updated.getLoadFlowParameters());
-        assertNotNull(savedStudyEntity1Updated.getShortCircuitParameters());
+        assertNotNull(savedStudyEntity1Updated.getShortCircuitParametersUuid());
 
         studyRepository.save(savedStudyEntity1Updated);
         savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
@@ -154,22 +154,22 @@ public class RepositoriesTest {
                 .caseFormat("caseFormat")
                 .caseUuid(UUID.randomUUID())
                 .loadFlowParameters(LoadFlowParametersEntity.builder().build())
-                .shortCircuitParameters(null) // intentionally set to null
+                .shortCircuitParametersUuid(null) // intentionally set to null
                 .build();
 
-        ShortCircuitParametersEntity shortCircuitParamFromEntity1 = studyEntity1.getShortCircuitParameters();
+        ShortCircuitParametersEntity shortCircuitParamFromEntity1 = studyEntity1.getShortCircuitParametersUuid();
         assertNotNull(shortCircuitParamFromEntity1);
 
         assertEquals(20., shortCircuitParamFromEntity1.getMinVoltageDropProportionalThreshold(), 0.001); // 20 is the default value
-        assertEquals(20., studyEntity1.getShortCircuitParameters().getMinVoltageDropProportionalThreshold(), 0.001);
-        studyEntity1.getShortCircuitParameters().setMinVoltageDropProportionalThreshold(30.);
-        assertEquals(30., studyEntity1.getShortCircuitParameters().getMinVoltageDropProportionalThreshold(), 0.001);
+        assertEquals(20., studyEntity1.getShortCircuitParametersUuid().getMinVoltageDropProportionalThreshold(), 0.001);
+        studyEntity1.getShortCircuitParametersUuid().setMinVoltageDropProportionalThreshold(30.);
+        assertEquals(30., studyEntity1.getShortCircuitParametersUuid().getMinVoltageDropProportionalThreshold(), 0.001);
 
         studyRepository.save(studyEntity1);
 
         StudyEntity savedStudyEntity1 = studyRepository.findAll().get(0);
-        assertNotNull(savedStudyEntity1.getShortCircuitParameters());
-        assertEquals(30., savedStudyEntity1.getShortCircuitParameters().getMinVoltageDropProportionalThreshold(), 0.001);
+        assertNotNull(savedStudyEntity1.getShortCircuitParametersUuid());
+        assertEquals(30., savedStudyEntity1.getShortCircuitParametersUuid().getMinVoltageDropProportionalThreshold(), 0.001);
     }
 
     @Test

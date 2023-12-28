@@ -316,7 +316,7 @@ public class NetworkModificationTreeTest {
             .networkId("netId")
             .networkUuid(networkUuid)
             .loadFlowParameters(new LoadFlowParametersEntity())
-            .shortCircuitParameters(new ShortCircuitParametersEntity())
+            .shortCircuitParametersUuid(new ShortCircuitParametersEntity())
             .build();
     }
 
