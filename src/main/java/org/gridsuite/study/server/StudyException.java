@@ -79,7 +79,8 @@ public class StudyException extends RuntimeException {
         SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND,
         DELETE_COMPUTATION_RESULTS_FAILED,
         STUDY_INDEXATION_FAILED,
-        STUDY_CHECK_INDEXATION_FAILED
+        STUDY_CHECK_INDEXATION_FAILED,
+        NOT_IMPLEMENTED,
     }
 
     private final Type type;

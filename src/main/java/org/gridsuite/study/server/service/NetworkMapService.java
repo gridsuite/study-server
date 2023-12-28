@@ -64,11 +64,14 @@ public class NetworkMapService {
         return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
     }
 
-    public String getElementInfos(UUID networkUuid, String variantId, String elementType, String infoType, double dcPowerFactor, String elementId) {
+    public String getElementInfos(UUID networkUuid, String variantId, String elementType, String infoType, String operation, double dcPowerFactor, String elementId) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements/{elementId}";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        if (!StringUtils.isBlank(operation)) {
+            builder = builder.queryParam(QUERY_PARAM_OPERATION, operation);
         }
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
@@ -79,9 +82,11 @@ public class NetworkMapService {
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(EQUIPMENT_NOT_FOUND);
-            } else {
-                throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
             }
+            if (HttpStatus.NOT_IMPLEMENTED.equals(e.getStatusCode())) {
+                throw new StudyException(StudyException.Type.NOT_IMPLEMENTED, e.getMessage());
+            }
+            throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
         }
     }
 

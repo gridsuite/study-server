@@ -7,13 +7,19 @@
 package org.gridsuite.study.server;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.gridsuite.study.server.service.FrontService;
+import org.gridsuite.study.server.service.client.RemoteServiceName;
+import org.hibernate.validator.constraints.URL;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
 
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -28,13 +34,15 @@ import java.util.Objects;
 @Data
 public class RemoteServicesProperties {
     private List<Service> services;
+    @NotNull private EnumMap<FrontService, EnumSet<RemoteServiceName>> remoteServiceViewFilter = new EnumMap<>(FrontService.class);
+    @NotNull private EnumSet<RemoteServiceName> remoteServiceViewDefault = EnumSet.allOf(RemoteServiceName.class);
 
     @AllArgsConstructor
     @NoArgsConstructor
     @Data
     public static class Service {
         @NotBlank private String name;
-        @NotBlank private String baseUri;
+        @NotBlank @URL private String baseUri;
         private boolean optional = false;
     }
 

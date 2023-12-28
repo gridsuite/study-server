@@ -83,6 +83,8 @@ public class RestResponseEntityExceptionHandler {
             case NO_VOLTAGE_INIT_RESULTS_FOR_NODE:
             case NO_VOLTAGE_INIT_MODIFICATIONS_GROUP_FOR_NODE:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getMessage());
+            case NOT_IMPLEMENTED:
+                return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(exception.getMessage());
             default:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

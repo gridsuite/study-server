@@ -107,7 +107,7 @@ public class SecurityAnalysisService {
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam("reportUuid", reportUuid.toString())
                 .queryParam("reporterId", nodeUuid.toString())
-                .queryParam("reportType", StudyService.ReportType.SECURITY_ANALYSIS.toString());
+                .queryParam("reportType", StudyService.ReportType.SECURITY_ANALYSIS.reportKey);
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }

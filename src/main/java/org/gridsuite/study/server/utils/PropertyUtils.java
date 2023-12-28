@@ -19,8 +19,8 @@ import java.util.Arrays;
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
 public final class PropertyUtils {
-
     private PropertyUtils() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
     public static void copyNonNullProperties(Object src, Object target, String... authorizedNullProperties) {
