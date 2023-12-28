@@ -10,7 +10,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 
 import java.util.Map;
 import java.util.UUID;
@@ -107,16 +106,8 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Builder.Default
     private StudyIndexationStatus indexationStatus = StudyIndexationStatus.NOT_INDEXED;
 
-    public ShortCircuitParametersEntity getShortCircuitParameters_() {
-        if (this.shortCircuitParameters == null) {
-            this.setShortCircuitParameters(ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP));
-        }
-        return this.shortCircuitParameters;
-    }
-
     @Value
     public static class StudyNetworkUuid {
         UUID networkUuid;
     }
 }
-

@@ -611,11 +611,15 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestParam(value = "busId", required = false) String busId,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         if (busId == null) {
             studyService.runShortCircuit(studyUuid, nodeUuid, userId);
         } else {
-            studyService.runShortCircuit(studyUuid, nodeUuid, userId, busId);
+            if (StringUtils.isBlank(busId)) {
+                throw new IllegalArgumentException("busId must not be empty");
+            } else {
+                studyService.runShortCircuit(studyUuid, nodeUuid, userId, busId);
+            }
         }
         return ResponseEntity.ok().build();
     }

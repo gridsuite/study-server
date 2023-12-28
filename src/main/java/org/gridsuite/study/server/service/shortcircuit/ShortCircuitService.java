@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service.shortcircuit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.shortcircuit.ShortCircuitParameters;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
@@ -17,10 +16,14 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.StudyService.ReportType;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -66,10 +69,10 @@ public class ShortCircuitService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String busId, ShortCircuitParameters shortCircuitParameters, String userId) {
-        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, @Nullable String busId, UUID shortCircuitParameters, String userId) {
+        final UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        final String variantId = networkModificationTreeService.getVariantId(nodeUuid);
+        final UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
         String receiver;
         try {
@@ -78,30 +81,26 @@ public class ShortCircuitService {
             throw new UncheckedIOException(e);
         }
 
-        var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/networks/{networkUuid}/run-and-save")
+        var uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(shortCircuitServerBaseUri)
+                .pathSegment(SHORT_CIRCUIT_API_VERSION, "networks", "{networkUuid}", "run-and-save")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam("reportUuid", reportUuid.toString())
                 .queryParam("reporterId", nodeUuid.toString())
-                .queryParam("reportType", StringUtils.isBlank(busId) ? StudyService.ReportType.ALL_BUSES_SHORTCIRCUIT_ANALYSIS.reportKey :
-                        StudyService.ReportType.ONE_BUS_SHORTCIRCUIT_ANALYSIS.reportKey);
-
+                .queryParam("reportType", StringUtils.isBlank(busId) ?
+                        ReportType.ALL_BUSES_SHORTCIRCUIT_ANALYSIS.reportKey : ReportType.ONE_BUS_SHORTCIRCUIT_ANALYSIS.reportKey)
+                .queryParam("parametersUuid", shortCircuitParameters);
         if (!StringUtils.isBlank(busId)) {
             uriComponentsBuilder.queryParam("busId", busId);
         }
-
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<ShortCircuitParameters> httpEntity = new HttpEntity<>(shortCircuitParameters, headers);
-
-        return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.postForObject(uriComponentsBuilder.build(networkUuid), new HttpEntity<Void>(headers), UUID.class);
     }
 
     private String getShortCircuitAnalysisResultResourcePath(UUID nodeUuid, ShortcircuitAnalysisType type) {

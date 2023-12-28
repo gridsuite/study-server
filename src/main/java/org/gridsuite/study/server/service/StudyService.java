@@ -18,7 +18,6 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.security.SecurityAnalysisParameters;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
-import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import lombok.Getter;
@@ -1026,12 +1025,6 @@ public class StudyService {
         });
     }
 
-    public ShortCircuitParameters getShortCircuitParameters(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(studyEntity -> ShortCircuitService.fromEntity(studyEntity.getShortCircuitParameters()))
-                .orElse(null);
-    }
-
     public ShortCircuitParametersInfos getShortCircuitParametersInfo(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(studyEntity -> ShortCircuitService.toShortCircuitParametersInfo(studyEntity.getShortCircuitParameters()))
@@ -1881,13 +1874,9 @@ public class StudyService {
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String userId) {
         networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid, ShortcircuitAnalysisType.ALL_BUSES)
             .ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
-
-        ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
-        shortCircuitParameters.setWithFortescueResult(false);
-        UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, null, shortCircuitParameters, userId);
-
+        final UUID shortCircuitParameters = studyRepository.getReferenceById(studyUuid).getShortCircuitParametersUuid();
+        final UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, null, shortCircuitParameters, userId);
         updateShortCircuitAnalysisResultUuid(nodeUuid, result);
-
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         return result;
     }
@@ -1895,13 +1884,9 @@ public class StudyService {
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String userId, String busId) {
         networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid, ShortcircuitAnalysisType.ONE_BUS)
             .ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
-
-        ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
-        shortCircuitParameters.setWithFortescueResult(true);
-        UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId, shortCircuitParameters, userId);
-
+        final UUID shortCircuitParameters = studyRepository.getReferenceById(studyUuid).getShortCircuitParametersUuid();
+        final UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId, shortCircuitParameters, userId);
         updateOneBusShortCircuitAnalysisResultUuid(nodeUuid, result);
-
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         return result;
     }
