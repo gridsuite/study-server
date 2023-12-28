@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service.shortcircuit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.NonNull;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
@@ -273,5 +274,16 @@ public class ShortCircuitService {
         } else {
             return response.getBody();
         }
+    }
+
+    /**
+     * duplicate existing parameters
+     * @param parametersUuid the parameters to duplicate
+     * @return the UUID of the duplicated instance
+     */
+    public UUID duplicateParameters(@NonNull final UUID parametersUuid) {
+        return restTemplate.postForObject(UriComponentsBuilder.fromHttpUrl(shortCircuitServerBaseUri)
+                .pathSegment(SHORT_CIRCUIT_API_VERSION, "parameters", "{parametersUuid}", "duplicate")
+                .build(Map.of("parametersUuid", parametersUuid)), null, UUID.class);
     }
 }

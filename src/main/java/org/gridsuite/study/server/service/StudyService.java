@@ -624,6 +624,8 @@ public class StudyService {
                 ? SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues()
                 : SensitivityAnalysisService.fromEntity(sourceStudy.getSensitivityAnalysisParameters());
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudy.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
+        final UUID shortCircuitParameters = sourceStudy.getShortCircuitParametersUuid() == null
+                ? shortCircuitService.createParameters() : shortCircuitService.duplicateParameters(sourceStudy.getShortCircuitParametersUuid());
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyInfos.getId())
@@ -636,7 +638,7 @@ public class StudyService {
                 .sensitivityAnalysisProvider(sourceStudy.getSensitivityAnalysisProvider())
                 .dynamicSimulationProvider(sourceStudy.getDynamicSimulationProvider())
                 .dynamicSimulationParameters(DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper))
-                .shortCircuitParameters(sourceStudy.getShortCircuitParameters())
+                .shortCircuitParametersUuid(shortCircuitParameters)
                 .voltageInitParametersUuid(sourceStudy.getVoltageInitParametersUuid())
                 .sensitivityAnalysisParameters(SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues))
                 .importParameters(Map.copyOf(sourceStudy.getImportParameters()))
