@@ -13,6 +13,7 @@ import com.powsybl.shortcircuit.InitialVoltageProfileMode;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.shortcircuit.StudyType;
 import com.powsybl.shortcircuit.VoltageRange;
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
@@ -20,7 +21,6 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ShortCircuitParametersInfos;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.dto.ShortCircuitStatus;
-import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
@@ -53,7 +53,6 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  */
 @Service
 public class ShortCircuitService {
-
     static final String RESULT_UUID = "resultUuid";
 
     static final List<VoltageRange> CEI909_VOLTAGE_PROFILE = List.of(
@@ -62,34 +61,30 @@ public class ShortCircuitService {
             new VoltageRange(300.0, 500.0, 1.05)
     );
 
-    private String shortCircuitServerBaseUri;
-
-    @Autowired
-    NotificationService notificationService;
+    @Setter private String shortCircuitServerBaseUri;
 
     private final NetworkService networkStoreService;
-
-    NetworkModificationTreeService networkModificationTreeService;
+    private final NetworkModificationTreeService networkModificationTreeService;
 
     private final ObjectMapper objectMapper;
-
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     @Autowired
     public ShortCircuitService(RemoteServicesProperties remoteServicesProperties,
                                NetworkModificationTreeService networkModificationTreeService,
-                               NetworkService networkStoreService, ObjectMapper objectMapper) {
+                               NetworkService networkStoreService,
+                               RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.shortCircuitServerBaseUri = remoteServicesProperties.getServiceUri("shortcircuit-server");
         this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
+        this.restTemplate = restTemplate;
     }
 
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String busId, ShortCircuitParameters shortCircuitParameters, String userId) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
-        UUID reportUuid = getReportUuid(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
+        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
         String receiver;
         try {
@@ -230,14 +225,6 @@ public class ShortCircuitService {
         restTemplate.put(shortCircuitServerBaseUri + path, Void.class);
     }
 
-    private String getVariantId(UUID nodeUuid) {
-        return networkModificationTreeService.getVariantId(nodeUuid);
-    }
-
-    private UUID getReportUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getReportUuid(nodeUuid);
-    }
-
     public static ShortCircuitParametersEntity toEntity(ShortCircuitParameters parameters, ShortCircuitPredefinedConfiguration shortCircuitPredefinedConfiguration) {
         Objects.requireNonNull(parameters);
         return new ShortCircuitParametersEntity(parameters.isWithLimitViolations(),
@@ -283,10 +270,6 @@ public class ShortCircuitService {
 
     public static ShortCircuitParameters getDefaultShortCircuitParameters() {
         return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, false, false, true, true, InitialVoltageProfileMode.NOMINAL, null);
-    }
-
-    public void setShortCircuitServerBaseUri(String shortCircuitServerBaseUri) {
-        this.shortCircuitServerBaseUri = shortCircuitServerBaseUri;
     }
 
     public void deleteShortCircuitAnalysisResult(UUID uuid) {

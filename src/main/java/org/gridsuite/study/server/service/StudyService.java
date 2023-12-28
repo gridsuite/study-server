@@ -20,6 +20,7 @@ import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
+import lombok.Getter;
 import lombok.NonNull;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
@@ -50,6 +51,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.elasticsearch.client.elc.QueryBuilders;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -83,30 +85,20 @@ public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
 
-    static final String EQUIPMENT_NAME = "equipmentName.fullascii";
+    private static final String EQUIPMENT_NAME = "equipmentName.fullascii";
+    private static final String EQUIPMENT_ID = "equipmentId.fullascii";
+    private static final String NETWORK_UUID = "networkUuid.keyword";
+    private static final String VARIANT_ID = "variantId.keyword";
+    private static final String EQUIPMENT_TYPE = "equipmentType.keyword";
 
-    static final String EQUIPMENT_ID = "equipmentId.fullascii";
+    @Getter private final String defaultLoadflowProvider;
+    @Getter private final String defaultSecurityAnalysisProvider;
+    @Getter private final String defaultSensitivityAnalysisProvider;
+    @Getter private final String defaultDynamicSimulationProvider;
 
-    static final String NETWORK_UUID = "networkUuid.keyword";
-
-    static final String VARIANT_ID = "variantId.keyword";
-
-    static final String EQUIPMENT_TYPE = "equipmentType.keyword";
-
-    NotificationService notificationService;
-
-    NetworkModificationTreeService networkModificationTreeService;
-
-    StudyServerExecutionService studyServerExecutionService;
-
-    private final String defaultLoadflowProvider;
-
-    private final String defaultSecurityAnalysisProvider;
-
-    private final String defaultSensitivityAnalysisProvider;
-
-    private final String defaultDynamicSimulationProvider;
-
+    private final NotificationService notificationService;
+    private final NetworkModificationTreeService networkModificationTreeService;
+    private final StudyServerExecutionService studyServerExecutionService;
     private final StudyRepository studyRepository;
     private final StudyCreationRequestRepository studyCreationRequestRepository;
     private final NetworkService networkStoreService;
@@ -129,6 +121,7 @@ public class StudyService {
     private final CaseService caseService;
 
     private final ObjectMapper objectMapper;
+    private final StudyService self;
 
     public enum ComputationUsingLoadFlow {
         LOAD_FLOW, SECURITY_ANALYSIS, SENSITIVITY_ANALYSIS
@@ -155,14 +148,12 @@ public class StudyService {
     }
 
     @Autowired
-    StudyService self;
-
-    @Autowired
     public StudyService(
             @Value("${loadflow.default-provider}") String defaultLoadflowProvider,
             @Value("${security-analysis.default-provider}") String defaultSecurityAnalysisProvider,
             @Value("${sensitivity-analysis.default-provider}") String defaultSensitivityAnalysisProvider,
             @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
+            @Lazy StudyService self,
             StudyRepository studyRepository,
             StudyCreationRequestRepository studyCreationRequestRepository,
             NetworkService networkStoreService,
@@ -215,6 +206,7 @@ public class StudyService {
         this.dynamicSimulationService = dynamicSimulationService;
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
+        this.self = self;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -262,7 +254,7 @@ public class StudyService {
     }
 
     public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean duplicateCase) {
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+        BasicStudyInfos basicStudyInfos = toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         UUID importReportUuid = UUID.randomUUID();
         UUID caseUuidToUse = caseUuid;
         try {
@@ -321,7 +313,7 @@ public class StudyService {
         if (sourceStudy == null) {
             return null;
         }
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+        BasicStudyInfos basicStudyInfos = toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
 
         studyServerExecutionService.runAsync(() -> self.duplicateStudyAsync(basicStudyInfos, sourceStudyUuid, userId));
 
@@ -348,7 +340,7 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public StudyInfos getStudyInfos(UUID studyUuid) {
-        return StudyService.toStudyInfos(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
+        return toStudyInfos(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
     }
 
     @Transactional(readOnly = true)
@@ -601,7 +593,7 @@ public class StudyService {
                                               UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
                                               ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, UUID voltageInitParametersUuid, Map<String, String> importParameters, UUID importReportUuid) {
         StudyEntity studyEntity = insertStudyEntity(studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersUuid, importParameters);
-        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudiesChanged(studyUuid, userId);
@@ -612,7 +604,7 @@ public class StudyService {
     public CreatedStudyBasicInfos updateStudyNetwork(StudyEntity studyEntity, String userId, NetworkInfos networkInfos) {
         self.updateStudyEntityNetwork(studyEntity, networkInfos);
 
-        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudyNetworkRecreationDone(studyEntity.getId(), userId);
@@ -666,7 +658,7 @@ public class StudyService {
                 .sensitivityAnalysisParameters(SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues))
                 .importParameters(newImportParameters)
                 .build();
-        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), UUID.randomUUID()));
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), UUID.randomUUID()));
 
         studyInfosService.add(createdStudyBasicInfos);
         notificationService.emitStudiesChanged(studyInfos.getId(), userId);
@@ -986,10 +978,6 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public String getDefaultLoadflowProvider() {
-        return defaultLoadflowProvider;
-    }
-
     public String getLoadFlowProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(StudyEntity::getLoadFlowProvider)
@@ -1011,10 +999,6 @@ public class StudyService {
         });
     }
 
-    public String getDefaultSecurityAnalysisProvider() {
-        return defaultSecurityAnalysisProvider;
-    }
-
     public String getSecurityAnalysisProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(StudyEntity::getSecurityAnalysisProvider)
@@ -1030,10 +1014,6 @@ public class StudyService {
         });
     }
 
-    public String getDefaultSensitivityAnalysisProvider() {
-        return defaultSensitivityAnalysisProvider;
-    }
-
     public String getSensitivityAnalysisProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(StudyEntity::getSensitivityAnalysisProvider)
@@ -1047,10 +1027,6 @@ public class StudyService {
             invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         });
-    }
-
-    public String getDefaultDynamicSimulationProvider() {
-        return defaultDynamicSimulationProvider;
     }
 
     public String getDynamicSimulationProvider(UUID studyUuid) {

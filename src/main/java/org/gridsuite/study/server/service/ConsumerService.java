@@ -46,23 +46,22 @@ import static org.gridsuite.study.server.StudyConstants.*;
  */
 @Service
 public class ConsumerService {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerService.class);
 
-    static final String RESULT_UUID = "resultUuid";
-    static final String NETWORK_UUID = "networkUuid";
-    static final String NETWORK_ID = "networkId";
-    static final String HEADER_CASE_FORMAT = "caseFormat";
-    static final String HEADER_CASE_NAME = "caseName";
-    static final String HEADER_ERROR_MESSAGE = "errorMessage";
+    private static final String HEADER_RESULT_UUID = "resultUuid";
+    private static final String HEADER_NETWORK_UUID = "networkUuid";
+    private static final String HEADER_NETWORK_ID = "networkId";
+    private static final String HEADER_CASE_FORMAT = "caseFormat";
+    private static final String HEADER_CASE_NAME = "caseName";
+    private static final String HEADER_ERROR_MESSAGE = "errorMessage";
 
     private final ObjectMapper objectMapper;
 
-    NotificationService notificationService;
-    StudyService studyService;
-    CaseService caseService;
-    NetworkModificationTreeService networkModificationTreeService;
-    StudyRepository studyRepository;
+    private final NotificationService notificationService;
+    private final StudyService studyService;
+    private final CaseService caseService;
+    private final NetworkModificationTreeService networkModificationTreeService;
+    private final StudyRepository studyRepository;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -82,7 +81,7 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeDsResult() {
         return message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(HEADER_RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (!Strings.isBlank(receiver)) {
                 NodeReceiver receiverObj;
@@ -166,7 +165,7 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeSaResult() {
         return message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(HEADER_RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
                 NodeReceiver receiverObj;
@@ -323,8 +322,8 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeCaseImportSucceeded() {
         return message -> {
             String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            UUID networkUuid = UUID.fromString(message.getHeaders().get(NETWORK_UUID, String.class));
-            String networkId = message.getHeaders().get(NETWORK_ID, String.class);
+            UUID networkUuid = UUID.fromString(message.getHeaders().get(HEADER_NETWORK_UUID, String.class));
+            String networkId = message.getHeaders().get(HEADER_NETWORK_ID, String.class);
             String caseFormat = message.getHeaders().get(HEADER_CASE_FORMAT, String.class);
             String caseName = message.getHeaders().get(HEADER_CASE_NAME, String.class);
             Map<String, String> importParameters = message.getHeaders().get(HEADER_IMPORT_PARAMETERS, Map.class);
@@ -401,7 +400,7 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeSensitivityAnalysisResult() {
         return message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(HEADER_RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
                 NodeReceiver receiverObj;
@@ -481,34 +480,34 @@ public class ConsumerService {
         };
     }
 
-    void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
+    private void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
         networkModificationTreeService.updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
     }
 
-    void updateDynamicSimulationResultUuid(UUID nodeUuid, UUID dynamicSimulationResultUuid) {
+    private void updateDynamicSimulationResultUuid(UUID nodeUuid, UUID dynamicSimulationResultUuid) {
         networkModificationTreeService.updateDynamicSimulationResultUuid(nodeUuid, dynamicSimulationResultUuid);
     }
 
-    void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
+    private void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
         networkModificationTreeService.updateSensitivityAnalysisResultUuid(nodeUuid, sensitivityAnalysisResultUuid);
     }
 
-    void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+    private void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
         networkModificationTreeService.updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
     }
 
-    void updateOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+    private void updateOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
         networkModificationTreeService.updateOneBusShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
     }
 
-    void updateLoadFlowResultUuid(UUID nodeUuid, UUID loadFlowResultUuid) {
+    private void updateLoadFlowResultUuid(UUID nodeUuid, UUID loadFlowResultUuid) {
         networkModificationTreeService.updateLoadFlowResultUuid(nodeUuid, loadFlowResultUuid);
     }
 
     @Bean
     public Consumer<Message<String>> consumeLoadFlowResult() {
         return message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(HEADER_RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
                 NodeReceiver receiverObj;
@@ -586,7 +585,7 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeShortCircuitAnalysisResult() {
         return message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(HEADER_RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
             ShortcircuitAnalysisType analysisType = busId == null ? ShortcircuitAnalysisType.ALL_BUSES : ShortcircuitAnalysisType.ONE_BUS;
@@ -680,14 +679,14 @@ public class ConsumerService {
         };
     }
 
-    void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
+    private void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
         networkModificationTreeService.updateVoltageInitResultUuid(nodeUuid, voltageInitResultUuid);
     }
 
     @Bean
     public Consumer<Message<String>> consumeVoltageInitResult() {
         return message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(HEADER_RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
                 NodeReceiver receiverObj;
@@ -741,7 +740,7 @@ public class ConsumerService {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
             String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(HEADER_RESULT_UUID, String.class));
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
