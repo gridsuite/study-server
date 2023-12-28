@@ -33,7 +33,6 @@ import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
@@ -85,7 +84,7 @@ public class SecurityAnalysisService {
             return null;
         }
 
-        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getPathFromResultType(resultType))
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getPagedPathFromResultType(resultType))
             .queryParam("page", pageable.getPageNumber())
             .queryParam("size", pageable.getPageSize());
 
@@ -119,7 +118,7 @@ public class SecurityAnalysisService {
             return;
         }
 
-        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getPathFromResultType(resultType) + "/csv");
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getExportPathFromResultType(resultType));
 
         String path = pathBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
 
@@ -135,11 +134,19 @@ public class SecurityAnalysisService {
         );
     }
 
-    private String getPathFromResultType(SecurityAnalysisResultType resultType) {
+    private String getPagedPathFromResultType(SecurityAnalysisResultType resultType) {
         return switch (resultType) {
             case NMK_CONTINGENCIES -> "nmk-contingencies-result/paged";
             case NMK_LIMIT_VIOLATIONS -> "nmk-constraints-result/paged";
             case N -> "n-result";
+        };
+    }
+
+    private String getExportPathFromResultType(SecurityAnalysisResultType resultType) {
+        return switch (resultType) {
+            case NMK_CONTINGENCIES -> "nmk-contingencies-result/csv";
+            case NMK_LIMIT_VIOLATIONS -> "nmk-constraints-result/csv";
+            case N -> "n-result/csv";
         };
     }
 
