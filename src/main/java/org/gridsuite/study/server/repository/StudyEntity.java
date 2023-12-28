@@ -6,13 +6,11 @@
  */
 package org.gridsuite.study.server.repository;
 
+import jakarta.persistence.*;
 import lombok.*;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-
-import jakarta.persistence.*;
 
 import java.util.Map;
 import java.util.UUID;

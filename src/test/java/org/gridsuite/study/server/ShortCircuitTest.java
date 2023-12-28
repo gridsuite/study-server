@@ -21,21 +21,21 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ShortCircuitParametersInfos;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.ReportService;
 import org.gridsuite.study.server.service.SensitivityAnalysisService;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
-import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -59,7 +59,10 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
@@ -247,7 +250,19 @@ public class ShortCircuitTest {
                 content().string(TestUtils.resourceToString("/short-circuit-parameters.json")));
 
         // change some short circuit parameters
-        ShortCircuitParameters shortCircuitParameters = ShortCircuitService.newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, true, true, true, true, InitialVoltageProfileMode.NOMINAL, null);
+        ShortCircuitParameters shortCircuitParameters = new ShortCircuitParameters()
+                .setStudyType(StudyType.TRANSIENT)
+                .setMinVoltageDropProportionalThreshold(20)
+                .setWithFeederResult(true)
+                .setWithLimitViolations(true)
+                .setWithVoltageResult(false)
+                .setWithFortescueResult(false)
+                .setWithLoads(true)
+                .setWithShuntCompensators(true)
+                .setWithVSCConverterStations(true)
+                .setWithNeutralPosition(true)
+                .setInitialVoltageProfileMode(InitialVoltageProfileMode.NOMINAL)
+                .setVoltageRanges(null);
         ShortCircuitParametersInfos shortCircuitParametersInfos = new ShortCircuitParametersInfos();
         shortCircuitParametersInfos.setParameters(shortCircuitParameters);
         shortCircuitParametersInfos.setPredefinedParameters(ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_CEI909);
