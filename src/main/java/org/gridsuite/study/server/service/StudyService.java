@@ -754,7 +754,7 @@ public class StudyService {
         LoadFlowParametersInfos lfParameters = getLoadFlowParametersInfos(studyEntity);
         UUID result = loadflowService.runLoadFlow(studyUuid, nodeUuid, lfParameters, studyEntity.getLoadFlowProvider(), userId, limitReduction);
 
-        updateLoadFlowResultUuid(nodeUuid, result);
+        networkModificationTreeService.updateLoadFlowResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         return result;
     }
@@ -933,7 +933,8 @@ public class StudyService {
 
     @Transactional
     public void setSecurityAnalysisParametersValues(UUID studyUuid, SecurityAnalysisParametersValues parameters, String userId) {
-        updateSecurityAnalysisParameters(studyUuid, SecurityAnalysisService.toEntity(parameters != null ? parameters : SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues()));
+        studyRepository.findById(studyUuid).ifPresent(studyEntity -> studyEntity.setSecurityAnalysisParameters(SecurityAnalysisService.toEntity(
+                parameters != null ? parameters : SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues())));
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -947,7 +948,7 @@ public class StudyService {
 
     @Transactional
     public void setLoadFlowParameters(UUID studyUuid, LoadFlowParametersValues parameters, String userId) {
-        updateLoadFlowParameters(studyUuid, createParametersEntity(parameters));
+        studyRepository.findById(studyUuid).ifPresent(studyEntity -> studyEntity.setLoadFlowParameters(createParametersEntity(parameters)));
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
@@ -1036,7 +1037,7 @@ public class StudyService {
         Objects.requireNonNull(shortCircuitParametersInfos);
         Objects.requireNonNull(shortCircuitParametersInfos.getParameters());
         ShortCircuitParametersEntity shortCircuitParametersEntity = ShortCircuitService.toEntity(shortCircuitParametersInfos.getParameters(), shortCircuitParametersInfos.getPredefinedParameters());
-        updateShortCircuitParameters(studyUuid, shortCircuitParametersEntity);
+        studyRepository.findById(studyUuid).ifPresent(studyEntity -> studyEntity.setShortCircuitParametersUuid(shortCircuitParametersEntity));
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -1075,7 +1076,7 @@ public class StudyService {
 
         UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, nodeUuid, variantId, provider, contingencyListNames, params, receiver, userId);
 
-        updateSecurityAnalysisResultUuid(nodeUuid, result);
+        networkModificationTreeService.updateSecurityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         return result;
     }
@@ -1208,54 +1209,10 @@ public class StudyService {
         return study;
     }
 
-    void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
-        networkModificationTreeService.updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
-    }
-
-    void updateDynamicSimulationResultUuid(UUID nodeUuid, UUID dynamicSimulationResultUuid) {
-        networkModificationTreeService.updateDynamicSimulationResultUuid(nodeUuid, dynamicSimulationResultUuid);
-    }
-
-    void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
-        networkModificationTreeService.updateSensitivityAnalysisResultUuid(nodeUuid, sensitivityAnalysisResultUuid);
-    }
-
-    void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
-        networkModificationTreeService.updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
-    }
-
-    void updateOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
-        networkModificationTreeService.updateOneBusShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
-    }
-
-    void updateLoadFlowResultUuid(UUID nodeUuid, UUID loadFlowResultUuid) {
-        networkModificationTreeService.updateLoadFlowResultUuid(nodeUuid, loadFlowResultUuid);
-    }
-
-    void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
-        networkModificationTreeService.updateVoltageInitResultUuid(nodeUuid, voltageInitResultUuid);
-    }
-
     private StudyCreationRequestEntity insertStudyCreationRequestEntity(UUID studyUuid) {
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(
                 studyUuid == null ? UUID.randomUUID() : studyUuid);
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
-    }
-
-    public void updateLoadFlowParameters(UUID studyUuid, LoadFlowParametersEntity loadFlowParametersEntity) {
-        studyRepository.findById(studyUuid).ifPresent(studyEntity -> studyEntity.setLoadFlowParameters(loadFlowParametersEntity));
-    }
-
-    public void updateShortCircuitParameters(UUID studyUuid, UUID shortCircuitParametersEntity) {
-        studyRepository.findById(studyUuid).ifPresent(studyEntity -> studyEntity.setShortCircuitParametersUuid(shortCircuitParametersEntity));
-    }
-
-    public void updateDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity) {
-        studyRepository.findById(studyUuid).ifPresent(studyEntity -> {
-            studyEntity.setDynamicSimulationParameters(dynamicSimulationParametersEntity);
-            invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-        });
     }
 
     public void createOrUpdateVoltageInitParameters(UUID studyUuid, String parameters) {
@@ -1268,10 +1225,6 @@ public class StudyService {
             voltageInitService.updateVoltageInitParameters(voltageInitParametersUuid, parameters);
         }
         invalidateVoltageInitStatusOnAllNodes(studyUuid);
-    }
-
-    public void updateSecurityAnalysisParameters(UUID studyUuid, SecurityAnalysisParametersEntity securityAnalysisParametersEntity) {
-        studyRepository.findById(studyUuid).ifPresent(studyEntity1 -> studyEntity1.setSecurityAnalysisParameters(securityAnalysisParametersEntity));
     }
 
     public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid, String userId) {
@@ -1866,7 +1819,7 @@ public class StudyService {
         UUID result = sensitivityAnalysisService.runSensitivityAnalysis(
                 nodeUuid, networkUuid, variantId, reportUuid, provider, sensitivityAnalysisInputData, userId);
 
-        updateSensitivityAnalysisResultUuid(nodeUuid, result);
+        networkModificationTreeService.updateSensitivityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         return result;
     }
@@ -1876,7 +1829,7 @@ public class StudyService {
             .ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
         final UUID shortCircuitParameters = studyRepository.getReferenceById(studyUuid).getShortCircuitParametersUuid();
         final UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, null, shortCircuitParameters, userId);
-        updateShortCircuitAnalysisResultUuid(nodeUuid, result);
+        networkModificationTreeService.updateShortCircuitAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         return result;
     }
@@ -1886,7 +1839,7 @@ public class StudyService {
             .ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
         final UUID shortCircuitParameters = studyRepository.getReferenceById(studyUuid).getShortCircuitParametersUuid();
         final UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId, shortCircuitParameters, userId);
-        updateOneBusShortCircuitAnalysisResultUuid(nodeUuid, result);
+        networkModificationTreeService.updateOneBusShortCircuitAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         return result;
     }
@@ -1900,7 +1853,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID result = voltageInitService.runVoltageInit(networkUuid, variantId, studyEntity.getVoltageInitParametersUuid(), nodeUuid, userId);
 
-        updateVoltageInitResultUuid(nodeUuid, result);
+        networkModificationTreeService.updateVoltageInitResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         return result;
     }
@@ -1940,7 +1893,12 @@ public class StudyService {
 
     @Transactional
     public void setDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersInfos dsParameter, String userId) {
-        updateDynamicSimulationParameters(studyUuid, DynamicSimulationService.toEntity(dsParameter != null ? dsParameter : DynamicSimulationService.getDefaultDynamicSimulationParameters(), objectMapper));
+        studyRepository.findById(studyUuid).ifPresent(studyEntity -> {
+            studyEntity.setDynamicSimulationParameters(DynamicSimulationService.toEntity(
+                dsParameter != null ? dsParameter : DynamicSimulationService.getDefaultDynamicSimulationParameters(), objectMapper));
+            invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
+            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        });
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -2050,7 +2008,7 @@ public class StudyService {
         UUID resultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyUuid), receiver, networkUuid, "", mergeParameters, userId);
 
         // update result uuid and notification
-        updateDynamicSimulationResultUuid(nodeUuid, resultUuid);
+        networkModificationTreeService.updateDynamicSimulationResultUuid(nodeUuid, resultUuid);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
 
         return resultUuid;
@@ -2120,19 +2078,14 @@ public class StudyService {
 
     @Transactional
     public void setSensitivityAnalysisParametersValues(UUID studyUuid, SensitivityAnalysisParametersInfos parameters, String userId) {
-        updateSensitivityAnalysisParameters(studyUuid,
-                SensitivityAnalysisService.toEntity(parameters != null ? parameters :
-                        SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues()));
+        studyRepository.findById(studyUuid).ifPresent(studyEntity -> studyEntity.setSensitivityAnalysisParameters(SensitivityAnalysisService.toEntity(
+                parameters != null ? parameters : SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues())));
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public Long getSensitivityAnalysisFactorsCount(UUID studyUuid, Map<String, List<UUID>> ids, Boolean isInjectionsSet) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         return sensitivityAnalysisService.getSensitivityAnalysisFactorsCount(ids, networkUuid, isInjectionsSet);
-    }
-
-    public void updateSensitivityAnalysisParameters(UUID studyUuid, SensitivityAnalysisParametersEntity sensitivityParametersEntity) {
-        studyRepository.findById(studyUuid).ifPresent(studyEntity -> studyEntity.setSensitivityAnalysisParameters(sensitivityParametersEntity));
     }
 
     @Transactional
