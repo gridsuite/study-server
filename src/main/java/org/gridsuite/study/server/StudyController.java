@@ -901,12 +901,13 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
+    @GetMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get short-circuit analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters")})
-    public ResponseEntity<ShortCircuitParametersInfos> getShortCircuitParameters(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getShortCircuitParametersInfo(studyUuid));
+    public ResponseEntity<String> getShortCircuitParameters(@PathVariable("studyUuid") UUID studyUuid) {
+        studyService.assertIsStudyExist(studyUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+            .body(studyService.getShortCircuitParametersInfo(studyUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")

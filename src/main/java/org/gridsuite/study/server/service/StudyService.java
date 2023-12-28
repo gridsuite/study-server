@@ -1027,10 +1027,8 @@ public class StudyService {
         });
     }
 
-    public ShortCircuitParametersInfos getShortCircuitParametersInfo(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(studyEntity -> ShortCircuitService.toShortCircuitParametersInfo(studyEntity.getShortCircuitParameters()))
-                .orElse(null);
+    public String getShortCircuitParametersInfo(final UUID studyUuid) {
+        return shortCircuitService.getParametersInfo(studyRepository.getReferenceById(studyUuid).getShortCircuitParametersUuid());
     }
 
     @Transactional

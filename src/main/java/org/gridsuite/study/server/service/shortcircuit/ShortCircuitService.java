@@ -287,6 +287,12 @@ public class ShortCircuitService {
                 .build(Map.of("parametersUuid", parametersUuid)), jsonParametersInfo);
     }
 
+    public String getParametersInfo(final UUID parametersUuid) {
+        return restTemplate.getForObject(UriComponentsBuilder.fromHttpUrl(shortCircuitServerBaseUri)
+                .pathSegment(SHORT_CIRCUIT_API_VERSION, "parameters", "{parametersUuid}")
+                .build(Map.of("parametersUuid", parametersUuid)), String.class);
+    }
+
     /**
      * duplicate existing parameters
      * @param parametersUuid the parameters to duplicate
