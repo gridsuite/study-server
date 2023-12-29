@@ -2155,15 +2155,6 @@ public class StudyService {
                 substationsIds, equipmentType);
     }
 
-    public String getSecurityAnalysisParameters(UUID studyUuid) {
-        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID securityAnalysisParametersUuid = studyEntity.getSecurityAnalysisParametersUuid();
-        if (securityAnalysisParametersUuid == null) {
-            return "{}";
-        }
-        return securityAnalysisService.getSecurityAnalysisParameters(securityAnalysisParametersUuid);
-    }
-
     @Transactional(readOnly = true)
     public String getVoltageInitModifications(@NonNull UUID nodeUuid) {
         // get modifications group uuid associated to voltage init results
