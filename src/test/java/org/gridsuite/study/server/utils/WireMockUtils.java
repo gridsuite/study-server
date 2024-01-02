@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import lombok.NonNull;
 
 import java.util.List;
 import java.util.Map;
@@ -352,14 +353,8 @@ public class WireMockUtils {
         verifyPutRequest(stubUuid, "/v1/cases/" + caseUuid + "/disableExpiration", false, Map.of(), null);
     }
 
-    public UUID stubActuatorHealthGet(String jsonResponse) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/actuator/health"))
-                .willReturn(WireMock.ok().withBody(jsonResponse))
-        ).getId();
-    }
-
-    public void verifyActuatorHealth(UUID stubUuid, int nbServer) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/actuator/health"));
+    public void verifyActuatorHealth(@NonNull final String serviceName, final UUID stubUuid, final int nbServer) {
+        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/" + serviceName + "/actuator/health"));
         wireMock.verify(nbServer, requestBuilder);
         removeRequestForStub(stubUuid, nbServer);
     }

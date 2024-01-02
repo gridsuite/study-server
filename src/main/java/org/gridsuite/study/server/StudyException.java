@@ -78,7 +78,8 @@ public class StudyException extends RuntimeException {
         DELETE_COMPUTATION_RESULTS_FAILED,
         STUDY_INDEXATION_FAILED,
         STUDY_CHECK_INDEXATION_FAILED,
-        EVALUATE_FILTER_FAILED
+        NOT_IMPLEMENTED,
+        EVALUATE_FILTER_FAILED,
     }
 
     private final Type type;

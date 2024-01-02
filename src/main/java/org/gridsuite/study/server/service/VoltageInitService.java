@@ -10,6 +10,7 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
@@ -24,7 +25,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -52,7 +56,7 @@ public class VoltageInitService {
 
     @Autowired
     public VoltageInitService(RemoteServicesProperties remoteServicesProperties,
-            NetworkModificationTreeService networkModificationTreeService, ObjectMapper objectMapper) {
+                              NetworkModificationTreeService networkModificationTreeService, ObjectMapper objectMapper) {
         this.voltageInitServerBaseUri = remoteServicesProperties.getServiceUri("voltage-init-server");
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
@@ -72,7 +76,8 @@ public class VoltageInitService {
                 .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam("reportUuid", reportUuid.toString())
-                .queryParam("reporterId", nodeUuid.toString());
+                .queryParam("reporterId", nodeUuid.toString())
+                .queryParam("reportType", StudyService.ReportType.VOLTAGE_INIT.reportKey);
 
         if (parametersUuid != null) {
             uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
@@ -272,4 +277,14 @@ public class VoltageInitService {
         }
     }
 
+    public void resetModificationsGroupUuid(UUID nodeUuid) {
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getVoltageInitResultUuid(nodeUuid);
+        if (resultUuidOpt.isEmpty()) {
+            throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, "The node " + nodeUuid + " has no voltage init results");
+        }
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group-uuid")
+            .buildAndExpand(resultUuidOpt.get()).toUriString();
+
+        restTemplate.put(voltageInitServerBaseUri + path, Void.class);
+    }
 }

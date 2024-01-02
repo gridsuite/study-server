@@ -9,14 +9,14 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData;
-import org.gridsuite.study.server.dto.sensianalysis.*;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
-
-import org.gridsuite.study.server.repository.sensianalysis.*;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.repository.EquipmentsContainerEmbeddable;
+import org.gridsuite.study.server.repository.sensianalysis.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -28,11 +28,7 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -76,7 +72,8 @@ public class SensitivityAnalysisService {
                                        String variantId,
                                        UUID reportUuid,
                                        String provider,
-                                       SensitivityAnalysisInputData sensitivityAnalysisParameters) {
+                                       SensitivityAnalysisInputData sensitivityAnalysisParameters,
+                                       String userId) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
@@ -87,7 +84,7 @@ public class SensitivityAnalysisService {
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
             .queryParam("reportUuid", reportUuid.toString())
             .queryParam("reporterId", nodeUuid.toString())
-            .queryParam("reportType", StudyService.ReportType.SENSITIVITY_ANALYSIS.toString());
+            .queryParam("reportType", StudyService.ReportType.SENSITIVITY_ANALYSIS.reportKey);
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
@@ -99,6 +96,7 @@ public class SensitivityAnalysisService {
             .buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<SensitivityAnalysisInputData> httpEntity = new HttpEntity<>(sensitivityAnalysisParameters, headers);
@@ -376,5 +374,23 @@ public class SensitivityAnalysisService {
                 .sensitivityPST(List.of())
                 .sensitivityNodes(List.of())
                 .build();
+    }
+
+    public Long getSensitivityAnalysisFactorsCount(Map<String, List<UUID>> ids, UUID networkUuid, Boolean isInjectionsSet) {
+        var uriComponentsBuilder = UriComponentsBuilder
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/factors-count")
+                .queryParam("isInjectionsSet", isInjectionsSet);
+
+        var path = uriComponentsBuilder
+                .buildAndExpand(networkUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<String, List<UUID>>> httpEntity = new HttpEntity<>(ids, headers);
+
+        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity,
+                Long.class).getBody();
     }
 }

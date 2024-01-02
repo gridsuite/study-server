@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -26,6 +27,8 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
 
 /**
@@ -130,7 +133,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         nodes.stream().forEach(node -> node.setLoadFlowResultUuid(null));
-        Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.LOAD_FLOW.subReporterKey, nodes);
+        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.LOADFLOW.reportKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         loadFlowService.deleteLoadFlowResults();
         LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.LOAD_FLOW, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
@@ -153,7 +156,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull();
         nodes.stream().forEach(node -> node.setSecurityAnalysisResultUuid(null));
-        Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SECURITY_ANALYSIS.subReporterKey, nodes);
+        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.SECURITY_ANALYSIS.reportKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         securityAnalysisService.deleteSecurityAnalysisResults();
         LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.SECURITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
@@ -165,7 +168,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull();
         nodes.stream().forEach(node -> node.setSensitivityAnalysisResultUuid(null));
-        Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SENSITIVITY_ANALYSIS.subReporterKey, nodes);
+        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.SENSITIVITY_ANALYSIS.reportKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         sensitivityAnalysisService.deleteSensitivityAnalysisResults();
         LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.SENSITIVITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
@@ -175,24 +178,35 @@ public class SupervisionService {
     private Integer deleteShortcircuitResults() {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
-        nodes.stream().forEach(node -> {
-            node.setShortCircuitAnalysisResultUuid(null);
-            node.setOneBusShortCircuitAnalysisResultUuid(null);
-        });
-        Map<UUID, String> subreportToDelete = formatSubreportMap(ComputationType.SHORT_CIRCUIT.subReporterKey, nodes);
-        reportService.deleteTreeReports(subreportToDelete);
+        // Reset result uuid and remove logs, for all-buses computations, then for 1-bus ones
+        List<NetworkModificationNodeInfoEntity> allBusesNodes = networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
+        if (!allBusesNodes.isEmpty()) {
+            allBusesNodes.forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
+            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.ALL_BUSES_SHORTCIRCUIT_ANALYSIS.reportKey, allBusesNodes));
+        }
+        List<NetworkModificationNodeInfoEntity> oneBusNodes = networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull();
+        if (!oneBusNodes.isEmpty()) {
+            oneBusNodes.forEach(node -> node.setOneBusShortCircuitAnalysisResultUuid(null));
+            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.ONE_BUS_SHORTCIRCUIT_ANALYSIS.reportKey, oneBusNodes));
+        }
+        // Then delete all results (1-bus and all-buses), cause short-circuit-server cannot make the difference
         shortCircuitService.deleteShortCircuitAnalysisResults();
         LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.SHORT_CIRCUIT, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        return nodes.size();
+        // return distinct processed nodes count
+        return (int) Stream.concat(allBusesNodes.stream(), oneBusNodes.stream())
+                .map(AbstractNodeInfoEntity::getId)
+                .distinct()
+                .count();
     }
 
     private Integer deleteVoltageInitResults() {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull();
-        nodes.stream().forEach(node -> node.setVoltageInitResultUuid(null));
-        //TODO Add logs deletion once they are added
+        if (!nodes.isEmpty()) {
+            nodes.forEach(node -> node.setVoltageInitResultUuid(null));
+            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.VOLTAGE_INIT.reportKey, nodes));
+        }
         voltageInitService.deleteVoltageInitResults();
         LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.VOLTAGE_INITIALIZATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return nodes.size();
@@ -210,7 +224,7 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
-        studyService.invalidateBuild(studyUuid, rootNode.getId(), false, false);
+        studyService.invalidateBuild(studyUuid, rootNode.getId(), false, false, true);
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 }

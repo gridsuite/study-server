@@ -95,7 +95,7 @@ public class NetworkService {
         }
     }
 
-    void deleteVariants(UUID networkUuid, List<String> variantsToRemove) {
+    public void deleteVariants(UUID networkUuid, List<String> variantsToRemove) {
         try {
             Network network = networkStoreService.getNetwork(networkUuid);
             network.addListener(new NetworkVariantsListener(networkUuid, equipmentInfosService));
