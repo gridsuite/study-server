@@ -1026,8 +1026,8 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report/severity-levels", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get node report with its parent nodes")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    @Operation(summary = "Get security levels of a node report with its parent nodes")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Security levels of the node"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<List<String>> getNodesReportPresentSecutityLevel(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                            @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                            @Parameter(description = "The report Id") @RequestParam(name = "reportId", required = false) String reportId,
@@ -1048,8 +1048,8 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/subreport/severity-levels", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get node report with its parent nodes")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    @Operation(summary = "Get security levels of a node report with its parent nodes")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Security levels of the node"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<List<String>> getNodesSubReportPresentSecutityLevel(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                               @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                               @Parameter(description = "The report Id") @RequestParam(name = "reportId") String reportId) {
