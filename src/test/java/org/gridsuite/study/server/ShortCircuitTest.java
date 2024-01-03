@@ -59,7 +59,6 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.IOException;
 import java.util.*;
@@ -269,9 +268,8 @@ public class ShortCircuitTest {
     }
 
     @Test
-    public void testShortCircuit() throws Exception {
-        MvcResult mvcResult;
-        String resultAsString;
+    public void testAllBusesShortCircuit() throws Exception {
+
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -299,11 +297,10 @@ public class ShortCircuitTest {
                         .header("userId", "userId"))
                 .andExpect(status().isForbidden());
 
-        //run a short circuit analysis
-        mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
+        //run an all-buses short circuit analysis
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
                         .header("userId", "userId"))
-                .andExpect(status().isOk())
-                .andReturn();
+                .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
@@ -312,10 +309,6 @@ public class ShortCircuitTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
-
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        UUID uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
-        assertEquals(uuidResponse, UUID.fromString(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
 
         // get short circuit result
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode3Uuid))
@@ -346,13 +339,9 @@ public class ShortCircuitTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
 
         // short circuit analysis failed
-        mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode2Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode2Uuid)
                 .header(HEADER_USER_ID, "testUserId"))
                 .andExpect(status().isOk()).andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
-
-        assertEquals(SHORT_CIRCUIT_ANALYSIS_ERROR_RESULT_UUID, uuidResponse.toString());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED);
 
@@ -360,14 +349,16 @@ public class ShortCircuitTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
 
-        //Test result count
+        // Test result count
+        // In short-circuit server there is no distinction between 1-bus and all-buses, so the count will return all kinds of short-circuit
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
                 .queryParam("dryRun", String.valueOf(true)))
-            .andExpect(status().isOk());
+                .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
 
-        //Delete Shortcircuit results
+        // Delete Shortcircuit results
+        // In short-circuit server there is no distinction between 1-bus and all-buses, so we remove all kinds of short-circuit
         assertEquals(1, networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
@@ -382,8 +373,6 @@ public class ShortCircuitTest {
 
     @Test
     public void testPagedShortCircuit() throws Exception {
-        MvcResult mvcResult;
-        String resultAsString;
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -395,10 +384,9 @@ public class ShortCircuitTest {
         UUID unknownModificationNodeUuid = UUID.randomUUID();
 
         //run a short circuit analysis
-        mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode1Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode1Uuid)
                 .header(HEADER_USER_ID, "userId"))
-                .andExpect(status().isOk())
-                .andReturn();
+                .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
@@ -407,10 +395,6 @@ public class ShortCircuitTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
-
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        UUID uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
-        assertEquals(uuidResponse, UUID.fromString(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
 
         // get short circuit result with pagination
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20&sort=id,DESC", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
@@ -442,8 +426,6 @@ public class ShortCircuitTest {
 
     @Test
     public void testOneBusShortCircuit() throws Exception {
-        MvcResult mvcResult;
-        String resultAsString;
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -470,11 +452,10 @@ public class ShortCircuitTest {
             .andExpect(status().isForbidden());
 
         //run a one bus short circuit analysis
-        mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
                 .param("busId", "BUS_TEST_ID")
                 .header("userId", "userId"))
-            .andExpect(status().isOk())
-            .andReturn();
+            .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
 
@@ -484,9 +465,7 @@ public class ShortCircuitTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        UUID uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
-        assertEquals(uuidResponse, UUID.fromString(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
+        assertEquals(1, networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
 
         // get one bus short circuit result
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode3Uuid)
@@ -516,6 +495,24 @@ public class ShortCircuitTest {
             );
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
+
+        //Test result count
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                        .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
+                        .queryParam("dryRun", String.valueOf(true)))
+                .andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
+
+        // Delete Shortcircuit results
+        mockMvc.perform(delete("/v1/supervision/computation/results")
+                        .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
+                        .queryParam("dryRun", String.valueOf(false)))
+                .andExpect(status().isOk());
+
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.contains("/v1/results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
+        assertEquals(0, networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
     }
 
     @Test

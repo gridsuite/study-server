@@ -29,6 +29,8 @@ public interface NetworkModificationNodeInfoRepository extends NodeInfoRepositor
 
     List<NetworkModificationNodeInfoEntity> findAllByShortCircuitAnalysisResultUuidNotNull();
 
+    List<NetworkModificationNodeInfoEntity> findAllByOneBusShortCircuitAnalysisResultUuidNotNull();
+
     List<NetworkModificationNodeInfoEntity> findAllByVoltageInitResultUuidNotNull();
 
     List<NetworkModificationNodeInfoEntity> findAllByNodeStudyId(UUID studyUuid);

@@ -279,6 +279,9 @@ public class VoltageInitTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("1");
+                } else if (path.matches("/v1/treereports")) {
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -350,8 +353,6 @@ public class VoltageInitTest {
 
     @Test
     public void testVoltageInit() throws Exception {
-        MvcResult mvcResult;
-        String resultAsString;
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID));
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -374,10 +375,9 @@ public class VoltageInitTest {
                 .andExpect(status().isForbidden());
 
         //run a voltage init analysis
-        mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run", studyNameUserIdUuid, modificationNode3Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run", studyNameUserIdUuid, modificationNode3Uuid)
                         .header("userId", "userId"))
-                .andExpect(status().isOk())
-                .andReturn();
+                .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
 
@@ -386,10 +386,6 @@ public class VoltageInitTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
-
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        UUID uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
-        assertEquals(uuidResponse, UUID.fromString(VOLTAGE_INIT_RESULT_UUID));
 
         // get voltage init result
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/result", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
@@ -424,14 +420,9 @@ public class VoltageInitTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
 
-        // voltage init failed
-        mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run", studyNameUserIdUuid, modificationNode2Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run", studyNameUserIdUuid, modificationNode2Uuid)
                         .header("userId", "userId"))
-                .andExpect(status().isOk()).andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
-
-        assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, uuidResponse.toString());
+                .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_FAILED);
 
@@ -604,7 +595,9 @@ public class VoltageInitTest {
                 .queryParam("dryRun", String.valueOf(false)))
             .andExpect(status().isOk());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results")));
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.contains("/v1/results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
     }
 

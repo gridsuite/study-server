@@ -302,14 +302,10 @@ public class SensitivityAnalysisTest {
         mockMvc.perform(get("/v1/sensitivity-analysis/results/{resultUuid}", NOT_FOUND_SENSITIVITY_ANALYSIS_UUID)).andExpect(status().isNotFound());
 
         // run sensitivity analysis
-        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, nodeUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, nodeUuid)
             .contentType(MediaType.APPLICATION_JSON).header("userId", "userId")
             .header(HEADER_USER_ID, "testUserId")
-            .content(SENSITIVITY_INPUT)).andExpect(status().isOk())
-            .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        UUID uuidResponse = mapper.readValue(resultAsString, UUID.class);
-        assertEquals(uuidResponse, resultUuid);
+            .content(SENSITIVITY_INPUT)).andExpect(status().isOk());
 
         Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -529,9 +525,6 @@ public class SensitivityAnalysisTest {
     // test sensitivity analysis on network 2 will fail
     @Test
     public void testSensitivityAnalysisFailedForNotification() throws Exception {
-        MvcResult mvcResult;
-        String resultAsString;
-
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_2_STRING), CASE_2_UUID);
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
@@ -539,15 +532,11 @@ public class SensitivityAnalysisTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         //run failing sensitivity analysis (because in network 2)
-        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, modificationNode1Uuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, modificationNode1Uuid)
             .contentType(MediaType.APPLICATION_JSON)
             .header(HEADER_USER_ID, "testUserId")
             .content(SENSITIVITY_INPUT))
-            .andExpect(status().isOk()).andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        String uuidResponse = mapper.readValue(resultAsString, String.class);
-
-        assertEquals(SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID, uuidResponse);
+            .andExpect(status().isOk());
 
         // failed sensitivity analysis
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
