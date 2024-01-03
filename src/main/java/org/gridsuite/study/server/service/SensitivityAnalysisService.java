@@ -73,7 +73,8 @@ public class SensitivityAnalysisService {
                                        String variantId,
                                        UUID reportUuid,
                                        String provider,
-                                       SensitivityAnalysisInputData sensitivityAnalysisParameters) {
+                                       SensitivityAnalysisInputData sensitivityAnalysisParameters,
+                                       String userId) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
@@ -84,7 +85,7 @@ public class SensitivityAnalysisService {
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
             .queryParam("reportUuid", reportUuid.toString())
             .queryParam("reporterId", nodeUuid.toString())
-            .queryParam("reportType", StudyService.ReportType.SENSITIVITY_ANALYSIS.toString());
+            .queryParam("reportType", StudyService.ReportType.SENSITIVITY_ANALYSIS.reportKey);
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
@@ -96,6 +97,7 @@ public class SensitivityAnalysisService {
             .buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<SensitivityAnalysisInputData> httpEntity = new HttpEntity<>(sensitivityAnalysisParameters, headers);

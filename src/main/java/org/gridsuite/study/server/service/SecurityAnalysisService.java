@@ -117,12 +117,12 @@ public class SecurityAnalysisService {
     }
 
     public UUID runSecurityAnalysis(UUID networkUuid, UUID reportUuid, UUID nodeUuid, String variantId, String provider, List<String> contingencyListNames, SecurityAnalysisParametersInfos securityAnalysisParameters,
-            String receiver) {
+            String receiver, String userId) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam("reportUuid", reportUuid.toString())
                 .queryParam("reporterId", nodeUuid.toString())
-                .queryParam("reportType", StudyService.ReportType.SECURITY_ANALYSIS.toString());
+                .queryParam("reportType", StudyService.ReportType.SECURITY_ANALYSIS.reportKey);
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
@@ -133,6 +133,7 @@ public class SecurityAnalysisService {
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<SecurityAnalysisParametersInfos> httpEntity = new HttpEntity<>(securityAnalysisParameters, headers);

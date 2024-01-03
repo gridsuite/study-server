@@ -77,7 +77,7 @@ public class VoltageInitService {
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam("reportUuid", reportUuid.toString())
                 .queryParam("reporterId", nodeUuid.toString())
-                .queryParam("reportType", StudyService.ReportType.VOLTAGE_INIT.toString());
+                .queryParam("reportType", StudyService.ReportType.VOLTAGE_INIT.reportKey);
 
         if (parametersUuid != null) {
             uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
@@ -277,4 +277,14 @@ public class VoltageInitService {
         }
     }
 
+    public void resetModificationsGroupUuid(UUID nodeUuid) {
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getVoltageInitResultUuid(nodeUuid);
+        if (resultUuidOpt.isEmpty()) {
+            throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, "The node " + nodeUuid + " has no voltage init results");
+        }
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group-uuid")
+            .buildAndExpand(resultUuidOpt.get()).toUriString();
+
+        restTemplate.put(voltageInitServerBaseUri + path, Void.class);
+    }
 }
