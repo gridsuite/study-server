@@ -115,7 +115,7 @@ public class NonEvacuatedEnergyService {
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/non-evacuated-energy")
             .queryParam("reportUuid", reportUuid.toString())
             .queryParam("reporterId", nodeUuid.toString())
-            .queryParam("reportType", StudyService.ReportType.NON_EVACUATED_ENERGY.toString());
+            .queryParam("reportType", StudyService.ReportType.NON_EVACUATED_ENERGY.reportKey);
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
