@@ -539,7 +539,7 @@ public class VoltageInitTest {
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateVoltageInitResultUuid(modificationNode.getId(), resultUuid);
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, ComputationType.VOLTAGE_INITIALIZATION);
         assertTrue(networkModificationTreeService.getVoltageInitResultUuid(modificationNode.getId()).isPresent());
         assertEquals(resultUuid, networkModificationTreeService.getVoltageInitResultUuid(modificationNode.getId()).get());
 

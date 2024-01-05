@@ -8,6 +8,7 @@
 package org.gridsuite.study.server.networkmodificationtree;
 
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -43,37 +44,19 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return null;
     }
 
-    public void updateShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
+    public void updateComputationResultUuid(AbstractNode node, UUID resultUuid, ComputationType computationType) {
     }
 
     public NodeBuildStatus getNodeBuildStatus(AbstractNode node) {
         return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
     }
 
-    public void updateLoadFlowResultUuid(AbstractNode node, UUID loadFlowResultUuid) {
-    }
-
-    public void updateOneBusShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
-    }
-
-    public void updateVoltageInitResultUuid(AbstractNode node, UUID voltageInitResultUuid) {
-    }
-
-    public void updateSecurityAnalysisResultUuid(AbstractNode node, UUID securityAnalysisResultUuid) {
-    }
-
     public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
         return null;
     }
 
-    public void updateDynamicSimulationResultUuid(AbstractNode node, UUID dynamicSimulationResultUuid) {
-    }
-
     public UUID getDynamicSimulationResultUuid(AbstractNode node) {
         return null;
-    }
-
-    public void updateSensitivityAnalysisResultUuid(AbstractNode node, UUID sensitivityAnalysisResultUuid) {
     }
 
     public UUID getSensitivityAnalysisResultUuid(AbstractNode node) {
@@ -177,40 +160,16 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getNode(nodeUuid).getReportUuid();
     }
 
-    public void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
-        updateShortCircuitAnalysisResultUuid(getNode(nodeUuid), shortCircuitAnalysisResultUuid);
-    }
-
-    public void updateLoadFlowResultUuid(UUID nodeUuid, UUID loadFlowResultUuid) {
-        updateLoadFlowResultUuid(getNode(nodeUuid), loadFlowResultUuid);
-    }
-
-    public void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
-        updateVoltageInitResultUuid(getNode(nodeUuid), voltageInitResultUuid);
-    }
-
-    public void updateOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
-        updateOneBusShortCircuitAnalysisResultUuid(getNode(nodeUuid), shortCircuitAnalysisResultUuid);
-    }
-
-    public void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
-        updateSecurityAnalysisResultUuid(getNode(nodeUuid), securityAnalysisResultUuid);
+    public void updateComputationResultUuid(UUID nodeUuid, UUID computationResultUuid, ComputationType computationType) {
+        updateComputationResultUuid(getNode(nodeUuid), computationResultUuid, computationType);
     }
 
     public UUID getSecurityAnalysisResultUuid(UUID nodeUuid) {
         return getSecurityAnalysisResultUuid(getNode(nodeUuid));
     }
 
-    public void updateDynamicSimulationResultUuid(UUID nodeUuid, UUID dynamicSimulationResultUuid) {
-        updateDynamicSimulationResultUuid(getNode(nodeUuid), dynamicSimulationResultUuid);
-    }
-
     public UUID getDynamicSimulationResultUuid(UUID nodeUuid) {
         return getDynamicSimulationResultUuid(getNode(nodeUuid));
-    }
-
-    public void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
-        updateSensitivityAnalysisResultUuid(getNode(nodeUuid), sensitivityAnalysisResultUuid);
     }
 
     public UUID getSensitivityAnalysisResultUuid(UUID nodeUuid) {

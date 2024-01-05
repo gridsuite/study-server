@@ -406,7 +406,7 @@ public class LoadFlowTest {
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateLoadFlowResultUuid(modificationNode.getId(), resultUuid);
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, ComputationType.LOAD_FLOW);
         assertTrue(networkModificationTreeService.getLoadFlowResultUuid(modificationNode.getId()).isPresent());
         assertEquals(resultUuid, networkModificationTreeService.getLoadFlowResultUuid(modificationNode.getId()).get());
 

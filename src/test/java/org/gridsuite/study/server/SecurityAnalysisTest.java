@@ -342,7 +342,7 @@ public class SecurityAnalysisTest {
         String resultUuidJson = mapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateSecurityAnalysisResultUuid(modificationNode.getId(), resultUuid);
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, ComputationType.SECURITY_ANALYSIS);
         assertTrue(networkModificationTreeService.getSecurityAnalysisResultUuid(modificationNode.getId()).isPresent());
         assertEquals(resultUuid, networkModificationTreeService.getSecurityAnalysisResultUuid(modificationNode.getId()).get());
 
