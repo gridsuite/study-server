@@ -120,13 +120,13 @@ public class SecurityAnalysisService {
         var path = uriComponentsBuilder.queryParam("contingencyListName", contingencyListNames)
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
 
-        var additionalParameters = new SecurityAnalysisAdditionalParametersInfos(loadFlowParameters, specificParams);
+        var additionalParameters = new LoadFlowParametersInfos(loadFlowParameters, specificParams);
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<SecurityAnalysisAdditionalParametersInfos> httpEntity = new HttpEntity<>(additionalParameters, headers);
+        HttpEntity<LoadFlowParametersInfos> httpEntity = new HttpEntity<>(additionalParameters, headers);
 
         return restTemplate
                 .exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
