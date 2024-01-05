@@ -526,9 +526,12 @@ public class ShortCircuitTest {
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateShortCircuitAnalysisResultUuid(modificationNode.getId(), resultUuid);
-        assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), ShortcircuitAnalysisType.ALL_BUSES).isPresent());
-        assertEquals(resultUuid, networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), ShortcircuitAnalysisType.ALL_BUSES).get());
+        ComputationType computationType = ComputationType.SHORT_CIRCUIT;
+        ShortcircuitAnalysisType shortcircuitAnalysisType = ShortcircuitAnalysisType.ALL_BUSES;
+        computationType.setBusMode(shortcircuitAnalysisType);
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, computationType);
+        assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), shortcircuitAnalysisType).isPresent());
+        assertEquals(resultUuid, networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), shortcircuitAnalysisType).get());
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
@@ -538,7 +541,7 @@ public class ShortCircuitTest {
         studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), "");
 
         // Test reset uuid result in the database
-        assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), ShortcircuitAnalysisType.ALL_BUSES).isEmpty());
+        assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), shortcircuitAnalysisType).isEmpty());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));

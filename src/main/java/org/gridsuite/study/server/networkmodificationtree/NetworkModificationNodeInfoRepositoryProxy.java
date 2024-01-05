@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server.networkmodificationtree;
 
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -19,6 +20,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+
+import static org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType.ONE_BUS;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -110,25 +113,33 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         }
     }
 
-    @Override
-    public void updateShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisUuid) {
+    public void updateComputationResultUuid(AbstractNode node, UUID computationUuid, ComputationType computationType) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setShortCircuitAnalysisResultUuid(shortCircuitAnalysisUuid);
-        updateNode(modificationNode, "shortCircuitAnalysisResultUuid");
-    }
-
-    @Override
-    public void updateLoadFlowResultUuid(AbstractNode node, UUID loadFlowUuid) {
-        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setLoadFlowResultUuid(loadFlowUuid);
-        updateNode(modificationNode, "loadFlowResultUuid");
-    }
-
-    @Override
-    public void updateOneBusShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisUuid) {
-        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setOneBusShortCircuitAnalysisResultUuid(shortCircuitAnalysisUuid);
-        updateNode(modificationNode, "oneBusShortCircuitAnalysisResultUuid");
+        switch (computationType) {
+            case LOAD_FLOW : {
+                modificationNode.setLoadFlowResultUuid(computationUuid);
+            } break;
+            case SECURITY_ANALYSIS : {
+                modificationNode.setSecurityAnalysisResultUuid(computationUuid);
+            } break;
+            case SENSITIVITY_ANALYSIS : {
+                modificationNode.setSensitivityAnalysisResultUuid(computationUuid);
+            } break;
+            case SHORT_CIRCUIT : {
+                if (computationType.getOneBus() == ONE_BUS) {
+                    modificationNode.setOneBusShortCircuitAnalysisResultUuid(computationUuid);
+                } else {
+                    modificationNode.setShortCircuitAnalysisResultUuid(computationUuid);
+                }
+            } break;
+            case VOLTAGE_INITIALIZATION : {
+                modificationNode.setVoltageInitResultUuid(computationUuid);
+            } break;
+            case DYNAMIC_SIMULATION : {
+                modificationNode.setDynamicSimulationResultUuid(computationUuid);
+            } break;
+        }
+        updateNode(modificationNode, computationType.getResultUuidLabel());
     }
 
     @Override
@@ -147,22 +158,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void updateVoltageInitResultUuid(AbstractNode node, UUID voltageInitUuid) {
-        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setVoltageInitResultUuid(voltageInitUuid);
-        updateNode(modificationNode, "voltageInitResultUuid");
-    }
-
-    @Override
     public UUID getVoltageInitResultUuid(AbstractNode node) {
         return ((NetworkModificationNode) node).getVoltageInitResultUuid();
-    }
-
-    @Override
-    public void updateSecurityAnalysisResultUuid(AbstractNode node, UUID securityAnalysisResultUuid) {
-        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setSecurityAnalysisResultUuid(securityAnalysisResultUuid);
-        updateNode(modificationNode, "securityAnalysisResultUuid");
     }
 
     @Override
@@ -171,22 +168,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void updateSensitivityAnalysisResultUuid(AbstractNode node, UUID sensitivityAnalysisResultUuid) {
-        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
-        updateNode(modificationNode, "sensitivityAnalysisResultUuid");
-    }
-
-    @Override
     public UUID getSensitivityAnalysisResultUuid(AbstractNode node) {
         return ((NetworkModificationNode) node).getSensitivityAnalysisResultUuid();
-    }
-
-    @Override
-    public void updateDynamicSimulationResultUuid(AbstractNode node, UUID dynamicSimulationResultUuid) {
-        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setDynamicSimulationResultUuid(dynamicSimulationResultUuid);
-        updateNode(modificationNode, "dynamicSimulationResultUuid");
     }
 
     @Override

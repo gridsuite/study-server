@@ -474,7 +474,7 @@ public class SensitivityAnalysisTest {
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNodeUuid = modificationNode1.getId();
-        networkModificationTreeService.updateSensitivityAnalysisResultUuid(modificationNodeUuid, notFoundSensitivityUuid);
+        networkModificationTreeService.updateComputationResultUuid(modificationNodeUuid, notFoundSensitivityUuid, ComputationType.SENSITIVITY_ANALYSIS);
         assertTrue(networkModificationTreeService.getSensitivityAnalysisResultUuid(modificationNodeUuid).isPresent());
         assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getSensitivityAnalysisResultUuid(modificationNodeUuid).get());
 
@@ -505,7 +505,7 @@ public class SensitivityAnalysisTest {
         String resultUuidJson = mapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateSensitivityAnalysisResultUuid(modificationNode.getId(), resultUuid);
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, ComputationType.SENSITIVITY_ANALYSIS);
         assertTrue(networkModificationTreeService.getSensitivityAnalysisResultUuid(modificationNode.getId()).isPresent());
         assertEquals(resultUuid, networkModificationTreeService.getSensitivityAnalysisResultUuid(modificationNode.getId()).get());
 

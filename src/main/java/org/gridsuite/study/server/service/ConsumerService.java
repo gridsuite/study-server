@@ -246,62 +246,36 @@ public class ConsumerService {
         String errorMessage = msg.getHeaders().get(HEADER_MESSAGE, String.class);
         String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
         UUID resultUuid = null;
-        String resultId = msg.getHeaders().get(RESULT_UUID, String.class);
-        if (resultId != null) {
-            resultUuid = UUID.fromString(resultId);
+        // resultUuid is only used for the voltage initialization computation, I don't know why
+        if (computationType == VOLTAGE_INITIALIZATION) {
+            String resultId = msg.getHeaders().get(RESULT_UUID, String.class);
+            if (resultId != null) {
+                resultUuid = UUID.fromString(resultId);
+            }
         }
-        if (receiver != null && !Strings.isBlank(receiver)) {
+        if (!Strings.isBlank(receiver)) {
             NodeReceiver receiverObj;
             try {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
                 LOGGER.info("{} failed for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
 
-                String updateType = "";
-                // delete computtion results from the databases
-                // ==> will probably be removed soon because it prevents the front from recovering the resultId ; or 'null' parameter will be replaced by null like in VOLTAGE_INITIALIZATION
-                switch (computationType) {
-                    case LOAD_FLOW : {
-                        networkModificationTreeService.updateLoadFlowResultUuid(receiverObj.getNodeUuid(), null);
-                        updateType = NotificationService.UPDATE_TYPE_LOADFLOW_FAILED;
-                    } break;
-                    case SECURITY_ANALYSIS : {
-                        networkModificationTreeService.updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-                        updateType = NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_FAILED;
-                    } break;
-                    case SENSITIVITY_ANALYSIS : {
-                        networkModificationTreeService.updateSensitivityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-                        updateType = NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED;
-                    } break;
-                    case SHORT_CIRCUIT : {
-                        String busId = msg.getHeaders().get(HEADER_BUS_ID, String.class);
-                        ShortcircuitAnalysisType analysisType = (busId == null) ?
-                                ShortcircuitAnalysisType.ALL_BUSES :
-                                ShortcircuitAnalysisType.ONE_BUS;
-                        if (analysisType == ShortcircuitAnalysisType.ALL_BUSES) {
-                            networkModificationTreeService.updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-                            updateType = NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED;
-                        } else {
-                            networkModificationTreeService.updateOneBusShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-                            updateType = NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_FAILED;
-                        }
-                    } break;
-                    case VOLTAGE_INITIALIZATION : {
-                        networkModificationTreeService.updateVoltageInitResultUuid(receiverObj.getNodeUuid(), resultUuid);
-                        updateType = NotificationService.UPDATE_TYPE_VOLTAGE_INIT_FAILED;
-                    } break;
-                    case DYNAMIC_SIMULATION : {
-                        networkModificationTreeService.updateDynamicSimulationResultUuid(receiverObj.getNodeUuid(), null);
-                        updateType = NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED;
-                    } break;
+                if (computationType == SHORT_CIRCUIT) {
+                    String busId = msg.getHeaders().get(HEADER_BUS_ID, String.class);
+                    computationType.setBusMode((busId == null) ?
+                            ShortcircuitAnalysisType.ALL_BUSES :
+                            ShortcircuitAnalysisType.ONE_BUS);
                 }
+                // delete computation results from the databases
+                // ==> will probably be removed soon because it prevents the front from recovering the resultId ; or 'null' parameter will be replaced by null like in VOLTAGE_INITIALIZATION
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, computationType);
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notification for failed computation
                 notificationService.emitStudyError(
                         studyUuid,
                         receiverObj.getNodeUuid(),
-                        updateType,
+                        computationType.getUpdateFailedType(),
                         errorMessage,
                         userId);
             } catch (JsonProcessingException e) {
@@ -312,46 +286,18 @@ public class ConsumerService {
 
     public void consumeCalculationStopped(Message<String> msg, ComputationType computationType) {
         String receiver = msg.getHeaders().get(HEADER_RECEIVER, String.class);
-        if (receiver != null) {
+        if (!Strings.isBlank(receiver)) {
             NodeReceiver receiverObj;
             try {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
-                LOGGER.info("{} stopped for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
-
-                String updateType = "";
                 // delete computation results from the database
-                switch (computationType) {
-                    case LOAD_FLOW: {
-                        networkModificationTreeService.updateLoadFlowResultUuid(receiverObj.getNodeUuid(), null);
-                        updateType = NotificationService.UPDATE_TYPE_LOADFLOW_STATUS;
-                    } break;
-                    case SECURITY_ANALYSIS: {
-                        networkModificationTreeService.updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-                        updateType = NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS;
-                    } break;
-                    case SENSITIVITY_ANALYSIS: {
-                        networkModificationTreeService.updateSensitivityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-                        updateType = NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS;
-                    } break;
-                    case SHORT_CIRCUIT: {
-                        // TODO : this Stopped function is the only one when SHORT_CIRCUIT doesn't handle buses => might cause a bug
-                        networkModificationTreeService.updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-                        updateType = NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS;
-                    } break;
-                    case VOLTAGE_INITIALIZATION: {
-                        networkModificationTreeService.updateVoltageInitResultUuid(receiverObj.getNodeUuid(), null);
-                        updateType = NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS;
-                    } break;
-                    case DYNAMIC_SIMULATION: {
-                        networkModificationTreeService.updateDynamicSimulationResultUuid(receiverObj.getNodeUuid(), null);
-                        updateType = NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
-                    } break;
-                }
-
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), null, computationType);
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notification for stopped computation
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), updateType);
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateStatusType());
+
+                LOGGER.info("{} stopped for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
             } catch (JsonProcessingException e) {
                 LOGGER.error(e.toString());
             }
@@ -365,7 +311,7 @@ public class ConsumerService {
             resultUuid = UUID.fromString(resultId);
         }
         String receiver = msg.getHeaders().get(HEADER_RECEIVER, String.class);
-        if (receiver != null) {
+        if (!Strings.isBlank(receiver)) {
             NodeReceiver receiverObj;
             try {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
@@ -375,57 +321,19 @@ public class ConsumerService {
                         resultUuid,
                         receiverObj.getNodeUuid());
 
-                String updateStatusType = "";
-                String updateResultType = "";
                 // update DB
-                switch (computationType) {
-                    case LOAD_FLOW: {
-                        networkModificationTreeService.updateLoadFlowResultUuid(receiverObj.getNodeUuid(), resultUuid);
-                        updateStatusType = NotificationService.UPDATE_TYPE_LOADFLOW_STATUS;
-                        updateResultType = NotificationService.UPDATE_TYPE_LOADFLOW_RESULT;
-                    } break;
-                    case SECURITY_ANALYSIS: {
-                        networkModificationTreeService.updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
-                        updateStatusType = NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS;
-                        updateResultType = NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT;
-                    } break;
-                    case SENSITIVITY_ANALYSIS: {
-                        networkModificationTreeService.updateSensitivityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
-                        updateStatusType = NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS;
-                        updateResultType = NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT;
-                    } break;
-                    case SHORT_CIRCUIT: {
-                        String busId = msg.getHeaders().get(HEADER_BUS_ID, String.class);
-                        ShortcircuitAnalysisType analysisType = (busId == null) ?
-                                ShortcircuitAnalysisType.ALL_BUSES :
-                                ShortcircuitAnalysisType.ONE_BUS;
-                        if (analysisType == ShortcircuitAnalysisType.ALL_BUSES) {
-                            networkModificationTreeService.updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
-                            updateStatusType = NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS;
-                            updateResultType = NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT;
-                        } else {
-                            networkModificationTreeService.updateOneBusShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
-                            updateStatusType = NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS;
-                            updateResultType = NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT;
-                        }
-
-                    } break;
-                    case VOLTAGE_INITIALIZATION: {
-                        networkModificationTreeService.updateVoltageInitResultUuid(receiverObj.getNodeUuid(), resultUuid);
-                        updateStatusType = NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS;
-                        updateResultType = NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT;
-                    } break;
-                    case DYNAMIC_SIMULATION: {
-                        networkModificationTreeService.updateDynamicSimulationResultUuid(receiverObj.getNodeUuid(), resultUuid);
-                        updateStatusType = NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
-                        updateResultType = NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT;
-                    } break;
+                if (computationType == SHORT_CIRCUIT) {
+                    String busId = msg.getHeaders().get(HEADER_BUS_ID, String.class);
+                    computationType.setBusMode((busId == null) ?
+                            ShortcircuitAnalysisType.ALL_BUSES :
+                            ShortcircuitAnalysisType.ONE_BUS);
                 }
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, computationType);
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notifications
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), updateStatusType);
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), updateResultType);
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateStatusType());
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateResultType());
             } catch (JsonProcessingException e) {
                 LOGGER.error(e.toString());
             }

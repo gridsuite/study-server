@@ -32,6 +32,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
+import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
+import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
+import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT;
+import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -656,38 +661,8 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid));
-    }
-
-    @Transactional
-    public void updateOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateOneBusShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid));
-    }
-
-    @Transactional
-    public void updateLoadFlowResultUuid(UUID nodeUuid, UUID loadFlowResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowResultUuid(nodeUuid, loadFlowResultUuid));
-    }
-
-    @Transactional
-    public void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateVoltageInitResultUuid(nodeUuid, voltageInitResultUuid));
-    }
-
-    @Transactional
-    public void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid));
-    }
-
-    @Transactional
-    public void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateSensitivityAnalysisResultUuid(nodeUuid, sensitivityAnalysisResultUuid));
-    }
-
-    @Transactional
-    public void updateDynamicSimulationResultUuid(UUID nodeUuid, UUID dynamicSimulationResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateDynamicSimulationResultUuid(nodeUuid, dynamicSimulationResultUuid));
+    public void updateComputationResultUuid(UUID nodeUuid, UUID computationResultUuid, ComputationType computationType) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateComputationResultUuid(nodeUuid, computationResultUuid, computationType));
     }
 
     @Transactional(readOnly = true)
@@ -943,13 +918,15 @@ public class NetworkModificationTreeService {
             if (!invalidateOnlyChildrenBuildStatus) {
                 nodeRepository.invalidateNodeBuildStatus(childUuid, changedNodes);
             }
-            nodeRepository.updateLoadFlowResultUuid(childUuid, null);
-            nodeRepository.updateSecurityAnalysisResultUuid(childUuid, null);
-            nodeRepository.updateSensitivityAnalysisResultUuid(childUuid, null);
-            nodeRepository.updateShortCircuitAnalysisResultUuid(childUuid, null);
-            nodeRepository.updateOneBusShortCircuitAnalysisResultUuid(childUuid, null);
+            nodeRepository.updateComputationResultUuid(childUuid, null, LOAD_FLOW);
+            nodeRepository.updateComputationResultUuid(childUuid, null, SECURITY_ANALYSIS);
+            nodeRepository.updateComputationResultUuid(childUuid, null, SENSITIVITY_ANALYSIS);
+            ComputationType computationType = SHORT_CIRCUIT;
+            nodeRepository.updateComputationResultUuid(childUuid, null, computationType);
+            computationType.setBusMode(ShortcircuitAnalysisType.ALL_BUSES);
+            nodeRepository.updateComputationResultUuid(childUuid, null, computationType);
             if (deleteVoltageInitResults) {
-                nodeRepository.updateVoltageInitResultUuid(childUuid, null);
+                nodeRepository.updateComputationResultUuid(childUuid, null, VOLTAGE_INITIALIZATION);
             }
         }
     }
