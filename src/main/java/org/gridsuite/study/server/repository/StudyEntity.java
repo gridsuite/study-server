@@ -89,6 +89,17 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "voltageInitParametersUuid")
     private UUID voltageInitParametersUuid;
 
+    @Deprecated(forRemoval = true)
+    @Getter(AccessLevel.PROTECTED)
+    @Setter(AccessLevel.PROTECTED)
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "securityAnalysisParametersEntity_id",
+            referencedColumnName = "id",
+            foreignKey = @ForeignKey(
+                    name = "securityAnalysisParameters_id_fk"
+            ))
+    private SecurityAnalysisParametersEntity securityAnalysisParameters;
+
     @Column(name = "securityAnalysisParametersUuid")
     private UUID securityAnalysisParametersUuid;
 
