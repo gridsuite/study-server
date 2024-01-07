@@ -246,7 +246,7 @@ public class LoadFlowService {
             parameters = restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowParametersValues.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(VOLTAGE_INIT_PARAMETERS_NOT_FOUND);
+                throw new StudyException(LOADFLOW_PARAMETERS_NOT_FOUND);
             }
             throw e;
         }
@@ -272,7 +272,7 @@ public class LoadFlowService {
         try {
             parametersUuid = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
         } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_VOLTAGE_INIT_PARAMETERS_FAILED);
+            throw handleHttpError(e, CREATE_LOADFLOW_PARAMETERS_FAILED);
         }
 
         return parametersUuid;
@@ -293,7 +293,7 @@ public class LoadFlowService {
         try {
             parametersUuid = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
         } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_VOLTAGE_INIT_PARAMETERS_FAILED);
+            throw handleHttpError(e, CREATE_LOADFLOW_PARAMETERS_FAILED);
         }
 
         return parametersUuid;
@@ -316,7 +316,7 @@ public class LoadFlowService {
         try {
             restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT, httpEntity, UUID.class);
         } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED);
+            throw handleHttpError(e, UPDATE_LOADFLOW_PARAMETERS_FAILED);
         }
     }
 
