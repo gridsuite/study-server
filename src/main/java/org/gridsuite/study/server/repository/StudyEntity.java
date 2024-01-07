@@ -73,7 +73,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             referencedColumnName = "id",
             foreignKey = @ForeignKey(
                     name = "loadFlowParameters_id_fk"
-            ), nullable = false)
+            ))
     private LoadFlowParametersEntity loadFlowParameters;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
