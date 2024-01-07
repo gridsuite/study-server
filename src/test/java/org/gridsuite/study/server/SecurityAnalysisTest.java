@@ -374,14 +374,10 @@ public class SecurityAnalysisTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         //run failing security analysis (because in network 2)
-        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
                 studyUuid, modificationNode1Uuid, CONTINGENCY_LIST_NAME)
                         .header(HEADER_USER_ID, "testUserId"))
-                        .andExpect(status().isOk()).andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        String uuidResponse = mapper.readValue(resultAsString, String.class);
-
-        assertEquals(SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID, uuidResponse);
+                        .andExpect(status().isOk());
 
         // failed security analysis
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
@@ -437,11 +433,7 @@ public class SecurityAnalysisTest {
                         .content(objectWriter.writeValueAsString(securityAnalysisParameters));
         }
         requestBuilder.header(HEADER_USER_ID, "testUserId");
-        mvcResult = mockMvc.perform(requestBuilder).andExpect(status().isOk())
-            .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        UUID uuidResponse = mapper.readValue(resultAsString, UUID.class);
-        assertEquals(uuidResponse, resultUuid);
+        mockMvc.perform(requestBuilder).andExpect(status().isOk());
 
         Message<byte[]> securityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));

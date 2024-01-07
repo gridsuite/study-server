@@ -27,6 +27,7 @@ public final class StudyUtils {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private StudyUtils() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
     public static StudyException handleHttpError(HttpStatusCodeException httpException, StudyException.Type type) {

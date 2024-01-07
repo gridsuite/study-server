@@ -295,18 +295,12 @@ public class StudyControllerDynamicSimulationTest {
         MvcResult result;
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
-        result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
                         studyUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
-                .andExpect(status().isOk()).andReturn();
-
-        // --- check result --- //
-        String resultUuidJson = result.getResponse().getContentAsString();
-        UUID resultUuid = objectMapper.readValue(resultUuidJson, UUID.class);
-
-        assertEquals(RESULT_UUID, resultUuid);
+                .andExpect(status().isOk());
 
         // --- check async messages emitted by runDynamicSimulation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
@@ -372,18 +366,12 @@ public class StudyControllerDynamicSimulationTest {
         MvcResult result;
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
-        result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
                         studyUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
-                .andExpect(status().isOk()).andReturn();
-
-        // --- check result --- //
-        String resultUuidJson = result.getResponse().getContentAsString();
-        UUID resultUuid = objectMapper.readValue(resultUuidJson, UUID.class);
-
-        assertEquals(RESULT_UUID, resultUuid);
+                .andExpect(status().isOk());
 
         // --- check async messages emitted by runDynamicSimulation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
@@ -461,18 +449,12 @@ public class StudyControllerDynamicSimulationTest {
         MvcResult result;
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
-        result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
                         studyUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
-                .andExpect(status().isOk()).andReturn();
-
-        // --- check result --- //
-        String resultUuidJson = result.getResponse().getContentAsString();
-        UUID resultUuid = objectMapper.readValue(resultUuidJson, UUID.class);
-
-        assertEquals(RESULT_UUID, resultUuid);
+                .andExpect(status().isOk());
 
         // --- check async messages emitted by runDynamicSimulation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination

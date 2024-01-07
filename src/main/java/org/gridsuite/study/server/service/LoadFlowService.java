@@ -81,7 +81,7 @@ public class LoadFlowService {
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam(QUERY_PARAM_REPORT_UUID, reportUuid.toString())
                 .queryParam(QUERY_PARAM_REPORTER_ID, nodeUuid.toString())
-                .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.LOADFLOW.toString());
+                .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.LOADFLOW.reportKey);
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
