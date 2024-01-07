@@ -65,6 +65,17 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "loadFlowParametersUuid")
     private UUID loadFlowParametersUuid;
 
+    @Deprecated(forRemoval = true)
+    @Getter(AccessLevel.PROTECTED)
+    @Setter(AccessLevel.PROTECTED)
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "loadFlowParametersEntity_id",
+            referencedColumnName = "id",
+            foreignKey = @ForeignKey(
+                    name = "loadFlowParameters_id_fk"
+            ), nullable = false)
+    private LoadFlowParametersEntity loadFlowParameters;
+
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "shortCircuitParametersEntity_id",
             referencedColumnName = "id",

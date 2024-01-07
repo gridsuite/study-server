@@ -70,7 +70,7 @@ public final class TestUtils {
     }
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider,
-                                               UUID loadFlowParametersEntity,
+                                               UUID loadFlowParametersUuid,
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
                                                UUID voltageInitParametersUuid,
                                                SecurityAnalysisParametersEntity securityAnalysisParametersEntity,
@@ -80,6 +80,7 @@ public final class TestUtils {
             .networkId("netId")
             .networkUuid(networkUuid)
             .loadFlowProvider(loadflowProvider)
+            .loadFlowParametersUuid(loadFlowParametersUuid)
             .shortCircuitParameters(shortCircuitParametersEntity)
             .voltageInitParametersUuid(voltageInitParametersUuid)
             .securityAnalysisParameters(securityAnalysisParametersEntity)
@@ -88,7 +89,7 @@ public final class TestUtils {
     }
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider,
-                                               UUID loadFlowParametersEntity,
+                                               UUID loadFlowParametersUuid,
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
                                                SecurityAnalysisParametersEntity securityAnalysisParametersEntity,
                                                SensitivityAnalysisParametersEntity sensitivityParametersEntity) {
@@ -96,6 +97,7 @@ public final class TestUtils {
                 .networkId("netId")
                 .networkUuid(networkUuid)
                 .loadFlowProvider(loadflowProvider)
+                .loadFlowParametersUuid(loadFlowParametersUuid)
                 .shortCircuitParameters(shortCircuitParametersEntity)
                 .securityAnalysisParameters(securityAnalysisParametersEntity)
                 .sensitivityAnalysisParameters(sensitivityParametersEntity)

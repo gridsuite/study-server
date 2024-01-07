@@ -319,4 +319,13 @@ public class LoadFlowService {
             throw handleHttpError(e, UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED);
         }
     }
+
+    public void deleteLoadFlowParameters(UUID uuid) {
+        Objects.requireNonNull(uuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/{parametersUuid}")
+                .buildAndExpand(uuid)
+                .toUriString();
+
+        restTemplate.delete(loadFlowServerBaseUri + path);
+    }
 }

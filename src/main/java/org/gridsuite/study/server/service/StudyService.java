@@ -536,6 +536,9 @@ public class StudyService {
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
+                if (s.getLoadFlowParametersUuid() != null) {
+                    loadflowService.deleteLoadFlowParameters(s.getLoadFlowParametersUuid());
+                }
             });
             deleteStudyInfos = new DeleteStudyInfos(networkUuid, caseUuid.get(), nodesModificationInfos);
         } else {
@@ -641,7 +644,10 @@ public class StudyService {
 
         Map<String, String> newImportParameters = Map.copyOf(sourceStudy.getImportParameters());
 
-        UUID copiedLoadFlowParametersUuid = loadflowService.duplicateLoadFlowParameters(sourceStudy.getLoadFlowParametersUuid());
+        UUID copiedLoadFlowParametersUuid = null;
+        if (sourceStudy.getLoadFlowParametersUuid() != null) {
+            copiedLoadFlowParametersUuid = loadflowService.duplicateLoadFlowParameters(sourceStudy.getLoadFlowParametersUuid());
+        }
 
         SecurityAnalysisParametersValues securityAnalysisParametersValues = sourceStudy.getSecurityAnalysisParameters() == null ? SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues() : SecurityAnalysisService.fromEntity(sourceStudy.getSecurityAnalysisParameters());
 
@@ -879,7 +885,7 @@ public class StudyService {
     }
 
     private LoadFlowParametersInfos getLoadFlowParametersInfos(StudyEntity studyEntity, ComputationUsingLoadFlow computation) {
-        LoadFlowParametersValues params = loadflowService.getLoadFlowParameters(studyEntity.getLoadFlowParametersUuid());
+        LoadFlowParametersValues params = getLoadFlowParametersValues(studyEntity.getId());
         String lfProvider;
         if (computation == ComputationUsingLoadFlow.SECURITY_ANALYSIS) {
             lfProvider = studyEntity.getSecurityAnalysisProvider();
@@ -890,7 +896,7 @@ public class StudyService {
         }
         return LoadFlowParametersInfos.builder()
                 .commonParameters(params.getCommonParameters())
-                .specificParameters(params.getSpecificParametersPerProvider().getOrDefault(lfProvider, Map.of()))
+                .specificParameters(lfProvider != null ? params.getSpecificParametersPerProvider().getOrDefault(lfProvider, Map.of()) : Map.of())
                 .build(); 
     }
 
@@ -1161,7 +1167,7 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParametersUuid, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, importParameters, StudyIndexationStatus.INDEXED);
+                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParametersUuid, null, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, null, importParameters, StudyIndexationStatus.INDEXED);
         return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
     }
 

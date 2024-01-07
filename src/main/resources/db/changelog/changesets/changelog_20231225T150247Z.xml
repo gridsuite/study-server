@@ -5,16 +5,7 @@
             <column name="load_flow_parameters_uuid" type="uuid"/>
         </addColumn>
     </changeSet>
-    <changeSet  author="labidiayo" id="1703516587040-13">  
-        <dropTable  cascadeConstraints="true" tableName="load_flow_parameters"/>  
-    </changeSet>
-    <changeSet author="labidiayo (generated)" id="1703516587040-14">
-        <dropTable cascadeConstraints="true" tableName="load_flow_specific_parameters"/>
-    </changeSet>
-    <changeSet author="labidiayo (generated)" id="1703516587040-15">
-        <dropTable cascadeConstraints="true" tableName="load_flow_parameters_entity_countries_to_balance"/>
-    </changeSet>
-    <changeSet author="labidiayo (generated)" id="1703516587040-16">
-        <dropColumn columnName="load_flow_parameters_entity_id" tableName="STUDY"/>
+    <changeSet author="labidiayo" id="1703516587040-13">
+        <dropNotNullConstraint tableName="study" columnName="load_flow_parameters_entity_id"/>
     </changeSet>
 </databaseChangeLog>
