@@ -15,7 +15,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
@@ -44,7 +43,6 @@ import org.springframework.data.util.Pair;
 import org.springframework.http.*;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
@@ -788,11 +786,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis result csv export"),
         @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
-    public void getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    public byte[] getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                           @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
-                                                                           HttpServletResponse response) {
-        securityAnalysisService.getSecurityAnalysisResultCsv(nodeUuid, resultType, response);
+                                                                           @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType) {
+        return securityAnalysisService.getSecurityAnalysisResultCsv(nodeUuid, resultType);
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count")
