@@ -264,7 +264,7 @@ public class NonEvacuatedEnergyService {
         NonEvacuatedEnergyGeneratorsCappingsEntity generatorsCappingsEntity = new NonEvacuatedEnergyGeneratorsCappingsEntity();
         if (parameters.getGeneratorsCappings() != null) {
             generatorsCappingsEntity.setSensitivityThreshold(parameters.getGeneratorsCappings().getSensitivityThreshold());
-            for (NonEvacuatedEnergyGeneratorCappingsByType generatorsCappingsByType : parameters.getGeneratorsCappings().getGeneratorsCappingsByType()) {
+            for (NonEvacuatedEnergyGeneratorCappingsByType generatorsCappingsByType : parameters.getGeneratorsCappings().getGenerators()) {
                 NonEvacuatedEnergyGeneratorsCappingsByTypeEntity generatorsCappingsByTypeEntity = new NonEvacuatedEnergyGeneratorsCappingsByTypeEntity();
                 generatorsCappingsByTypeEntity.setActivated(generatorsCappingsByType.isActivated());
                 generatorsCappingsByTypeEntity.setEnergySource(generatorsCappingsByType.getEnergySource());

@@ -2307,7 +2307,7 @@ public class StudyService {
             .filter(NonEvacuatedEnergyStagesSelection::isActivated)
             .collect(Collectors.toList()));
 
-        List<NonEvacuatedEnergyGeneratorCappingsByType> generatorsCappingsByType = nonEvacuatedEnergyParametersInfos.getGeneratorsCappings().getGeneratorsCappingsByType()
+        List<NonEvacuatedEnergyGeneratorCappingsByType> generatorsCappingsByType = nonEvacuatedEnergyParametersInfos.getGeneratorsCappings().getGenerators()
             .stream()
             .filter(NonEvacuatedEnergyGeneratorCappingsByType::isActivated)
             .collect(Collectors.toList());

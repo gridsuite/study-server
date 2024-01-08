@@ -29,5 +29,5 @@ public class NonEvacuatedEnergyGeneratorsCappings {
     Double sensitivityThreshold;
 
     @Builder.Default
-    List<NonEvacuatedEnergyGeneratorCappingsByType> generatorsCappingsByType = new ArrayList<>();
+    List<NonEvacuatedEnergyGeneratorCappingsByType> generators = new ArrayList<>();
 }
