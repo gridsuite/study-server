@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy;
+package org.gridsuite.study.server.repository.nonevacuatedenergy;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -51,7 +51,7 @@ public class NonEvacuatedEnergyParametersEntity {
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "non_Evacuated_Energy_Parameters_id")
-    private NonEvacuatedEnergyGeneratorsLimitEntity generatorsLimit;
+    private NonEvacuatedEnergyGeneratorsCappingsEntity generatorsCappings;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "non_Evacuated_Energy_Parameters_id")

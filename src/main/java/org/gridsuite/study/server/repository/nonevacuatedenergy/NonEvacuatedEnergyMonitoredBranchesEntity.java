@@ -4,15 +4,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy;
+package org.gridsuite.study.server.repository.nonevacuatedenergy;
 
-import com.powsybl.iidm.network.EnergySource;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -33,8 +31,8 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "nonEvacuatedEnergyStageDefinition")
-public class NonEvacuatedEnergyStageDefinitionEntity {
+@Table(name = "nonEvacuatedEnergyMonitoredBranches")
+public class NonEvacuatedEnergyMonitoredBranchesEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
@@ -42,18 +40,29 @@ public class NonEvacuatedEnergyStageDefinitionEntity {
 
     @ElementCollection
     @CollectionTable(
-        name = "nonEvacuatedEnergyStageDefinitionGenerators",
-        joinColumns = @JoinColumn(name = "non_evacuated_energy_stage_definition_id")
+            name = "nonEvacuatedEnergyMonitoredBranch",
+            joinColumns = @JoinColumn(name = "NonEvacuatedEnergyMonitoredBranchesId", foreignKey = @ForeignKey(name = "nonEvacuatedEnergyMonitoredBranchesEntity_monitoredBranches_fk"))
     )
-    private List<EquipmentsContainerEmbeddable> generators;
+    private List<EquipmentsContainerEmbeddable> monitoredBranches;
 
-    @Enumerated(EnumType.STRING)
-    private EnergySource energySource;
+    @Column(name = "ist_n")
+    private boolean istN;
 
-    @ElementCollection
-    @CollectionTable(
-        name = "nonEvacuatedEnergyStageDefinitionPmaxPercent",
-        joinColumns = @JoinColumn(name = "non_evacuated_energy_stage_definition_id")
-    )
-    private List<Float> pMaxPercents;
+    @Column(name = "limit_name_n")
+    private String limitNameN;
+
+    @Column(name = "n_coefficient")
+    private float nCoefficient;
+
+    @Column(name = "ist_nm1")
+    private boolean istNm1;
+
+    @Column(name = "limit_name_nm1")
+    private String limitNameNm1;
+
+    @Column(name = "nm1_coefficient")
+    private float nm1Coefficient;
+
+    @Column(name = "activated", columnDefinition = "boolean default true")
+    private boolean activated;
 }

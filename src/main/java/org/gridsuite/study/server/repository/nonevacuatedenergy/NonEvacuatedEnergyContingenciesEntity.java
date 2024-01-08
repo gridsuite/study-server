@@ -4,12 +4,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy;
+package org.gridsuite.study.server.repository.nonevacuatedenergy;
 
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -18,6 +19,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.gridsuite.study.server.repository.EquipmentsContainerEmbeddable;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,30 +31,19 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "nonEvacuatedEnergyStagesSelection")
-public class NonEvacuatedEnergyStagesSelectionEntity {
+@Table(name = "nonEvacuatedEnergyContingencies")
+public class NonEvacuatedEnergyContingenciesEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
 
-    private String name;
-
-    @Column(name = "stages_definition_index")
     @ElementCollection
     @CollectionTable(
-        name = "nonEvacuatedEnergyStagesSelectionDefinitionIndex",
-        joinColumns = @JoinColumn(name = "non_evacuated_energy_stages_selection_id")
+            name = "nonEvacuatedEnergyContingency",
+            joinColumns = @JoinColumn(name = "NonEvacuatedEnergyContingenciesId", foreignKey = @ForeignKey(name = "nonEvacuatedEnergyContingenciesEntity_contingencies_fk"))
     )
-    List<Integer> stageDefinitionIndex;
-
-    @Column(name = "pmax_percent_index")
-    @ElementCollection
-    @CollectionTable(
-        name = "nonEvacuatedEnergyStageSelectionPmaxPercentIndex",
-        joinColumns = @JoinColumn(name = "non_evacuated_energy_stages_selection_id")
-    )
-    List<Integer> pMaxPercentsIndex;
+    private List<EquipmentsContainerEmbeddable> contingencies;
 
     @Column(name = "activated", columnDefinition = "boolean default true")
     private boolean activated;

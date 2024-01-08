@@ -482,7 +482,7 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<String>> consumeSensitivityAnalysisNonEvacuatedEnergyResult() {
+    public Consumer<Message<String>> consumeNonEvacuatedEnergyResult() {
         return message -> {
             UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
@@ -509,7 +509,7 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<String>> consumeSensitivityAnalysisNonEvacuatedEnergyStopped() {
+    public Consumer<Message<String>> consumeNonEvacuatedEnergyStopped() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
@@ -533,7 +533,7 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<String>> consumeSensitivityAnalysisNonEvacuatedEnergyFailed() {
+    public Consumer<Message<String>> consumeNonEvacuatedEnergyFailed() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);

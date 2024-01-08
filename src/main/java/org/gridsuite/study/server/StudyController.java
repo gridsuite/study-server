@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
@@ -1735,7 +1736,7 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/run")
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/run")
     @Operation(summary = "run sensitivity analysis non evacuated energy on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy has started")})
     public ResponseEntity<UUID> runNonEvacuatedEnergy(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
@@ -1745,7 +1746,7 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.runNonEvacuatedEnergy(studyUuid, nodeUuid, userId));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/result")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/result")
     @Operation(summary = "Get a sensitivity analysis non evacuated energy result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy result"),
         @ApiResponse(responseCode = "204", description = "No sensitivity analysis non evacuated energy has been done yet"),
@@ -1757,7 +1758,7 @@ public class StudyController {
             ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/status")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/status")
     @Operation(summary = "Get the sensitivity analysis non evacuated energy status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy status"),
         @ApiResponse(responseCode = "204", description = "No sensitivity analysis non evacuated energy has been done yet"),
@@ -1769,7 +1770,7 @@ public class StudyController {
             ResponseEntity.noContent().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis-non-evacuated-energy/stop")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/stop")
     @Operation(summary = "stop sensitivity analysis non evacuated energy on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy has been stopped")})
     public ResponseEntity<Void> stopNonEvacuatedEnergy(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
@@ -1778,22 +1779,22 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/sensitivity-analysis-non-evacuated-energy/parameters")
+    @GetMapping(value = "/studies/{studyUuid}/non-evacuated-energy/parameters")
     @Operation(summary = "Get sensitivity analysis non evacuated energy parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy parameters")})
-    public ResponseEntity<org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos> getNonEvacuatedEnergyParametersValues(
+    public ResponseEntity<NonEvacuatedEnergyParametersInfos> getNonEvacuatedEnergyParametersInfos(
         @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getNonEvacuatedEnergyParametersValues(studyUuid));
+        return ResponseEntity.ok().body(studyService.getNonEvacuatedEnergyParametersInfos(studyUuid));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis-non-evacuated-energy/parameters")
+    @PostMapping(value = "/studies/{studyUuid}/non-evacuated-energy/parameters")
     @Operation(summary = "set sensitivity analysis non evacuated energy parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters non evacuated energy are set")})
-    public ResponseEntity<Void> setNonEvacuatedEnergyParametersValues(
+    public ResponseEntity<Void> setNonEvacuatedEnergyParametersInfos(
         @PathVariable("studyUuid") UUID studyUuid,
-        @RequestBody(required = false) org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersValues,
+        @RequestBody(required = false) NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos,
         @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setNonEvacuatedEnergyParametersValues(studyUuid, nonEvacuatedEnergyParametersValues, userId);
+        studyService.setNonEvacuatedEnergyParametersInfos(studyUuid, nonEvacuatedEnergyParametersInfos, userId);
         return ResponseEntity.ok().build();
     }
 

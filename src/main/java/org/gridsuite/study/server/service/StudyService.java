@@ -30,13 +30,14 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.*;
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyContingencies;
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyGeneratorLimitByType;
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyGeneratorsLimit;
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyInputData;
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyMonitoredBranches;
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyStagesSelection;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyContingencies;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyGeneratorCappingsByType;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyGeneratorsCappings;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyInputData;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyMonitoredBranches;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyStagesSelection;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -47,7 +48,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
-import org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -661,8 +662,8 @@ public class StudyService {
                 SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues() :
                 SensitivityAnalysisService.fromEntity(sourceStudy.getSensitivityAnalysisParameters());
 
-        org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersValues = sourceStudy.getNonEvacuatedEnergyParameters() == null ?
-            NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersValues() :
+        NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos = sourceStudy.getNonEvacuatedEnergyParameters() == null ?
+            NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos() :
             NonEvacuatedEnergyService.fromEntity(sourceStudy.getNonEvacuatedEnergyParameters());
 
         UUID copiedVoltageInitParametersUuid = sourceStudy.getVoltageInitParametersUuid();
@@ -686,7 +687,7 @@ public class StudyService {
                 .shortCircuitParameters(ShortCircuitService.toEntity(shortCircuitParameters, shortCircuitPredefinedConfiguration))
                 .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
                 .sensitivityAnalysisParameters(SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues))
-            .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersValues))
+            .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
                 .importParameters(newImportParameters)
                 .build();
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), UUID.randomUUID()));
@@ -996,11 +997,11 @@ public class StudyService {
                 .orElse(null);
     }
 
-    public org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos getNonEvacuatedEnergyParametersValues(UUID studyUuid) {
+    public NonEvacuatedEnergyParametersInfos getNonEvacuatedEnergyParametersInfos(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
             .map(studyEntity -> studyEntity.getNonEvacuatedEnergyParameters() != null ?
                 NonEvacuatedEnergyService.fromEntity(studyEntity.getNonEvacuatedEnergyParameters()) :
-                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersValues())
+                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos())
             .orElse(null);
     }
 
@@ -2239,10 +2240,10 @@ public class StudyService {
     }
 
     @Transactional
-    public void setNonEvacuatedEnergyParametersValues(UUID studyUuid, org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos parameters, String userId) {
+    public void setNonEvacuatedEnergyParametersInfos(UUID studyUuid, NonEvacuatedEnergyParametersInfos parameters, String userId) {
         updateNonEvacuatedEnergyParameters(studyUuid,
             NonEvacuatedEnergyService.toEntity(parameters != null ? parameters :
-                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersValues()));
+                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos()));
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -2286,9 +2287,9 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
-        org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersValues = getNonEvacuatedEnergyParametersValues(studyUuid);
+        NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos = getNonEvacuatedEnergyParametersInfos(studyUuid);
         SensitivityAnalysisParameters sensitivityAnalysisParameters = SensitivityAnalysisParameters.load();
-        sensitivityAnalysisParameters.setFlowFlowSensitivityValueThreshold(nonEvacuatedEnergyParametersValues.getGeneratorsLimit().getSensitivityThreshold());
+        sensitivityAnalysisParameters.setFlowFlowSensitivityValueThreshold(nonEvacuatedEnergyParametersInfos.getGeneratorsCappings().getSensitivityThreshold());
 
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
         List<LoadFlowSpecificParameterInfos> specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SENSITIVITY_ANALYSIS);
@@ -2299,26 +2300,26 @@ public class StudyService {
         nonEvacuatedEnergyInputData.setLoadFlowSpecificParameters(specificParameters == null ?
             Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)));
 
-        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyStagesDefinition(nonEvacuatedEnergyParametersValues.getStagesDefinition());
+        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyStagesDefinition(nonEvacuatedEnergyParametersInfos.getStagesDefinition());
 
-        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyStagesSelection(nonEvacuatedEnergyParametersValues.getStagesSelection()
+        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyStagesSelection(nonEvacuatedEnergyParametersInfos.getStagesSelection()
             .stream()
             .filter(NonEvacuatedEnergyStagesSelection::isActivated)
             .collect(Collectors.toList()));
 
-        List<NonEvacuatedEnergyGeneratorLimitByType> generatorLimitByTypes = nonEvacuatedEnergyParametersValues.getGeneratorsLimit().getGenerators()
+        List<NonEvacuatedEnergyGeneratorCappingsByType> generatorsCappingsByType = nonEvacuatedEnergyParametersInfos.getGeneratorsCappings().getGeneratorsCappingsByType()
             .stream()
-            .filter(NonEvacuatedEnergyGeneratorLimitByType::isActivated)
+            .filter(NonEvacuatedEnergyGeneratorCappingsByType::isActivated)
             .collect(Collectors.toList());
-        NonEvacuatedEnergyGeneratorsLimit generatorsLimit = new NonEvacuatedEnergyGeneratorsLimit(nonEvacuatedEnergyParametersValues.getGeneratorsLimit().getSensitivityThreshold(), generatorLimitByTypes);
-        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyGeneratorsLimit(generatorsLimit);
+        NonEvacuatedEnergyGeneratorsCappings generatorsCappings = new NonEvacuatedEnergyGeneratorsCappings(nonEvacuatedEnergyParametersInfos.getGeneratorsCappings().getSensitivityThreshold(), generatorsCappingsByType);
+        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyGeneratorsCappings(generatorsCappings);
 
-        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyMonitoredBranches(nonEvacuatedEnergyParametersValues.getMonitoredBranches()
+        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyMonitoredBranches(nonEvacuatedEnergyParametersInfos.getMonitoredBranches()
             .stream()
             .filter(NonEvacuatedEnergyMonitoredBranches::isActivated)
             .collect(Collectors.toList()));
 
-        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyContingencies(nonEvacuatedEnergyParametersValues.getContingencies()
+        nonEvacuatedEnergyInputData.setNonEvacuatedEnergyContingencies(nonEvacuatedEnergyParametersInfos.getContingencies()
             .stream()
             .filter(NonEvacuatedEnergyContingencies::isActivated)
             .collect(Collectors.toList()));

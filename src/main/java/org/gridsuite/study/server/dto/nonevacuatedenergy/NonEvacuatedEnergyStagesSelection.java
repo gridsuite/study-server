@@ -4,14 +4,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy;
+package org.gridsuite.study.server.dto.nonevacuatedenergy;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.experimental.SuperBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,14 +20,20 @@ import java.util.List;
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
-@SuperBuilder
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
-@Schema(description = "Sensitivity analysis non evacuated energy generators limit")
-public class NonEvacuatedEnergyGeneratorsLimit {
-    Double sensitivityThreshold;
+@Schema(description = "Sensitivity analysis non evacuated energy stages selection")
+public class NonEvacuatedEnergyStagesSelection {
+    String name;
 
-    List<NonEvacuatedEnergyGeneratorLimitByType> generators = new ArrayList<>();
+    @Builder.Default
+    List<Integer> stagesDefinitionIndex = new ArrayList<>();
+
+    @JsonProperty("pMaxPercentsIndex")
+    List<Integer> pMaxPercentsIndex;
+
+    boolean activated;
 }

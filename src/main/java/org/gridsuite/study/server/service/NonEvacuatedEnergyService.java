@@ -12,23 +12,23 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyContingencies;
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyGeneratorLimitByType;
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyGeneratorsLimit;
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyInputData;
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyMonitoredBranches;
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyStageDefinition;
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
-import org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyStagesSelection;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyContingencies;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyGeneratorCappingsByType;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyGeneratorsCappings;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyInputData;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyMonitoredBranches;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyStageDefinition;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyStagesSelection;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyStatus;
 import org.gridsuite.study.server.repository.EquipmentsContainerEmbeddable;
-import org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyContingenciesEntity;
-import org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyGeneratorsLimitByTypeEntity;
-import org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyGeneratorsLimitEntity;
-import org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyMonitoredBranchesEntity;
-import org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
-import org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyStageDefinitionEntity;
-import org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy.NonEvacuatedEnergyStagesSelectionEntity;
+import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyContingenciesEntity;
+import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyGeneratorsCappingsByTypeEntity;
+import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyGeneratorsCappingsEntity;
+import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyMonitoredBranchesEntity;
+import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyStageDefinitionEntity;
+import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyStagesSelectionEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -49,7 +49,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
@@ -72,7 +71,6 @@ public class NonEvacuatedEnergyService {
 
     private String sensitivityAnalysisServerBaseUri;
 
-    @Autowired
     private RestTemplate restTemplate;
 
     private final ObjectMapper objectMapper;
@@ -82,10 +80,12 @@ public class NonEvacuatedEnergyService {
     @Autowired
     NonEvacuatedEnergyService(RemoteServicesProperties remoteServicesProperties,
                               NetworkModificationTreeService networkModificationTreeService,
-                              ObjectMapper objectMapper) {
+                              ObjectMapper objectMapper,
+                              RestTemplate restTemplate) {
         this.sensitivityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("sensitivity-analysis-server");
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
+        this.restTemplate = restTemplate;
     }
 
     public void setSensitivityAnalysisServerBaseUri(String sensitivityAnalysisServerBaseUri) {
@@ -94,7 +94,7 @@ public class NonEvacuatedEnergyService {
 
     public void assertNonEvacuatedEnergyNotRunning(UUID nodeUuid) {
         String nonEvacuatedEnergyStatus = getNonEvacuatedEnergyStatus(nodeUuid);
-        if (SensitivityAnalysisStatus.RUNNING.name().equals(nonEvacuatedEnergyStatus)) {
+        if (NonEvacuatedEnergyStatus.RUNNING.name().equals(nonEvacuatedEnergyStatus)) {
             throw new StudyException(NON_EVACUATED_ENERGY_RUNNING);
         }
     }
@@ -256,20 +256,20 @@ public class NonEvacuatedEnergyService {
                 stagesSelectionEntity.setName(stagesSelection.getName());
                 stagesSelectionEntity.setActivated(stagesSelection.isActivated());
                 stagesSelectionEntity.setPMaxPercentsIndex(stagesSelection.getPMaxPercentsIndex());
-                stagesSelectionEntity.setStageDefinitionIndex(stagesSelection.getStagesDefinitonIndex());
+                stagesSelectionEntity.setStageDefinitionIndex(stagesSelection.getStagesDefinitionIndex());
                 stagesSelectionEntities.add(stagesSelectionEntity);
             }
         }
 
-        NonEvacuatedEnergyGeneratorsLimitEntity generatorsLimitEntity = new NonEvacuatedEnergyGeneratorsLimitEntity();
-        if (parameters.getGeneratorsLimit() != null) {
-            generatorsLimitEntity.setSensitivityThreshold(parameters.getGeneratorsLimit().getSensitivityThreshold());
-            for (NonEvacuatedEnergyGeneratorLimitByType generatorLimitByType : parameters.getGeneratorsLimit().getGenerators()) {
-                NonEvacuatedEnergyGeneratorsLimitByTypeEntity generatorsLimitByTypeEntity = new NonEvacuatedEnergyGeneratorsLimitByTypeEntity();
-                generatorsLimitByTypeEntity.setActivated(generatorLimitByType.isActivated());
-                generatorsLimitByTypeEntity.setEnergySource(generatorLimitByType.getEnergySource());
-                generatorsLimitByTypeEntity.setGenerators(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(generatorLimitByType.getGenerators()));
-                generatorsLimitEntity.addGenerators(generatorsLimitByTypeEntity);
+        NonEvacuatedEnergyGeneratorsCappingsEntity generatorsCappingsEntity = new NonEvacuatedEnergyGeneratorsCappingsEntity();
+        if (parameters.getGeneratorsCappings() != null) {
+            generatorsCappingsEntity.setSensitivityThreshold(parameters.getGeneratorsCappings().getSensitivityThreshold());
+            for (NonEvacuatedEnergyGeneratorCappingsByType generatorsCappingsByType : parameters.getGeneratorsCappings().getGeneratorsCappingsByType()) {
+                NonEvacuatedEnergyGeneratorsCappingsByTypeEntity generatorsCappingsByTypeEntity = new NonEvacuatedEnergyGeneratorsCappingsByTypeEntity();
+                generatorsCappingsByTypeEntity.setActivated(generatorsCappingsByType.isActivated());
+                generatorsCappingsByTypeEntity.setEnergySource(generatorsCappingsByType.getEnergySource());
+                generatorsCappingsByTypeEntity.setGenerators(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(generatorsCappingsByType.getGenerators()));
+                generatorsCappingsEntity.addGenerators(generatorsCappingsByTypeEntity);
             }
         }
 
@@ -300,54 +300,48 @@ public class NonEvacuatedEnergyService {
         }
 
         return new NonEvacuatedEnergyParametersEntity(null, stageDefinitionEntities, stagesSelectionEntities,
-            generatorsLimitEntity, monitoredBranchesEntities, contingenciesEntities);
+            generatorsCappingsEntity, monitoredBranchesEntities, contingenciesEntities);
     }
 
     public static NonEvacuatedEnergyParametersInfos fromEntity(NonEvacuatedEnergyParametersEntity entity) {
         Objects.requireNonNull(entity);
 
-        List<NonEvacuatedEnergyStageDefinition> stageDefinitionParam = new ArrayList<>();
-        entity.getStagesDefinition().stream().map(stageDefinitionEntity ->
-                new NonEvacuatedEnergyStageDefinition(EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(stageDefinitionEntity.getGenerators()),
-                    stageDefinitionEntity.getEnergySource(), stageDefinitionEntity.getPMaxPercents())
-        ).collect(Collectors.toList()).forEach(stageDefinitionParam::add);
+        List<NonEvacuatedEnergyStageDefinition> stageDefinitionParam = entity.getStagesDefinition().stream().map(stageDefinitionEntity ->
+            new NonEvacuatedEnergyStageDefinition(EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(stageDefinitionEntity.getGenerators()),
+                stageDefinitionEntity.getEnergySource(), stageDefinitionEntity.getPMaxPercents())
+        ).toList();
 
-        List<NonEvacuatedEnergyStagesSelection> stagesSelectionParam = new ArrayList<>();
-        for (NonEvacuatedEnergyStagesSelectionEntity stagesSelectionEntity : entity.getStagesSelection()) {
-            NonEvacuatedEnergyStagesSelection stagesSelection = new NonEvacuatedEnergyStagesSelection();
-            stagesSelection.setName(stagesSelectionEntity.getName());
-            stagesSelection.setActivated(stagesSelectionEntity.isActivated());
-            stagesSelection.setPMaxPercentsIndex(stagesSelectionEntity.getPMaxPercentsIndex());
-            stagesSelection.setStagesDefinitonIndex(stagesSelectionEntity.getStageDefinitionIndex());
-            stagesSelectionParam.add(stagesSelection);
-        }
+        List<NonEvacuatedEnergyStagesSelection> stagesSelectionParam = entity.getStagesSelection().stream().map(stagesSelectionEntity ->
+            new NonEvacuatedEnergyStagesSelection(stagesSelectionEntity.getName(),
+                                                  stagesSelectionEntity.getStageDefinitionIndex(),
+                                                  stagesSelectionEntity.getPMaxPercentsIndex(),
+                                                  stagesSelectionEntity.isActivated())
+        ).toList();
 
-        NonEvacuatedEnergyGeneratorsLimit generatorsLimitParam = new NonEvacuatedEnergyGeneratorsLimit(entity.getGeneratorsLimit().getSensitivityThreshold(),
-            entity.getGeneratorsLimit().getGeneratorsByType().stream().map(generatorsLimitByTypeEntity ->
-                new NonEvacuatedEnergyGeneratorLimitByType(EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(generatorsLimitByTypeEntity.getGenerators()),
-                    generatorsLimitByTypeEntity.getEnergySource(), generatorsLimitByTypeEntity.isActivated())).toList());
+        NonEvacuatedEnergyGeneratorsCappings generatorsCappingsParam = new NonEvacuatedEnergyGeneratorsCappings(entity.getGeneratorsCappings().getSensitivityThreshold(),
+            entity.getGeneratorsCappings().getGeneratorsCappings().stream().map(generatorsCappingsByTypeEntity ->
+                new NonEvacuatedEnergyGeneratorCappingsByType(EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(generatorsCappingsByTypeEntity.getGenerators()),
+                    generatorsCappingsByTypeEntity.getEnergySource(), generatorsCappingsByTypeEntity.isActivated())).toList());
 
-        List<NonEvacuatedEnergyMonitoredBranches> monitoredBranchesParam = new ArrayList<>();
-        entity.getMonitoredBranches().stream().map(monitoredBranchesEntity ->
+        List<NonEvacuatedEnergyMonitoredBranches> monitoredBranchesParam = entity.getMonitoredBranches().stream().map(monitoredBranchesEntity ->
             new NonEvacuatedEnergyMonitoredBranches(EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(monitoredBranchesEntity.getMonitoredBranches()),
                 monitoredBranchesEntity.isActivated(), monitoredBranchesEntity.isIstN(), monitoredBranchesEntity.getLimitNameN(), monitoredBranchesEntity.getNCoefficient(),
                 monitoredBranchesEntity.isIstNm1(), monitoredBranchesEntity.getLimitNameNm1(), monitoredBranchesEntity.getNm1Coefficient())
-        ).forEach(monitoredBranchesParam::add);
+        ).toList();
 
-        List<NonEvacuatedEnergyContingencies> contingenciesParam = new ArrayList<>();
-        entity.getContingencies().stream().map(contingenciesEntity ->
+        List<NonEvacuatedEnergyContingencies> contingenciesParam = entity.getContingencies().stream().map(contingenciesEntity ->
             new NonEvacuatedEnergyContingencies(EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(contingenciesEntity.getContingencies()), contingenciesEntity.isActivated())
-        ).forEach(contingenciesParam::add);
+        ).toList();
 
-        return new NonEvacuatedEnergyParametersInfos(stageDefinitionParam, stagesSelectionParam, generatorsLimitParam,
+        return new NonEvacuatedEnergyParametersInfos(stageDefinitionParam, stagesSelectionParam, generatorsCappingsParam,
             monitoredBranchesParam, contingenciesParam);
     }
 
-    public static NonEvacuatedEnergyParametersInfos getDefaultNonEvacuatedEnergyParametersValues() {
+    public static NonEvacuatedEnergyParametersInfos getDefaultNonEvacuatedEnergyParametersInfos() {
         return NonEvacuatedEnergyParametersInfos.builder()
                 .stagesDefinition(List.of())
                 .stagesSelection(List.of())
-                .generatorsLimit(new NonEvacuatedEnergyGeneratorsLimit(0., List.of()))
+                .generatorsCappings(new NonEvacuatedEnergyGeneratorsCappings(0., List.of()))
                 .monitoredBranches(List.of())
                 .contingencies(List.of())
                 .build();

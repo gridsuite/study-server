@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.repository.sensianalysis.nonevacuatedenergy;
+package org.gridsuite.study.server.repository.nonevacuatedenergy;
 
 import com.powsybl.iidm.network.EnergySource;
 import jakarta.persistence.CollectionTable;
@@ -33,20 +33,21 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "nonEvacuatedEnergyGeneratorsLimitByType")
-public class NonEvacuatedEnergyGeneratorsLimitByTypeEntity {
+@Table(name = "nonEvacuatedEnergyGeneratorsCappingsByType")
+public class NonEvacuatedEnergyGeneratorsCappingsByTypeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "energy_source")
     private EnergySource energySource;
 
     @ElementCollection
     @CollectionTable(
             name = "nonEvacuatedEnergyGenerators",
-            joinColumns = @JoinColumn(name = "non_evacuated_energy_generators_limit_by_type_id")
+            joinColumns = @JoinColumn(name = "non_evacuated_energy_generators_cappings_by_type_id")
     )
     private List<EquipmentsContainerEmbeddable> generators;
 

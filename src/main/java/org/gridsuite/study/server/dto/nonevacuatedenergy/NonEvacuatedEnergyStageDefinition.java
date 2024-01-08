@@ -4,15 +4,17 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.dto.sensianalysis.nonevacuatedenergy;
+package org.gridsuite.study.server.dto.nonevacuatedenergy;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.powsybl.iidm.network.EnergySource;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.dto.sensianalysis.EquipmentsContainer;
 
 import java.util.List;
@@ -20,27 +22,18 @@ import java.util.List;
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
-@SuperBuilder
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
-@Schema(description = "Sensitivity analysis non evacuated energy monitored branches")
-public class NonEvacuatedEnergyMonitoredBranches {
-    List<EquipmentsContainer> branches;
+@EqualsAndHashCode
+@Schema(description = "Sensitivity analysis non evacuated energy stage definition")
+public class NonEvacuatedEnergyStageDefinition {
+    List<EquipmentsContainer> generators;
 
-    boolean activated;
+    EnergySource energySource;
 
-    boolean istN;
-
-    String limitNameN;
-
-    @JsonProperty("nCoefficient")
-    float nCoefficient;
-
-    boolean istNm1;
-
-    String limitNameNm1;
-
-    float nm1Coefficient;
+    @JsonProperty("pMaxPercents")
+    List<Float> pMaxPercents;
 }
