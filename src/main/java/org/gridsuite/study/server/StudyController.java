@@ -44,7 +44,6 @@ import org.springframework.data.util.Pair;
 import org.springframework.http.*;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
@@ -1398,12 +1397,12 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv")
     @Operation(summary = "Get a sensitivity analysis result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis result"),
-            @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
-            @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
+        @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
     public ResponseEntity<byte[]> exportSensitivityResultsAsCsv(
-            @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestBody SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
+        @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+        @RequestBody SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
         byte[] result = sensitivityAnalysisService.exportSensitivityResultsAsCsv(nodeUuid, sensitivityAnalysisCsvFileInfos);
         if (result == null) {
             return ResponseEntity.noContent().build();
