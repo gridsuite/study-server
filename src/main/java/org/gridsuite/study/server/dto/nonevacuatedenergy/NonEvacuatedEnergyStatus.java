@@ -12,5 +12,6 @@ package org.gridsuite.study.server.dto.nonevacuatedenergy;
 public enum NonEvacuatedEnergyStatus {
     NOT_DONE,
     RUNNING,
-    COMPLETED
+    COMPLETED,
+    FAILED
 }

@@ -467,6 +467,7 @@ public class NonEvacuatedEnergyTest {
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_FAILED, updateType);
+        assertTrue(networkModificationTreeService.getNonEvacuatedEnergyResultUuid(modificationNode.getId()).isEmpty());
     }
 
     @Test
