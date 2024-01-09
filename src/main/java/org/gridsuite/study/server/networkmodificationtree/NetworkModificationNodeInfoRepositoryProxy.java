@@ -21,8 +21,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType.ONE_BUS;
-
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
@@ -113,68 +111,33 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         }
     }
 
+    @Override
     public void updateComputationResultUuid(AbstractNode node, UUID computationUuid, ComputationType computationType) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         switch (computationType) {
-            case LOAD_FLOW : {
-                modificationNode.setLoadFlowResultUuid(computationUuid);
-            } break;
-            case SECURITY_ANALYSIS : {
-                modificationNode.setSecurityAnalysisResultUuid(computationUuid);
-            } break;
-            case SENSITIVITY_ANALYSIS : {
-                modificationNode.setSensitivityAnalysisResultUuid(computationUuid);
-            } break;
-            case SHORT_CIRCUIT : {
-                if (computationType.getOneBus() == ONE_BUS) {
-                    modificationNode.setOneBusShortCircuitAnalysisResultUuid(computationUuid);
-                } else {
-                    modificationNode.setShortCircuitAnalysisResultUuid(computationUuid);
-                }
-            } break;
-            case VOLTAGE_INITIALIZATION : {
-                modificationNode.setVoltageInitResultUuid(computationUuid);
-            } break;
-            case DYNAMIC_SIMULATION : {
-                modificationNode.setDynamicSimulationResultUuid(computationUuid);
-            } break;
+            case LOAD_FLOW : modificationNode.setLoadFlowResultUuid(computationUuid); break;
+            case SECURITY_ANALYSIS : modificationNode.setSecurityAnalysisResultUuid(computationUuid); break;
+            case SENSITIVITY_ANALYSIS : modificationNode.setSensitivityAnalysisResultUuid(computationUuid); break;
+            case SHORT_CIRCUIT : modificationNode.setShortCircuitAnalysisResultUuid(computationUuid); break;
+            case SHORT_CIRCUIT_ONE_BUS: modificationNode.setOneBusShortCircuitAnalysisResultUuid(computationUuid); break;
+            case VOLTAGE_INITIALIZATION : modificationNode.setVoltageInitResultUuid(computationUuid); break;
+            case DYNAMIC_SIMULATION : modificationNode.setDynamicSimulationResultUuid(computationUuid); break;
+            default: return;
         }
         updateNode(modificationNode, computationType.getResultUuidLabel());
     }
 
     @Override
-    public UUID getShortCircuitAnalysisResultUuid(AbstractNode node) {
-        return ((NetworkModificationNode) node).getShortCircuitAnalysisResultUuid();
-    }
-
-    @Override
-    public UUID getOneBusShortCircuitAnalysisResultUuid(AbstractNode node) {
-        return ((NetworkModificationNode) node).getOneBusShortCircuitAnalysisResultUuid();
-    }
-
-    @Override
-    public UUID getLoadFlowResultUuid(AbstractNode node) {
-        return ((NetworkModificationNode) node).getLoadFlowResultUuid();
-    }
-
-    @Override
-    public UUID getVoltageInitResultUuid(AbstractNode node) {
-        return ((NetworkModificationNode) node).getVoltageInitResultUuid();
-    }
-
-    @Override
-    public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
-        return ((NetworkModificationNode) node).getSecurityAnalysisResultUuid();
-    }
-
-    @Override
-    public UUID getSensitivityAnalysisResultUuid(AbstractNode node) {
-        return ((NetworkModificationNode) node).getSensitivityAnalysisResultUuid();
-    }
-
-    @Override
-    public UUID getDynamicSimulationResultUuid(AbstractNode node) {
-        return ((NetworkModificationNode) node).getDynamicSimulationResultUuid();
+    public UUID getComputationResultUuid(AbstractNode node, ComputationType computationType) {
+        return switch (computationType) {
+            case LOAD_FLOW -> ((NetworkModificationNode) node).getLoadFlowResultUuid();
+            case SECURITY_ANALYSIS -> ((NetworkModificationNode) node).getSecurityAnalysisResultUuid();
+            case SENSITIVITY_ANALYSIS -> ((NetworkModificationNode) node).getSensitivityAnalysisResultUuid();
+            case SHORT_CIRCUIT -> ((NetworkModificationNode) node).getShortCircuitAnalysisResultUuid();
+            case SHORT_CIRCUIT_ONE_BUS -> ((NetworkModificationNode) node).getOneBusShortCircuitAnalysisResultUuid();
+            case VOLTAGE_INITIALIZATION -> ((NetworkModificationNode) node).getVoltageInitResultUuid();
+            case DYNAMIC_SIMULATION -> ((NetworkModificationNode) node).getDynamicSimulationResultUuid();
+        };
     }
 
     private void updateNode(NetworkModificationNode node, List<UUID> changedNodes) {

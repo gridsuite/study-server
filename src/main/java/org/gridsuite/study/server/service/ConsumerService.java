@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.NetworkInfos;
@@ -25,7 +26,6 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +46,7 @@ import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
 import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
 import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT;
+import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_BUS;
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
 
 /**
@@ -258,24 +259,26 @@ public class ConsumerService {
             try {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
-                LOGGER.info("{} failed for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
-
-                if (computationType == SHORT_CIRCUIT) {
+                ComputationType updatedComputationType = computationType;
+                if (updatedComputationType == SHORT_CIRCUIT) {
                     String busId = msg.getHeaders().get(HEADER_BUS_ID, String.class);
-                    computationType.setBusMode((busId == null) ?
-                            ShortcircuitAnalysisType.ALL_BUSES :
-                            ShortcircuitAnalysisType.ONE_BUS);
+                    if (!StringUtils.isEmpty(busId)) {
+                        updatedComputationType = SHORT_CIRCUIT_ONE_BUS;
+                    }
                 }
+
+                LOGGER.info("{} failed for node '{}'", updatedComputationType.getLabel(), receiverObj.getNodeUuid());
+
                 // delete computation results from the databases
                 // ==> will probably be removed soon because it prevents the front from recovering the resultId ; or 'null' parameter will be replaced by null like in VOLTAGE_INITIALIZATION
-                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, computationType);
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, updatedComputationType);
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notification for failed computation
                 notificationService.emitStudyError(
                         studyUuid,
                         receiverObj.getNodeUuid(),
-                        computationType.getUpdateFailedType(),
+                        updatedComputationType.getUpdateFailedType(),
                         errorMessage,
                         userId);
             } catch (JsonProcessingException e) {
@@ -316,24 +319,26 @@ public class ConsumerService {
             try {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
+                ComputationType updatedComputationType = computationType;
+                if (updatedComputationType == SHORT_CIRCUIT) {
+                    String busId = msg.getHeaders().get(HEADER_BUS_ID, String.class);
+                    if (!StringUtils.isEmpty(busId)) {
+                        updatedComputationType = SHORT_CIRCUIT_ONE_BUS;
+                    }
+                }
+
                 LOGGER.info("{} result '{}' available for node '{}'",
-                        computationType.getLabel(),
+                        updatedComputationType.getLabel(),
                         resultUuid,
                         receiverObj.getNodeUuid());
 
                 // update DB
-                if (computationType == SHORT_CIRCUIT) {
-                    String busId = msg.getHeaders().get(HEADER_BUS_ID, String.class);
-                    computationType.setBusMode((busId == null) ?
-                            ShortcircuitAnalysisType.ALL_BUSES :
-                            ShortcircuitAnalysisType.ONE_BUS);
-                }
-                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, computationType);
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, updatedComputationType);
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notifications
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateStatusType());
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateResultType());
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), updatedComputationType.getUpdateStatusType());
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), updatedComputationType.getUpdateResultType());
             } catch (JsonProcessingException e) {
                 LOGGER.error(e.toString());
             }

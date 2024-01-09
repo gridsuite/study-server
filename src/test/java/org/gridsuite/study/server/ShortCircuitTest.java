@@ -523,12 +523,9 @@ public class ShortCircuitTest {
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
 
         // Set an uuid result in the database
-        ComputationType computationType = ComputationType.SHORT_CIRCUIT;
-        ShortcircuitAnalysisType shortcircuitAnalysisType = ShortcircuitAnalysisType.ALL_BUSES;
-        computationType.setBusMode(shortcircuitAnalysisType);
-        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, computationType);
-        assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), shortcircuitAnalysisType).isPresent());
-        assertEquals(resultUuid, networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), shortcircuitAnalysisType).get());
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, ComputationType.SHORT_CIRCUIT);
+        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.SHORT_CIRCUIT).isPresent());
+        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.SHORT_CIRCUIT).get());
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
@@ -538,7 +535,7 @@ public class ShortCircuitTest {
         studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), "");
 
         // Test reset uuid result in the database
-        assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), shortcircuitAnalysisType).isEmpty());
+        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.SHORT_CIRCUIT).isEmpty());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));

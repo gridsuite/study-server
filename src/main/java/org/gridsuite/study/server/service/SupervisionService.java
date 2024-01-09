@@ -90,6 +90,7 @@ public class SupervisionService {
             case SENSITIVITY_ANALYSIS:
                 return dryRun ? sensitivityAnalysisService.getSensitivityAnalysisResultsCount() : deleteSensitivityAnalysisResults();
             case SHORT_CIRCUIT:
+            case SHORT_CIRCUIT_ONE_BUS:
                 return dryRun ? shortCircuitService.getShortCircuitResultsCount() : deleteShortcircuitResults();
             case VOLTAGE_INITIALIZATION:
                 return dryRun ? voltageInitService.getVoltageInitResultsCount() : deleteVoltageInitResults();

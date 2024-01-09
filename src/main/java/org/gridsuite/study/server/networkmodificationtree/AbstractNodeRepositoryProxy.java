@@ -51,31 +51,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
     }
 
-    public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
-        return null;
-    }
-
-    public UUID getDynamicSimulationResultUuid(AbstractNode node) {
-        return null;
-    }
-
-    public UUID getSensitivityAnalysisResultUuid(AbstractNode node) {
-        return null;
-    }
-
-    public UUID getShortCircuitAnalysisResultUuid(AbstractNode node) {
-        return null;
-    }
-
-    public UUID getOneBusShortCircuitAnalysisResultUuid(AbstractNode node) {
-        return null;
-    }
-
-    public UUID getLoadFlowResultUuid(AbstractNode node) {
-        return null;
-    }
-
-    public UUID getVoltageInitResultUuid(AbstractNode node) {
+    public UUID getComputationResultUuid(AbstractNode node, ComputationType computationType) {
         return null;
     }
 
@@ -164,32 +140,8 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         updateComputationResultUuid(getNode(nodeUuid), computationResultUuid, computationType);
     }
 
-    public UUID getSecurityAnalysisResultUuid(UUID nodeUuid) {
-        return getSecurityAnalysisResultUuid(getNode(nodeUuid));
-    }
-
-    public UUID getDynamicSimulationResultUuid(UUID nodeUuid) {
-        return getDynamicSimulationResultUuid(getNode(nodeUuid));
-    }
-
-    public UUID getSensitivityAnalysisResultUuid(UUID nodeUuid) {
-        return getSensitivityAnalysisResultUuid(getNode(nodeUuid));
-    }
-
-    public UUID getShortCircuitAnalysisResultUuid(UUID nodeUuid) {
-        return getShortCircuitAnalysisResultUuid(getNode(nodeUuid));
-    }
-
-    public UUID getOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid) {
-        return getOneBusShortCircuitAnalysisResultUuid(getNode(nodeUuid));
-    }
-
-    public UUID getLoadFlowResultUuid(UUID nodeUuid) {
-        return getLoadFlowResultUuid(getNode(nodeUuid));
-    }
-
-    public UUID getVoltageInitResultUuid(UUID nodeUuid) {
-        return getVoltageInitResultUuid(getNode(nodeUuid));
+    public UUID getComputationResultUuid(UUID nodeUuid, ComputationType computationType) {
+        return getComputationResultUuid(getNode(nodeUuid), computationType);
     }
 
     public void updateNodeBuildStatus(UUID nodeUuid, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {

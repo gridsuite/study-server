@@ -105,7 +105,7 @@ public class StudyServiceDynamicSimulationTest {
 
         // setup NetworkModificationTreeService mock
         // suppose always having an existing result in a previous run
-        given(networkModificationTreeService.getDynamicSimulationResultUuid(any(UUID.class))).willReturn(Optional.of(RESULT_UUID));
+        given(networkModificationTreeService.getComputationResultUuid(any(UUID.class), eq(DYNAMIC_SIMULATION))).willReturn(Optional.of(RESULT_UUID));
         given(networkModificationTreeService.getVariantId(any(UUID.class))).willReturn(VARIANT_1_ID);
         willDoNothing().given(networkModificationTreeService).updateComputationResultUuid(NODE_UUID, RESULT_UUID, DYNAMIC_SIMULATION);
 
