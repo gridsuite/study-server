@@ -186,6 +186,34 @@ public class VoltageInitService {
         }
     }
 
+    public UUID duplicateVoltageInitParameters(UUID sourceParametersUuid) {
+
+        Objects.requireNonNull(sourceParametersUuid);
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters")
+                .queryParam("duplicateFrom", sourceParametersUuid)
+                .buildAndExpand()
+                .toUriString();
+
+        UUID parametersUuid;
+
+        try {
+            parametersUuid = restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_VOLTAGE_INIT_PARAMETERS_FAILED);
+        }
+
+        return parametersUuid;
+    }
+
+    public void deleteVoltageInitParameters(UUID parametersUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters/{parametersUuid}")
+            .buildAndExpand(parametersUuid).toUriString();
+
+        restTemplate.delete(voltageInitServerBaseUri + path);
+    }
+
     public void stopVoltageInit(UUID studyUuid, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
