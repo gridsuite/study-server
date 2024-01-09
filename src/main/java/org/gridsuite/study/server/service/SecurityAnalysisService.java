@@ -122,9 +122,7 @@ public class SecurityAnalysisService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<String> entity = new HttpEntity<String>(csvTranslations ,headers);
-
+        HttpEntity<String> entity = new HttpEntity<>(csvTranslations, headers);
         try {
             result = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, entity, byte[].class);
         } catch (HttpStatusCodeException e) {
