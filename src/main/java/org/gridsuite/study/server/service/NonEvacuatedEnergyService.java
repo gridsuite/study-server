@@ -112,7 +112,7 @@ public class NonEvacuatedEnergyService {
             throw new UncheckedIOException(e);
         }
         var uriComponentsBuilder = UriComponentsBuilder
-            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/non-evacuated-energy")
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/non-evacuated-energy/run-and-save")
             .queryParam("reportUuid", reportUuid.toString())
             .queryParam("reporterId", nodeUuid.toString())
             .queryParam("reportType", StudyService.ReportType.NON_EVACUATED_ENERGY.reportKey);
@@ -144,7 +144,7 @@ public class NonEvacuatedEnergyService {
 
         // initializing from uri string (not from path string) allows build() to escape selector content
         URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
-            .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, "non-evacuated-energy-results", resultUuidOpt.get().toString())
+            .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, "non-evacuated-energy", "results", resultUuidOpt.get().toString())
             .build().encode().toUri();
         try {
             result = restTemplate.getForObject(uri, String.class);
@@ -166,7 +166,7 @@ public class NonEvacuatedEnergyService {
             return null;
         }
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy-results/{resultUuid}/status")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results/{resultUuid}/status")
             .buildAndExpand(resultUuidOpt.get()).toUriString();
         try {
             result = restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
@@ -195,7 +195,7 @@ public class NonEvacuatedEnergyService {
             throw new UncheckedIOException(e);
         }
         String path = UriComponentsBuilder
-            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy-results/{resultUuid}/stop")
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results/{resultUuid}/stop")
             .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
 
         restTemplate.put(sensitivityAnalysisServerBaseUri + path, Void.class);
@@ -204,7 +204,7 @@ public class NonEvacuatedEnergyService {
     public void invalidateNonEvacuatedEnergyStatus(List<UUID> uuids) {
         if (!uuids.isEmpty()) {
             String path = UriComponentsBuilder
-                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy-results/invalidate-status")
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results/invalidate-status")
                 .queryParam(RESULT_UUID, uuids).build().toUriString();
 
             restTemplate.put(sensitivityAnalysisServerBaseUri + path, Void.class);
@@ -212,7 +212,7 @@ public class NonEvacuatedEnergyService {
     }
 
     public void deleteNonEvacuatedEnergyResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy-results/{resultUuid}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results/{resultUuid}")
             .buildAndExpand(uuid)
             .toUriString();
 
@@ -221,7 +221,7 @@ public class NonEvacuatedEnergyService {
 
     public void deleteNonEvacuatedEnergyResults() {
         try {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy-results")
+            String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results")
                 .toUriString();
             restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
         } catch (HttpStatusCodeException e) {
@@ -231,7 +231,7 @@ public class NonEvacuatedEnergyService {
 
     public Integer getNonEvacuatedEnergyAnalysisResultsCount() {
         String path = UriComponentsBuilder
-            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/supervision/non-evacuated-energy-results-count").toUriString();
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/supervision/non-evacuated-energy/results-count").toUriString();
         return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, Integer.class);
     }
 

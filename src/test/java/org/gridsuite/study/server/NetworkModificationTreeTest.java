@@ -261,7 +261,7 @@ public class NetworkModificationTreeTest {
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
 
-                if ((path.matches("/v1/results/.*") || path.matches("/v1/non-evacuated-energy-results/.*")) && request.getMethod().equals("DELETE")) {
+                if ((path.matches("/v1/results/.*") || path.matches("/v1/non-evacuated-energy/results/.*")) && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(HttpStatus.OK.value())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/network-modifications.*")) {
