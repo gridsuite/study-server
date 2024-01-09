@@ -108,7 +108,7 @@ public class SecurityAnalysisService {
         return result;
     }
 
-    public byte[] getSecurityAnalysisResultCsv(UUID nodeUuid, SecurityAnalysisResultType resultType) {
+    public byte[] getSecurityAnalysisResultCsv(UUID nodeUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
         ResponseEntity<byte[]> result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
 
@@ -120,8 +120,13 @@ public class SecurityAnalysisService {
 
         String path = pathBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> entity = new HttpEntity<String>(csvTranslations ,headers);
+
         try {
-            result = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.GET, null, byte[].class);
+            result = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, entity, byte[].class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
