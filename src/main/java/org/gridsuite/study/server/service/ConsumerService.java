@@ -240,7 +240,7 @@ public class ConsumerService {
     }
 
     /**
-     * parse the error message from the computation microservice and uses its data to notify the front
+     * processes the error message from the computation microservice and uses its data to notify the front
      */
     public void consumeCalculationFailed(Message<String> msg, ComputationType computationType) {
         String receiver = msg.getHeaders().get(HEADER_RECEIVER, String.class);
@@ -259,26 +259,18 @@ public class ConsumerService {
             try {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
-                ComputationType updatedComputationType = computationType;
-                if (updatedComputationType == SHORT_CIRCUIT) {
-                    String busId = msg.getHeaders().get(HEADER_BUS_ID, String.class);
-                    if (!StringUtils.isEmpty(busId)) {
-                        updatedComputationType = SHORT_CIRCUIT_ONE_BUS;
-                    }
-                }
-
-                LOGGER.info("{} failed for node '{}'", updatedComputationType.getLabel(), receiverObj.getNodeUuid());
+                LOGGER.info("{} failed for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
 
                 // delete computation results from the databases
                 // ==> will probably be removed soon because it prevents the front from recovering the resultId ; or 'null' parameter will be replaced by null like in VOLTAGE_INITIALIZATION
-                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, updatedComputationType);
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, computationType);
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notification for failed computation
                 notificationService.emitStudyError(
                         studyUuid,
                         receiverObj.getNodeUuid(),
-                        updatedComputationType.getUpdateFailedType(),
+                        computationType.getUpdateFailedType(),
                         errorMessage,
                         userId);
             } catch (JsonProcessingException e) {
@@ -319,26 +311,18 @@ public class ConsumerService {
             try {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
-                ComputationType updatedComputationType = computationType;
-                if (updatedComputationType == SHORT_CIRCUIT) {
-                    String busId = msg.getHeaders().get(HEADER_BUS_ID, String.class);
-                    if (!StringUtils.isEmpty(busId)) {
-                        updatedComputationType = SHORT_CIRCUIT_ONE_BUS;
-                    }
-                }
-
                 LOGGER.info("{} result '{}' available for node '{}'",
-                        updatedComputationType.getLabel(),
+                        computationType.getLabel(),
                         resultUuid,
                         receiverObj.getNodeUuid());
 
                 // update DB
-                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, updatedComputationType);
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, computationType);
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notifications
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), updatedComputationType.getUpdateStatusType());
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), updatedComputationType.getUpdateResultType());
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateStatusType());
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateResultType());
             } catch (JsonProcessingException e) {
                 LOGGER.error(e.toString());
             }
@@ -407,7 +391,14 @@ public class ConsumerService {
 
     @Bean
     public Consumer<Message<String>> consumeShortCircuitAnalysisResult() {
-        return message -> consumeCalculationResult(message, SHORT_CIRCUIT);
+        return message -> {
+            String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
+            if (!StringUtils.isEmpty(busId)) {
+                consumeCalculationResult(message, SHORT_CIRCUIT_ONE_BUS);
+            } else {
+                consumeCalculationResult(message, SHORT_CIRCUIT);
+            }
+        };
     }
 
     @Bean
@@ -417,7 +408,14 @@ public class ConsumerService {
 
     @Bean
     public Consumer<Message<String>> consumeShortCircuitAnalysisFailed() {
-        return message -> consumeCalculationFailed(message, SHORT_CIRCUIT);
+        return message -> {
+            String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
+            if (!StringUtils.isEmpty(busId)) {
+                consumeCalculationFailed(message, SHORT_CIRCUIT_ONE_BUS);
+            } else {
+                consumeCalculationFailed(message, SHORT_CIRCUIT);
+            }
+        };
     }
 
     @Bean

@@ -51,6 +51,11 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
     }
 
+    /**
+     * @param node fetched network modification node
+     * @param computationType type of the fetched computation
+     * @return UUID of the computation of this type, done on this node
+     */
     public UUID getComputationResultUuid(AbstractNode node, ComputationType computationType) {
         return null;
     }

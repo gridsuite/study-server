@@ -115,14 +115,13 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public void updateComputationResultUuid(AbstractNode node, UUID computationUuid, ComputationType computationType) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         switch (computationType) {
-            case LOAD_FLOW : modificationNode.setLoadFlowResultUuid(computationUuid); break;
-            case SECURITY_ANALYSIS : modificationNode.setSecurityAnalysisResultUuid(computationUuid); break;
-            case SENSITIVITY_ANALYSIS : modificationNode.setSensitivityAnalysisResultUuid(computationUuid); break;
-            case SHORT_CIRCUIT : modificationNode.setShortCircuitAnalysisResultUuid(computationUuid); break;
-            case SHORT_CIRCUIT_ONE_BUS: modificationNode.setOneBusShortCircuitAnalysisResultUuid(computationUuid); break;
-            case VOLTAGE_INITIALIZATION : modificationNode.setVoltageInitResultUuid(computationUuid); break;
-            case DYNAMIC_SIMULATION : modificationNode.setDynamicSimulationResultUuid(computationUuid); break;
-            default: return;
+            case LOAD_FLOW -> modificationNode.setLoadFlowResultUuid(computationUuid);
+            case SECURITY_ANALYSIS -> modificationNode.setSecurityAnalysisResultUuid(computationUuid);
+            case SENSITIVITY_ANALYSIS -> modificationNode.setSensitivityAnalysisResultUuid(computationUuid);
+            case SHORT_CIRCUIT -> modificationNode.setShortCircuitAnalysisResultUuid(computationUuid);
+            case SHORT_CIRCUIT_ONE_BUS -> modificationNode.setOneBusShortCircuitAnalysisResultUuid(computationUuid);
+            case VOLTAGE_INITIALIZATION -> modificationNode.setVoltageInitResultUuid(computationUuid);
+            case DYNAMIC_SIMULATION -> modificationNode.setDynamicSimulationResultUuid(computationUuid);
         }
         updateNode(modificationNode, computationType.getResultUuidLabel());
     }
