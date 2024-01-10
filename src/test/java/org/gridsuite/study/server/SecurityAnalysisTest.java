@@ -110,7 +110,6 @@ public class SecurityAnalysisTest {
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String VARIANT_ID_3 = "variant_3";
 
-
     private static final String CSV_TRANSLATION_DTO_STRING = "{translationsObject}";
 
     private static final long TIMEOUT = 1000;
@@ -644,7 +643,7 @@ public class SecurityAnalysisTest {
         // get N security analysis result zipped csv
         MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}", studyUuid, nodeUuid, SecurityAnalysisResultType.N).content(CSV_TRANSLATION_DTO_STRING)).andExpectAll(
             status().isOk()).andReturn();
-        byte[] byteArrayResult  = mvcResult.getResponse().getContentAsByteArray();
+        byte[] byteArrayResult = mvcResult.getResponse().getContentAsByteArray();
         assertTrue(Arrays.equals(SECURITY_ANALYSIS_N_RESULT_CSV_ZIPPED, byteArrayResult));
 
         assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
@@ -655,7 +654,7 @@ public class SecurityAnalysisTest {
         // get NMK_CONTINGENCIES security analysis result zipped csv
         mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}", studyUuid, nodeUuid, SecurityAnalysisResultType.NMK_CONTINGENCIES).content(CSV_TRANSLATION_DTO_STRING)).andExpectAll(
             status().isOk()).andReturn();
-        byteArrayResult  = mvcResult.getResponse().getContentAsByteArray();
+        byteArrayResult = mvcResult.getResponse().getContentAsByteArray();
         assertTrue(Arrays.equals(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_CSV_ZIPPED, byteArrayResult));
 
         assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
@@ -666,7 +665,7 @@ public class SecurityAnalysisTest {
         // get NMK_CONSTRAINTS security analysis result zipped csv
         mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}", studyUuid, nodeUuid, SecurityAnalysisResultType.NMK_LIMIT_VIOLATIONS).content(CSV_TRANSLATION_DTO_STRING)).andExpectAll(
             status().isOk()).andReturn();
-        byteArrayResult  = mvcResult.getResponse().getContentAsByteArray();
+        byteArrayResult = mvcResult.getResponse().getContentAsByteArray();
         assertTrue(Arrays.equals(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_CSV_ZIPPED, byteArrayResult));
 
         assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
