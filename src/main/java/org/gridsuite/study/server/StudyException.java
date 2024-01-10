@@ -59,6 +59,7 @@ public class StudyException extends RuntimeException {
         GET_MODIFICATIONS_FAILED,
         GET_MODIFICATIONS_COUNT_FAILED,
         GET_NETWORK_ELEMENT_FAILED,
+        GET_NETWORK_COUNTRY_FAILED,
         BAD_JSON_FORMAT,
         UNKNOWN_ACTION_TYPE,
         MISSING_PARAMETER,
@@ -78,6 +79,7 @@ public class StudyException extends RuntimeException {
         STUDY_INDEXATION_FAILED,
         STUDY_CHECK_INDEXATION_FAILED,
         NOT_IMPLEMENTED,
+        EVALUATE_FILTER_FAILED,
     }
 
     private final Type type;
