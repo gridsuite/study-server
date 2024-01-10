@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
-import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.FilterService;
@@ -110,8 +109,7 @@ public class FilterServiceTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
-        LoadFlowParametersEntity defaultLoadflowParametersEntity = LoadFlowParametersEntity.builder().build();
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", null, defaultLoadflowParametersEntity, null, null, null);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", null, UUID.randomUUID(), null, null, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
