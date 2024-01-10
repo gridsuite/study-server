@@ -625,7 +625,7 @@ public class VoltageInitTest {
         SensitivityAnalysisParametersEntity defaultSensitivityParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
 
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", "defaultLoadflowProvider",
-                null, defaultShortCircuitParametersEntity, voltageInitParametersUuid, null, defaultSensitivityParametersEntity);
+                UUID.randomUUID(), defaultShortCircuitParametersEntity, voltageInitParametersUuid, null, defaultSensitivityParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

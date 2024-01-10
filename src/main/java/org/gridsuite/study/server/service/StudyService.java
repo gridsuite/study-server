@@ -868,13 +868,6 @@ public class StudyService {
 
     public LoadFlowParametersValues getLoadFlowParametersValues(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID loadFlowParametersUuid = studyEntity.getLoadFlowParametersUuid();
-        if (loadFlowParametersUuid == null) {
-            return LoadFlowParametersValues.builder()
-                .commonParameters(LoadFlowParameters.load())
-                .specificParametersPerProvider(Map.of())
-                .build();
-        }
         return loadflowService.getLoadFlowParameters(studyEntity.getLoadFlowParametersUuid());
     }
 

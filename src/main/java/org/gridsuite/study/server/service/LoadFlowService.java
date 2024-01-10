@@ -328,4 +328,22 @@ public class LoadFlowService {
 
         restTemplate.delete(loadFlowServerBaseUri + path);
     }
+
+    public UUID createDefaultLoadFlowParameters() {
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/default")
+                .buildAndExpand()
+                .toUriString();
+
+        UUID parametersUuid;
+
+        try {
+            parametersUuid = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_LOADFLOW_PARAMETERS_FAILED);
+        }
+
+        return parametersUuid;
+    }
 }

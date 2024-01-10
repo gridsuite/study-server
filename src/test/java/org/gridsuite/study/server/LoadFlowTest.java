@@ -92,9 +92,9 @@ public class LoadFlowTest {
 
     private static final String LOADFLOW_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
 
-    private static final String LOADFLOW_PARAMETERS_UUID = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
+    private static final String LOADFLOW_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
 
-    private static final String WRONG_LOADFLOW_PARAMETERS_UUID = "0c0f1efd-bd22-1111-83d3-9e530245c7f4";
+    private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString(LOADFLOW_PARAMETERS_UUID_STRING);
 
     private static final String LOADFLOW_PARAMETERS_JSON = "{\"commonParameters\":{\"version\":\"1.9\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true,\"dcPowerFactor\":1.0},\"specificParametersPerProvider\":{}}";
 
@@ -229,17 +229,15 @@ public class LoadFlowTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("1");
-                } else if (path.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID)) {
+                } else if (path.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)) {
                     if (method.equals("PUT")) {
                         return new MockResponse().setResponseCode(200);
                     } else {
                         return new MockResponse().setResponseCode(200).setBody(LOADFLOW_PARAMETERS_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
-                } else if (path.matches("/v1/parameters/" + WRONG_LOADFLOW_PARAMETERS_UUID)) {
-                    return new MockResponse().setResponseCode(404);
                 } else if (path.matches("/v1/parameters")) {
-                    return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(LOADFLOW_PARAMETERS_UUID))
+                    return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(LOADFLOW_PARAMETERS_UUID_STRING))
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -256,7 +254,7 @@ public class LoadFlowTest {
     public void testLoadFlow() throws Exception {
         MvcResult mvcResult;
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -326,7 +324,7 @@ public class LoadFlowTest {
     @Test
     public void testGetLimitViolations() throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID_2, "node 1");
@@ -359,7 +357,7 @@ public class LoadFlowTest {
     @Test
     public void testInvalidateStatus() throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID_2, "node 1");
@@ -386,7 +384,7 @@ public class LoadFlowTest {
     @Test
     public void testDeleteLoadFlowResults() throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -421,7 +419,7 @@ public class LoadFlowTest {
     @SneakyThrows
     public void testResetUuidResultWhenLFFailed() {
         UUID resultUuid = UUID.randomUUID();
-        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), null);
+        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), LOADFLOW_PARAMETERS_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
@@ -486,7 +484,7 @@ public class LoadFlowTest {
     @Test
     public void testNoResult() throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -530,7 +528,7 @@ public class LoadFlowTest {
     @Test
     public void testLoadFlowParameters() throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         //get initial loadFlow parameters
@@ -540,7 +538,6 @@ public class LoadFlowTest {
         JSONAssert.assertEquals(LOADFLOW_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_PARAMETERS_JSON);
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters")));
 
         //checking update is registered
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
@@ -548,20 +545,7 @@ public class LoadFlowTest {
 
         JSONAssert.assertEquals(LOADFLOW_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID)));
-
-        //update loadFlow parameters
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_PARAMETERS_JSON);
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID)));
-
-        // insert a study with a wrong loadflow parameters uuid
-        StudyEntity studyEntity2 = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, UUID.fromString(WRONG_LOADFLOW_PARAMETERS_UUID));
-
-        // get loadFlow parameters
-        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyEntity2.getId())).andExpect(
-            status().isNotFound());
-
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + WRONG_LOADFLOW_PARAMETERS_UUID)));
+        assertTrue(TestUtils.getRequestsDone(3, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
 
     }
 

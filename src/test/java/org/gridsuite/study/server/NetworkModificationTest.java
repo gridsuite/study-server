@@ -2676,7 +2676,7 @@ public class NetworkModificationTest {
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat) {
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, caseFormat, defaultLoadflowProvider, null, defaultShortCircuitParametersEntity, null, null);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, caseFormat, defaultLoadflowProvider, UUID.randomUUID(), defaultShortCircuitParametersEntity, null, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

@@ -60,6 +60,7 @@ public class ConsumerService {
     NotificationService notificationService;
     StudyService studyService;
     CaseService caseService;
+    LoadFlowService loadFlowService;
     NetworkModificationTreeService networkModificationTreeService;
     StudyRepository studyRepository;
 
@@ -68,12 +69,14 @@ public class ConsumerService {
                            NotificationService notificationService,
                            StudyService studyService,
                            CaseService caseService,
+                           LoadFlowService loadFlowService,
                            NetworkModificationTreeService networkModificationTreeService,
                            StudyRepository studyRepository) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
         this.caseService = caseService;
+        this.loadFlowService = loadFlowService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.studyRepository = studyRepository;
     }
@@ -355,7 +358,9 @@ public class ConsumerService {
                         // we only update network infos sent by network conversion server
                         studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
                     } else {
-                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, null, ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, importParameters, importReportUuid);
+                        // create default loadFlow Parameters
+                        UUID loadFlowParametersUuid = loadFlowService.createDefaultLoadFlowParameters();
+                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, loadFlowParametersUuid, ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, importParameters, importReportUuid);
                     }
 
                     caseService.disableCaseExpiration(caseUuid);
