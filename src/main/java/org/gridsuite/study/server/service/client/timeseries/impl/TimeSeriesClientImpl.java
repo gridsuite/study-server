@@ -8,8 +8,8 @@
 package org.gridsuite.study.server.service.client.timeseries.impl;
 
 import com.powsybl.timeseries.TimeSeries;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
-import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.springframework.beans.factory.annotation.Autowired;

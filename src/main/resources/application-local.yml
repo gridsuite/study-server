@@ -70,3 +70,4 @@ gridsuite:
     -
       name: filter-server
       base-uri: http://localhost:5027
+

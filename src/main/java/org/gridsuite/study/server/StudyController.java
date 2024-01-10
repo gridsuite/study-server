@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
@@ -21,26 +22,25 @@ import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
-import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
-import org.springframework.data.domain.Pageable;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.util.Pair;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
@@ -55,12 +55,10 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
-
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
 @Tag(name = "Study server")
 public class StudyController {
-
     private final StudyService studyService;
     private final NetworkService networkStoreService;
     private final NetworkModificationTreeService networkModificationTreeService;
@@ -72,7 +70,7 @@ public class StudyController {
     private final VoltageInitService voltageInitService;
     private final LoadFlowService loadflowService;
     private final CaseService caseService;
-    private final ActuatorHealthService actuatorHealthService;
+    private final RemoteServicesInspector remoteServicesInspector;
 
     public StudyController(StudyService studyService,
             NetworkService networkStoreService,
@@ -85,7 +83,7 @@ public class StudyController {
             VoltageInitService voltageInitService,
             LoadFlowService loadflowService,
             CaseService caseService,
-            ActuatorHealthService actuatorHealthService) {
+            RemoteServicesInspector remoteServicesInspector) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -97,7 +95,7 @@ public class StudyController {
         this.voltageInitService = voltageInitService;
         this.loadflowService = loadflowService;
         this.caseService = caseService;
-        this.actuatorHealthService = actuatorHealthService;
+        this.remoteServicesInspector = remoteServicesInspector;
     }
 
     @InitBinder
@@ -463,9 +461,10 @@ public class StudyController {
             @Parameter(description = "Element id") @PathVariable("elementId") String elementId,
             @Parameter(description = "Element type") @RequestParam(name = "elementType") String elementType,
             @Parameter(description = "Info type") @RequestParam(name = "infoType") String infoType,
+            @Parameter(description = "Operation") @RequestParam(name = "operation", required = false) String operation,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementInfos(studyUuid, nodeUuid, elementType, infoType, elementId, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementInfos(studyUuid, nodeUuid, elementType, infoType, elementId, operation, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/countries")
@@ -573,13 +572,14 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run")
     @Operation(summary = "run loadflow on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow has started")})
-    public ResponseEntity<UUID> runLoadFlow(
+    public ResponseEntity<Void> runLoadFlow(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "The limit reduction") @RequestParam(name = "limitReduction", required = false) Float limitReduction,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runLoadFlow(studyUuid, nodeUuid, userId, limitReduction));
+        studyService.runLoadFlow(studyUuid, nodeUuid, userId, limitReduction);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/result")
@@ -618,17 +618,18 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run")
     @Operation(summary = "run short circuit analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis has started")})
-    public ResponseEntity<UUID> runShortCircuit(
+    public ResponseEntity<Void> runShortCircuit(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestParam(value = "busId", required = false) String busId,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         if (busId == null) {
-            return ResponseEntity.ok().body(studyService.runShortCircuit(studyUuid, nodeUuid, userId));
+            studyService.runShortCircuit(studyUuid, nodeUuid, userId);
         } else {
-            return ResponseEntity.ok().body(studyService.runShortCircuit(studyUuid, nodeUuid, userId, busId));
+            studyService.runShortCircuit(studyUuid, nodeUuid, userId, busId);
         }
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop")
@@ -677,12 +678,13 @@ public class StudyController {
     @Operation(summary = "run voltage init on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has started"),
         @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
-    public ResponseEntity<UUID> runVoltageInit(
+    public ResponseEntity<Void> runVoltageInit(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runVoltageInit(studyUuid, nodeUuid, userId));
+        studyService.runVoltageInit(studyUuid, nodeUuid, userId);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/stop")
@@ -765,13 +767,14 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run")
     @Operation(summary = "run security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has started")})
-    public ResponseEntity<UUID> runSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> runSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                          @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames) {
+                                                          @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames,
+                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         List<String> nonNullcontingencyListNames = contingencyListNames != null ? contingencyListNames : Collections.emptyList();
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-
-        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid));
+        studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid, userId);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result")
@@ -1165,16 +1168,16 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(studyUuid, referenceId, node, insertMode, userId));
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
-    @Operation(summary = "Delete node with given id")
+    @DeleteMapping(value = "/studies/{studyUuid}/tree/nodes")
+    @Operation(summary = "Delete node with given ids")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted"),
-        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
+        @ApiResponse(responseCode = "404", description = "The study or the nodes not found")})
     public ResponseEntity<Void> deleteNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                           @Parameter(description = "id of child to remove") @PathVariable("id") UUID nodeId,
+                                           @Parameter(description = "ids of children to remove") @RequestParam("ids") List<UUID> nodeIds,
                                            @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.deleteNode(studyUuid, nodeId, deleteChildren, userId);
+        studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1199,14 +1202,14 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getStashedNodes(studyUuid));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{nodeId}/restore")
-    @Operation(summary = "restore node below the given anchor node")
+    @PostMapping(value = "/studies/{studyUuid}/tree/nodes/restore")
+    @Operation(summary = "restore nodes below the given anchor node")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
-    public ResponseEntity<Void> restoreNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                          @Parameter(description = "id of node to restore") @PathVariable("nodeId") UUID nodeId,
-                                                          @Parameter(description = "id of node below which the node will be restored") @RequestParam("anchorNodeId") UUID anchorNodeId) {
-        studyService.restoreNode(studyUuid, nodeId, anchorNodeId);
+    public ResponseEntity<Void> restoreNodes(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                            @Parameter(description = "ids of nodes to restore") @RequestParam("ids") List<UUID> nodeIds,
+                                            @Parameter(description = "id of node below which the node will be restored") @RequestParam("anchorNodeId") UUID anchorNodeId) {
+        studyService.restoreNodes(studyUuid, nodeIds, anchorNodeId);
         return ResponseEntity.ok().build();
     }
 
@@ -1293,6 +1296,17 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/unbuild")
+    @Operation(summary = "unbuild a study node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been unbuilt"),
+        @ApiResponse(responseCode = "404", description = "The study or node doesn't exist"),
+        @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
+    public ResponseEntity<Void> unbuildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        studyService.unbuildNode(studyUuid, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/build/stop")
     @Operation(summary = "stop a node build")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The build has been stopped"),
@@ -1368,10 +1382,12 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run")
     @Operation(summary = "run sensitivity analysis on study")
         @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has started"), @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
-    public ResponseEntity<UUID> runSensitivityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+    public ResponseEntity<Void> runSensitivityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                       @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runSensitivityAnalysis(studyUuid, nodeUuid));
+        studyService.runSensitivityAnalysis(studyUuid, nodeUuid, userId);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result")
@@ -1536,12 +1552,13 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/run")
     @Operation(summary = "run dynamic simulation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation has started")})
-    public ResponseEntity<UUID> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                     @RequestBody(required = false) DynamicSimulationParametersInfos parameters) {
+                                                     @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
+                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.runDynamicSimulation(studyUuid, nodeUuid, parameters));
+        studyService.runDynamicSimulation(studyUuid, nodeUuid, parameters, userId);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries/metadata")
@@ -1638,8 +1655,8 @@ public class StudyController {
     @GetMapping(value = "/optional-services")
     @Operation(summary = "Get all the optional services and their status")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of optional services")})
-    public ResponseEntity<List<ActuatorHealthService.ServiceStatusInfos>> getOptionalServices() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(actuatorHealthService.getOptionalServices());
+    public ResponseEntity<List<ServiceStatusInfos>> getOptionalServices() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(remoteServicesInspector.getOptionalServices());
     }
 
     enum UpdateModificationAction {
@@ -1696,6 +1713,16 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/sensitivity-analysis/factors-count")
+    @Operation(summary = "Get the factors count of sensitivity parameters")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The factors count of sensitivity parameters")})
+    public ResponseEntity<Long> getSensitivityAnalysisFactorsCount(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Is Injections Set") @RequestParam(name = "isInjectionsSet", required = false) Boolean isInjectionsSet,
+            SensitivityFactorsIdsByGroup factorsIds) {
+        return ResponseEntity.ok().body(sensitivityAnalysisService.getSensitivityAnalysisFactorsCount(networkStoreService.getNetworkUuid(studyUuid), factorsIds, isInjectionsSet));
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")
     @Operation(summary = "Invalidate loadflow status on study nodes")
     @ApiResponses(value = {
@@ -1709,10 +1736,41 @@ public class StudyController {
 
     @PutMapping(value = "/studies/{studyUuid}/short-circuit/invalidate-status")
     @Operation(summary = "Invalidate short circuit status on study nodes")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit status has been invalidated on all study nodes"), @ApiResponse(responseCode = "404", description = "The study is not found")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit status has been invalidated on all study nodes"),
+                           @ApiResponse(responseCode = "404", description = "The study is not found")})
     public ResponseEntity<Void> invalidateShortCircuitStatus(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
         studyService.invalidateShortCircuitStatus(studyUuid);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/servers/infos")
+    @Operation(summary = "Get the information of all backend servers (if not filter with view parameter)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The information on all known servers"),
+        @ApiResponse(responseCode = "207", description = "Partial result because some servers haven't responded or threw an error"),
+        @ApiResponse(responseCode = "424", description = "All requests have failed, no information retrieved")})
+    public ResponseEntity<Map<String, JsonNode>> getSuiteServersInformation(
+            @Parameter(description = "the view which will be used to filter the returned services") @RequestParam final Optional<FrontService> view
+    ) { //Map<String, Info> from springboot-actuator
+        try {
+            return ResponseEntity.ok(remoteServicesInspector.getServicesInfo(view.orElse(null)));
+        } catch (final PartialResultException e) {
+            return ResponseEntity.status(HttpStatus.MULTI_STATUS).body((Map<String, JsonNode>) e.getResult());
+        }
+    }
+
+    @GetMapping(value = "/servers/about")
+    @Operation(summary = "Get the aggregated about information from all (if not filter with view parameter) backend servers")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The information on all known servers"),
+        @ApiResponse(responseCode = "207", description = "Partial result because some servers haven't responded or threw an error"),
+        @ApiResponse(responseCode = "424", description = "All requests have failed, no information retrieved")})
+    public ResponseEntity<AboutInfo[]> getSuiteAboutInformation(
+            @Parameter(description = "the view which will be used to filter the returned services") @RequestParam final Optional<FrontService> view
+    ) {
+        final ResponseEntity<Map<String, JsonNode>> suiteServersInfo = this.getSuiteServersInformation(view);
+        return ResponseEntity.status(suiteServersInfo.getStatusCode()).body(
+                remoteServicesInspector.convertServicesInfoToAboutInfo(Objects.requireNonNullElseGet(suiteServersInfo.getBody(), Map::of)));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/filters/evaluate")
