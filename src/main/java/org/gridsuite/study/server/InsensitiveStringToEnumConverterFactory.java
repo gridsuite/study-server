@@ -37,7 +37,7 @@ public final class InsensitiveStringToEnumConverterFactory implements ConverterF
      */
     @Override
     public <T extends Enum> Converter<String, T> getConverter(Class<T> targetType) {
-        return new CaseInsensitiveStringToEnum(getEnumType(targetType));
+        return new CaseInsensitiveStringToEnum<>((Class<T>) getEnumType(targetType));
     }
 
     /**
