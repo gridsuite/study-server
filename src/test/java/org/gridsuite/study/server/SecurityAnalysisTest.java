@@ -208,6 +208,8 @@ public class SecurityAnalysisTest {
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n-result/csv")) {
                     return new MockResponse().setResponseCode(200).setBody(getBinaryAsBuffer(SECURITY_ANALYSIS_N_RESULT_CSV_ZIPPED))
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/n-result/csv")) {
+                    return new MockResponse().setResponseCode(404);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-contingencies-result/csv")) {
                     return new MockResponse().setResponseCode(200).setBody(getBinaryAsBuffer(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_CSV_ZIPPED))
                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -670,6 +672,51 @@ public class SecurityAnalysisTest {
 
         assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
             r.getPath().matches(String.format("/v1/results/%s/nmk-constraints-result/csv", SECURITY_ANALYSIS_RESULT_UUID))
+                && r.getBody().equals(CSV_TRANSLATION_DTO_STRING)
+        ));
+    }
+
+    @Test
+    public void getResultZippedCsvNotFound() throws Exception {
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID_3, "node 1");
+        UUID nodeUuid = modificationNode.getId();
+
+        /**
+         * RUN SECURITY ANALYSIS START
+         */
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
+            studyUuid, nodeUuid, CONTINGENCY_LIST_NAME).header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
+
+        Message<byte[]> securityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        String updateType = (String) securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
+
+        Message<byte[]> securityAnalysisUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, securityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        updateType = (String) securityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT, updateType);
+
+        securityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        updateType = (String) securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
+        /**
+         * RUN SECURITY ANALYSIS END
+         */
+
+        // get NOT_FOUND security analysis result zipped csv
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}", studyUuid, nodeUuid, SecurityAnalysisResultType.N).content(CSV_TRANSLATION_DTO_STRING)).andExpectAll(
+            status().isNotFound());
+
+        assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
+            r.getPath().matches(String.format("/v1/results/%s/n-result/csv", SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID))
                 && r.getBody().equals(CSV_TRANSLATION_DTO_STRING)
         ));
     }
