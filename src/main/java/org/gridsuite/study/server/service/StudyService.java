@@ -958,14 +958,6 @@ public class StudyService {
         return LoadFlowService.toEntity(allCommonValues, allSpecificValues);
     }
 
-    private void deleteLoadFlowResult(UUID studyUuid) {
-        List<UUID> loadFlowResultUuids = networkModificationTreeService.getComputationResultUuids(studyUuid, LOAD_FLOW);
-        if (!loadFlowResultUuids.isEmpty()) {
-            loadflowService.deleteLoadFlowResults(loadFlowResultUuids);
-        }
-        networkModificationTreeService.getAllNodes(studyUuid).forEach(node -> networkModificationTreeService.updateComputationResultUuid(node.getIdNode(), null, LOAD_FLOW));
-    }
-
     public SecurityAnalysisParametersValues getSecurityAnalysisParametersValues(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(studyEntity -> studyEntity.getSecurityAnalysisParameters() != null ? SecurityAnalysisService.fromEntity(studyEntity.getSecurityAnalysisParameters()) : SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues())
