@@ -13,6 +13,7 @@ import com.google.common.io.ByteStreams;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.loadflow.LoadFlowParameters;
 import okhttp3.mockwebserver.MockWebServer;
+import okio.Buffer;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -28,7 +29,11 @@ import org.springframework.cloud.stream.binder.test.OutputDestination;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -178,5 +183,11 @@ public final class TestUtils {
     public static String resourceToString(String resource) throws IOException {
         String content = new String(ByteStreams.toByteArray(TestUtils.class.getResourceAsStream(resource)), StandardCharsets.UTF_8);
         return StringUtils.replaceWhitespaceCharacters(content, "");
+    }
+
+    public static Buffer getBinaryAsBuffer(byte[] binary) {
+        Buffer buf = new Buffer();
+        buf.write(binary);
+        return buf;
     }
 }

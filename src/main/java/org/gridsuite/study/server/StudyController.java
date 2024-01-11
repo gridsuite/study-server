@@ -1394,9 +1394,9 @@ public class StudyController {
             ResponseEntity.noContent().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv")
-    @Operation(summary = "Get a sensitivity analysis result on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis result"),
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get a sensitivity analysis result as csv")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Csv of sensitivity analysis results"),
         @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
     public ResponseEntity<byte[]> exportSensitivityResultsAsCsv(
