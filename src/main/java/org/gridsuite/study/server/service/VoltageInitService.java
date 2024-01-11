@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -105,7 +106,7 @@ public class VoltageInitService {
 
     public String getVoltageInitResultOrStatus(UUID nodeUuid, String suffix) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getVoltageInitResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.VOLTAGE_INITIALIZATION);
 
         if (resultUuidOpt.isEmpty()) {
             return null;
@@ -218,7 +219,7 @@ public class VoltageInitService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getVoltageInitResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.VOLTAGE_INITIALIZATION);
         if (resultUuidOpt.isEmpty()) {
             return;
         }
@@ -276,7 +277,7 @@ public class VoltageInitService {
     }
 
     public UUID getModificationsGroupUuid(UUID nodeUuid) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getVoltageInitResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.VOLTAGE_INITIALIZATION);
         if (resultUuidOpt.isEmpty()) {
             throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, "The node " + nodeUuid + " has no voltage init results");
         }
@@ -306,7 +307,7 @@ public class VoltageInitService {
     }
 
     public void resetModificationsGroupUuid(UUID nodeUuid) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getVoltageInitResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.VOLTAGE_INITIALIZATION);
         if (resultUuidOpt.isEmpty()) {
             throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, "The node " + nodeUuid + " has no voltage init results");
         }
