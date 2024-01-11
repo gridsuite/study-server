@@ -533,6 +533,9 @@ public class StudyService {
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
+                if (s.getVoltageInitParametersUuid() != null) {
+                    voltageInitService.deleteVoltageInitParameters(s.getVoltageInitParametersUuid());
+                }
             });
             deleteStudyInfos = new DeleteStudyInfos(networkUuid, caseUuid.get(), nodesModificationInfos);
         } else {
@@ -647,7 +650,10 @@ public class StudyService {
                 SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues() :
                 SensitivityAnalysisService.fromEntity(sourceStudy.getSensitivityAnalysisParameters());
 
-        UUID copiedVoltageInitParametersUuid = sourceStudy.getVoltageInitParametersUuid();
+        UUID copiedVoltageInitParametersUuid = null;
+        if (sourceStudy.getVoltageInitParametersUuid() != null) {
+            copiedVoltageInitParametersUuid = voltageInitService.duplicateVoltageInitParameters(sourceStudy.getVoltageInitParametersUuid());
+        }
 
         ShortCircuitParameters shortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
         ShortCircuitPredefinedConfiguration shortCircuitPredefinedConfiguration = sourceStudy.getShortCircuitParameters().getPredefinedParameters();
