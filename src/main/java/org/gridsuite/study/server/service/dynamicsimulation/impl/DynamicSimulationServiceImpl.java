@@ -11,6 +11,7 @@ import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -62,7 +63,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
         if (resultUuidOpt.isEmpty()) {
             return null;
@@ -80,7 +81,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, List<String> timeSeriesNames) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
         if (resultUuidOpt.isEmpty()) {
             return Collections.emptyList();
@@ -103,7 +104,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<StringTimeSeries> getTimeLineResult(UUID nodeUuid) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
         if (resultUuidOpt.isEmpty()) {
             return Collections.emptyList();
@@ -126,7 +127,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public DynamicSimulationStatus getStatus(UUID nodeUuid) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
         if (resultUuidOpt.isEmpty()) {
             return null;

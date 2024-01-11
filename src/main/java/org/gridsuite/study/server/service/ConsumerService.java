@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.NetworkInfos;
@@ -25,7 +26,6 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +40,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
+import org.gridsuite.study.server.dto.ComputationType;
+import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
+import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
+import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
+import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
+import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT;
+import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_BUS;
+import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -77,173 +85,6 @@ public class ConsumerService {
         this.caseService = caseService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.studyRepository = studyRepository;
-    }
-
-    @Bean
-    public Consumer<Message<String>> consumeDsResult() {
-        return message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (!Strings.isBlank(receiver)) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
-
-                    LOGGER.info("Dynamic Simulation result '{}' available for node '{}'", resultUuid,
-                            receiverObj.getNodeUuid());
-
-                    // insert resultUuid into DB
-                    updateDynamicSimulationResultUuid(receiverObj.getNodeUuid(), resultUuid);
-                    // send notifications
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
-    }
-
-    @Bean
-    public Consumer<Message<String>> consumeDsStopped() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (!Strings.isBlank(receiver)) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
-
-                    LOGGER.info("Dynamic Simulation stopped for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete dynamic simulation resultUuid into DB
-                    updateDynamicSimulationResultUuid(receiverObj.getNodeUuid(), null);
-                    // send notification for stopped computation
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
-    }
-
-    @Bean
-    public Consumer<Message<String>> consumeDsFailed() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
-            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-            if (!Strings.isBlank(receiver)) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
-
-                    LOGGER.info("Dynamic Simulation failed for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete dynamic simulation resultUuid into DB
-                    updateDynamicSimulationResultUuid(receiverObj.getNodeUuid(), null);
-                    // send notification for failed computation
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyError(
-                            studyUuid,
-                            receiverObj.getNodeUuid(),
-                            NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED,
-                            errorMessage,
-                            userId);
-
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
-    }
-
-    @Bean
-    public Consumer<Message<String>> consumeSaResult() {
-        return message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
-
-                    LOGGER.info("Security analysis result '{}' available for node '{}'", resultUuid,
-                            receiverObj.getNodeUuid());
-
-                    // update DB
-                    updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
-                                // send notifications
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
-    }
-
-    @Bean
-    public Consumer<Message<String>> consumeSaStopped() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
-
-                    LOGGER.info("Security analysis stopped for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete security analysis result in database
-                    updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-                    // send notification for stopped computation
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
-    }
-
-    @Bean
-    public Consumer<Message<String>> consumeSaFailed() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
-            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
-
-                    LOGGER.info("Security analysis failed for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete security analysis result in database
-                    updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-                    // send notification for failed computation
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyError(studyUuid,
-                            receiverObj.getNodeUuid(),
-                            NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_FAILED,
-                            errorMessage,
-                            userId);
-
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
     }
 
     @Bean
@@ -398,367 +239,197 @@ public class ConsumerService {
         };
     }
 
+    /**
+     * processes the error message from the computation microservice and uses its data to notify the front
+     */
+    public void consumeCalculationFailed(Message<String> msg, ComputationType computationType) {
+        String receiver = msg.getHeaders().get(HEADER_RECEIVER, String.class);
+        String errorMessage = msg.getHeaders().get(HEADER_MESSAGE, String.class);
+        String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
+        UUID resultUuid = null;
+        // resultUuid is only used for the voltage initialization computation, I don't know why
+        if (computationType == VOLTAGE_INITIALIZATION) {
+            String resultId = msg.getHeaders().get(RESULT_UUID, String.class);
+            if (resultId != null) {
+                resultUuid = UUID.fromString(resultId);
+            }
+        }
+        if (!Strings.isBlank(receiver)) {
+            NodeReceiver receiverObj;
+            try {
+                receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                LOGGER.info("{} failed for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
+
+                // delete computation results from the databases
+                // ==> will probably be removed soon because it prevents the front from recovering the resultId ; or 'null' parameter will be replaced by null like in VOLTAGE_INITIALIZATION
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, computationType);
+
+                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                // send notification for failed computation
+                notificationService.emitStudyError(
+                        studyUuid,
+                        receiverObj.getNodeUuid(),
+                        computationType.getUpdateFailedType(),
+                        errorMessage,
+                        userId);
+            } catch (JsonProcessingException e) {
+                LOGGER.error(e.toString());
+            }
+        }
+    }
+
+    public void consumeCalculationStopped(Message<String> msg, ComputationType computationType) {
+        String receiver = msg.getHeaders().get(HEADER_RECEIVER, String.class);
+        if (!Strings.isBlank(receiver)) {
+            NodeReceiver receiverObj;
+            try {
+                receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                // delete computation results from the database
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), null, computationType);
+                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                // send notification for stopped computation
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateStatusType());
+
+                LOGGER.info("{} stopped for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
+            } catch (JsonProcessingException e) {
+                LOGGER.error(e.toString());
+            }
+        }
+    }
+
+    public void consumeCalculationResult(Message<String> msg, ComputationType computationType) {
+        UUID resultUuid = null;
+        String resultId = msg.getHeaders().get(RESULT_UUID, String.class);
+        if (resultId != null) {
+            resultUuid = UUID.fromString(resultId);
+        }
+        String receiver = msg.getHeaders().get(HEADER_RECEIVER, String.class);
+        if (!Strings.isBlank(receiver)) {
+            NodeReceiver receiverObj;
+            try {
+                receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                LOGGER.info("{} result '{}' available for node '{}'",
+                        computationType.getLabel(),
+                        resultUuid,
+                        receiverObj.getNodeUuid());
+
+                // update DB
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, computationType);
+
+                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                // send notifications
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateStatusType());
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateResultType());
+            } catch (JsonProcessingException e) {
+                LOGGER.error(e.toString());
+            }
+        }
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDsResult() {
+        return message -> consumeCalculationResult(message, DYNAMIC_SIMULATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDsStopped() {
+        return message -> consumeCalculationStopped(message, DYNAMIC_SIMULATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDsFailed() {
+        return message -> consumeCalculationFailed(message, DYNAMIC_SIMULATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeSaResult() {
+        return message -> consumeCalculationResult(message, SECURITY_ANALYSIS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeSaStopped() {
+        return message -> consumeCalculationStopped(message, SECURITY_ANALYSIS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeSaFailed() {
+        return message -> consumeCalculationFailed(message, SECURITY_ANALYSIS);
+    }
+
     @Bean
     public Consumer<Message<String>> consumeSensitivityAnalysisResult() {
-        return message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("Sensitivity analysis result '{}' available for node '{}'", resultUuid, receiverObj.getNodeUuid());
-
-                    // update DB
-                    updateSensitivityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
-
-                    // send notifications
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
+        return message -> consumeCalculationResult(message, SENSITIVITY_ANALYSIS);
     }
 
     @Bean
     public Consumer<Message<String>> consumeSensitivityAnalysisStopped() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("Sensitivity analysis stopped for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete sensitivity analysis result in database
-                    updateSensitivityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-
-                    // send notification for stopped computation
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
+        return message -> consumeCalculationStopped(message, SENSITIVITY_ANALYSIS);
     }
 
     @Bean
     public Consumer<Message<String>> consumeSensitivityAnalysisFailed() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
-            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("Sensitivity analysis failed for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete sensitivity analysis result in database
-                    updateSensitivityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-
-                    // send notification for failed computation
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
-                    notificationService.emitStudyError(
-                            studyUuid,
-                            receiverObj.getNodeUuid(),
-                            NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED,
-                            errorMessage,
-                            userId);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
-    }
-
-    void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
-        networkModificationTreeService.updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
-    }
-
-    void updateDynamicSimulationResultUuid(UUID nodeUuid, UUID dynamicSimulationResultUuid) {
-        networkModificationTreeService.updateDynamicSimulationResultUuid(nodeUuid, dynamicSimulationResultUuid);
-    }
-
-    void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
-        networkModificationTreeService.updateSensitivityAnalysisResultUuid(nodeUuid, sensitivityAnalysisResultUuid);
-    }
-
-    void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
-        networkModificationTreeService.updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
-    }
-
-    void updateOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
-        networkModificationTreeService.updateOneBusShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
-    }
-
-    void updateLoadFlowResultUuid(UUID nodeUuid, UUID loadFlowResultUuid) {
-        networkModificationTreeService.updateLoadFlowResultUuid(nodeUuid, loadFlowResultUuid);
+        return message -> consumeCalculationFailed(message, SENSITIVITY_ANALYSIS);
     }
 
     @Bean
     public Consumer<Message<String>> consumeLoadFlowResult() {
-        return message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("Loadflow result '{}' available for node '{}'", resultUuid, receiverObj.getNodeUuid());
-
-                    // update DB
-                    updateLoadFlowResultUuid(receiverObj.getNodeUuid(), resultUuid);
-
-                    // send notifications
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
+        return message -> consumeCalculationResult(message, LOAD_FLOW);
     }
 
     @Bean
     public Consumer<Message<String>> consumeLoadFlowStopped() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("Loadflow stopped for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete loadflow result in database
-                    updateLoadFlowResultUuid(receiverObj.getNodeUuid(), null);
-
-                    // send notification for stopped computation
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
+        return message -> consumeCalculationStopped(message, LOAD_FLOW);
     }
 
     @Bean
     public Consumer<Message<String>> consumeLoadFlowFailed() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
-            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("LoadFlow failed for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete LoadFlow result in database
-                    updateLoadFlowResultUuid(receiverObj.getNodeUuid(), null);
-
-                    // send notification for failed computation
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
-                    notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_LOADFLOW_FAILED, errorMessage, userId);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
+        return message -> consumeCalculationFailed(message, LOAD_FLOW);
     }
 
     @Bean
     public Consumer<Message<String>> consumeShortCircuitAnalysisResult() {
         return message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
-            ShortcircuitAnalysisType analysisType = busId == null ? ShortcircuitAnalysisType.ALL_BUSES : ShortcircuitAnalysisType.ONE_BUS;
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("Short circuit analysis result '{}' available for node '{}'", resultUuid, receiverObj.getNodeUuid());
-
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
-                    // update DB
-                    if (analysisType == ShortcircuitAnalysisType.ALL_BUSES) {
-                        updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
-
-                        // send notifications
-                        notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-                        notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
-                    } else {
-                        updateOneBusShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
-
-                        // send notifications
-                        notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-                        notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT);
-                    }
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
+            if (!StringUtils.isEmpty(busId)) {
+                consumeCalculationResult(message, SHORT_CIRCUIT_ONE_BUS);
+            } else {
+                consumeCalculationResult(message, SHORT_CIRCUIT);
             }
         };
     }
 
     @Bean
     public Consumer<Message<String>> consumeShortCircuitAnalysisStopped() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("Short circuit analysis stopped for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete Short circuit analysis result in database
-                    updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-
-                    // send notification for stopped computation
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
+        return message -> consumeCalculationStopped(message, SHORT_CIRCUIT);
     }
 
     @Bean
     public Consumer<Message<String>> consumeShortCircuitAnalysisFailed() {
         return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
-            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
             String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
-            ShortcircuitAnalysisType analysisType = busId == null ? ShortcircuitAnalysisType.ALL_BUSES : ShortcircuitAnalysisType.ONE_BUS;
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("Short circuit analysis failed for node '{}'", receiverObj.getNodeUuid());
-
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    if (analysisType == ShortcircuitAnalysisType.ALL_BUSES) {
-                        // delete Short circuit analysis result in database
-                        updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-
-                        // send notification for failed computation
-                        notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED, errorMessage, userId);
-                    } else {
-                        // delete one bus Short circuit analysis result in database
-                        updateOneBusShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-
-                        // send notification for failed computation
-                        notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_FAILED, errorMessage, userId);
-                    }
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
+            if (!StringUtils.isEmpty(busId)) {
+                consumeCalculationFailed(message, SHORT_CIRCUIT_ONE_BUS);
+            } else {
+                consumeCalculationFailed(message, SHORT_CIRCUIT);
             }
         };
-    }
-
-    void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
-        networkModificationTreeService.updateVoltageInitResultUuid(nodeUuid, voltageInitResultUuid);
     }
 
     @Bean
     public Consumer<Message<String>> consumeVoltageInitResult() {
-        return message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("Voltage init result '{}' available for node '{}'", resultUuid, receiverObj.getNodeUuid());
-
-                    // update DB
-                    updateVoltageInitResultUuid(receiverObj.getNodeUuid(), resultUuid);
-
-                    // send notifications
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
+        return message -> consumeCalculationResult(message, VOLTAGE_INITIALIZATION);
     }
 
     @Bean
     public Consumer<Message<String>> consumeVoltageInitStopped() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("Voltage init stopped for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete Voltage Init analysis result in database
-                    updateVoltageInitResultUuid(receiverObj.getNodeUuid(), null);
-
-                    // send notification for stopped computation
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
+        return message -> consumeCalculationStopped(message, VOLTAGE_INITIALIZATION);
     }
 
     @Bean
     public Consumer<Message<String>> consumeVoltageInitFailed() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
-            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("Voltage init failed for node '{}'", receiverObj.getNodeUuid());
-
-                    updateVoltageInitResultUuid(receiverObj.getNodeUuid(), resultUuid);
-
-                    // send notification for failed computation
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
-                    notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_VOLTAGE_INIT_FAILED, errorMessage, userId);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
+        return message -> consumeCalculationFailed(message, VOLTAGE_INITIALIZATION);
     }
 }
