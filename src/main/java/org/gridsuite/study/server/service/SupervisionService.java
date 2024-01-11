@@ -188,7 +188,7 @@ public class SupervisionService {
 
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull();
         nodes.stream().forEach(node -> node.setNonEvacuatedEnergyResultUuid(null));
-        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.NON_EVACUATED_ENERGY.reportKey, nodes);
+        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.NON_EVACUATED_ENERGY_ANALYSIS.reportKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResults();
         LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.NON_EVACUATED_ENERGY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
