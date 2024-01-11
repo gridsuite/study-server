@@ -326,8 +326,8 @@ public class StudyService {
     public BasicStudyInfos duplicateStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
         Objects.requireNonNull(sourceStudyUuid);
 
-        Optional<StudyEntity> sourceStudy = studyRepository.findById(sourceStudyUuid);
-        if (!sourceStudy.isPresent()) {
+        StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElse(null);
+        if (sourceStudy == null) {
             return null;
         }
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
