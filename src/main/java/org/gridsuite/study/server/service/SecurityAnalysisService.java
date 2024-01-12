@@ -9,11 +9,12 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.loadflow.LoadFlowParameters;
+import jakarta.transaction.Transactional;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.repository.SecurityAnalysisParametersEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
@@ -226,20 +227,17 @@ public class SecurityAnalysisService {
         }
     }
 
-    public UUID updateSecurityAnalysisParameters(UUID parametersUuid, String parameters) {
+    public void updateSecurityAnalysisParameters(UUID parametersUuid, String parameters) {
 
-        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters");
-        if (parametersUuid != null) {
-            uriBuilder.queryParam("uuid", parametersUuid);
-        }
-        String path = uriBuilder.buildAndExpand().toUriString();
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{uuid}");
+        String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
         try {
-            return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.PUT, httpEntity, UUID.class).getBody();
+            restTemplate.put(securityAnalysisServerBaseUri + path, httpEntity);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_SECURITY_ANALYSIS_PARAMETERS_FAILED);
         }
@@ -263,13 +261,11 @@ public class SecurityAnalysisService {
     }
 
     public String getSecurityAnalysisParameters(UUID parametersUuid) {
+        Objects.requireNonNull(parametersUuid);
         String parameters;
 
-        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters");
-        if (parametersUuid != null) {
-            uriBuilder.queryParam("uuid", parametersUuid);
-        }
-        String path = uriBuilder.buildAndExpand().toUriString();
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{uuid}")
+                .buildAndExpand(parametersUuid).toUriString();
 
         try {
             parameters = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
@@ -282,6 +278,14 @@ public class SecurityAnalysisService {
         return parameters;
     }
 
+    @Transactional
+    public UUID getSecurityAnalysisParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
+        if (studyEntity.getSecurityAnalysisParametersUuid() == null) {
+            studyEntity.setSecurityAnalysisParametersUuid(createDefaultSecurityAnalysisParameters());
+        }
+        return studyEntity.getSecurityAnalysisParametersUuid();
+    }
+
     public void deleteSecurityAnalysisParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{parametersUuid}")
@@ -290,4 +294,40 @@ public class SecurityAnalysisService {
 
         restTemplate.delete(securityAnalysisServerBaseUri + path);
     }
+
+    public UUID createDefaultSecurityAnalysisParameters() {
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/default")
+                .buildAndExpand()
+                .toUriString();
+
+        UUID parametersUuid;
+        try {
+            parametersUuid = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_SECURITY_ANALYSIS_PARAMETERS_FAILED);
+        }
+        return parametersUuid;
+    }
+
+    public UUID createSecurityAnalysisParameters(String parameters) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters")
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+
+        UUID parametersUuid;
+        try {
+            parametersUuid = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_SECURITY_ANALYSIS_PARAMETERS_FAILED);
+        }
+        return parametersUuid;
+    }
+
 }

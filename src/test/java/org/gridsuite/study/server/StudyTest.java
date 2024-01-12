@@ -471,6 +471,8 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.matches("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID) && DELETE.equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/parameters/default") && POST.equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_PARAMETERS_UUID.toString());
                 }
 
                 switch (path) {
@@ -1021,10 +1023,11 @@ public class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(3, server);
+        var requests = TestUtils.getRequestsDone(4, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", caseUuid)));
+        assertTrue(requests.contains("/v1/parameters/default"));
 
         return studyUuid;
     }
@@ -1040,10 +1043,11 @@ public class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(4, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/exists", caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/disableExpiration", caseUuid))));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/default")));
 
         assertEquals(mapper.writeValueAsString(importParameters),
                 requests.stream().filter(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*"))
@@ -1064,12 +1068,13 @@ public class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(4, server);
+        var requests = TestUtils.getRequestsDone(5, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
         assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=true", caseUuid)));
         // note : it's a new case UUID
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CLONED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CLONED_CASE_UUID_STRING)));
+        assertTrue(requests.contains("/v1/parameters/default"));
 
         return studyUuid;
     }
@@ -1252,10 +1257,11 @@ public class StudyTest {
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(3, server);
+        var requests = TestUtils.getRequestsDone(4, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", NEW_STUDY_CASE_UUID)));
+        assertTrue(requests.contains("/v1/parameters/default"));
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
@@ -1473,7 +1479,6 @@ public class StudyTest {
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
     }
-  
 
     public void testDuplicateStudyWithVoltageInitParameters() throws Exception {
         String userId = "userId";
@@ -1587,27 +1592,31 @@ public class StudyTest {
         wireMockUtils.verifyDuplicateModificationGroup(stubUuid, 3);
 
         Set<RequestWithBody> requests;
+        int numberOfRequests = 2;
         if (sourceStudy.getSecurityAnalysisParametersUuid() == null) {
             // if we don't have a securityAnalysisParametersUuid we don't call the security-analysis-server to duplicate them
             assertNull(duplicatedStudy.getSecurityAnalysisParametersUuid());
-            requests = TestUtils.getRequestsWithBodyDone(2, server);
         } else {
             // else we call the security-analysis-server to duplicate them
             assertNotNull(duplicatedStudy.getSecurityAnalysisParametersUuid());
-            requests = TestUtils.getRequestsWithBodyDone(3, server);
-            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters/duplicate\\?duplicateFrom=.*")).count());
+            numberOfRequests++;
         }
-      
+
         if (sourceStudy.getVoltageInitParametersUuid() == null) {
             assertNull(duplicatedStudy.getVoltageInitParametersUuid());
-            requests = TestUtils.getRequestsWithBodyDone(2, server);
         } else {
             assertNotNull(duplicatedStudy.getVoltageInitParametersUuid());
-            requests = TestUtils.getRequestsWithBodyDone(3, server);
-            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=.*")).count());
+            numberOfRequests++;
         }
+        requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + duplicatedStudy.getNetworkUuid() + "/reindex-all")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
+        if (sourceStudy.getVoltageInitParametersUuid() != null) {
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=.*")).count());
+        }
+        if (sourceStudy.getSecurityAnalysisParametersUuid() != null) {
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters/duplicate\\?duplicateFrom=.*")).count());
+        }
         return duplicatedStudy;
     }
 

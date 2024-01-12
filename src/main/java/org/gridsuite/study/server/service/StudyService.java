@@ -973,12 +973,12 @@ public class StudyService {
 
     public String getSecurityAnalysisParametersValues(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID securityAnalysisParametersUuid = studyEntity.getSecurityAnalysisParametersUuid();
+        UUID securityAnalysisParametersUuid = securityAnalysisService.getSecurityAnalysisParametersUuidOrElseCreateDefaults(studyEntity);
         return securityAnalysisService.getSecurityAnalysisParameters(securityAnalysisParametersUuid);
     }
 
     public void setSecurityAnalysisParametersValues(UUID studyUuid, String parameters, String userId) {
-        updateSecurityAnalysisParameters(studyUuid, parameters);
+        createOrUpdateSecurityAnalysisParameters(studyUuid, parameters);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -1312,15 +1312,15 @@ public class StudyService {
         invalidateVoltageInitStatusOnAllNodes(studyUuid);
     }
 
-    public void updateSecurityAnalysisParameters(UUID studyUuid, String parameters) {
+    public void createOrUpdateSecurityAnalysisParameters(UUID studyUuid, String parameters) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID securityAnalysisParametersUuid = studyEntity.getSecurityAnalysisParametersUuid();
-        UUID newParametersUuid = securityAnalysisService.updateSecurityAnalysisParameters(securityAnalysisParametersUuid, parameters);
-        // In this case it means we never persisted any param, so we need to store the returned id,
-        // otherwise no need to do anything the id is already stored
         if (securityAnalysisParametersUuid == null) {
-            studyEntity.setSecurityAnalysisParametersUuid(newParametersUuid);
+            securityAnalysisParametersUuid = securityAnalysisService.createSecurityAnalysisParameters(parameters);
+            studyEntity.setSecurityAnalysisParametersUuid(securityAnalysisParametersUuid);
             studyRepository.save(studyEntity);
+        } else {
+            securityAnalysisService.updateSecurityAnalysisParameters(securityAnalysisParametersUuid, parameters);
         }
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
     }

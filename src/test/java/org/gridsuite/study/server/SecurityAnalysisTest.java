@@ -59,10 +59,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
@@ -253,7 +250,7 @@ public class SecurityAnalysisTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("1");
-                } else if (path.matches("/v1/parameters\\?uuid=" + SECURITY_ANALYSIS_PARAMETERS_UUID)) {
+                } else if (path.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID)) {
                     if (method.equals("GET")) {
                         return new MockResponse().setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8")
@@ -269,12 +266,21 @@ public class SecurityAnalysisTest {
                         return new MockResponse().setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8")
                                 .setBody(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
-                    } else {
+                    } else if (method.equals("GET")) {
                         //Method PUT
                         return new MockResponse().setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8")
                                 .setBody(objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
+                    } else {
+                        //Method POST
+                        return new MockResponse().setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8")
+                                .setBody(objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
                     }
+                } else if (path.matches("/v1/parameters/default") && method.equals("POST")) {
+                        return new MockResponse().setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8")
+                                .setBody(objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -582,29 +588,33 @@ public class SecurityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         UUID studyNameUserIdUuid = studyEntity.getId();
         assertNotNull(studyNameUserIdUuid);
-        //get security analysis parameters
+        //get security analysis parameters but since it wasn't created before it will create the default parameters and then return them
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
                 content().string(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters")));
+
+        assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSecurityAnalysisParametersUuid());
+        Set<String> requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID)));
 
         String mnBodyJson = objectWriter.writeValueAsString(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
 
-        assertNull(studyEntity.getSecurityAnalysisParametersUuid());
+        //update the parameters
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mnBodyJson)).andExpect(
                 status().isOk());
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID)));
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSecurityAnalysisParametersUuid());
 
-        //get security analysis parameters but with a registered securityAnalysisParametersUuid
+        //get security analysis parameters but with an already registered securityAnalysisParametersUuid
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
                 content().string(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters\\?uuid=" + SECURITY_ANALYSIS_PARAMETERS_UUID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID)));
 
         //same with set parameters
         mockMvc.perform(
@@ -613,9 +623,30 @@ public class SecurityAnalysisTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mnBodyJson)).andExpect(
                 status().isOk());
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters\\?uuid=" + SECURITY_ANALYSIS_PARAMETERS_UUID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID)));
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSecurityAnalysisParametersUuid());
+    }
 
+    @Test
+    public void testCreateSecurityAnalysisParameters() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
+        UUID studyUuid = studyEntity.getId();
+        assertNotNull(studyUuid);
+        assertNull(studyEntity.getSecurityAnalysisParametersUuid());
+        String mnBodyJson = objectWriter.writeValueAsString(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
+
+        //test update parameters without having already created parameters -> should call create instead of update
+        mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid)
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mnBodyJson))
+                .andExpectAll(
+                    status().isOk());
+                    //content().string(SECURITY_ANALYSIS_PARAMETERS_UUID.toString()));
+
+        assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyUuid).orElseThrow().getSecurityAnalysisParametersUuid());
+        Set<String> requests = TestUtils.getRequestsDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters")));
     }
 
     private void cleanDB() {
