@@ -14,10 +14,12 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -345,5 +347,13 @@ public class LoadFlowService {
         }
 
         return parametersUuid;
+    }
+
+    @Transactional
+    public UUID getLoadFlowParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
+        if (studyEntity.getLoadFlowParametersUuid() == null) {
+            studyEntity.setLoadFlowParametersUuid(createDefaultLoadFlowParameters());
+        }
+        return studyEntity.getLoadFlowParametersUuid();
     }
 }

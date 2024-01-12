@@ -791,7 +791,7 @@ public class StudyService {
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getLoadFlowResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(loadflowService::deleteLoadFlowResult);
 
-        UUID lfParametersUuid = studyEntity.getLoadFlowParametersUuid();
+        UUID lfParametersUuid = loadflowService.getLoadFlowParametersUuidOrElseCreateDefaults(studyEntity);
         UUID result = loadflowService.runLoadFlow(studyUuid, nodeUuid, lfParametersUuid, studyEntity.getLoadFlowProvider(), userId, limitReduction);
 
         updateLoadFlowResultUuid(nodeUuid, result);
@@ -880,7 +880,8 @@ public class StudyService {
     }
 
     private LoadFlowParametersInfos getLoadFlowParametersInfos(StudyEntity studyEntity, ComputationUsingLoadFlow computation) {
-        LoadFlowParametersValues params = getLoadFlowParametersValues(studyEntity.getId());
+        UUID loadFlowParametersUuid = loadflowService.getLoadFlowParametersUuidOrElseCreateDefaults(studyEntity);
+        LoadFlowParametersValues params = loadflowService.getLoadFlowParameters(loadFlowParametersUuid);
         String lfProvider;
         if (computation == ComputationUsingLoadFlow.SECURITY_ANALYSIS) {
             lfProvider = studyEntity.getSecurityAnalysisProvider();
@@ -892,7 +893,7 @@ public class StudyService {
         return LoadFlowParametersInfos.builder()
                 .commonParameters(params.getCommonParameters())
                 .specificParameters(lfProvider != null ? params.getSpecificParametersPerProvider().getOrDefault(lfProvider, Map.of()) : Map.of())
-                .build(); 
+                .build();
     }
 
     private void deleteLoadFlowResult(UUID studyUuid) {

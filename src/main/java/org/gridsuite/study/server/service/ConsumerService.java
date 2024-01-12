@@ -359,7 +359,7 @@ public class ConsumerService {
                         studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
                     } else {
                         // create default loadFlow Parameters
-                        UUID loadFlowParametersUuid = loadFlowService.createDefaultLoadFlowParameters();
+                        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters();
                         studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, loadFlowParametersUuid, ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, importParameters, importReportUuid);
                     }
 
@@ -376,6 +376,15 @@ public class ConsumerService {
                 }
             }
         };
+    }
+
+    private UUID createDefaultLoadFlowParameters() {
+        try {
+            return loadFlowService.createDefaultLoadFlowParameters();
+        } catch (Exception e) {
+            LOGGER.error(e.toString(), e);
+        }
+        return null;
     }
 
     @Bean
