@@ -30,7 +30,6 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -59,6 +58,7 @@ import java.io.IOException;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
+import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -406,9 +406,9 @@ public class LoadFlowTest {
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateLoadFlowResultUuid(modificationNode.getId(), resultUuid);
-        assertTrue(networkModificationTreeService.getLoadFlowResultUuid(modificationNode.getId()).isPresent());
-        assertEquals(resultUuid, networkModificationTreeService.getLoadFlowResultUuid(modificationNode.getId()).get());
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, LOAD_FLOW);
+        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), LOAD_FLOW).isPresent());
+        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), LOAD_FLOW).get());
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
@@ -418,7 +418,7 @@ public class LoadFlowTest {
         studyService.runLoadFlow(studyEntity.getId(), modificationNode.getId(), "", null);
 
         // Test reset uuid result in the database
-        assertTrue(networkModificationTreeService.getLoadFlowResultUuid(modificationNode.getId()).isEmpty());
+        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), LOAD_FLOW).isEmpty());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -443,7 +443,7 @@ public class LoadFlowTest {
 
     private void testResultCount() throws Exception {
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(ComputationType.LOAD_FLOW))
+                .queryParam("type", String.valueOf(LOAD_FLOW))
                 .queryParam("dryRun", String.valueOf(true)))
             .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
@@ -452,7 +452,7 @@ public class LoadFlowTest {
     private void testDeleteResults(int expectedInitialResultCount) throws Exception {
         assertEquals(expectedInitialResultCount, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(ComputationType.LOAD_FLOW))
+                .queryParam("type", String.valueOf(LOAD_FLOW))
                 .queryParam("dryRun", String.valueOf(false)))
             .andExpect(status().isOk());
 

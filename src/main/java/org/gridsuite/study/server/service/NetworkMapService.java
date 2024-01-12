@@ -28,8 +28,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.EQUIPMENT_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.GET_NETWORK_ELEMENT_FAILED;
+import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
@@ -87,6 +86,24 @@ public class NetworkMapService {
                 throw new StudyException(StudyException.Type.NOT_IMPLEMENTED, e.getMessage());
             }
             throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
+        }
+    }
+
+    public String getCountries(UUID networkUuid, String variantId) {
+        String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/countries";
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
+        if (!StringUtils.isBlank(variantId)) {
+            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+
+        try {
+            return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(NETWORK_NOT_FOUND);
+            } else {
+                throw handleHttpError(e, GET_NETWORK_COUNTRY_FAILED);
+            }
         }
     }
 
