@@ -148,6 +148,7 @@ public class StudyTest {
     private static final ReporterModel REPORT_TEST = new ReporterModel("test", "test");
     private static final String VARIANT_ID = "variant_1";
     public static final String POST = "POST";
+    public static final String DELETE = "DELETE";
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String VARIANT_ID_3 = "variant_3";
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
@@ -165,6 +166,7 @@ public class StudyTest {
     private static final Map DEFAULT_IMPORT_PARAMETERS = Map.of("param1", "defaultValue1", "param2", "defaultValue2");
     private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
+    private static final UUID VOLTAGE_INIT_PARAMETERS_UUID = UUID.randomUUID();
 
     private static final String DEFAULT_MODIFICATION_LIST_RESULT = "[{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}]";
 
@@ -206,6 +208,9 @@ public class StudyTest {
 
     @Autowired
     private SecurityAnalysisService securityAnalysisService;
+
+    @Autowired
+    private VoltageInitService voltageInitService;
 
     @MockBean
     private EquipmentInfosService equipmentInfosService;
@@ -333,6 +338,7 @@ public class StudyTest {
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
+        voltageInitService.setVoltageInitServerBaseUri(baseUrl);
 
         String baseUrlWireMock = wireMockServer.baseUrl();
         networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
@@ -457,6 +463,10 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CLONED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS, "UCTE");
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/parameters\\?duplicateFrom=" + VOLTAGE_INIT_PARAMETERS_UUID) && POST.equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
+                } else if (path.matches("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID) && DELETE.equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
                 }
 
@@ -858,6 +868,28 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + nonExistingCaseUuid)));
+    }
+
+    @Test
+    public void testDeleteStudyWithVoltageInitParameters() throws Exception {
+        UUID studyUuid = createStudy("userId", CASE_UUID);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
+        studyEntity.setVoltageInitParametersUuid(VOLTAGE_INIT_PARAMETERS_UUID);
+        studyRepository.save(studyEntity);
+
+        UUID stubUuid = wireMockUtils.stubNetworkModificationDeleteGroup();
+        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+
+        assertTrue(studyRepository.findById(studyUuid).isEmpty());
+
+        wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(4, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + CASE_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID)));
     }
 
     @Test
@@ -1355,6 +1387,72 @@ public class StudyTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    public void testDuplicateStudyWithVoltageInitParameters() throws Exception {
+        String userId = "userId";
+        UUID study1Uuid = createStudy("userId", CASE_UUID);
+        RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
+        UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
+        NetworkModificationNode node2 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID_2, "node2", userId);
+
+        StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
+        studyEntity.setVoltageInitParametersUuid(VOLTAGE_INIT_PARAMETERS_UUID);
+        studyRepository.save(studyEntity);
+
+        // add modification on node "node1"
+        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+
+        UUID stubPostId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
+        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createTwoWindingsTransformerAttributes)
+                .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
+        checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node1.getId()));
+        checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
+        checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
+        checkElementUpdatedMessageSent(study1Uuid, userId);
+        wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, createTwoWindingsTransformerAttributes, NETWORK_UUID_STRING, VARIANT_ID);
+
+        // add modification on node "node2"
+        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+
+        stubPostId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
+        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(createLoadAttributes)
+            .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
+        checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node2.getId()));
+        checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
+        checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
+        checkElementUpdatedMessageSent(study1Uuid, userId);
+        wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
+
+        node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
+        node2.setSensitivityAnalysisResultUuid(UUID.randomUUID());
+        node2.setShortCircuitAnalysisResultUuid(UUID.randomUUID());
+        node2.setOneBusShortCircuitAnalysisResultUuid(UUID.randomUUID());
+        node2.setDynamicSimulationResultUuid(UUID.randomUUID());
+        node2.setVoltageInitResultUuid(UUID.randomUUID());
+        node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
+        networkModificationTreeService.updateNode(study1Uuid, node2, userId);
+        output.receive(TIMEOUT, studyUpdateDestination);
+        checkElementUpdatedMessageSent(study1Uuid, userId);
+
+        // duplicate the study
+        StudyEntity duplicatedStudy = duplicateStudy(study1Uuid, userId);
+        assertNotEquals(study1Uuid, duplicatedStudy.getId());
+
+        //Test duplication from a non existing source study
+        mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={sourceStudyUuid}&studyUuid={studyUuid}", UUID.randomUUID(), DUPLICATED_STUDY_UUID)
+                .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isNotFound());
+    }
+
     private StudyEntity duplicateStudy(UUID studyUuid, String userId) throws Exception {
         UUID stubUuid = wireMockUtils.stubDuplicateModificationGroup();
         mockMvc.perform(post(STUDIES_URL)
@@ -1363,6 +1461,7 @@ public class StudyTest {
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
 
+        StudyEntity sourceStudy = studyRepository.findById(studyUuid).orElseThrow();
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
@@ -1401,7 +1500,16 @@ public class StudyTest {
         //Check requests to duplicate modification groups has been emitted (3 nodes)
         wireMockUtils.verifyDuplicateModificationGroup(stubUuid, 3);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(2, server);
+        Set<RequestWithBody> requests;
+        if (sourceStudy.getVoltageInitParametersUuid() == null) {
+            assertNull(duplicatedStudy.getVoltageInitParametersUuid());
+            requests = TestUtils.getRequestsWithBodyDone(2, server);
+        } else {
+            assertNotNull(duplicatedStudy.getVoltageInitParametersUuid());
+            requests = TestUtils.getRequestsWithBodyDone(3, server);
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=.*")).count());
+
+        }
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + duplicatedStudy.getNetworkUuid() + "/reindex-all")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
         return duplicatedStudy;

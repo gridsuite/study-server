@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyContingencies;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyGeneratorCappingsByType;
@@ -137,7 +138,7 @@ public class NonEvacuatedEnergyService {
 
     public String getNonEvacuatedEnergyResult(UUID nodeUuid) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getNonEvacuatedEnergyResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
         if (resultUuidOpt.isEmpty()) {
             return null;
         }
@@ -160,7 +161,7 @@ public class NonEvacuatedEnergyService {
 
     public String getNonEvacuatedEnergyStatus(UUID nodeUuid) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getNonEvacuatedEnergyResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
 
         if (resultUuidOpt.isEmpty()) {
             return null;
@@ -183,7 +184,7 @@ public class NonEvacuatedEnergyService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getNonEvacuatedEnergyResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
         if (resultUuidOpt.isEmpty()) {
             return;
         }

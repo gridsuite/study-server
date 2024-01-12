@@ -83,24 +83,22 @@ public class SupervisionService {
 
     @Transactional
     public Integer deleteComputationResults(ComputationType computationType, boolean dryRun) {
-        switch (computationType) {
-            case LOAD_FLOW:
-                return dryRun ? loadFlowService.getLoadFlowResultsCount() : deleteLoadflowResults();
-            case DYNAMIC_SIMULATION:
-                return dryRun ? dynamicSimulationService.getResultsCount() : deleteDynamicSimulationResults();
-            case SECURITY_ANALYSIS:
-                return dryRun ? securityAnalysisService.getSecurityAnalysisResultsCount() : deleteSecurityAnalysisResults();
-            case SENSITIVITY_ANALYSIS:
-                return dryRun ? sensitivityAnalysisService.getSensitivityAnalysisResultsCount() : deleteSensitivityAnalysisResults();
-            case NON_EVACUATED_ENERGY_ANALYSIS:
-                return dryRun ? nonEvacuatedEnergyService.getNonEvacuatedEnergyAnalysisResultsCount() : deleteNonEvacuatedEnergyAnalysisResults();
-            case SHORT_CIRCUIT:
-                return dryRun ? shortCircuitService.getShortCircuitResultsCount() : deleteShortcircuitResults();
-            case VOLTAGE_INITIALIZATION:
-                return dryRun ? voltageInitService.getVoltageInitResultsCount() : deleteVoltageInitResults();
-            default:
-                throw new StudyException(ELEMENT_NOT_FOUND);
-        }
+        return switch (computationType) {
+            case LOAD_FLOW -> dryRun ? loadFlowService.getLoadFlowResultsCount() : deleteLoadflowResults();
+            case DYNAMIC_SIMULATION ->
+                    dryRun ? dynamicSimulationService.getResultsCount() : deleteDynamicSimulationResults();
+            case SECURITY_ANALYSIS ->
+                    dryRun ? securityAnalysisService.getSecurityAnalysisResultsCount() : deleteSecurityAnalysisResults();
+            case SENSITIVITY_ANALYSIS ->
+                    dryRun ? sensitivityAnalysisService.getSensitivityAnalysisResultsCount() : deleteSensitivityAnalysisResults();
+            case NON_EVACUATED_ENERGY_ANALYSIS ->
+                    dryRun ? nonEvacuatedEnergyService.getNonEvacuatedEnergyAnalysisResultsCount() : deleteNonEvacuatedEnergyAnalysisResults();
+            case SHORT_CIRCUIT, SHORT_CIRCUIT_ONE_BUS ->
+                    dryRun ? shortCircuitService.getShortCircuitResultsCount() : deleteShortcircuitResults();
+            case VOLTAGE_INITIALIZATION ->
+                    dryRun ? voltageInitService.getVoltageInitResultsCount() : deleteVoltageInitResults();
+            default -> throw new StudyException(ELEMENT_NOT_FOUND);
+        };
     }
 
     public Long getStudyIndexedEquipmentsCount(UUID networkUUID) {

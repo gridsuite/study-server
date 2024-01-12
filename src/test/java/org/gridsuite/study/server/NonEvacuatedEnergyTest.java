@@ -430,9 +430,9 @@ public class NonEvacuatedEnergyTest {
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNodeUuid = modificationNode1.getId();
-        networkModificationTreeService.updateNonEvacuatedEnergyResultUuid(modificationNodeUuid, notFoundSensitivityUuid);
-        assertTrue(networkModificationTreeService.getNonEvacuatedEnergyResultUuid(modificationNodeUuid).isPresent());
-        assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getNonEvacuatedEnergyResultUuid(modificationNodeUuid).get());
+        networkModificationTreeService.updateComputationResultUuid(modificationNodeUuid, notFoundSensitivityUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS).isPresent());
+        assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS).get());
 
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/non-evacuated-energy/results/" + notFoundSensitivityUuid))
                 .willReturn(WireMock.notFound()));
@@ -452,9 +452,9 @@ public class NonEvacuatedEnergyTest {
         String resultUuidJson = mapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateNonEvacuatedEnergyResultUuid(modificationNode.getId(), resultUuid);
-        assertTrue(networkModificationTreeService.getNonEvacuatedEnergyResultUuid(modificationNode.getId()).isPresent());
-        assertEquals(resultUuid, networkModificationTreeService.getNonEvacuatedEnergyResultUuid(modificationNode.getId()).get());
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.NON_EVACUATED_ENERGY_ANALYSIS).isPresent());
+        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.NON_EVACUATED_ENERGY_ANALYSIS).get());
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
@@ -467,7 +467,7 @@ public class NonEvacuatedEnergyTest {
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_FAILED, updateType);
-        assertTrue(networkModificationTreeService.getNonEvacuatedEnergyResultUuid(modificationNode.getId()).isEmpty());
+        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.NON_EVACUATED_ENERGY_ANALYSIS).isEmpty());
     }
 
     @Test
