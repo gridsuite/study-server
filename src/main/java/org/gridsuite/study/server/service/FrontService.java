@@ -10,5 +10,5 @@ package org.gridsuite.study.server.service;
  * An enum that list known front apps
  */
 public enum FrontService {
-    EXPLORE, STUDY, MERGE, DYNA
+    EXPLORE, STUDY, MERGE, DYNA, ADMIN
 }
