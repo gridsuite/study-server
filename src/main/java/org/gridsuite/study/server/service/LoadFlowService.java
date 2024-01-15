@@ -316,7 +316,7 @@ public class LoadFlowService {
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
         try {
-            restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT, httpEntity, UUID.class);
+            restTemplate.put(loadFlowServerBaseUri + path, httpEntity);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_LOADFLOW_PARAMETERS_FAILED);
         }

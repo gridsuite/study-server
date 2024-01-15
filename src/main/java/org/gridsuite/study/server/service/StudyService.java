@@ -876,12 +876,12 @@ public class StudyService {
 
     public LoadFlowParametersValues getLoadFlowParametersValues(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        return loadflowService.getLoadFlowParameters(studyEntity.getLoadFlowParametersUuid());
+        UUID loadFlowParamsUuid = loadflowService.getLoadFlowParametersUuidOrElseCreateDefaults(studyEntity);
+        return loadflowService.getLoadFlowParameters(loadFlowParamsUuid);
     }
 
     private LoadFlowParametersInfos getLoadFlowParametersInfos(StudyEntity studyEntity, ComputationUsingLoadFlow computation) {
-        UUID loadFlowParametersUuid = loadflowService.getLoadFlowParametersUuidOrElseCreateDefaults(studyEntity);
-        LoadFlowParametersValues params = loadflowService.getLoadFlowParameters(loadFlowParametersUuid);
+        LoadFlowParametersValues params = getLoadFlowParametersValues(studyEntity.getId());
         String lfProvider;
         if (computation == ComputationUsingLoadFlow.SECURITY_ANALYSIS) {
             lfProvider = studyEntity.getSecurityAnalysisProvider();
@@ -1247,6 +1247,7 @@ public class StudyService {
         if (loadFlowParametersUuid == null) {
             loadFlowParametersUuid = loadflowService.createLoadFlowParameters(parameters);
             studyEntity.setLoadFlowParametersUuid(loadFlowParametersUuid);
+            studyRepository.save(studyEntity);
         } else {
             loadflowService.updateLoadFlowParameters(loadFlowParametersUuid, parameters);
         }

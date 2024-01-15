@@ -72,6 +72,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -179,6 +180,10 @@ public class SingleLineDiagramTest {
                 .commonParameters(LoadFlowParameters.load())
                 .specificParametersPerProvider(Map.of())
                 .build());
+
+        when(loadFlowService.getLoadFlowParametersUuidOrElseCreateDefaults(any()))
+            .thenReturn(LOADFLOW_PARAMETERS_UUID);
+
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
