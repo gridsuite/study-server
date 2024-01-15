@@ -31,10 +31,10 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -68,6 +68,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -314,7 +315,7 @@ public class SecurityAnalysisTest {
 
         //Test delete all results
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(ComputationType.SECURITY_ANALYSIS))
+                .queryParam("type", String.valueOf(SECURITY_ANALYSIS))
                 .queryParam("dryRun", String.valueOf(true)))
             .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
@@ -322,7 +323,7 @@ public class SecurityAnalysisTest {
         //Delete Security analysis results
         assertEquals(1, networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(ComputationType.SECURITY_ANALYSIS))
+                .queryParam("type", String.valueOf(SECURITY_ANALYSIS))
                 .queryParam("dryRun", String.valueOf(false)))
             .andExpect(status().isOk());
 
@@ -342,9 +343,9 @@ public class SecurityAnalysisTest {
         String resultUuidJson = mapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateSecurityAnalysisResultUuid(modificationNode.getId(), resultUuid);
-        assertTrue(networkModificationTreeService.getSecurityAnalysisResultUuid(modificationNode.getId()).isPresent());
-        assertEquals(resultUuid, networkModificationTreeService.getSecurityAnalysisResultUuid(modificationNode.getId()).get());
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, SECURITY_ANALYSIS);
+        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), SECURITY_ANALYSIS).isPresent());
+        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), SECURITY_ANALYSIS).get());
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
@@ -354,7 +355,7 @@ public class SecurityAnalysisTest {
         studyService.runSecurityAnalysis(studyEntity.getId(), List.of(), modificationNode.getId(), "");
 
         // Test reset uuid result in the database
-        assertTrue(networkModificationTreeService.getSecurityAnalysisResultUuid(modificationNode.getId()).isEmpty());
+        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), SECURITY_ANALYSIS).isEmpty());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -511,6 +512,7 @@ public class SecurityAnalysisTest {
             .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         SensitivityAnalysisParametersEntity defaultSensitivityParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
+        NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
         SecurityAnalysisParametersValues securityAnalysisParametersValues = SecurityAnalysisParametersValues.builder()
                 .lowVoltageAbsoluteThreshold(0.0)
                 .lowVoltageProportionalThreshold(0.0)
@@ -520,7 +522,8 @@ public class SecurityAnalysisTest {
                 .build();
         SecurityAnalysisParametersEntity securityAnalysisParametersEntity = SecurityAnalysisService.toEntity(securityAnalysisParametersValues);
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider,
-                defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, securityAnalysisParametersEntity, defaultSensitivityParametersEntity);
+                defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, securityAnalysisParametersEntity, defaultSensitivityParametersEntity,
+                defaultNonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
