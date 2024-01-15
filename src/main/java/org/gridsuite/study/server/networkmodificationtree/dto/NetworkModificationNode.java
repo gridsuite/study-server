@@ -47,6 +47,8 @@ public class NetworkModificationNode extends AbstractNode {
 
     private UUID sensitivityAnalysisResultUuid;
 
+    private UUID nonEvacuatedEnergyResultUuid;
+
     private UUID dynamicSimulationResultUuid;
 
     private NodeBuildStatus nodeBuildStatus;
