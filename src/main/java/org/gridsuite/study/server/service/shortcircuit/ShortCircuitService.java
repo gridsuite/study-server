@@ -38,10 +38,7 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -154,6 +151,41 @@ public class ShortCircuitService {
         } else {
             return getShortCircuitAnalysisResult(nodeUuid, mode, type);
         }
+    }
+
+    private String getShortCircuitAnalysisCsvResultResourcePath(UUID nodeUuid, ShortcircuitAnalysisType type) {
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid,
+                type == ShortcircuitAnalysisType.ALL_BUSES ? ComputationType.SHORT_CIRCUIT : ComputationType.SHORT_CIRCUIT_ONE_BUS);
+        if (resultUuidOpt.isEmpty()) {
+            return null;
+        }
+        String path = DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/csv";
+        return UriComponentsBuilder.fromPath(path).buildAndExpand(resultUuidOpt.get()).toUriString();
+    }
+
+    public byte[] getShortCircuitAnalysisCsvResultResource(URI resourcePath, String headersCsv) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> entity = new HttpEntity<>(headersCsv, headers);
+        ResponseEntity<byte[]> response = restTemplate.exchange(
+                resourcePath,
+                HttpMethod.POST,
+                entity,
+                byte[].class
+        );
+        if (response.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
+            throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
+        }
+        return response.getBody();
+    }
+
+    public byte[] getShortCircuitAnalysisCsvResult(UUID nodeUuid, ShortcircuitAnalysisType type, String headersCsv) {
+        String resultPath = getShortCircuitAnalysisCsvResultResourcePath(nodeUuid, type);
+        if (resultPath == null) {
+            return new byte[0];
+        }
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath);
+        return getShortCircuitAnalysisCsvResultResource(builder.build().toUri(), headersCsv);
     }
 
     public String getShortCircuitAnalysisResult(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type) {
