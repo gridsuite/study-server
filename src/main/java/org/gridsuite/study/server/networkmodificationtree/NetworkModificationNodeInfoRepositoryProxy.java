@@ -56,6 +56,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getVoltageInitResultUuid(),
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
+            modificationNode.getNonEvacuatedEnergyResultUuid(),
             modificationNode.getDynamicSimulationResultUuid(),
             modificationNode.getNodeBuildStatus().toEntity());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
@@ -74,6 +75,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getVoltageInitResultUuid(),
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
+            node.getNonEvacuatedEnergyResultUuid(),
             node.getDynamicSimulationResultUuid(),
             node.getNodeBuildStatus().toDto()));
     }
@@ -118,6 +120,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             case LOAD_FLOW -> modificationNode.setLoadFlowResultUuid(computationUuid);
             case SECURITY_ANALYSIS -> modificationNode.setSecurityAnalysisResultUuid(computationUuid);
             case SENSITIVITY_ANALYSIS -> modificationNode.setSensitivityAnalysisResultUuid(computationUuid);
+            case NON_EVACUATED_ENERGY_ANALYSIS -> modificationNode.setNonEvacuatedEnergyResultUuid(computationUuid);
             case SHORT_CIRCUIT -> modificationNode.setShortCircuitAnalysisResultUuid(computationUuid);
             case SHORT_CIRCUIT_ONE_BUS -> modificationNode.setOneBusShortCircuitAnalysisResultUuid(computationUuid);
             case VOLTAGE_INITIALIZATION -> modificationNode.setVoltageInitResultUuid(computationUuid);
@@ -132,6 +135,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             case LOAD_FLOW -> ((NetworkModificationNode) node).getLoadFlowResultUuid();
             case SECURITY_ANALYSIS -> ((NetworkModificationNode) node).getSecurityAnalysisResultUuid();
             case SENSITIVITY_ANALYSIS -> ((NetworkModificationNode) node).getSensitivityAnalysisResultUuid();
+            case NON_EVACUATED_ENERGY_ANALYSIS -> ((NetworkModificationNode) node).getNonEvacuatedEnergyResultUuid();
             case SHORT_CIRCUIT -> ((NetworkModificationNode) node).getShortCircuitAnalysisResultUuid();
             case SHORT_CIRCUIT_ONE_BUS -> ((NetworkModificationNode) node).getOneBusShortCircuitAnalysisResultUuid();
             case VOLTAGE_INITIALIZATION -> ((NetworkModificationNode) node).getVoltageInitResultUuid();
@@ -180,6 +184,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .loadFlowUuid(networkModificationNode.getLoadFlowResultUuid())
             .securityAnalysisUuid(networkModificationNode.getSecurityAnalysisResultUuid())
             .sensitivityAnalysisUuid(networkModificationNode.getSensitivityAnalysisResultUuid())
+            .nonEvacuatedEnergyUuid(networkModificationNode.getNonEvacuatedEnergyResultUuid())
             .shortCircuitAnalysisUuid(networkModificationNode.getShortCircuitAnalysisResultUuid())
             .oneBusShortCircuitAnalysisUuid(networkModificationNode.getOneBusShortCircuitAnalysisResultUuid())
             .voltageInitUuid(networkModificationNode.getVoltageInitResultUuid())

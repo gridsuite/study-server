@@ -181,6 +181,9 @@ public class StudyTest {
     @Value("${sensitivity-analysis.default-provider}")
     String defaultSensitivityAnalysisProvider;
 
+    @Value("${sensitivity-analysis.default-provider}")
+    String defaultNonEvacuatedEnergyProvider;
+
     @Autowired
     private OutputDestination output;
 
@@ -1280,6 +1283,7 @@ public class StudyTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
@@ -1350,6 +1354,7 @@ public class StudyTest {
         assertEquals(study.getLoadFlowProvider(), defaultLoadflowProvider);
         assertEquals(study.getSecurityAnalysisProvider(), defaultSecurityAnalysisProvider);
         assertEquals(study.getSensitivityAnalysisProvider(), defaultSensitivityAnalysisProvider);
+        assertEquals(study.getNonEvacuatedEnergyProvider(), defaultNonEvacuatedEnergyProvider);
     }
 
     @Test
@@ -1395,6 +1400,7 @@ public class StudyTest {
 
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         node2.setSensitivityAnalysisResultUuid(UUID.randomUUID());
+        node2.setNonEvacuatedEnergyResultUuid(UUID.randomUUID());
         node2.setShortCircuitAnalysisResultUuid(UUID.randomUUID());
         node2.setOneBusShortCircuitAnalysisResultUuid(UUID.randomUUID());
         node2.setDynamicSimulationResultUuid(UUID.randomUUID());
@@ -1583,10 +1589,12 @@ public class StudyTest {
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getLoadFlowResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getSecurityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getSensitivityAnalysisResultUuid());
+        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getNonEvacuatedEnergyResultUuid());
 
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getLoadFlowResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSecurityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSensitivityAnalysisResultUuid());
+        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getNonEvacuatedEnergyResultUuid());
 
         //Check requests to duplicate modification groups has been emitted (3 nodes)
         wireMockUtils.verifyDuplicateModificationGroup(stubUuid, 3);
@@ -1913,6 +1921,8 @@ public class StudyTest {
         //securityAnalysis_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //sensitivityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //nonEvacuatedEnergy_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //shortCircuitAnalysis_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
@@ -2294,6 +2304,8 @@ public class StudyTest {
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
                 //sensitivityAnalysis_status
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                //nonEvacuatedEnergy_status
+                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
                 //shortCircuitAnalysis_status
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
                 //oneBusShortCircuitAnalysis_status
@@ -2314,6 +2326,8 @@ public class StudyTest {
             //securityAnalysis_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //sensitivityAnalysis_status
+            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            //sensitivityAnalysisonEvacuated_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //shortCircuitAnalysis_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
@@ -2388,6 +2402,13 @@ public class StudyTest {
         mockMvc.perform(get("/v1/sensitivity-analysis-default-provider")).andExpectAll(
                 status().isOk(),
                 content().string(defaultSensitivityAnalysisProvider));
+    }
+
+    @Test
+    public void getDefaultNonEvacuatedEnergyProvider() throws Exception {
+        mockMvc.perform(get("/v1/non-evacuated-energy-default-provider")).andExpectAll(
+            status().isOk(),
+            content().string(defaultNonEvacuatedEnergyProvider));
     }
 
     private void checkSubtreeMovedMessageSent(UUID studyUuid, UUID movedNodeUuid, UUID referenceNodeUuid) {
@@ -2486,8 +2507,11 @@ public class StudyTest {
                 .andExpectAll(status().isOk(),
                         content().string(defaultSecurityAnalysisProvider));
         mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid))
-                .andExpectAll(status().isOk(),
-                        content().string(defaultSensitivityAnalysisProvider));
+            .andExpectAll(status().isOk(),
+                content().string(defaultSensitivityAnalysisProvider));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
+            .andExpectAll(status().isOk(),
+                content().string(defaultSensitivityAnalysisProvider));  // same default provider as for sensitivity analysis
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/provider", studyUuid)
                         .content("SuperLF")
@@ -2519,6 +2543,16 @@ public class StudyTest {
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
 
+        mockMvc.perform(post("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid)
+                .content("SuperNEE")
+                .contentType(MediaType.TEXT_PLAIN)
+                .header(USER_ID_HEADER, USER_ID_HEADER))
+            .andExpect(status().isOk());
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(message);
+        assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
+
         mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyUuid))
                 .andExpectAll(status().isOk(),
                         content().string("SuperLF"));
@@ -2528,6 +2562,9 @@ public class StudyTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid))
                 .andExpectAll(status().isOk(),
                         content().string("SuperSE"));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
+            .andExpectAll(status().isOk(),
+                content().string("SuperNEE"));
     }
 
     @Test

@@ -1,0 +1,191 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-14">
+        <createTable tableName="non_evacuated_energy_contingencies">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="non_evacuated_energy_contingenciesPK"/>
+            </column>
+            <column defaultValueBoolean="true" name="activated" type="BOOLEAN"/>
+            <column name="non_evacuated_energy_parameters_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-15">
+        <createTable tableName="non_evacuated_energy_contingency">
+            <column name="non_evacuated_energy_contingencies_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="container_id" type="UUID"/>
+            <column name="container_name" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-16">
+        <createTable tableName="non_evacuated_energy_generators">
+            <column name="non_evacuated_energy_generators_cappings_by_type_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="container_id" type="UUID"/>
+            <column name="container_name" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-17">
+        <createTable tableName="non_evacuated_energy_generators_cappings">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="non_evacuated_energy_generators_cappingsPK"/>
+            </column>
+            <column name="sensitivity_threshold" type="FLOAT(53)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-18">
+        <createTable tableName="non_evacuated_energy_generators_cappings_by_type">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="non_evacuated_energy_generators_cappings_by_typePK"/>
+            </column>
+            <column defaultValueBoolean="true" name="activated" type="BOOLEAN"/>
+            <column name="energy_source" type="VARCHAR(255)"/>
+            <column name="non_evacuated_energy_generators_cappings_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-19">
+        <createTable tableName="non_evacuated_energy_monitored_branch">
+            <column name="non_evacuated_energy_monitored_branches_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="container_id" type="UUID"/>
+            <column name="container_name" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-20">
+        <createTable tableName="non_evacuated_energy_monitored_branches">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="non_evacuated_energy_monitored_branchesPK"/>
+            </column>
+            <column defaultValueBoolean="true" name="activated" type="BOOLEAN"/>
+            <column name="ist_n" type="BOOLEAN"/>
+            <column name="ist_nm1" type="BOOLEAN"/>
+            <column name="limit_name_n" type="VARCHAR(255)"/>
+            <column name="limit_name_nm1" type="VARCHAR(255)"/>
+            <column name="n_coefficient" type="FLOAT4"/>
+            <column name="nm1_coefficient" type="FLOAT4"/>
+            <column name="non_evacuated_energy_parameters_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-21">
+        <createTable tableName="non_evacuated_energy_parameters">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="non_evacuated_energy_parametersPK"/>
+            </column>
+            <column name="non_evacuated_energy_parameters_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-22">
+        <createTable tableName="non_evacuated_energy_stage_definition">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="non_evacuated_energy_stage_definitionPK"/>
+            </column>
+            <column name="energy_source" type="VARCHAR(255)"/>
+            <column name="non_evacuated_energy_parameters_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-23">
+        <createTable tableName="non_evacuated_energy_stage_definition_generators">
+            <column name="non_evacuated_energy_stage_definition_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="container_id" type="UUID"/>
+            <column name="container_name" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-24">
+        <createTable tableName="non_evacuated_energy_stage_definition_pmax_percent">
+            <column name="non_evacuated_energy_stage_definition_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="p_max_percents" type="FLOAT4"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-25">
+        <createTable tableName="non_evacuated_energy_stage_selection_pmax_percent_index">
+            <column name="non_evacuated_energy_stages_selection_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="pmax_percent_index" type="INT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-26">
+        <createTable tableName="non_evacuated_energy_stages_selection">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="non_evacuated_energy_stages_selectionPK"/>
+            </column>
+            <column defaultValueBoolean="true" name="activated" type="BOOLEAN"/>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="non_evacuated_energy_parameters_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-27">
+        <createTable tableName="non_evacuated_energy_stages_selection_definition_index">
+            <column name="non_evacuated_energy_stages_selection_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="stages_definition_index" type="INT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-28">
+        <addColumn tableName="study">
+            <column name="non_evacuated_energy_parameters_entity_id" type="uuid"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-29">
+        <addColumn tableName="study">
+            <column name="non_evacuated_energy_provider" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-30">
+        <addColumn tableName="network_modification_node_info">
+            <column name="non_evacuated_energy_result_uuid" type="uuid"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-38">
+        <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_stages_selection_id" baseTableName="non_evacuated_energy_stages_selection_definition_index" constraintName="FK8fl4tq030br4bbklva1mm58n0" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_stages_selection" validate="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-39">
+        <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_parameters_id" baseTableName="non_evacuated_energy_monitored_branches" constraintName="FK8tjct8dlkwarxnn2bknxlmd0h" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-40">
+        <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_generators_cappings_by_type_id" baseTableName="non_evacuated_energy_generators" constraintName="FK9rshdjtsjdbielm3onu3nsdt4" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_generators_cappings_by_type" validate="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-41">
+        <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_stage_definition_id" baseTableName="non_evacuated_energy_stage_definition_pmax_percent" constraintName="FKa0pwgp26ea6fo8ua641tc63o8" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_stage_definition" validate="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-42">
+        <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_generators_cappings_id" baseTableName="non_evacuated_energy_generators_cappings_by_type" constraintName="FKaa020g32ngpxkubc46c4s3gan" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_generators_cappings" validate="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-43">
+        <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_stages_selection_id" baseTableName="non_evacuated_energy_stage_selection_pmax_percent_index" constraintName="FKc75ctih7oe2e2gm0ok9gm6m9s" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_stages_selection" validate="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-44">
+        <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_parameters_id" baseTableName="non_evacuated_energy_stages_selection" constraintName="FKccd1j5pdxhb2w6b106pdhesrn" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-45">
+        <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_parameters_id" baseTableName="non_evacuated_energy_stage_definition" constraintName="FKemuif9hqvtoic0cqwmd6w40ga" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-46">
+        <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_parameters_id" baseTableName="non_evacuated_energy_parameters" constraintName="FKj21clpgyt0wua608n1k0srp8n" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_generators_cappings" validate="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-47">
+        <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_stage_definition_id" baseTableName="non_evacuated_energy_stage_definition_generators" constraintName="FKmt5yraxoeowmogmhhre37tvgv" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_stage_definition" validate="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-48">
+        <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_parameters_id" baseTableName="non_evacuated_energy_contingencies" constraintName="FKqluf2r4fwoqpk9nosvqxni9gu" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-49">
+        <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_contingencies_id" baseTableName="non_evacuated_energy_contingency" constraintName="nonEvacuatedEnergyContingenciesEntity_contingencies_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_contingencies" validate="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-50">
+        <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_monitored_branches_id" baseTableName="non_evacuated_energy_monitored_branch" constraintName="nonEvacuatedEnergyMonitoredBranchesEntity_monitoredBranches_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_monitored_branches" validate="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1701878575342-51">
+        <addForeignKeyConstraint baseColumnNames="non_evacuated_energy_parameters_entity_id" baseTableName="study" constraintName="nonEvacuatedEnergyParameters_id_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="non_evacuated_energy_parameters" validate="true"/>
+    </changeSet>
+</databaseChangeLog>

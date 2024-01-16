@@ -43,6 +43,7 @@ import static org.gridsuite.study.server.StudyConstants.*;
 import org.gridsuite.study.server.dto.ComputationType;
 import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
+import static org.gridsuite.study.server.dto.ComputationType.NON_EVACUATED_ENERGY_ANALYSIS;
 import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
 import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
 import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT;
@@ -346,6 +347,21 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeDsFailed() {
         return message -> consumeCalculationFailed(message, DYNAMIC_SIMULATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeNonEvacuatedEnergyResult() {
+        return message -> consumeCalculationResult(message, NON_EVACUATED_ENERGY_ANALYSIS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeNonEvacuatedEnergyStopped() {
+        return message -> consumeCalculationStopped(message, NON_EVACUATED_ENERGY_ANALYSIS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeNonEvacuatedEnergyFailed() {
+        return message -> consumeCalculationFailed(message, NON_EVACUATED_ENERGY_ANALYSIS);
     }
 
     @Bean
