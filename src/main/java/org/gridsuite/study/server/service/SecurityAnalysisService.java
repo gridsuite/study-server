@@ -8,8 +8,7 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.loadflow.LoadFlowParameters;
-import jakarta.transaction.Transactional;
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
@@ -42,11 +41,11 @@ public class SecurityAnalysisService {
 
     static final String RESULT_UUID = "resultUuid";
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     private final ObjectMapper objectMapper;
 
+    @Setter
     private String securityAnalysisServerBaseUri;
 
     private final NetworkModificationTreeService networkModificationTreeService;
@@ -54,10 +53,11 @@ public class SecurityAnalysisService {
     @Autowired
     public SecurityAnalysisService(RemoteServicesProperties remoteServicesProperties,
                                    NetworkModificationTreeService networkModificationTreeService,
-                                   ObjectMapper objectMapper) {
+                                   ObjectMapper objectMapper, RestTemplate restTemplate) {
         this.securityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("security-analysis-server");
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
+        this.restTemplate = restTemplate;
     }
 
     public String getSecurityAnalysisResult(UUID nodeUuid, SecurityAnalysisResultType resultType, String filters, Pageable pageable) {
@@ -103,12 +103,11 @@ public class SecurityAnalysisService {
         };
     }
 
-    public UUID runSecurityAnalysis(UUID networkUuid, UUID reportUuid, UUID nodeUuid, String variantId, String provider, List<String> contingencyListNames,
-                                    UUID securityAnalysisParametersUuid, Map<String, String> specificParams, LoadFlowParameters loadFlowParameters, String receiver, String userId) {
+    public UUID runSecurityAnalysis(UUID networkUuid, String variantId, RunSecurityAnalysisParametersInfos parametersInfos, ReportInfos reportInfos, String provider, String receiver, String userId) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
-                .queryParam("reportUuid", reportUuid.toString())
-                .queryParam("reporterId", nodeUuid.toString())
+                .queryParam("reportUuid", reportInfos.getReportUuid().toString())
+                .queryParam("reporterId", reportInfos.getReporterId())
                 .queryParam("reportType", StudyService.ReportType.SECURITY_ANALYSIS.reportKey);
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
@@ -116,13 +115,13 @@ public class SecurityAnalysisService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        if (securityAnalysisParametersUuid != null) {
-            uriComponentsBuilder.queryParam("parametersUuid", securityAnalysisParametersUuid);
+        if (parametersInfos.getSecurityAnalysisParametersUuid() != null) {
+            uriComponentsBuilder.queryParam("parametersUuid", parametersInfos.getSecurityAnalysisParametersUuid());
         }
-        var path = uriComponentsBuilder.queryParam("contingencyListName", contingencyListNames)
+        var path = uriComponentsBuilder.queryParam("contingencyListName", parametersInfos.getContingencyListNames())
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
 
-        var additionalParameters = new LoadFlowParametersInfos(loadFlowParameters, specificParams);
+        var additionalParameters = new LoadFlowParametersInfos(parametersInfos.getLoadFlowParameters(), parametersInfos.getSpecificParams());
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
@@ -216,10 +215,6 @@ public class SecurityAnalysisService {
         }
     }
 
-    public void setSecurityAnalysisServerBaseUri(String securityAnalysisServerBaseUri) {
-        this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
-    }
-
     public void assertSecurityAnalysisNotRunning(UUID nodeUuid) {
         SecurityAnalysisStatus sas = getSecurityAnalysisStatus(nodeUuid);
         if (sas == SecurityAnalysisStatus.RUNNING) {
@@ -246,8 +241,8 @@ public class SecurityAnalysisService {
     public UUID duplicateSecurityAnalysisParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
 
-        var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/duplicate")
-                .queryParam("duplicateFrom", sourceParametersUuid).buildAndExpand().toUriString();
+        var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{sourceParametersUuid}")
+                .buildAndExpand(sourceParametersUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -273,15 +268,15 @@ public class SecurityAnalysisService {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND);
             }
-            throw e;
+            throw handleHttpError(e, GET_SECURITY_ANALYSIS_PARAMETERS_FAILED);
         }
         return parameters;
     }
 
-    @Transactional
     public UUID getSecurityAnalysisParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
         if (studyEntity.getSecurityAnalysisParametersUuid() == null) {
             studyEntity.setSecurityAnalysisParametersUuid(createDefaultSecurityAnalysisParameters());
+
         }
         return studyEntity.getSecurityAnalysisParametersUuid();
     }

@@ -997,14 +997,16 @@ public class StudyService {
         return LoadFlowService.toEntity(allCommonValues, allSpecificValues);
     }
 
+    @Transactional
     public String getSecurityAnalysisParametersValues(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID securityAnalysisParametersUuid = securityAnalysisService.getSecurityAnalysisParametersUuidOrElseCreateDefaults(studyEntity);
-        return securityAnalysisService.getSecurityAnalysisParameters(securityAnalysisParametersUuid);
+        return securityAnalysisService.getSecurityAnalysisParameters(securityAnalysisService.getSecurityAnalysisParametersUuidOrElseCreateDefaults(studyEntity));
     }
 
+    @Transactional
     public void setSecurityAnalysisParametersValues(UUID studyUuid, String parameters, String userId) {
-        createOrUpdateSecurityAnalysisParameters(studyUuid, parameters);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        createOrUpdateSecurityAnalysisParameters(studyUuid, studyEntity, parameters);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -1172,11 +1174,12 @@ public class StudyService {
         List<LoadFlowSpecificParameterInfos> specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SECURITY_ANALYSIS);
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
 
-        Map<String, String> specificParametersMap = specificParameters == null ?
+        Map<String, String> specificParametersMap = specificParameters.isEmpty() ?
                     Map.of() : specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue));
 
-        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, nodeUuid, variantId, provider, contingencyListNames,
-                securityAnalysisParametersUuid, specificParametersMap, loadFlowParameters, receiver, userId);
+        var runSecurityAnalysisParametersInfos = new RunSecurityAnalysisParametersInfos(securityAnalysisParametersUuid, specificParametersMap, loadFlowParameters, contingencyListNames);
+        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, variantId, runSecurityAnalysisParametersInfos,
+                new ReportInfos(reportUuid, nodeUuid.toString()), provider, receiver, userId);
 
         updateComputationResultUuid(nodeUuid, result, SECURITY_ANALYSIS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
@@ -1358,13 +1361,11 @@ public class StudyService {
         invalidateVoltageInitStatusOnAllNodes(studyUuid);
     }
 
-    public void createOrUpdateSecurityAnalysisParameters(UUID studyUuid, String parameters) {
-        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+    public void createOrUpdateSecurityAnalysisParameters(UUID studyUuid, StudyEntity studyEntity, String parameters) {
         UUID securityAnalysisParametersUuid = studyEntity.getSecurityAnalysisParametersUuid();
         if (securityAnalysisParametersUuid == null) {
             securityAnalysisParametersUuid = securityAnalysisService.createSecurityAnalysisParameters(parameters);
             studyEntity.setSecurityAnalysisParametersUuid(securityAnalysisParametersUuid);
-            studyRepository.save(studyEntity);
         } else {
             securityAnalysisService.updateSecurityAnalysisParameters(securityAnalysisParametersUuid, parameters);
         }

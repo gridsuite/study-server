@@ -466,7 +466,7 @@ public class StudyTest {
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CLONED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS, "UCTE");
                     return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/parameters/duplicate\\?duplicateFrom=.*") && POST.equals(request.getMethod())) {
+                } else if (path.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID) && POST.equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID) && DELETE.equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
@@ -1429,7 +1429,7 @@ public class StudyTest {
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
         NetworkModificationNode node2 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID_2, "node2", userId);
         StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
-        studyEntity.setSecurityAnalysisParametersUuid(UUID.randomUUID());
+        studyEntity.setSecurityAnalysisParametersUuid(SECURITY_ANALYSIS_PARAMETERS_UUID);
         studyRepository.save(studyEntity);
 
         // add modification on node "node1"
@@ -1623,7 +1623,7 @@ public class StudyTest {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=.*")).count());
         }
         if (sourceStudy.getSecurityAnalysisParametersUuid() != null) {
-            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters/duplicate\\?duplicateFrom=.*")).count());
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID)).count());
         }
         return duplicatedStudy;
     }
