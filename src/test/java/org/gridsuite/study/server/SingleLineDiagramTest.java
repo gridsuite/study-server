@@ -28,7 +28,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 
-import org.gridsuite.study.server.dto.LoadFlowParametersValues;
+import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -176,12 +176,12 @@ public class SingleLineDiagramTest {
             .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
 
         when(loadFlowService.getLoadFlowParameters(LOADFLOW_PARAMETERS_UUID))
-            .thenReturn(LoadFlowParametersValues.builder()
+            .thenReturn(LoadFlowParametersInfos.builder()
                 .commonParameters(LoadFlowParameters.load())
                 .specificParametersPerProvider(Map.of())
                 .build());
 
-        when(loadFlowService.getLoadFlowParametersUuidOrElseCreateDefaults(any()))
+        when(loadFlowService.getLoadFlowParametersOrDefaultsUuid(any()))
             .thenReturn(LOADFLOW_PARAMETERS_UUID);
 
         final Dispatcher dispatcher = new Dispatcher() {

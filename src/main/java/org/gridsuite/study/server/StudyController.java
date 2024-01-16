@@ -824,9 +824,9 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/loadflow/parameters")
     @Operation(summary = "Get loadflow parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters")})
-    public ResponseEntity<LoadFlowParametersValues> getLoadflowParameters(
+    public ResponseEntity<LoadFlowParametersInfos> getLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getLoadFlowParametersValues(studyUuid));
+        return ResponseEntity.ok().body(studyService.getLoadFlowParametersInfos(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/provider")

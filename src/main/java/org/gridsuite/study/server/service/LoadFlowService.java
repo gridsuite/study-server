@@ -19,7 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -239,13 +238,13 @@ public class LoadFlowService {
         return result;
     }
 
-    public LoadFlowParametersValues getLoadFlowParameters(UUID parametersUuid) {
-        LoadFlowParametersValues parameters;
+    public LoadFlowParametersInfos getLoadFlowParameters(UUID parametersUuid) {
+        LoadFlowParametersInfos parameters;
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/{parametersUuid}")
             .buildAndExpand(parametersUuid).toUriString();
         try {
-            parameters = restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowParametersValues.class);
+            parameters = restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowParametersInfos.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(LOADFLOW_PARAMETERS_NOT_FOUND);
@@ -349,8 +348,7 @@ public class LoadFlowService {
         return parametersUuid;
     }
 
-    @Transactional
-    public UUID getLoadFlowParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
+    public UUID getLoadFlowParametersOrDefaultsUuid(StudyEntity studyEntity) {
         if (studyEntity.getLoadFlowParametersUuid() == null) {
             studyEntity.setLoadFlowParametersUuid(createDefaultLoadFlowParameters());
         }

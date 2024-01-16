@@ -10,8 +10,6 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-
 import java.util.Map;
 
 /**
@@ -20,10 +18,9 @@ import java.util.Map;
 @Getter
 @AllArgsConstructor
 @Builder
-@NoArgsConstructor
 public class LoadFlowParametersValues {
 
-    private LoadFlowParameters commonParameters;
+    private final LoadFlowParameters commonParameters;
 
-    private Map<String, Map<String, String>> specificParametersPerProvider;
+    private final Map<String, String> specificParameters;
 }
