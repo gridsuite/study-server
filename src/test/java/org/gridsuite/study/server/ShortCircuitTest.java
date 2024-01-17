@@ -59,6 +59,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
+import okio.Buffer;
+
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
@@ -93,6 +95,10 @@ public class ShortCircuitTest {
     private static final String SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
 
     private static final String SHORT_CIRCUIT_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"faults\":[]";
+
+    private static final String CSV_HEADERS = "{csvHeaders}";
+
+    private static final byte[] SHORT_CIRCUIT_ANALYSIS_CSV_RESULT = {0x00, 0x11};
 
     private static final String SHORT_CIRCUIT_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String VARIANT_ID = "variant_1";
@@ -195,6 +201,9 @@ public class ShortCircuitTest {
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged" + "\\?mode=FULL&page=0&size=20&sort=id,DESC")) {
                     return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv")) {
+                    return new MockResponse().setResponseCode(200).setBody(getBinaryAsBuffer(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT))
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/feeder_results/paged" + "\\?mode=FULL&filters=fakeFilters&page=0&size=20&sort=id,DESC")) {
                     return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
@@ -315,6 +324,12 @@ public class ShortCircuitTest {
                 content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=FULL")));
+
+        // export short circuit analysis csv result
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, modificationNode3Uuid)
+                .param("type", "ALL_BUSES")
+                .content(CSV_HEADERS)).andExpectAll(status().isOk(), content().bytes(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv")));
 
         // get short circuit result but with unknown node
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, unknownModificationNodeUuid)).andExpect(
@@ -474,6 +489,12 @@ public class ShortCircuitTest {
             );
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=FULL")));
+
+        // export short circuit analysis csv result
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, modificationNode3Uuid)
+                .param("type", "ONE_BUS")
+                .content(CSV_HEADERS)).andExpectAll(status().isOk(), content().bytes(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv")));
 
         // get short circuit result with pagination
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20&sort=id,DESC&filters=fakeFilters", studyNameUserIdUuid, modificationNode3Uuid)
@@ -699,6 +720,12 @@ public class ShortCircuitTest {
     private void cleanDB() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
+    }
+
+    public Buffer getBinaryAsBuffer(byte[] binary) {
+        Buffer buf = new Buffer();
+        buf.write(binary);
+        return buf;
     }
 
     @After
