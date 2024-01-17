@@ -195,30 +195,30 @@ public class SecurityAnalysisTest {
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .build(), saResultDestination);
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n-result\\?page=.*size=.*filters=.*sort=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_N_RESULT_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-contingencies-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-constraints-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n-result/csv")) {
                     return new MockResponse().setResponseCode(200).setBody(getBinaryAsBuffer(SECURITY_ANALYSIS_N_RESULT_CSV_ZIPPED))
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/n-result/csv")) {
                     return new MockResponse().setResponseCode(404);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-contingencies-result/csv")) {
                     return new MockResponse().setResponseCode(200).setBody(getBinaryAsBuffer(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_CSV_ZIPPED))
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-constraints-result/csv")) {
                     return new MockResponse().setResponseCode(200).setBody(getBinaryAsBuffer(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_CSV_ZIPPED))
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_STATUS_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/stop.*")
                         || path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_3 + ".*") ? SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID : SECURITY_ANALYSIS_RESULT_UUID;
@@ -227,43 +227,43 @@ public class SecurityAnalysisTest {
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .build(), saStoppedDestination);
                     return new MockResponse().setResponseCode(200)
-                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                         .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING)
                         || path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(CONTINGENCIES_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/n-result\\?page=.*size=.*filters=.*sort=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_N_RESULT_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/nmk-contingencies-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/nmk-constraints-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/status").equals(path)) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_STATUS_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/run-and-save.*")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), saFailedDestination);
                     return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"")
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/run-and-save.*")) {
                     input.send(MessageBuilder.withPayload("")
                         .build(), saFailedDestination);
                     return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"")
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if ("/v1/results".equals(path)) {
                     return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/treereports")) {
                     return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/supervision/results-count")) {
                     return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8")
+                        .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8)
                         .setBody("1");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -650,7 +650,7 @@ public class SecurityAnalysisTest {
 
         assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
             r.getPath().matches(String.format("/v1/results/%s/n-result/csv", SECURITY_ANALYSIS_RESULT_UUID))
-                && r.getBody().equals(CSV_TRANSLATION_DTO_STRING)
+                && CSV_TRANSLATION_DTO_STRING.equals(r.getBody())
         ));
 
         // get NMK_CONTINGENCIES security analysis result zipped csv
@@ -661,7 +661,7 @@ public class SecurityAnalysisTest {
 
         assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
             r.getPath().matches(String.format("/v1/results/%s/nmk-contingencies-result/csv", SECURITY_ANALYSIS_RESULT_UUID))
-                && r.getBody().equals(CSV_TRANSLATION_DTO_STRING)
+                && CSV_TRANSLATION_DTO_STRING.equals(r.getBody())
         ));
 
         // get NMK_CONSTRAINTS security analysis result zipped csv
@@ -672,7 +672,7 @@ public class SecurityAnalysisTest {
 
         assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
             r.getPath().matches(String.format("/v1/results/%s/nmk-constraints-result/csv", SECURITY_ANALYSIS_RESULT_UUID))
-                && r.getBody().equals(CSV_TRANSLATION_DTO_STRING)
+                && CSV_TRANSLATION_DTO_STRING.equals(r.getBody())
         ));
     }
 
@@ -717,7 +717,7 @@ public class SecurityAnalysisTest {
 
         assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
             r.getPath().matches(String.format("/v1/results/%s/n-result/csv", SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID))
-                && r.getBody().equals(CSV_TRANSLATION_DTO_STRING)
+                && CSV_TRANSLATION_DTO_STRING.equals(r.getBody().equals(CSV_TRANSLATION_DTO_STRING))
         ));
     }
 

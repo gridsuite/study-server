@@ -800,7 +800,7 @@ public class StudyController {
     public byte[] getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                            @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
-                                                                           @Parameter(description = "Csv translation") @RequestBody String csvTranslations) {
+                                                                           @Parameter(description = "Csv translation (JSON)") @RequestBody String csvTranslations) {
         return securityAnalysisService.getSecurityAnalysisResultCsv(nodeUuid, resultType, csvTranslations);
     }
 
