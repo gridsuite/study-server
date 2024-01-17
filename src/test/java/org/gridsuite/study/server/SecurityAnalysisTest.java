@@ -721,7 +721,7 @@ public class SecurityAnalysisTest {
 
         assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
             r.getPath().matches(String.format("/v1/results/%s/n-result/csv", SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID))
-                && CSV_TRANSLATION_DTO_STRING.equals(r.getBody().equals(CSV_TRANSLATION_DTO_STRING))
+                && CSV_TRANSLATION_DTO_STRING.equals(r.getBody())
         ));
     }
 

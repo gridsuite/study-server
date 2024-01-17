@@ -111,7 +111,7 @@ public class SecurityAnalysisService {
 
     public byte[] getSecurityAnalysisResultCsv(UUID nodeUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
         ResponseEntity<byte[]> result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
 
         if (resultUuidOpt.isEmpty()) {
             throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
