@@ -17,6 +17,7 @@ import com.powsybl.security.SecurityAnalysisParameters;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SecurityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.SecurityAnalysisParametersValues;
@@ -75,7 +76,7 @@ public class SecurityAnalysisService {
 
     public String getSecurityAnalysisResult(UUID nodeUuid, SecurityAnalysisResultType resultType, String filters, Pageable pageable) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
 
         if (resultUuidOpt.isEmpty()) {
             return null;
@@ -182,7 +183,7 @@ public class SecurityAnalysisService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
 
         if (resultUuidOpt.isEmpty()) {
             return;
@@ -205,7 +206,7 @@ public class SecurityAnalysisService {
 
     public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID nodeUuid) {
         SecurityAnalysisStatus status;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
 
         if (resultUuidOpt.isEmpty()) {
             return null;
