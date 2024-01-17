@@ -433,6 +433,11 @@ public class StudyService {
         return nodeUuidToSearchIn;
     }
 
+    private List<EquipmentInfos> cleanModifiedAndRemovedEquipments(UUID networkUuid, String variantId, List<EquipmentInfos> equipmentInfos) {
+        cleanModifiedEquipents(equipmentInfos);
+        return cleanRemovedEquipments(networkUuid, variantId, equipmentInfos);
+    }
+
     public List<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
                                                  @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
                                                  boolean inUpstreamBuiltParentNode) {
@@ -448,8 +453,7 @@ public class StudyService {
             BoolQuery query = buildSearchAllEquipmentsQuery(userInput, fieldSelector, networkUuid,
                     VariantManagerConstants.INITIAL_VARIANT_ID, variantId);
             List<EquipmentInfos> equipmentInfos = equipmentInfosService.searchEquipments(query);
-
-            return variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ? equipmentInfos : cleanRemovedEquipments(networkUuid, variantId, equipmentInfos);
+            return variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ? equipmentInfos : cleanModifiedAndRemovedEquipments(networkUuid, variantId, equipmentInfos);
         } else {
             String queryInitialVariant = buildSearchEquipmentsByTypeQuery(userInput, fieldSelector, networkUuid,
                     VariantManagerConstants.INITIAL_VARIANT_ID, equipmentType);
@@ -460,6 +464,23 @@ public class StudyService {
                     : completeSearchWithCurrentVariant(networkUuid, variantId, userInput, fieldSelector,
                     equipmentInfosInInitVariant, equipmentType);
         }
+    }
+
+    private void cleanModifiedEquipents(List<EquipmentInfos> equipmentInfos) {
+        List<EquipmentInfos> equipmentToDelete = new ArrayList<>(); // Use HashSet for better performance
+        Map<String, List<EquipmentInfos>> groupedById = equipmentInfos.stream()
+                .collect(Collectors.groupingBy(EquipmentInfos::getId));
+
+        groupedById.forEach((id, equipments) -> {
+            if (equipments.size() > 1) {
+                equipmentToDelete.addAll(
+                        equipments.stream()
+                                .filter(e -> VariantManagerConstants.INITIAL_VARIANT_ID.equals(e.getVariantId()))
+                                .collect(Collectors.toList())
+                );
+            }
+        });
+        equipmentInfos.removeAll(equipmentToDelete);
     }
 
     private List<EquipmentInfos> cleanRemovedEquipments(UUID networkUuid, String variantId, List<EquipmentInfos> equipmentInfos) {

@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static java.util.Map.entry;
 
@@ -136,7 +137,7 @@ public class EquipmentInfosService {
         return elasticsearchOperations.search(nativeQuery, EquipmentInfos.class)
                 .stream()
                 .map(SearchHit::getContent)
-                .toList();
+                .collect(Collectors.toList());
     }
 
     public List<TombstonedEquipmentInfos> searchTombstonedEquipments(@NonNull final String query) {
