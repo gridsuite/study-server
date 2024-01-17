@@ -26,7 +26,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_RUNNING;
@@ -66,15 +65,18 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
         if (resultUuidOpt.isEmpty()) {
-            return null;
+            return Collections.emptyList();
         }
         UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
+        if (timeSeriesUuid == null) {
+            return Collections.emptyList();
+        }
 
         // get timeseries metadata
         List<TimeSeriesMetadataInfos> metadataList = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid)
                 .getMetadatas()
                 .stream()
-                .map(TimeSeriesMetadataInfos::fromRest).collect(Collectors.toUnmodifiableList());
+                .map(TimeSeriesMetadataInfos::fromRest).toList();
 
         return metadataList;
     }
@@ -87,6 +89,9 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
             return Collections.emptyList();
         }
         UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
+        if (timeSeriesUuid == null) {
+            return Collections.emptyList();
+        }
 
         // get timeseries data
         List<TimeSeries> timeSeries = timeSeriesClient.getTimeSeriesGroup(timeSeriesUuid, timeSeriesNames);
@@ -110,6 +115,9 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
             return Collections.emptyList();
         }
         UUID timeLineUuid = dynamicSimulationClient.getTimeLineResult(resultUuidOpt.get()); // get timeline uuid
+        if (timeLineUuid == null) {
+            return Collections.emptyList();
+        }
 
         // get timeline data
         List<TimeSeries> timeLines = timeSeriesClient.getTimeSeriesGroup(timeLineUuid, null);
@@ -129,10 +137,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     public DynamicSimulationStatus getStatus(UUID nodeUuid) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
-        if (resultUuidOpt.isEmpty()) {
-            return null;
-        }
-        return dynamicSimulationClient.getStatus(resultUuidOpt.get());
+        return resultUuidOpt.map(dynamicSimulationClient::getStatus).orElse(null);
     }
 
     @Override
