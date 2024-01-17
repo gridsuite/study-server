@@ -40,6 +40,8 @@ public class LoadFlowService {
 
     static final String RESULT_UUID = "resultUuid";
     static final String RESULTS_UUIDS = "resultsUuids";
+    private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
+
     private String loadFlowServerBaseUri;
 
     NotificationService notificationService;
@@ -241,7 +243,7 @@ public class LoadFlowService {
     public LoadFlowParametersInfos getLoadFlowParameters(UUID parametersUuid) {
         LoadFlowParametersInfos parameters;
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/{parametersUuid}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid).toUriString();
         try {
             parameters = restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowParametersInfos.class);
@@ -305,7 +307,7 @@ public class LoadFlowService {
         Objects.requireNonNull(parameters);
 
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/{parametersUuid}")
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid)
                 .toUriString();
 
@@ -323,7 +325,7 @@ public class LoadFlowService {
 
     public void deleteLoadFlowParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/{parametersUuid}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(uuid)
                 .toUriString();
 

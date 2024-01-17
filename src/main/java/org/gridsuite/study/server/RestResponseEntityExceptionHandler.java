@@ -23,17 +23,7 @@ public class RestResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleStudyException(StudyException exception) {
         StudyException.Type type = exception.getType();
         switch (type) {
-            case ELEMENT_NOT_FOUND:
-            case STUDY_NOT_FOUND:
-            case NODE_NOT_FOUND:
-            case SECURITY_ANALYSIS_NOT_FOUND:
-            case SENSITIVITY_ANALYSIS_NOT_FOUND:
-            case NON_EVACUATED_ENERGY_NOT_FOUND:
-            case DYNAMIC_SIMULATION_NOT_FOUND:
-            case DYNAMIC_MAPPING_NOT_FOUND:
-            case EQUIPMENT_NOT_FOUND:
-            case VOLTAGE_INIT_PARAMETERS_NOT_FOUND:
-            case LOADFLOW_PARAMETERS_NOT_FOUND:
+            case ELEMENT_NOT_FOUND, STUDY_NOT_FOUND, NODE_NOT_FOUND, SECURITY_ANALYSIS_NOT_FOUND, SENSITIVITY_ANALYSIS_NOT_FOUND, NON_EVACUATED_ENERGY_NOT_FOUND, DYNAMIC_SIMULATION_NOT_FOUND, DYNAMIC_MAPPING_NOT_FOUND, EQUIPMENT_NOT_FOUND, VOLTAGE_INIT_PARAMETERS_NOT_FOUND, LOADFLOW_PARAMETERS_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getType());
             case CASE_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(exception.getMessage());
