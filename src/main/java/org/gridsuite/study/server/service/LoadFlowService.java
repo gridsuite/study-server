@@ -251,7 +251,7 @@ public class LoadFlowService {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(LOADFLOW_PARAMETERS_NOT_FOUND);
             }
-            throw e;
+            throw handleHttpError(e, GET_LOADFLOW_PARAMETERS_FAILED);
         }
         return parameters;
     }
@@ -329,7 +329,11 @@ public class LoadFlowService {
                 .buildAndExpand(uuid)
                 .toUriString();
 
-        restTemplate.delete(loadFlowServerBaseUri + path);
+        try {
+            restTemplate.delete(loadFlowServerBaseUri + path);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, DELETE_LOADFLOW_PARAMETERS_FAILED);
+        }
     }
 
     public UUID createDefaultLoadFlowParameters() {

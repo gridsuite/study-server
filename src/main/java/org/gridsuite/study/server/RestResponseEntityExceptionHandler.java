@@ -57,6 +57,8 @@ public class RestResponseEntityExceptionHandler {
             case UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED:
             case CREATE_LOADFLOW_PARAMETERS_FAILED:
             case UPDATE_LOADFLOW_PARAMETERS_FAILED:
+            case GET_LOADFLOW_PARAMETERS_FAILED:
+            case DELETE_LOADFLOW_PARAMETERS_FAILED:
             case STUDY_INDEXATION_FAILED:
             case STUDY_CHECK_INDEXATION_FAILED:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
