@@ -28,7 +28,9 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
+import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NonEvacuatedEnergyService;
 import org.gridsuite.study.server.service.ReportService;
 import org.gridsuite.study.server.service.SensitivityAnalysisService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -522,9 +524,9 @@ public class ShortCircuitTest {
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateShortCircuitAnalysisResultUuid(modificationNode.getId(), resultUuid);
-        assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), ShortcircuitAnalysisType.ALL_BUSES).isPresent());
-        assertEquals(resultUuid, networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), ShortcircuitAnalysisType.ALL_BUSES).get());
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, ComputationType.SHORT_CIRCUIT);
+        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.SHORT_CIRCUIT).isPresent());
+        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.SHORT_CIRCUIT).get());
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
@@ -534,7 +536,7 @@ public class ShortCircuitTest {
         studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), "");
 
         // Test reset uuid result in the database
-        assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId(), ShortcircuitAnalysisType.ALL_BUSES).isEmpty());
+        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.SHORT_CIRCUIT).isEmpty());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -642,8 +644,10 @@ public class ShortCircuitTest {
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         SensitivityAnalysisParametersEntity defaultSensitivityParametersEntity = SensitivityAnalysisService.toEntity(SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues());
+        NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", "defaultLoadflowProvider",
-                UUID.randomUUID(), defaultShortCircuitParametersEntity, null, defaultSensitivityParametersEntity);
+                UUID.randomUUID(), defaultShortCircuitParametersEntity, null, defaultSensitivityParametersEntity,
+                defaultNonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

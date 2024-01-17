@@ -28,6 +28,7 @@ public class RestResponseEntityExceptionHandler {
             case NODE_NOT_FOUND:
             case SECURITY_ANALYSIS_NOT_FOUND:
             case SENSITIVITY_ANALYSIS_NOT_FOUND:
+            case NON_EVACUATED_ENERGY_NOT_FOUND:
             case DYNAMIC_SIMULATION_NOT_FOUND:
             case DYNAMIC_MAPPING_NOT_FOUND:
             case EQUIPMENT_NOT_FOUND:
@@ -38,7 +39,7 @@ public class RestResponseEntityExceptionHandler {
                 return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(exception.getMessage());
             case STUDY_ALREADY_EXISTS:
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(type);
-            case LOADFLOW_NOT_RUNNABLE, LOADFLOW_RUNNING, SECURITY_ANALYSIS_RUNNING, SENSITIVITY_ANALYSIS_RUNNING, DYNAMIC_SIMULATION_RUNNING, SHORT_CIRCUIT_ANALYSIS_RUNNING, VOLTAGE_INIT_RUNNING:
+            case LOADFLOW_NOT_RUNNABLE, LOADFLOW_RUNNING, SECURITY_ANALYSIS_RUNNING, SENSITIVITY_ANALYSIS_RUNNING, NON_EVACUATED_ENERGY_RUNNING, DYNAMIC_SIMULATION_RUNNING, SHORT_CIRCUIT_ANALYSIS_RUNNING, VOLTAGE_INIT_RUNNING:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(type);
             case NOT_ALLOWED:
             case BAD_NODE_TYPE:
@@ -59,6 +60,7 @@ public class RestResponseEntityExceptionHandler {
             case GET_MODIFICATIONS_FAILED:
             case GET_NETWORK_ELEMENT_FAILED:
             case SENSITIVITY_ANALYSIS_ERROR:
+            case NON_EVACUATED_ENERGY_ERROR:
             case NODE_BUILD_ERROR:
             case URI_SYNTAX:
             case CREATE_VOLTAGE_INIT_PARAMETERS_FAILED:

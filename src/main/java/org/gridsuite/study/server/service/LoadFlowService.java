@@ -140,7 +140,7 @@ public class LoadFlowService {
 
     public String getLoadFlowResultOrStatus(UUID nodeUuid, String suffix) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getLoadFlowResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
 
         if (resultUuidOpt.isEmpty()) {
             return null;
@@ -171,7 +171,7 @@ public class LoadFlowService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getLoadFlowResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
         if (resultUuidOpt.isEmpty()) {
             return;
         }
@@ -220,7 +220,7 @@ public class LoadFlowService {
 
     public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid) {
         List<LimitViolationInfos> result = new ArrayList<>();
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getLoadFlowResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
 
         if (resultUuidOpt.isPresent()) {
             String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations")
