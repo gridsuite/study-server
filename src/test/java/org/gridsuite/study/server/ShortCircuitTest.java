@@ -205,6 +205,9 @@ public class ShortCircuitTest {
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv")) {
                     return new MockResponse().setResponseCode(200).setBody(getBinaryAsBuffer(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT))
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID + "/csv")) {
+                    return new MockResponse().setResponseCode(200).setBody("")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/feeder_results/paged" + "\\?mode=FULL&filters=fakeFilters&page=0&size=20&sort=id,DESC")) {
                     return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -330,6 +333,10 @@ public class ShortCircuitTest {
                 .param("type", "ALL_BUSES")
                 .content(CSV_HEADERS)).andExpectAll(status().isOk(), content().bytes(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv")));
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID)
+                .param("type", "ALL_BUSES")
+                .content(CSV_HEADERS)).andExpectAll(status().isOk());
 
         // get short circuit result but with unknown node
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, unknownModificationNodeUuid)).andExpect(
