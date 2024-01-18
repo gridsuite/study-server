@@ -62,46 +62,45 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid) {
+        List<TimeSeriesMetadataInfos> metadataList = new ArrayList<>();
+
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
-        if (resultUuidOpt.isEmpty()) {
-            return Collections.emptyList();
+        if (resultUuidOpt.isPresent()) {
+            UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
+            if (timeSeriesUuid != null) {
+                // get timeseries metadata
+                metadataList = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid)
+                        .getMetadatas()
+                        .stream()
+                        .map(TimeSeriesMetadataInfos::fromRest).toList();
+            }
         }
-        UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
-        if (timeSeriesUuid == null) {
-            return Collections.emptyList();
-        }
-
-        // get timeseries metadata
-        List<TimeSeriesMetadataInfos> metadataList = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid)
-                .getMetadatas()
-                .stream()
-                .map(TimeSeriesMetadataInfos::fromRest).toList();
 
         return metadataList;
     }
 
     @Override
     public List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, List<String> timeSeriesNames) {
+        List<TimeSeries> timeSeries = new ArrayList<>();
+
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
-        if (resultUuidOpt.isEmpty()) {
-            return Collections.emptyList();
-        }
-        UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
-        if (timeSeriesUuid == null) {
-            return Collections.emptyList();
-        }
+        if (resultUuidOpt.isPresent()) {
+            UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
+            if (timeSeriesUuid != null) {
+                // get timeseries data
+                timeSeries = timeSeriesClient.getTimeSeriesGroup(timeSeriesUuid, timeSeriesNames);
 
-        // get timeseries data
-        List<TimeSeries> timeSeries = timeSeriesClient.getTimeSeriesGroup(timeSeriesUuid, timeSeriesNames);
-
-        // get first element to check type
-        if (timeSeries != null &&
-                !timeSeries.isEmpty() &&
-                !(timeSeries.get(0) instanceof DoubleTimeSeries)) {
-            throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time series can not be a type: " + timeSeries.get(0).getClass().getSimpleName()
-                    + ", expected type: " + DoubleTimeSeries.class.getSimpleName());
+                // get first element to check type
+                if (timeSeries != null &&
+                    !timeSeries.isEmpty() &&
+                    !(timeSeries.get(0) instanceof DoubleTimeSeries)) {
+                    throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time series can not be a type: "
+                       + timeSeries.get(0).getClass().getSimpleName()
+                       + ", expected type: " + DoubleTimeSeries.class.getSimpleName());
+                }
+            }
         }
 
         return (List) timeSeries;
@@ -109,25 +108,25 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<StringTimeSeries> getTimeLineResult(UUID nodeUuid) {
+        List<TimeSeries> timeLines = new ArrayList<>();
+
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
-        if (resultUuidOpt.isEmpty()) {
-            return Collections.emptyList();
-        }
-        UUID timeLineUuid = dynamicSimulationClient.getTimeLineResult(resultUuidOpt.get()); // get timeline uuid
-        if (timeLineUuid == null) {
-            return Collections.emptyList();
-        }
+        if (resultUuidOpt.isPresent()) {
+            UUID timeLineUuid = dynamicSimulationClient.getTimeLineResult(resultUuidOpt.get()); // get timeline uuid
+            if (timeLineUuid != null) {
+                // get timeline data
+                timeLines = timeSeriesClient.getTimeSeriesGroup(timeLineUuid, null);
 
-        // get timeline data
-        List<TimeSeries> timeLines = timeSeriesClient.getTimeSeriesGroup(timeLineUuid, null);
-
-        // get first element to check type
-        if (timeLines != null &&
-                !timeLines.isEmpty() &&
-                !(timeLines.get(0) instanceof StringTimeSeries)) {
-            throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time lines can not be a type: " + timeLines.get(0).getClass().getSimpleName()
-                    + ", expected type: " + StringTimeSeries.class.getSimpleName());
+                // get first element to check type
+                if (timeLines != null &&
+                    !timeLines.isEmpty() &&
+                    !(timeLines.get(0) instanceof StringTimeSeries)) {
+                    throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time lines can not be a type: "
+                       + timeLines.get(0).getClass().getSimpleName()
+                       + ", expected type: " + StringTimeSeries.class.getSimpleName());
+                }
+            }
         }
 
         return (List) timeLines;
