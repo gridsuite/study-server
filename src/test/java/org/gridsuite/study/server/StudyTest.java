@@ -261,6 +261,7 @@ public class StudyTest {
             .id(line.getId())
             .name(line.getNameOrId())
             .type("LINE")
+            .variantId("InitialState")
             .voltageLevels(Set.of(VoltageLevelInfos.builder().id(line.getTerminal1().getVoltageLevel().getId()).name(line.getTerminal1().getVoltageLevel().getNameOrId()).build()))
             .build();
     }
@@ -693,6 +694,21 @@ public class StudyTest {
                 .andExpectAll(status().isBadRequest(),
                         content().string("Enum unknown entry 'bogus' should be among NAME, ID"))
                 .andReturn();
+
+        // Create a line modification with a specific variantId, then perform a search for this modified entry.
+        // This process should return a unique result for each equipment, thereby ensuring no duplicates are present in the search results.
+
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeId, VARIANT_ID, "node1", "userId");
+        linesInfos.add(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("BBE1AA1  BBE2AA1  1").name(" space ECAPS ").type("LINE").variantId(VARIANT_ID).voltageLevels(Set.of(VoltageLevelInfos.builder().id("BBE1AA1").name("BBE1AA1").build())).build());
+        mvcResult = mockMvc
+                .perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=NAME",
+                        studyUuid, node1.getId(), "L").header(USER_ID_HEADER, "userId"))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        equipmentInfos = mapper.readValue(resultAsString,
+                new TypeReference<>() {
+                });
+        assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
     }
 
     @Test
