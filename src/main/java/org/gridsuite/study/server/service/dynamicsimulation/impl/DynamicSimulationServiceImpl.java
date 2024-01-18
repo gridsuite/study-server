@@ -82,7 +82,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, List<String> timeSeriesNames) {
-        List<TimeSeries> timeSeries = new ArrayList<>();
+        List<TimeSeries<?,?>> timeSeries = new ArrayList<>();
 
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
@@ -90,7 +90,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
             UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
             if (timeSeriesUuid != null) {
                 // get timeseries data
-                timeSeries = timeSeriesClient.getTimeSeriesGroup(timeSeriesUuid, timeSeriesNames);
+                timeSeries = (List) timeSeriesClient.getTimeSeriesGroup(timeSeriesUuid, timeSeriesNames);
 
                 // get first element to check type
                 if (timeSeries != null &&
@@ -108,7 +108,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<StringTimeSeries> getTimeLineResult(UUID nodeUuid) {
-        List<TimeSeries> timeLines = new ArrayList<>();
+        List<TimeSeries<?,?>> timeLines = new ArrayList<>();
 
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
@@ -116,7 +116,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
             UUID timeLineUuid = dynamicSimulationClient.getTimeLineResult(resultUuidOpt.get()); // get timeline uuid
             if (timeLineUuid != null) {
                 // get timeline data
-                timeLines = timeSeriesClient.getTimeSeriesGroup(timeLineUuid, null);
+                timeLines = (List) timeSeriesClient.getTimeSeriesGroup(timeLineUuid, null);
 
                 // get first element to check type
                 if (timeLines != null &&
