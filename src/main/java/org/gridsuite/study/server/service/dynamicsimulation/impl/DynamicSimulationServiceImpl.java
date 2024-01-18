@@ -82,7 +82,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, List<String> timeSeriesNames) {
-        List<TimeSeries<?,?>> timeSeries = new ArrayList<>();
+        List<TimeSeries<?, ?>> timeSeries = new ArrayList<>();
 
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
@@ -108,7 +108,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<StringTimeSeries> getTimeLineResult(UUID nodeUuid) {
-        List<TimeSeries<?,?>> timeLines = new ArrayList<>();
+        List<TimeSeries<?, ?>> timeLines = new ArrayList<>();
 
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
