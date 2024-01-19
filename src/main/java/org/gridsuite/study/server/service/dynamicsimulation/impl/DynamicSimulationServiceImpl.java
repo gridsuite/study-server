@@ -17,12 +17,14 @@ import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 
 import java.util.*;
@@ -70,10 +72,16 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
             UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
             if (timeSeriesUuid != null) {
                 // get timeseries metadata
-                metadataList = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid)
-                        .getMetadatas()
-                        .stream()
-                        .map(TimeSeriesMetadataInfos::fromRest).toList();
+                TimeSeriesGroupRest timeSeriesGroupMetadata = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid);
+
+                if (timeSeriesGroupMetadata != null &&
+                    !CollectionUtils.isEmpty(timeSeriesGroupMetadata.getMetadatas())) {
+                    metadataList = timeSeriesGroupMetadata
+                            .getMetadatas()
+                            .stream()
+                            .map(TimeSeriesMetadataInfos::fromRest)
+                            .toList();
+                }
             }
         }
 
@@ -82,7 +90,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, List<String> timeSeriesNames) {
-        List<TimeSeries<?, ?>> timeSeries = new ArrayList<>();
+        List<TimeSeries> timeSeries = new ArrayList<>();
 
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
@@ -90,11 +98,10 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
             UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
             if (timeSeriesUuid != null) {
                 // get timeseries data
-                timeSeries = (List) timeSeriesClient.getTimeSeriesGroup(timeSeriesUuid, timeSeriesNames);
+                timeSeries = timeSeriesClient.getTimeSeriesGroup(timeSeriesUuid, timeSeriesNames);
 
                 // get first element to check type
-                if (timeSeries != null &&
-                    !timeSeries.isEmpty() &&
+                if (!CollectionUtils.isEmpty(timeSeries) &&
                     !(timeSeries.get(0) instanceof DoubleTimeSeries)) {
                     throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time series can not be a type: "
                        + timeSeries.get(0).getClass().getSimpleName()
@@ -108,7 +115,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<StringTimeSeries> getTimeLineResult(UUID nodeUuid) {
-        List<TimeSeries<?, ?>> timeLines = new ArrayList<>();
+        List<TimeSeries> timeLines = new ArrayList<>();
 
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
@@ -116,11 +123,10 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
             UUID timeLineUuid = dynamicSimulationClient.getTimeLineResult(resultUuidOpt.get()); // get timeline uuid
             if (timeLineUuid != null) {
                 // get timeline data
-                timeLines = (List) timeSeriesClient.getTimeSeriesGroup(timeLineUuid, null);
+                timeLines = timeSeriesClient.getTimeSeriesGroup(timeLineUuid, null);
 
                 // get first element to check type
-                if (timeLines != null &&
-                    !timeLines.isEmpty() &&
+                if (CollectionUtils.isEmpty(timeLines) &&
                     !(timeLines.get(0) instanceof StringTimeSeries)) {
                     throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time lines can not be a type: "
                        + timeLines.get(0).getClass().getSimpleName()
@@ -134,9 +140,9 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public DynamicSimulationStatus getStatus(UUID nodeUuid) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
-
-        return resultUuidOpt.map(dynamicSimulationClient::getStatus).orElse(null);
+        return networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION)
+                .map(dynamicSimulationClient::getStatus)
+                .orElse(null);
     }
 
     @Override
