@@ -126,7 +126,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
                 timeLines = timeSeriesClient.getTimeSeriesGroup(timeLineUuid, null);
 
                 // get first element to check type
-                if (CollectionUtils.isEmpty(timeLines) &&
+                if (!CollectionUtils.isEmpty(timeLines) &&
                     !(timeLines.get(0) instanceof StringTimeSeries)) {
                     throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time lines can not be a type: "
                        + timeLines.get(0).getClass().getSimpleName()
