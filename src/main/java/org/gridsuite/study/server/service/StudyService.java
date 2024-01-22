@@ -485,22 +485,6 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    private List<EquipmentInfos> completeSearchWithCurrentVariant(UUID networkUuid, String variantId, String userInput,
-                                                                  EquipmentInfosService.FieldSelector fieldSelector, List<EquipmentInfos> equipmentInfosInInitVariant,
-                                                                  String equipmentType) {
-        // Clean equipments that have been removed in the current variant
-        List<EquipmentInfos> cleanedEquipmentsInInitVariant = cleanRemovedEquipments(networkUuid, variantId, equipmentInfosInInitVariant);
-
-        // Get the equipments of the current variant
-        String queryVariant = buildSearchEquipmentsByTypeQuery(userInput, fieldSelector, networkUuid, variantId, equipmentType);
-        List<EquipmentInfos> addedEquipmentInfosInVariant = equipmentInfosService.searchEquipments(queryVariant);
-
-        // Add equipments of the current variant to the ones of the init variant
-        cleanedEquipmentsInInitVariant.addAll(addedEquipmentInfosInVariant);
-
-        return cleanedEquipmentsInInitVariant;
-    }
-
     private String buildSearchEquipmentsByTypeQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId, String equipmentType) {
         String query = NETWORK_UUID + ":(%s) AND " + VARIANT_ID + ":(%s) AND %s:(*%s*)"
                 + (equipmentType == null ? "" : " AND " + EQUIPMENT_TYPE + ":(%s)");
