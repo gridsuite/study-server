@@ -82,7 +82,7 @@ public class SecurityAnalysisService {
             return null;
         }
 
-        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getPathFromResultType(resultType))
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getPagedPathFromResultType(resultType))
             .queryParam("page", pageable.getPageNumber())
             .queryParam("size", pageable.getPageSize());
 
@@ -109,11 +109,47 @@ public class SecurityAnalysisService {
         return result;
     }
 
-    private String getPathFromResultType(SecurityAnalysisResultType resultType) {
+    public byte[] getSecurityAnalysisResultCsv(UUID nodeUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
+        ResponseEntity<byte[]> result;
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
+
+        if (resultUuidOpt.isEmpty()) {
+            throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
+        }
+
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getExportPathFromResultType(resultType));
+
+        String path = pathBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> entity = new HttpEntity<>(csvTranslations, headers);
+        try {
+            result = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, entity, byte[].class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
+            } else {
+                throw e;
+            }
+        }
+
+        return result.getBody();
+    }
+
+    private String getPagedPathFromResultType(SecurityAnalysisResultType resultType) {
         return switch (resultType) {
             case NMK_CONTINGENCIES -> "nmk-contingencies-result/paged";
             case NMK_LIMIT_VIOLATIONS -> "nmk-constraints-result/paged";
             case N -> "n-result";
+        };
+    }
+
+    private String getExportPathFromResultType(SecurityAnalysisResultType resultType) {
+        return switch (resultType) {
+            case NMK_CONTINGENCIES -> "nmk-contingencies-result/csv";
+            case NMK_LIMIT_VIOLATIONS -> "nmk-constraints-result/csv";
+            case N -> "n-result/csv";
         };
     }
 
