@@ -449,21 +449,10 @@ public class StudyService {
             variantId = VariantManagerConstants.INITIAL_VARIANT_ID;
         }
 
-        if (equipmentType == null) {
-            BoolQuery query = buildSearchAllEquipmentsQuery(userInput, fieldSelector, networkUuid,
-                    VariantManagerConstants.INITIAL_VARIANT_ID, variantId);
-            List<EquipmentInfos> equipmentInfos = equipmentInfosService.searchEquipments(query);
-            return variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ? equipmentInfos : cleanModifiedAndRemovedEquipments(networkUuid, variantId, equipmentInfos);
-        } else {
-            String queryInitialVariant = buildSearchEquipmentsByTypeQuery(userInput, fieldSelector, networkUuid,
-                    VariantManagerConstants.INITIAL_VARIANT_ID, equipmentType);
-
-            List<EquipmentInfos> equipmentInfosInInitVariant = equipmentInfosService.searchEquipments(queryInitialVariant);
-
-            return (variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID)) ? equipmentInfosInInitVariant
-                    : completeSearchWithCurrentVariant(networkUuid, variantId, userInput, fieldSelector,
-                    equipmentInfosInInitVariant, equipmentType);
-        }
+        BoolQuery query = buildSearchEquipmentsQuery(userInput, fieldSelector, networkUuid,
+                VariantManagerConstants.INITIAL_VARIANT_ID, variantId, equipmentType);
+        List<EquipmentInfos> equipmentInfos = equipmentInfosService.searchEquipments(query);
+        return variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ? equipmentInfos : cleanModifiedAndRemovedEquipments(networkUuid, variantId, equipmentInfos);
     }
 
     private void cleanModifiedEquipments(List<EquipmentInfos> equipmentInfos) {
@@ -520,7 +509,7 @@ public class StudyService {
                 escapeLucene(userInput), equipmentType);
     }
 
-    private BoolQuery buildSearchAllEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId) {
+    private BoolQuery buildSearchEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId, String equipmentType) {
         WildcardQuery equipmentSearchQuery = QueryBuilders.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
         TermQuery networkUuidSearchQuery = QueryBuilders.termQuery(NETWORK_UUID, networkUuid.toString());
         TermsQuery variantIdSearchQuery = variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ?
@@ -553,9 +542,19 @@ public class StudyService {
         }
 
         FunctionScoreQuery functionScoreQuery = new FunctionScoreQuery.Builder().functions(functionScores).build();
+        BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder()
+                .filter(
+                        equipmentSearchQuery._toQuery(),
+                        networkUuidSearchQuery._toQuery(),
+                        variantIdSearchQuery._toQuery()
+                );
 
-        return new BoolQuery.Builder()
-                .filter(equipmentSearchQuery._toQuery(), networkUuidSearchQuery._toQuery(), variantIdSearchQuery._toQuery()).must(functionScoreQuery._toQuery()).build();
+        if (equipmentType != null && !equipmentType.isBlank()) {
+            boolQueryBuilder.filter(QueryBuilders.termQuery(EQUIPMENT_TYPE, equipmentType)._toQuery());
+        } else {
+            boolQueryBuilder.must(functionScoreQuery._toQuery());
+        }
+        return boolQueryBuilder.build();
     }
 
     private String buildTombstonedEquipmentSearchQuery(UUID networkUuid, String variantId) {
