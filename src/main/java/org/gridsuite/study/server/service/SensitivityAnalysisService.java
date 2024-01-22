@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
@@ -108,7 +109,7 @@ public class SensitivityAnalysisService {
 
     public String getSensitivityAnalysisResult(UUID nodeUuid, String selector) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuidOpt.isEmpty()) {
             return null;
         }
@@ -152,7 +153,7 @@ public class SensitivityAnalysisService {
 
     public String getSensitivityResultsFilterOptions(UUID nodeUuid, String selector) {
         String options;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuidOpt.isEmpty()) {
             return null;
         }
@@ -175,7 +176,7 @@ public class SensitivityAnalysisService {
 
     public String getSensitivityAnalysisStatus(UUID nodeUuid) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
 
         if (resultUuidOpt.isEmpty()) {
             return null;
@@ -198,7 +199,7 @@ public class SensitivityAnalysisService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuidOpt.isEmpty()) {
             return;
         }

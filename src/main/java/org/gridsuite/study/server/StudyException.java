@@ -26,6 +26,9 @@ public class StudyException extends RuntimeException {
         SENSITIVITY_ANALYSIS_RUNNING,
         SENSITIVITY_ANALYSIS_NOT_FOUND,
         SENSITIVITY_ANALYSIS_ERROR,
+        NON_EVACUATED_ENERGY_RUNNING,
+        NON_EVACUATED_ENERGY_NOT_FOUND,
+        NON_EVACUATED_ENERGY_ERROR,
         SHORT_CIRCUIT_ANALYSIS_NOT_FOUND,
         LOADFLOW_NOT_FOUND,
         SHORT_CIRCUIT_ANALYSIS_RUNNING,
@@ -59,6 +62,7 @@ public class StudyException extends RuntimeException {
         GET_MODIFICATIONS_FAILED,
         GET_MODIFICATIONS_COUNT_FAILED,
         GET_NETWORK_ELEMENT_FAILED,
+        GET_NETWORK_COUNTRY_FAILED,
         BAD_JSON_FORMAT,
         UNKNOWN_ACTION_TYPE,
         MISSING_PARAMETER,
@@ -78,6 +82,7 @@ public class StudyException extends RuntimeException {
         STUDY_INDEXATION_FAILED,
         STUDY_CHECK_INDEXATION_FAILED,
         NOT_IMPLEMENTED,
+        EVALUATE_FILTER_FAILED,
     }
 
     private final Type type;
