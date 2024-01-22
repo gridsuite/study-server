@@ -131,7 +131,7 @@ public class SensitivityAnalysisService {
     }
 
     public byte[] exportSensitivityResultsAsCsv(UUID nodeUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuidOpt.isEmpty()) {
             return null;
         }
