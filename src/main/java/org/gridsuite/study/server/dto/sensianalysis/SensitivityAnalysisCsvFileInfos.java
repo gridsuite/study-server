@@ -27,6 +27,6 @@ import java.util.List;
 @Builder
 public class SensitivityAnalysisCsvFileInfos {
     private SensitivityFunctionType sensitivityFunctionType;
-    private String tabSelection;
+    private String resultTab;
     private List<String> csvHeaders;
 }

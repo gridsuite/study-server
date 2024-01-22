@@ -374,7 +374,7 @@ public class SensitivityAnalysisTest {
         // export sensitivity analysis result as csv
         String content = objectMapper.writeValueAsString(SensitivityAnalysisCsvFileInfos.builder()
                 .sensitivityFunctionType(SensitivityFunctionType.BRANCH_CURRENT_1)
-                .tabSelection("N")
+                .resultTab("N")
                 .csvHeaders(List.of("h1", "h2", "h3"))
                 .build());
 
