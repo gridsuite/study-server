@@ -15,6 +15,7 @@ import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -44,7 +45,7 @@ public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeri
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, TIME_SERIES_END_POINT);
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{uuid}");
-        if (timeSeriesNames != null && !timeSeriesNames.isEmpty()) {
+        if (!CollectionUtils.isEmpty(timeSeriesNames)) {
             uriComponentsBuilder.queryParam("timeSeriesNames", timeSeriesNames);
         }
         var uriComponents = uriComponentsBuilder
@@ -53,7 +54,7 @@ public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeri
         // call time-series Rest API
         var timeSeriesJson = getRestTemplate().getForObject(uriComponents.toUriString(), String.class);
         if (!StringUtils.isBlank(timeSeriesJson)) {
-            // convert timeseries to json
+            // convert json to TimeSeries
             return TimeSeries.parseJson(timeSeriesJson);
         } else {
             return Collections.emptyList();
