@@ -485,14 +485,6 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    private String buildSearchEquipmentsByTypeQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId, String equipmentType) {
-        String query = NETWORK_UUID + ":(%s) AND " + VARIANT_ID + ":(%s) AND %s:(*%s*)"
-                + (equipmentType == null ? "" : " AND " + EQUIPMENT_TYPE + ":(%s)");
-        return String.format(query, networkUuid, variantId,
-                fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID,
-                escapeLucene(userInput), equipmentType);
-    }
-
     private BoolQuery buildSearchEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId, String equipmentType) {
         WildcardQuery equipmentSearchQuery = Queries.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
         TermQuery networkUuidSearchQuery = Queries.termQuery(NETWORK_UUID, networkUuid.toString());

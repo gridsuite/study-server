@@ -117,17 +117,6 @@ public class EquipmentInfosService {
 
     }
 
-    public List<EquipmentInfos> searchEquipments(@NonNull final String query) {
-        NativeQuery nativeSearchQuery = new NativeQueryBuilder()
-                .withQuery(QueryStringQuery.of(qs -> qs.query(query))._toQuery())
-                .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
-                .build();
-        return elasticsearchOperations.search(nativeSearchQuery, EquipmentInfos.class)
-                .stream()
-                .map(SearchHit::getContent)
-                .toList();
-    }
-
     public List<EquipmentInfos> searchEquipments(@NonNull final BoolQuery query) {
         NativeQuery nativeQuery = new NativeQueryBuilder()
                 .withQuery(query._toQuery())
@@ -137,7 +126,7 @@ public class EquipmentInfosService {
         return elasticsearchOperations.search(nativeQuery, EquipmentInfos.class)
                 .stream()
                 .map(SearchHit::getContent)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList());//.collect(Collectors.toList()) instead of .toList() to update list before returning
     }
 
     public List<TombstonedEquipmentInfos> searchTombstonedEquipments(@NonNull final String query) {
