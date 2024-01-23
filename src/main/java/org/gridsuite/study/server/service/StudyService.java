@@ -467,7 +467,7 @@ public class StudyService {
     }
 
     private void cleanModifiedEquipments(List<EquipmentInfos> equipmentInfos) {
-        List<EquipmentInfos> equipmentToDelete = new ArrayList<>(); // Use HashSet for better performance
+        Set<EquipmentInfos> equipmentToDelete = new HashSet<>();
         Map<String, List<EquipmentInfos>> groupedById = equipmentInfos.stream()
                 .collect(Collectors.groupingBy(EquipmentInfos::getId));
 
