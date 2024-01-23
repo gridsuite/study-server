@@ -126,7 +126,7 @@ public class EquipmentInfosService {
         return elasticsearchOperations.search(nativeQuery, EquipmentInfos.class)
                 .stream()
                 .map(SearchHit::getContent)
-                .collect(Collectors.toList());//.collect(Collectors.toList()) instead of .toList() to update list before returning
+                .collect(Collectors.toList()); //.collect(Collectors.toList()) instead of .toList() to update list before returning
     }
 
     public List<TombstonedEquipmentInfos> searchTombstonedEquipments(@NonNull final String query) {
