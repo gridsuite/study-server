@@ -57,7 +57,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.elasticsearch.client.elc.QueryBuilders;
+import org.springframework.data.elasticsearch.client.elc.Queries;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -494,12 +494,30 @@ public class StudyService {
     }
 
     private BoolQuery buildSearchEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId, String equipmentType) {
-        WildcardQuery equipmentSearchQuery = QueryBuilders.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
-        TermQuery networkUuidSearchQuery = QueryBuilders.termQuery(NETWORK_UUID, networkUuid.toString());
+        WildcardQuery equipmentSearchQuery = Queries.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
+        TermQuery networkUuidSearchQuery = Queries.termQuery(NETWORK_UUID, networkUuid.toString());
         TermsQuery variantIdSearchQuery = variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ?
                 new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(initialVariantId))).build()).build() :
                 new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(initialVariantId), FieldValue.of(variantId))).build()).build();
 
+        BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder()
+                .filter(
+                        equipmentSearchQuery._toQuery(),
+                        networkUuidSearchQuery._toQuery(),
+                        variantIdSearchQuery._toQuery()
+                );
+
+        if (equipmentType != null && !equipmentType.isBlank()) {
+            boolQueryBuilder.filter(Queries.termQuery(EQUIPMENT_TYPE, equipmentType)._toQuery());
+        } else {
+            List<FunctionScore> functionScores = buildFunctionScores(fieldSelector, userInput);
+            FunctionScoreQuery functionScoreQuery = new FunctionScoreQuery.Builder().functions(functionScores).build();
+            boolQueryBuilder.must(functionScoreQuery._toQuery());
+        }
+        return boolQueryBuilder.build();
+    }
+
+    private List<FunctionScore> buildFunctionScores(EquipmentInfosService.FieldSelector fieldSelector, String userInput) {
         List<FunctionScore> functionScores = new ArrayList<>();
         FunctionScore functionScore = new FunctionScore.Builder()
                 .filter(builder ->
@@ -507,7 +525,7 @@ public class StudyService {
                                 matchBuilder -> matchBuilder
                                         .field(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID)
                                         .query(FieldValue.of(escapeLucene(userInput))))
-                                )
+                )
                 .weight((double) EQUIPMENT_TYPE_SCORES.size())
                 .build();
         functionScores.add(functionScore);
@@ -524,21 +542,7 @@ public class StudyService {
                     .build();
             functionScores.add(functionScore);
         }
-
-        FunctionScoreQuery functionScoreQuery = new FunctionScoreQuery.Builder().functions(functionScores).build();
-        BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder()
-                .filter(
-                        equipmentSearchQuery._toQuery(),
-                        networkUuidSearchQuery._toQuery(),
-                        variantIdSearchQuery._toQuery()
-                );
-
-        if (equipmentType != null && !equipmentType.isBlank()) {
-            boolQueryBuilder.filter(QueryBuilders.termQuery(EQUIPMENT_TYPE, equipmentType)._toQuery());
-        } else {
-            boolQueryBuilder.must(functionScoreQuery._toQuery());
-        }
-        return boolQueryBuilder.build();
+        return functionScores;
     }
 
     private String buildTombstonedEquipmentSearchQuery(UUID networkUuid, String variantId) {
