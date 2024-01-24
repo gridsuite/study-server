@@ -15,6 +15,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.security.SecurityAnalysisParameters;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
@@ -98,7 +99,6 @@ public class SecurityAnalysisTest {
 
     private static final String LOADFLOW_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString(LOADFLOW_PARAMETERS_UUID_STRING);
-    private static final String LOADFLOW_PARAMETERS_JSON = "{\"commonParameters\":{\"version\":\"1.9\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true,\"dcPowerFactor\":1.0},\"specificParametersPerProvider\":{}}";
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
@@ -189,6 +189,12 @@ public class SecurityAnalysisTest {
         reportService.setReportServerBaseUri(baseUrl);
         loadFlowService.setLoadFlowServerBaseUri(baseUrl);
 
+        LoadFlowParametersInfos loadFlowParametersInfos = LoadFlowParametersInfos.builder()
+            .commonParameters(LoadFlowParameters.load())
+            .specificParametersPerProvider(Map.of())
+            .build();
+        String loadFlowParameters = objectMapper.writeValueAsString(loadFlowParametersInfos);
+
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
@@ -275,7 +281,7 @@ public class SecurityAnalysisTest {
                         .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8)
                         .setBody("1");
                 } else if (path.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)) {
-                    return new MockResponse().setResponseCode(200).setBody(LOADFLOW_PARAMETERS_JSON)
+                    return new MockResponse().setResponseCode(200).setBody(loadFlowParameters)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());

@@ -16,12 +16,16 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.loadflow.LoadFlowParameters;
+
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+
+import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.LoadFlowSpecificParameterInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
@@ -99,7 +103,6 @@ public class SensitivityAnalysisTest {
 
     private static final String LOADFLOW_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString(LOADFLOW_PARAMETERS_UUID_STRING);
-    private static final String LOADFLOW_PARAMETERS_JSON = "{\"commonParameters\":{\"version\":\"1.9\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true,\"dcPowerFactor\":1.0},\"specificParametersPerProvider\":{}}";
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
@@ -198,6 +201,12 @@ public class SensitivityAnalysisTest {
         actionsService.setActionsServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         loadFlowService.setLoadFlowServerBaseUri(baseUrl);
+
+        LoadFlowParametersInfos loadFlowParametersInfos = LoadFlowParametersInfos.builder()
+            .commonParameters(LoadFlowParameters.load())
+            .specificParametersPerProvider(Map.of())
+            .build();
+        String loadFlowParameters = objectMapper.writeValueAsString(loadFlowParametersInfos);
 
         SensitivityAnalysisInputData sensitivityAnalysisInputData = SensitivityAnalysisInputData.builder()
             .sensitivityInjectionsSets(List.of(SensitivityAnalysisInputData.SensitivityInjectionsSet.builder()
@@ -302,7 +311,7 @@ public class SensitivityAnalysisTest {
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("4");
                 } else if (path.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)) {
-                    return new MockResponse().setResponseCode(200).setBody(LOADFLOW_PARAMETERS_JSON)
+                    return new MockResponse().setResponseCode(200).setBody(loadFlowParameters)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());

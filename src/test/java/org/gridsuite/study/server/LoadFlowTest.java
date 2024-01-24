@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.iidm.network.Branch;
+import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.security.LimitViolationType;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
@@ -20,6 +21,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.LimitViolationInfos;
+import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -97,8 +99,6 @@ public class LoadFlowTest {
 
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString(LOADFLOW_PARAMETERS_UUID_STRING);
 
-    private static final String LOADFLOW_PARAMETERS_JSON = "{\"commonParameters\":{\"version\":\"1.9\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true,\"dcPowerFactor\":1.0},\"specificParametersPerProvider\":{}}";
-
     private static final String LOADFLOW_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String VARIANT_ID = "variant_1";
 
@@ -109,6 +109,8 @@ public class LoadFlowTest {
     private static final long TIMEOUT = 1000;
 
     private static String LIMIT_VIOLATIONS_JSON;
+
+    private static String LOADFLOW_PARAMETERS_JSON;
 
     @Autowired
     private MockMvc mockMvc;
@@ -175,6 +177,12 @@ public class LoadFlowTest {
             new LimitViolationInfos("lineId2", 100., "lineName2", null, 300, 80., Branch.Side.TWO.name(), LimitViolationType.CURRENT),
             new LimitViolationInfos("genId1", 500., "genName1", null, null, 370., null, LimitViolationType.HIGH_VOLTAGE));
         LIMIT_VIOLATIONS_JSON = objectMapper.writeValueAsString(limitViolations);
+
+        LoadFlowParametersInfos loadFlowParametersInfos = LoadFlowParametersInfos.builder()
+            .commonParameters(LoadFlowParameters.load())
+            .specificParametersPerProvider(Map.of())
+            .build();
+        LOADFLOW_PARAMETERS_JSON = objectMapper.writeValueAsString(loadFlowParametersInfos);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -538,15 +546,20 @@ public class LoadFlowTest {
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk()).andReturn();
 
-        JSONAssert.assertEquals(LOADFLOW_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+        String loadflowParameters = objectMapper.writeValueAsString(LoadFlowParametersInfos.builder()
+                .commonParameters(LoadFlowParameters.load())
+                .specificParametersPerProvider(Map.of())
+                .build());
 
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_PARAMETERS_JSON);
+        JSONAssert.assertEquals(loadflowParameters, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, loadflowParameters);
 
         //checking update is registered
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk()).andReturn();
 
-        JSONAssert.assertEquals(LOADFLOW_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+        JSONAssert.assertEquals(loadflowParameters, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
         assertTrue(TestUtils.getRequestsDone(3, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
 
@@ -554,13 +567,13 @@ public class LoadFlowTest {
 
         studyNameUserIdUuid = studyEntity2.getId();
 
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_PARAMETERS_JSON);
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, loadflowParameters);
 
         //get initial loadFlow parameters
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk()).andReturn();
 
-        JSONAssert.assertEquals(LOADFLOW_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+        JSONAssert.assertEquals(loadflowParameters, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters")));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
