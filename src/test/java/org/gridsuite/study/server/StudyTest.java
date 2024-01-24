@@ -475,7 +475,7 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.matches("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID) && DELETE.equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/parameters\\?duplicateFrom=" + LOADFLOW_PARAMETERS_UUID_STRING) && POST.equals(request.getMethod())) {
+                } else if (path.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING) && POST.equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING) && DELETE.equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
@@ -1624,7 +1624,7 @@ public class StudyTest {
             assertEquals(1, requests.stream().filter(r -> r.matches("/v1/parameters\\?duplicateFrom=" + VOLTAGE_INIT_PARAMETERS_UUID)).count());
         }
         if (sourceStudy.getLoadFlowParametersUuid() != null) {
-            assertEquals(1, requests.stream().filter(r -> r.matches("/v1/parameters\\?duplicateFrom=" + LOADFLOW_PARAMETERS_UUID)).count());
+            assertEquals(1, requests.stream().filter(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID)).count());
 
         }
         assertEquals(1, requests.stream().filter(r -> r.matches("/v1/networks/" + duplicatedStudy.getNetworkUuid() + "/reindex-all")).count());

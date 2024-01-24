@@ -286,10 +286,8 @@ public class LoadFlowService {
         Objects.requireNonNull(sourceParametersUuid);
 
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters")
-                .queryParam("duplicateFrom", sourceParametersUuid)
-                .buildAndExpand()
-                .toUriString();
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
+                .buildAndExpand(sourceParametersUuid).toUriString();
 
         UUID parametersUuid;
 
