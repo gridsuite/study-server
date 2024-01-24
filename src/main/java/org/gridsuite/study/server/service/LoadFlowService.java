@@ -114,15 +114,6 @@ public class LoadFlowService {
         restTemplate.delete(loadFlowServerBaseUri + path);
     }
 
-    public void deleteLoadFlowResults(List<UUID> uuids) {
-        if (!uuids.isEmpty()) {
-            String path = UriComponentsBuilder
-                    .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results")
-                    .queryParam(RESULTS_UUIDS, uuids).build().toUriString();
-            restTemplate.delete(loadFlowServerBaseUri + path, Void.class);
-        }
-    }
-
     public void deleteLoadFlowResults() {
         try {
             String path = UriComponentsBuilder
