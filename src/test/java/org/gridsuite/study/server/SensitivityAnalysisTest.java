@@ -43,9 +43,14 @@ import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
-import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
+import org.gridsuite.study.server.service.ActionsService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NonEvacuatedEnergyService;
+import org.gridsuite.study.server.service.ReportService;
+import org.gridsuite.study.server.service.SensitivityAnalysisService;
+import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -377,6 +382,12 @@ public class SensitivityAnalysisTest {
                 .resultTab("N")
                 .csvHeaders(List.of("h1", "h2", "h3"))
                 .build());
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", studyUuid, UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("userId", "userId")
+                        .content(content))
+                .andExpectAll(status().isNotFound(), content().string("\"SENSITIVITY_ANALYSIS_NOT_FOUND\""));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", studyUuid, nodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
