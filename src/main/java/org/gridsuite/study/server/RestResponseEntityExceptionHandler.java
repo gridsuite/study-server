@@ -23,22 +23,69 @@ public class RestResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleStudyException(StudyException exception) {
         StudyException.Type type = exception.getType();
         return switch (type) {
-            case ELEMENT_NOT_FOUND, STUDY_NOT_FOUND, NODE_NOT_FOUND, SECURITY_ANALYSIS_NOT_FOUND, SENSITIVITY_ANALYSIS_NOT_FOUND, NON_EVACUATED_ENERGY_NOT_FOUND, DYNAMIC_SIMULATION_NOT_FOUND, DYNAMIC_MAPPING_NOT_FOUND, EQUIPMENT_NOT_FOUND, VOLTAGE_INIT_PARAMETERS_NOT_FOUND, SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND ->
-                    ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getType());
+            case ELEMENT_NOT_FOUND,
+                    STUDY_NOT_FOUND,
+                    NODE_NOT_FOUND,
+                    SECURITY_ANALYSIS_NOT_FOUND,
+                    SENSITIVITY_ANALYSIS_NOT_FOUND,
+                    NON_EVACUATED_ENERGY_NOT_FOUND,
+                    DYNAMIC_SIMULATION_NOT_FOUND,
+                    DYNAMIC_MAPPING_NOT_FOUND,
+                    EQUIPMENT_NOT_FOUND,
+                    VOLTAGE_INIT_PARAMETERS_NOT_FOUND,
+                    SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND
+                    -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getType());
             case CASE_NOT_FOUND -> ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(exception.getMessage());
             case STUDY_ALREADY_EXISTS -> ResponseEntity.status(HttpStatus.CONFLICT).body(type);
-            case LOADFLOW_NOT_RUNNABLE, LOADFLOW_RUNNING, SECURITY_ANALYSIS_RUNNING, SENSITIVITY_ANALYSIS_RUNNING, NON_EVACUATED_ENERGY_RUNNING, DYNAMIC_SIMULATION_RUNNING, SHORT_CIRCUIT_ANALYSIS_RUNNING, VOLTAGE_INIT_RUNNING ->
-                    ResponseEntity.status(HttpStatus.FORBIDDEN).body(type);
-            case NOT_ALLOWED, BAD_NODE_TYPE, NODE_NAME_ALREADY_EXIST ->
-                    ResponseEntity.status(HttpStatus.FORBIDDEN).body(exception.getMessage());
+            case LOADFLOW_NOT_RUNNABLE,
+                    LOADFLOW_RUNNING,
+                    SECURITY_ANALYSIS_RUNNING,
+                    SENSITIVITY_ANALYSIS_RUNNING,
+                    NON_EVACUATED_ENERGY_RUNNING,
+                    DYNAMIC_SIMULATION_RUNNING,
+                    SHORT_CIRCUIT_ANALYSIS_RUNNING,
+                    VOLTAGE_INIT_RUNNING
+                    -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(type);
+            case NOT_ALLOWED,
+                    BAD_NODE_TYPE,
+                    NODE_NAME_ALREADY_EXIST
+                    -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(exception.getMessage());
             case CANT_DELETE_ROOT_NODE -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
-            case CREATE_NETWORK_MODIFICATION_FAILED, UPDATE_NETWORK_MODIFICATION_FAILED, DELETE_NETWORK_MODIFICATION_FAILED, BAD_MODIFICATION_TYPE, BAD_JSON_FORMAT, TIME_SERIES_BAD_TYPE ->
-                    ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getMessage());
-            case NETWORK_NOT_FOUND, NETWORK_INDEXATION_FAILED, NODE_NOT_BUILT, DELETE_EQUIPMENT_FAILED, DELETE_NODE_FAILED, DELETE_STUDY_FAILED, GET_MODIFICATIONS_FAILED, GET_NETWORK_ELEMENT_FAILED, SENSITIVITY_ANALYSIS_ERROR, NON_EVACUATED_ENERGY_ERROR, NODE_BUILD_ERROR, URI_SYNTAX, CREATE_VOLTAGE_INIT_PARAMETERS_FAILED, UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED, STUDY_INDEXATION_FAILED, STUDY_CHECK_INDEXATION_FAILED, UPDATE_SECURITY_ANALYSIS_PARAMETERS_FAILED, CREATE_SECURITY_ANALYSIS_PARAMETERS_FAILED, LOADFLOW_ERROR ->
-                    ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
-            case SVG_NOT_FOUND, NO_VOLTAGE_INIT_RESULTS_FOR_NODE, NO_VOLTAGE_INIT_MODIFICATIONS_GROUP_FOR_NODE -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getMessage());
-            case UNKNOWN_NOTIFICATION_TYPE, UNKNOWN_ACTION_TYPE, MISSING_PARAMETER ->
-                    ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getType());
+            case CREATE_NETWORK_MODIFICATION_FAILED,
+                    UPDATE_NETWORK_MODIFICATION_FAILED,
+                    DELETE_NETWORK_MODIFICATION_FAILED,
+                    BAD_MODIFICATION_TYPE,
+                    BAD_JSON_FORMAT,
+                    TIME_SERIES_BAD_TYPE
+                    -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getMessage());
+            case NETWORK_NOT_FOUND,
+                    NETWORK_INDEXATION_FAILED,
+                    NODE_NOT_BUILT,
+                    DELETE_EQUIPMENT_FAILED,
+                    DELETE_NODE_FAILED,
+                    DELETE_STUDY_FAILED,
+                    GET_MODIFICATIONS_FAILED,
+                    GET_NETWORK_ELEMENT_FAILED,
+                    SENSITIVITY_ANALYSIS_ERROR,
+                    NON_EVACUATED_ENERGY_ERROR,
+                    NODE_BUILD_ERROR, URI_SYNTAX,
+                    CREATE_VOLTAGE_INIT_PARAMETERS_FAILED,
+                    UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED,
+                    STUDY_INDEXATION_FAILED,
+                    STUDY_CHECK_INDEXATION_FAILED,
+                    UPDATE_SECURITY_ANALYSIS_PARAMETERS_FAILED,
+                    CREATE_SECURITY_ANALYSIS_PARAMETERS_FAILED,
+                    LOADFLOW_ERROR,
+                    GET_SECURITY_ANALYSIS_PARAMETERS_FAILED
+                    -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
+            case SVG_NOT_FOUND,
+                    NO_VOLTAGE_INIT_RESULTS_FOR_NODE,
+                    NO_VOLTAGE_INIT_MODIFICATIONS_GROUP_FOR_NODE
+                    -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getMessage());
+            case UNKNOWN_NOTIFICATION_TYPE,
+                    UNKNOWN_ACTION_TYPE,
+                    MISSING_PARAMETER
+                    -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getType());
             case NOT_IMPLEMENTED -> ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(exception.getMessage());
             default -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         };
