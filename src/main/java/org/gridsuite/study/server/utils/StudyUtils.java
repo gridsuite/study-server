@@ -35,7 +35,7 @@ public final class StudyUtils {
 
         String errorMessage = responseBody.isEmpty() ? httpException.getStatusCode().toString() : parseHttpError(responseBody);
 
-        LOGGER.error(errorMessage);
+        LOGGER.error(errorMessage, httpException);
 
         return new StudyException(type, errorMessage);
     }

@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
@@ -41,6 +42,7 @@ import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.util.Pair;
 import org.springframework.http.*;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
@@ -66,6 +68,7 @@ public class StudyController {
     private final NetworkConversionService networkConversionService;
     private final SecurityAnalysisService securityAnalysisService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
+    private final NonEvacuatedEnergyService nonEvacuatedEnergyService;
     private final ShortCircuitService shortCircuitService;
     private final VoltageInitService voltageInitService;
     private final LoadFlowService loadflowService;
@@ -79,6 +82,7 @@ public class StudyController {
             NetworkConversionService networkConversionService,
             SecurityAnalysisService securityAnalysisService,
             SensitivityAnalysisService sensitivityAnalysisService,
+            NonEvacuatedEnergyService nonEvacuatedEnergyService,
             ShortCircuitService shortCircuitService,
             VoltageInitService voltageInitService,
             LoadFlowService loadflowService,
@@ -91,6 +95,7 @@ public class StudyController {
         this.networkConversionService = networkConversionService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
+        this.nonEvacuatedEnergyService = nonEvacuatedEnergyService;
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
         this.loadflowService = loadflowService;
@@ -803,6 +808,18 @@ public class StudyController {
         String result = securityAnalysisService.getSecurityAnalysisResult(nodeUuid, resultType, filters, pageable);
         return result != null ? ResponseEntity.ok().body(result) :
                ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result/csv")
+    @Operation(summary = "Get a security analysis result on study - CSV export")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis result csv export"),
+        @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
+    public byte[] getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                           @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
+                                                                           @Parameter(description = "Csv translation (JSON)") @RequestBody String csvTranslations) {
+        return securityAnalysisService.getSecurityAnalysisResultCsv(nodeUuid, resultType, csvTranslations);
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count")
@@ -1577,44 +1594,44 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries/metadata")
     @Operation(summary = "Get list of time series metadata of dynamic simulation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Time series metadata of dynamic simulation result"),
-        @ApiResponse(responseCode = "204", description = "No dynamic simulation has been done yet"),
+        @ApiResponse(responseCode = "204", description = "No dynamic simulation metadata"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
     public ResponseEntity<List<TimeSeriesMetadataInfos>> getDynamicSimulationTimeSeriesMetadata(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         List<TimeSeriesMetadataInfos> result = studyService.getDynamicSimulationTimeSeriesMetadata(nodeUuid);
-        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
-                ResponseEntity.noContent().build();
+        return CollectionUtils.isEmpty(result) ? ResponseEntity.noContent().build() :
+                ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries")
     @Operation(summary = "Get all time series of dynamic simulation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All time series of dynamic simulation result"),
-        @ApiResponse(responseCode = "204", description = "No dynamic simulation has been done yet"),
+        @ApiResponse(responseCode = "204", description = "No dynamic simulation timeseries"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
     public ResponseEntity<List<DoubleTimeSeries>> getDynamicSimulationTimeSeriesResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                                        @Parameter(description = "timeSeriesNames") @RequestParam(name = "timeSeriesNames", required = false) List<String> timeSeriesNames) {
         List<DoubleTimeSeries> result = studyService.getDynamicSimulationTimeSeries(nodeUuid, timeSeriesNames);
-        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
-                ResponseEntity.noContent().build();
+        return CollectionUtils.isEmpty(result) ? ResponseEntity.noContent().build() :
+                ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeline")
     @Operation(summary = "Get a timeline of dynamic simulation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The timeline of dynamic simulation result"),
-        @ApiResponse(responseCode = "204", description = "No dynamic simulation has been done yet"),
+        @ApiResponse(responseCode = "204", description = "No dynamic simulation timeline"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
     public ResponseEntity<List<StringTimeSeries>> getDynamicSimulationTimeLineResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         List<StringTimeSeries> result = studyService.getDynamicSimulationTimeLine(nodeUuid);
-        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
-                ResponseEntity.noContent().build();
+        return CollectionUtils.isEmpty(result) ? ResponseEntity.noContent().build() :
+                ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/status")
     @Operation(summary = "Get the status of dynamic simulation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The status of dynamic simulation result"),
-        @ApiResponse(responseCode = "204", description = "No dynamic simulation has been done yet"),
+        @ApiResponse(responseCode = "204", description = "No dynamic simulation status"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
     public ResponseEntity<DynamicSimulationStatus> getDynamicSimulationStatus(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
@@ -1754,6 +1771,92 @@ public class StudyController {
     public ResponseEntity<Void> invalidateShortCircuitStatus(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
         studyService.invalidateShortCircuitStatus(studyUuid);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/run")
+    @Operation(summary = "run sensitivity analysis non evacuated energy on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy has started")})
+    public ResponseEntity<UUID> runNonEvacuatedEnergy(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                      @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        return ResponseEntity.ok().body(studyService.runNonEvacuatedEnergy(studyUuid, nodeUuid, userId));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/result")
+    @Operation(summary = "Get a sensitivity analysis non evacuated energy result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy result"),
+        @ApiResponse(responseCode = "204", description = "No sensitivity analysis non evacuated energy has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The sensitivity analysis non evacuated energy has not been found")})
+    public ResponseEntity<String> getNonEvacuatedEnergyResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = nonEvacuatedEnergyService.getNonEvacuatedEnergyResult(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+            ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/status")
+    @Operation(summary = "Get the sensitivity analysis non evacuated energy status on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy status"),
+        @ApiResponse(responseCode = "204", description = "No sensitivity analysis non evacuated energy has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The sensitivity analysis status non evacuated energy has not been found")})
+    public ResponseEntity<String> getNonEvacuatedEnergyStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = nonEvacuatedEnergyService.getNonEvacuatedEnergyStatus(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+            ResponseEntity.noContent().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/stop")
+    @Operation(summary = "stop sensitivity analysis non evacuated energy on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy has been stopped")})
+    public ResponseEntity<Void> stopNonEvacuatedEnergy(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        nonEvacuatedEnergyService.stopNonEvacuatedEnergy(studyUuid, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/non-evacuated-energy/parameters")
+    @Operation(summary = "Get sensitivity analysis non evacuated energy parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy parameters")})
+    public ResponseEntity<NonEvacuatedEnergyParametersInfos> getNonEvacuatedEnergyParametersInfos(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getNonEvacuatedEnergyParametersInfos(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/non-evacuated-energy/parameters")
+    @Operation(summary = "set sensitivity analysis non evacuated energy parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters non evacuated energy are set")})
+    public ResponseEntity<Void> setNonEvacuatedEnergyParametersInfos(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody(required = false) NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos,
+        @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setNonEvacuatedEnergyParametersInfos(studyUuid, nonEvacuatedEnergyParametersInfos, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/non-evacuated-energy/provider")
+    @Operation(summary = "set sensitivity analysis non evacuated energy provider for the specified study, no body means reset to default provider")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy provider is set")})
+    public ResponseEntity<Void> setNonEvacuatedEnergyProvider(@PathVariable("studyUuid") UUID studyUuid,
+                                                               @RequestBody(required = false) String provider,
+                                                               @RequestHeader("userId") String userId) {
+        studyService.updateNonEvacuatedEnergyProvider(studyUuid, provider, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/non-evacuated-energy/provider")
+    @Operation(summary = "Get sensitivity analysis non evacuated energy provider for a specified study, empty string means default provider")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy provider is returned")})
+    public ResponseEntity<String> getNonEvacuatedEnergyProvider(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getNonEvacuatedEnergyProvider(studyUuid));
+    }
+
+    @GetMapping(value = "/non-evacuated-energy-default-provider")
+    @Operation(summary = "get sensitivity analysis non evacuated energy default provider value")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "the sensitivity analysis non evacuated energy default provider has been found"))
+    public ResponseEntity<String> getDefaultNonEvacuatedEnergyProvider() {
+        return ResponseEntity.ok().body(studyService.getDefaultNonEvacuatedEnergyProvider());
     }
 
     @GetMapping(value = "/servers/infos")

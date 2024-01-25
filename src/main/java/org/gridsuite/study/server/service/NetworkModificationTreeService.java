@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
+import static org.gridsuite.study.server.dto.ComputationType.NON_EVACUATED_ENERGY_ANALYSIS;
 import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
 import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
 import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT;
@@ -151,6 +152,7 @@ public class NetworkModificationTreeService {
                 newGroupUuid,
                 UUID.randomUUID().toString(),
                 new HashSet<>(),
+                null,
                 null,
                 null,
                 null,
@@ -328,6 +330,11 @@ public class NetworkModificationTreeService {
                 deleteNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
             }
 
+            UUID nonEvacuatedEnergyResultUuid = repositories.get(nodeToDelete.getType()).getComputationResultUuid(id, NON_EVACUATED_ENERGY_ANALYSIS);
+            if (nonEvacuatedEnergyResultUuid != null) {
+                deleteNodeInfos.addNonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid);
+            }
+
             UUID shortCircuitAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getComputationResultUuid(id, SHORT_CIRCUIT);
             if (shortCircuitAnalysisResultUuid != null) {
                 deleteNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
@@ -448,6 +455,7 @@ public class NetworkModificationTreeService {
                 model.setLoadFlowResultUuid(null);
                 model.setSecurityAnalysisResultUuid(null);
                 model.setSensitivityAnalysisResultUuid(null);
+                model.setNonEvacuatedEnergyResultUuid(null);
                 model.setShortCircuitAnalysisResultUuid(null);
                 model.setOneBusShortCircuitAnalysisResultUuid(null);
                 model.setVoltageInitResultUuid(null);
@@ -773,6 +781,11 @@ public class NetworkModificationTreeService {
             invalidateNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
         }
 
+        UUID nonEvacuatedEnergyResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), NON_EVACUATED_ENERGY_ANALYSIS);
+        if (nonEvacuatedEnergyResultUuid != null) {
+            invalidateNodeInfos.addNonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid);
+        }
+
         UUID shortCircuitAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SHORT_CIRCUIT);
         if (shortCircuitAnalysisResultUuid != null) {
             invalidateNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
@@ -841,6 +854,7 @@ public class NetworkModificationTreeService {
             nodeRepository.updateComputationResultUuid(childUuid, null, LOAD_FLOW);
             nodeRepository.updateComputationResultUuid(childUuid, null, SECURITY_ANALYSIS);
             nodeRepository.updateComputationResultUuid(childUuid, null, SENSITIVITY_ANALYSIS);
+            nodeRepository.updateComputationResultUuid(childUuid, null, NON_EVACUATED_ENERGY_ANALYSIS);
             nodeRepository.updateComputationResultUuid(childUuid, null, SHORT_CIRCUIT);
             nodeRepository.updateComputationResultUuid(childUuid, null, SHORT_CIRCUIT_ONE_BUS);
             if (deleteVoltageInitResults) {

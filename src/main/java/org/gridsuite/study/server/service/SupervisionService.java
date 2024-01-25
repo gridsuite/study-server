@@ -55,6 +55,8 @@ public class SupervisionService {
 
     private SensitivityAnalysisService sensitivityAnalysisService;
 
+    private NonEvacuatedEnergyService nonEvacuatedEnergyService;
+
     private ShortCircuitService shortCircuitService;
 
     private VoltageInitService voltageInitService;
@@ -63,7 +65,7 @@ public class SupervisionService {
 
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    public SupervisionService(StudyService studyService, NetworkModificationTreeService networkModificationTreeService, NetworkService networkStoreService, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService) {
+    public SupervisionService(StudyService studyService, NetworkModificationTreeService networkModificationTreeService, NetworkService networkStoreService, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, NonEvacuatedEnergyService nonEvacuatedEnergyService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService) {
         this.networkStoreService = networkStoreService;
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -73,6 +75,7 @@ public class SupervisionService {
         this.dynamicSimulationService = dynamicSimulationService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
+        this.nonEvacuatedEnergyService = nonEvacuatedEnergyService;
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
         this.equipmentInfosService = equipmentInfosService;
@@ -88,6 +91,8 @@ public class SupervisionService {
                     dryRun ? securityAnalysisService.getSecurityAnalysisResultsCount() : deleteSecurityAnalysisResults();
             case SENSITIVITY_ANALYSIS ->
                     dryRun ? sensitivityAnalysisService.getSensitivityAnalysisResultsCount() : deleteSensitivityAnalysisResults();
+            case NON_EVACUATED_ENERGY_ANALYSIS ->
+                    dryRun ? nonEvacuatedEnergyService.getNonEvacuatedEnergyAnalysisResultsCount() : deleteNonEvacuatedEnergyAnalysisResults();
             case SHORT_CIRCUIT, SHORT_CIRCUIT_ONE_BUS ->
                     dryRun ? shortCircuitService.getShortCircuitResultsCount() : deleteShortcircuitResults();
             case VOLTAGE_INITIALIZATION ->
@@ -169,7 +174,23 @@ public class SupervisionService {
         Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.SENSITIVITY_ANALYSIS.reportKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         sensitivityAnalysisService.deleteSensitivityAnalysisResults();
+
         LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.SENSITIVITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+
+        return nodes.size();
+    }
+
+    private Integer deleteNonEvacuatedEnergyAnalysisResults() {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+
+        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull();
+        nodes.stream().forEach(node -> node.setNonEvacuatedEnergyResultUuid(null));
+        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.NON_EVACUATED_ENERGY_ANALYSIS.reportKey, nodes);
+        reportService.deleteTreeReports(subreportToDelete);
+        nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResults();
+        LOGGER.trace("{} results deletion for all studies : {} seconds", ComputationType.NON_EVACUATED_ENERGY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+
         return nodes.size();
     }
 
