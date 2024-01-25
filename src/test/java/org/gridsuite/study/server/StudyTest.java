@@ -709,6 +709,7 @@ public class StudyTest {
                 new TypeReference<>() {
                 });
         assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
+        assertEquals(16, equipmentInfos.size());
     }
 
     @Test
