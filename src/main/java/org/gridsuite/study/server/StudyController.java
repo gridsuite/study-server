@@ -1431,9 +1431,6 @@ public class StudyController {
         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
         @RequestBody SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
         byte[] result = sensitivityAnalysisService.exportSensitivityResultsAsCsv(nodeUuid, sensitivityAnalysisCsvFileInfos);
-        if (result == null) {
-            return ResponseEntity.noContent().build();
-        }
         HttpHeaders responseHeaders = new HttpHeaders();
         responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
         responseHeaders.setContentDispositionFormData("attachment", "sensitivity_results.csv");

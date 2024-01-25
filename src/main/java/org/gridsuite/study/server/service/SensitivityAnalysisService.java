@@ -134,7 +134,7 @@ public class SensitivityAnalysisService {
     public byte[] exportSensitivityResultsAsCsv(UUID nodeUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuidOpt.isEmpty()) {
-            return null;
+            throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
         }
 
         // initializing from uri string (not from path string) allows build() to escape selector content
@@ -148,7 +148,15 @@ public class SensitivityAnalysisService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<SensitivityAnalysisCsvFileInfos> httpEntity = new HttpEntity<>(sensitivityAnalysisCsvFileInfos, headers);
-        return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class).getBody();
+        try {
+            return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class).getBody();
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
+            } else {
+                throw handleHttpError(e, SENSITIVITY_ANALYSIS_ERROR);
+            }
+        }
 
     }
 
