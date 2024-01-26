@@ -18,7 +18,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
-import org.gridsuite.study.server.repository.SecurityAnalysisParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
@@ -76,7 +75,7 @@ public final class TestUtils {
                                                LoadFlowParametersEntity loadFlowParametersEntity,
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
                                                UUID voltageInitParametersUuid,
-                                               SecurityAnalysisParametersEntity securityAnalysisParametersEntity,
+                                               UUID securityAnalysisParametersUuid,
                                                SensitivityAnalysisParametersEntity sensitivityParametersEntity,
                                                NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
@@ -86,7 +85,7 @@ public final class TestUtils {
             .loadFlowParameters(loadFlowParametersEntity)
             .shortCircuitParameters(shortCircuitParametersEntity)
             .voltageInitParametersUuid(voltageInitParametersUuid)
-            .securityAnalysisParameters(securityAnalysisParametersEntity)
+            .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
             .sensitivityAnalysisParameters(sensitivityParametersEntity)
             .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
             .build();
@@ -95,7 +94,7 @@ public final class TestUtils {
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider,
                                                LoadFlowParametersEntity loadFlowParametersEntity,
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
-                                               SecurityAnalysisParametersEntity securityAnalysisParametersEntity,
+                                               UUID securityAnalysisParametersUuid,
                                                SensitivityAnalysisParametersEntity sensitivityParametersEntity,
                                                NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
@@ -104,7 +103,7 @@ public final class TestUtils {
                 .loadFlowProvider(loadflowProvider)
                 .loadFlowParameters(loadFlowParametersEntity)
                 .shortCircuitParameters(shortCircuitParametersEntity)
-                .securityAnalysisParameters(securityAnalysisParametersEntity)
+                .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
                 .sensitivityAnalysisParameters(sensitivityParametersEntity)
                 .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
                 .build();

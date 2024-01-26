@@ -1632,7 +1632,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/security-analysis/parameters")
     @Operation(summary = "Get security analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters")})
-    public ResponseEntity<SecurityAnalysisParametersValues> getSecurityAnalysisParametersValues(
+    public ResponseEntity<String> getSecurityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid));
     }
@@ -1642,7 +1642,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters are set")})
     public ResponseEntity<Void> setSecurityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) SecurityAnalysisParametersValues securityAnalysisParametersValues,
+            @RequestBody(required = false) String securityAnalysisParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId);
         return ResponseEntity.ok().build();

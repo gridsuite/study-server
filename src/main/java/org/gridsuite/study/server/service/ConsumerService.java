@@ -69,6 +69,7 @@ public class ConsumerService {
 
     NotificationService notificationService;
     StudyService studyService;
+    SecurityAnalysisService securityAnalysisService;
     CaseService caseService;
     NetworkModificationTreeService networkModificationTreeService;
     StudyRepository studyRepository;
@@ -77,12 +78,14 @@ public class ConsumerService {
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
                            StudyService studyService,
+                           SecurityAnalysisService securityAnalysisService,
                            CaseService caseService,
                            NetworkModificationTreeService networkModificationTreeService,
                            StudyRepository studyRepository) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
+        this.securityAnalysisService = securityAnalysisService;
         this.caseService = caseService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.studyRepository = studyRepository;
@@ -199,7 +202,7 @@ public class ConsumerService {
                         // we only update network infos sent by network conversion server
                         studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
                     } else {
-                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadFlowService.toEntity(loadFlowParameters, List.of()), ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, importParameters, importReportUuid);
+                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadFlowService.toEntity(loadFlowParameters, List.of()), ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, createDefaultSecurityAnalysisParameters(), importParameters, importReportUuid);
                     }
 
                     caseService.disableCaseExpiration(caseUuid);
@@ -447,5 +450,14 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeVoltageInitFailed() {
         return message -> consumeCalculationFailed(message, VOLTAGE_INITIALIZATION);
+    }
+
+    private UUID createDefaultSecurityAnalysisParameters() {
+        try {
+            return securityAnalysisService.createDefaultSecurityAnalysisParameters();
+        } catch (Exception e) {
+            LOGGER.error(e.toString(), e);
+        }
+        return null;
     }
 }
