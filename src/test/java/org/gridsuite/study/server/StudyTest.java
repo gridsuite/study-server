@@ -269,7 +269,7 @@ public class StudyTest {
     }
 
     private void initMockBeans(Network network) {
-        linesInfos = network.getLineStream().map(StudyTest::toEquipmentInfos).collect(Collectors.toList());
+        linesInfos = network.getLineStream().map(StudyTest::toEquipmentInfos).toList();
 
         studiesInfos = List.of(
                 CreatedStudyBasicInfos.builder().id(UUID.fromString(DUPLICATED_STUDY_UUID)).userId("userId1").caseFormat("XIIDM").build(),
@@ -707,17 +707,33 @@ public class StudyTest {
         // This process should return a unique result for each equipment, thereby ensuring no duplicates are present in the search results.
 
         NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeId, VARIANT_ID, "node1", "userId");
-        linesInfos.add(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("BBE1AA1  BBE2AA1  1").name(" space ECAPS ").type("LINE").variantId(VARIANT_ID).voltageLevels(Set.of(VoltageLevelInfos.builder().id("BBE1AA1").name("BBE1AA1").build())).build());
+        List<EquipmentInfos> mockLineInfosWithModification = new ArrayList<>(linesInfos);
+        // get whatever initial line to mock a line modification, here we take the first one as an example
+        EquipmentInfos lineInitial = linesInfos.get(0);
+        EquipmentInfos lineModification = EquipmentInfos.builder()
+                .networkUuid(NETWORK_UUID)
+                .id(lineInitial.getId())
+                .name(lineInitial.getName())
+                .type(lineInitial.getType())
+                .variantId(VARIANT_ID)
+                .voltageLevels(lineInitial.getVoltageLevels())
+                .build();
+
+        mockLineInfosWithModification.add(lineModification);
+
+        // prepare expected result
+        List<EquipmentInfos> expectedLineInfosWithModification = new ArrayList<>(mockLineInfosWithModification);
+        expectedLineInfosWithModification.remove(lineInitial);
+
+        // mock return of the equipmentInfosService
+        when(equipmentInfosService.searchEquipments(any(BoolQuery.class))).then((Answer<List<EquipmentInfos>>) invocation -> mockLineInfosWithModification);
+
         mvcResult = mockMvc
                 .perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=NAME",
                         studyUuid, node1.getId(), "L").header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        equipmentInfos = mapper.readValue(resultAsString,
-                new TypeReference<>() {
-                });
-        assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
-        assertEquals(16, equipmentInfos.size());
+        equipmentInfos = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertThat(equipmentInfos, new MatcherJson<>(mapper, expectedLineInfosWithModification));
     }
 
     @Test
