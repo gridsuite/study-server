@@ -33,7 +33,8 @@ public class RestResponseEntityExceptionHandler {
                     DYNAMIC_MAPPING_NOT_FOUND,
                     EQUIPMENT_NOT_FOUND,
                     VOLTAGE_INIT_PARAMETERS_NOT_FOUND,
-                    SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND
+                    SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND,
+                    LOADFLOW_PARAMETERS_NOT_FOUND
                     -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getType());
             case CASE_NOT_FOUND -> ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(exception.getMessage());
             case STUDY_ALREADY_EXISTS -> ResponseEntity.status(HttpStatus.CONFLICT).body(type);
@@ -76,7 +77,11 @@ public class RestResponseEntityExceptionHandler {
                     UPDATE_SECURITY_ANALYSIS_PARAMETERS_FAILED,
                     CREATE_SECURITY_ANALYSIS_PARAMETERS_FAILED,
                     LOADFLOW_ERROR,
-                    GET_SECURITY_ANALYSIS_PARAMETERS_FAILED
+                    GET_SECURITY_ANALYSIS_PARAMETERS_FAILED,
+                    CREATE_LOADFLOW_PARAMETERS_FAILED,
+                    UPDATE_LOADFLOW_PARAMETERS_FAILED,
+                    GET_LOADFLOW_PARAMETERS_FAILED,
+                    DELETE_LOADFLOW_PARAMETERS_FAILED
                     -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
             case SVG_NOT_FOUND,
                     NO_VOLTAGE_INIT_RESULTS_FOR_NODE,
