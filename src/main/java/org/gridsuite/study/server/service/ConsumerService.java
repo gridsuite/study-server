@@ -66,12 +66,12 @@ public class ConsumerService {
 
     private final ObjectMapper objectMapper;
 
-    NotificationService notificationService;
-    StudyService studyService;
-    CaseService caseService;
-    LoadFlowService loadFlowService;
-    NetworkModificationTreeService networkModificationTreeService;
-    StudyRepository studyRepository;
+    private final NotificationService notificationService;
+    private final StudyService studyService;
+    private final CaseService caseService;
+    private final LoadFlowService loadFlowService;
+    private final NetworkModificationTreeService networkModificationTreeService;
+    private final StudyRepository studyRepository;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,

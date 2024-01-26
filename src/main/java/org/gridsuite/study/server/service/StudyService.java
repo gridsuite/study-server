@@ -927,14 +927,11 @@ public class StudyService {
 
     private LoadFlowParametersValues getLoadFlowParametersValues(StudyEntity studyEntity, ComputationUsingLoadFlow computation) {
         LoadFlowParametersInfos params = getLoadFlowParametersInfos(studyEntity);
-        String lfProvider;
-        if (computation == ComputationUsingLoadFlow.SECURITY_ANALYSIS) {
-            lfProvider = studyEntity.getSecurityAnalysisProvider();
-        } else if (computation == ComputationUsingLoadFlow.SENSITIVITY_ANALYSIS) {
-            lfProvider = studyEntity.getSensitivityAnalysisProvider();
-        } else {
-            lfProvider = studyEntity.getLoadFlowProvider();
-        }
+        final String lfProvider = switch (computation) {
+            case SECURITY_ANALYSIS -> studyEntity.getSecurityAnalysisProvider();
+            case SENSITIVITY_ANALYSIS -> studyEntity.getSensitivityAnalysisProvider();
+            case LOAD_FLOW -> studyEntity.getLoadFlowProvider();
+        };
         return LoadFlowParametersValues.builder()
                 .commonParameters(params.getCommonParameters())
                 .specificParameters(lfProvider != null ? params.getSpecificParametersPerProvider().getOrDefault(lfProvider, Map.of()) : Map.of())

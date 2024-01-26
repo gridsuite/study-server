@@ -232,19 +232,17 @@ public class LoadFlowService {
     }
 
     public LoadFlowParametersInfos getLoadFlowParameters(UUID parametersUuid) {
-        LoadFlowParametersInfos parameters;
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid).toUriString();
         try {
-            parameters = restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowParametersInfos.class);
+            return restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowParametersInfos.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(LOADFLOW_PARAMETERS_NOT_FOUND);
             }
             throw handleHttpError(e, GET_LOADFLOW_PARAMETERS_FAILED);
         }
-        return parameters;
     }
 
     public UUID createLoadFlowParameters(String parameters) {
@@ -261,15 +259,11 @@ public class LoadFlowService {
 
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        UUID parametersUuid;
-
         try {
-            parametersUuid = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+            return restTemplate.postForObject(loadFlowServerBaseUri + path, httpEntity, UUID.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, CREATE_LOADFLOW_PARAMETERS_FAILED);
         }
-
-        return parametersUuid;
     }
 
     public UUID duplicateLoadFlowParameters(UUID sourceParametersUuid) {
@@ -280,15 +274,11 @@ public class LoadFlowService {
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(sourceParametersUuid).toUriString();
 
-        UUID parametersUuid;
-
         try {
-            parametersUuid = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+            return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, CREATE_LOADFLOW_PARAMETERS_FAILED);
         }
-
-        return parametersUuid;
     }
 
     public void updateLoadFlowParameters(UUID parametersUuid, String parameters) {
@@ -332,15 +322,11 @@ public class LoadFlowService {
                 .buildAndExpand()
                 .toUriString();
 
-        UUID parametersUuid;
-
         try {
-            parametersUuid = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+            return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, CREATE_LOADFLOW_PARAMETERS_FAILED);
         }
-
-        return parametersUuid;
     }
 
     public UUID getLoadFlowParametersOrDefaultsUuid(StudyEntity studyEntity) {
