@@ -11,13 +11,11 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.google.common.io.ByteStreams;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.loadflow.LoadFlowParameters;
 import okhttp3.mockwebserver.MockWebServer;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
@@ -72,7 +70,7 @@ public final class TestUtils {
     }
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider,
-                                               LoadFlowParametersEntity loadFlowParametersEntity,
+                                               UUID loadFlowParametersUuid,
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
                                                UUID voltageInitParametersUuid,
                                                UUID securityAnalysisParametersUuid,
@@ -82,7 +80,7 @@ public final class TestUtils {
             .networkId("netId")
             .networkUuid(networkUuid)
             .loadFlowProvider(loadflowProvider)
-            .loadFlowParameters(loadFlowParametersEntity)
+            .loadFlowParametersUuid(loadFlowParametersUuid)
             .shortCircuitParameters(shortCircuitParametersEntity)
             .voltageInitParametersUuid(voltageInitParametersUuid)
             .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
@@ -92,7 +90,7 @@ public final class TestUtils {
     }
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider,
-                                               LoadFlowParametersEntity loadFlowParametersEntity,
+                                               UUID loadFlowParametersUuid,
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
                                                UUID securityAnalysisParametersUuid,
                                                SensitivityAnalysisParametersEntity sensitivityParametersEntity,
@@ -101,7 +99,7 @@ public final class TestUtils {
                 .networkId("netId")
                 .networkUuid(networkUuid)
                 .loadFlowProvider(loadflowProvider)
-                .loadFlowParameters(loadFlowParametersEntity)
+                .loadFlowParametersUuid(loadFlowParametersUuid)
                 .shortCircuitParameters(shortCircuitParametersEntity)
                 .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
                 .sensitivityAnalysisParameters(sensitivityParametersEntity)
@@ -110,23 +108,12 @@ public final class TestUtils {
     }
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, String loadFlowProvider) {
-        LoadFlowParametersEntity loadFlowParametersEntity = LoadFlowParametersEntity.builder()
-            .voltageInitMode(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES)
-            .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
-            .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
-            .readSlackBus(true)
-            .distributedSlack(true)
-            .dcUseTransformerRatio(true)
-            .hvdcAcEmulation(true)
-            .dcPowerFactor(0.9)
-            .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .caseName(caseName)
             .networkId("netId")
             .networkUuid(networkUuid)
             .loadFlowProvider(loadFlowProvider)
-            .loadFlowParameters(loadFlowParametersEntity)
             .shortCircuitParameters(defaultShortCircuitParametersEntity)
             .build();
     }
