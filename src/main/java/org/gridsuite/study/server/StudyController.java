@@ -685,12 +685,14 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis csv export"),
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
-    public byte[] getShortCircuitAnalysisCsvResult(
+    public ResponseEntity<byte[]> getShortCircuitAnalysisCsvResult(
             @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "type") @RequestParam(value = "type") ShortcircuitAnalysisType type,
             @Parameter(description = "headersCsv") @RequestBody String headersCsv) {
-        return shortCircuitService.getShortCircuitAnalysisCsvResult(nodeUuid, type, headersCsv);
+        byte[] result = shortCircuitService.getShortCircuitAnalysisCsvResult(nodeUuid, type, headersCsv);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run")

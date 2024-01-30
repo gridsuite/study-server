@@ -157,7 +157,7 @@ public class ShortCircuitService {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid,
                 type == ShortcircuitAnalysisType.ALL_BUSES ? ComputationType.SHORT_CIRCUIT : ComputationType.SHORT_CIRCUIT_ONE_BUS);
         if (resultUuidOpt.isEmpty()) {
-            return null;
+            throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
         }
         String path = DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/csv";
         return UriComponentsBuilder.fromPath(path).buildAndExpand(resultUuidOpt.get()).toUriString();
@@ -167,23 +167,19 @@ public class ShortCircuitService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headersCsv, headers);
-        ResponseEntity<byte[]> response = restTemplate.exchange(
-                resourcePath,
-                HttpMethod.POST,
-                entity,
-                byte[].class
-        );
-        if (response.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
-            throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
+        try {
+            return restTemplate.exchange(resourcePath, HttpMethod.POST, entity, byte[].class).getBody();
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
+            } else {
+                throw handleHttpError(e, SHORT_CIRCUIT_ANALYSIS_ERROR);
+            }
         }
-        return response.getBody();
     }
 
     public byte[] getShortCircuitAnalysisCsvResult(UUID nodeUuid, ShortcircuitAnalysisType type, String headersCsv) {
         String resultPath = getShortCircuitAnalysisCsvResultResourcePath(nodeUuid, type);
-        if (resultPath == null) {
-            return new byte[0];
-        }
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath);
         return getShortCircuitAnalysisCsvResultResource(builder.build().toUri(), headersCsv);
     }
@@ -193,7 +189,6 @@ public class ShortCircuitService {
         if (resultPath == null) {
             return null;
         }
-
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath)
                 .queryParam("mode", mode);
 
