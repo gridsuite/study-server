@@ -22,7 +22,6 @@ import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.DiagramParameters;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;

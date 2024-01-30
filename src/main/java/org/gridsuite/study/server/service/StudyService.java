@@ -209,7 +209,6 @@ public class StudyService {
             VoltageInitService voltageInitService,
             DynamicSimulationEventService dynamicSimulationEventService,
             FilterService filterService
-//            StudyService self
     ) {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
@@ -242,7 +241,6 @@ public class StudyService {
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.filterService = filterService;
-//        this.self = self;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -394,27 +392,7 @@ public class StudyService {
         for (int i = 0; i < s.length(); ++i) {
             char c = s.charAt(i);
             switch (c) {
-                case '+':
-                case '\\':
-                case '-':
-                case '!':
-                case '(':
-                case ')':
-                case ':':
-                case '^':
-                case '[':
-                case ']':
-                case '"':
-                case '{':
-                case '}':
-                case '~':
-                case '*':
-                case '?':
-                case '|':
-                case '&':
-                case '/':
-
-                case ' ': // white space has to be escaped, too
+                case '+', '\\', '-', '!', '(', ')', ':', '^', '[', ']', '"', '{', '}', '~', '*', '?', '|', '&', '/', ' ': // white space has to be escaped, too
                     sb.append('\\');
                     break;
                 default:
@@ -620,11 +598,10 @@ public class StudyService {
                     LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                 }
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
         } catch (Exception e) {
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-//            LOGGER.error(e.toString(), e);
             throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
         }
     }
@@ -1489,11 +1466,10 @@ public class StudyService {
         );
         try {
             executeInParallel.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new StudyException(INVALIDATE_BUILD_FAILED, e.getMessage());
         } catch (Exception e) {
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-//            LOGGER.error(e.toString(), e);
             throw new StudyException(INVALIDATE_BUILD_FAILED, e.getMessage());
         }
 
@@ -1616,11 +1592,10 @@ public class StudyService {
 
             try {
                 executeInParallel.get();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
             } catch (Exception e) {
-                if (e instanceof InterruptedException) {
-                    Thread.currentThread().interrupt();
-                }
-//                LOGGER.error(e.toString(), e);
                 throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
             }
 

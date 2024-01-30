@@ -64,7 +64,6 @@ public class NetworkModificationTreeService {
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
                                           NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
-//                                          NetworkModificationTreeService self,
                                           NotificationService notificationService,
                                           NetworkModificationService networkModificationService
     ) {
@@ -72,7 +71,6 @@ public class NetworkModificationTreeService {
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         repositories.put(NodeType.ROOT, new RootNodeInfoRepositoryProxy(rootNodeInfoRepository));
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
-//        this.self = self;
         this.notificationService = notificationService;
         this.networkModificationService = networkModificationService;
     }
@@ -215,7 +213,7 @@ public class NetworkModificationTreeService {
         Optional<NodeEntity> nodeToMoveOpt = nodesRepository.findById(nodeToMoveUuid);
         NodeEntity nodeToMoveEntity = nodeToMoveOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
 
-        nodesRepository.findAllByParentNodeIdNode(nodeToMoveUuid).stream()
+        nodesRepository.findAllByParentNodeIdNode(nodeToMoveUuid)
             .forEach(child -> child.setParentNode(nodeToMoveEntity.getParentNode()));
 
         Optional<NodeEntity> anchorNodeOpt = nodesRepository.findById(anchorNodeUuid);
@@ -430,8 +428,7 @@ public class NetworkModificationTreeService {
         nodes.stream()
                 .filter(n -> n.getParentNode() != null)
                 .forEach(node -> fullMap.get(node.getParentNode().getIdNode()).getChildren().add(fullMap.get(node.getIdNode())));
-        var parentNetworkModificationNode = (NetworkModificationNode) fullMap.get(parentNodeUuid);
-        return parentNetworkModificationNode;
+        return (NetworkModificationNode) fullMap.get(parentNodeUuid);
     }
 
     @Transactional
@@ -442,13 +439,12 @@ public class NetworkModificationTreeService {
         }
         UUID referenceParentNodeId = rootId != null ? rootId : nodeParentId;
 
-        nodeToDuplicate.getChildren().stream().forEach(sourceNode -> {
+        nodeToDuplicate.getChildren().forEach(sourceNode -> {
             UUID newModificationGroupId = UUID.randomUUID();
             UUID newReportUuid = UUID.randomUUID();
             UUID nextParentId = null;
 
-            if (sourceNode instanceof NetworkModificationNode) {
-                NetworkModificationNode model = (NetworkModificationNode) sourceNode;
+            if (sourceNode instanceof NetworkModificationNode model) {
                 UUID modificationGroupToDuplicateId = model.getModificationGroupUuid();
                 model.setModificationGroupUuid(newModificationGroupId);
                 model.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
@@ -546,7 +542,7 @@ public class NetworkModificationTreeService {
         List<String> studyNodeNames = networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid)
                 .stream()
                 .map(AbstractNodeInfoEntity::getName)
-                .collect(Collectors.toList());
+                .toList();
 
         String namePrefix = "N";
         String uniqueName = StringUtils.EMPTY;
@@ -562,7 +558,7 @@ public class NetworkModificationTreeService {
         List<String> studyNodeNames = networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid)
                 .stream()
                 .map(AbstractNodeInfoEntity::getName)
-                .collect(Collectors.toList());
+                .toList();
 
         String uniqueName = nodeName;
         int i = 1;
@@ -573,7 +569,7 @@ public class NetworkModificationTreeService {
         return uniqueName;
     }
 
-    @Transactional(readOnly = false)
+    @Transactional
     public String getVariantId(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getVariantId(nodeUuid)).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
     }

@@ -12,7 +12,6 @@ import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;

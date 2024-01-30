@@ -660,7 +660,7 @@ public class StudyController {
                                                             "NONE (no fault)") @RequestParam(name = "mode", required = false, defaultValue = "FULL") FaultResultsMode mode,
                                                         @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type,
                                                         @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
-                                                        @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false) Boolean paged,
+                                                        @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false, defaultValue = "false") Boolean paged,
                                                         Pageable pageable) {
         String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid, mode, type, filters, paged, pageable);
         return result != null ? ResponseEntity.ok().body(result) :

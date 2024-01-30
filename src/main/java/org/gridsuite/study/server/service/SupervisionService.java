@@ -42,25 +42,25 @@ public class SupervisionService {
 
     private final NetworkService networkStoreService;
 
-    private StudyService studyService;
+    private final StudyService studyService;
 
-    private NetworkModificationTreeService networkModificationTreeService;
+    private final NetworkModificationTreeService networkModificationTreeService;
 
-    private ReportService reportService;
+    private final ReportService reportService;
 
-    private LoadFlowService loadFlowService;
+    private final LoadFlowService loadFlowService;
 
-    private DynamicSimulationService dynamicSimulationService;
+    private final DynamicSimulationService dynamicSimulationService;
 
-    private SecurityAnalysisService securityAnalysisService;
+    private final SecurityAnalysisService securityAnalysisService;
 
-    private SensitivityAnalysisService sensitivityAnalysisService;
+    private final SensitivityAnalysisService sensitivityAnalysisService;
 
-    private NonEvacuatedEnergyService nonEvacuatedEnergyService;
+    private final NonEvacuatedEnergyService nonEvacuatedEnergyService;
 
-    private ShortCircuitService shortCircuitService;
+    private final ShortCircuitService shortCircuitService;
 
-    private VoltageInitService voltageInitService;
+    private final VoltageInitService voltageInitService;
 
     private final EquipmentInfosService equipmentInfosService;
 
@@ -136,7 +136,7 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
-        nodes.stream().forEach(node -> node.setLoadFlowResultUuid(null));
+        nodes.forEach(node -> node.setLoadFlowResultUuid(null));
         Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.LOADFLOW.reportKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         loadFlowService.deleteLoadFlowResults();
@@ -148,7 +148,7 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull();
-        nodes.stream().forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
+        nodes.forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
         //TODO Add logs deletion once they are added
         dynamicSimulationService.deleteResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SIMULATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
@@ -159,7 +159,7 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull();
-        nodes.stream().forEach(node -> node.setSecurityAnalysisResultUuid(null));
+        nodes.forEach(node -> node.setSecurityAnalysisResultUuid(null));
         Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.SECURITY_ANALYSIS.reportKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         securityAnalysisService.deleteSecurityAnalysisResults();
@@ -171,7 +171,7 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull();
-        nodes.stream().forEach(node -> node.setSensitivityAnalysisResultUuid(null));
+        nodes.forEach(node -> node.setSensitivityAnalysisResultUuid(null));
         Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.SENSITIVITY_ANALYSIS.reportKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         sensitivityAnalysisService.deleteSensitivityAnalysisResults();
@@ -186,7 +186,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
 
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull();
-        nodes.stream().forEach(node -> node.setNonEvacuatedEnergyResultUuid(null));
+        nodes.forEach(node -> node.setNonEvacuatedEnergyResultUuid(null));
         Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.NON_EVACUATED_ENERGY_ANALYSIS.reportKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResults();
@@ -234,7 +234,7 @@ public class SupervisionService {
 
     private Map<UUID, String> formatSubreportMap(String subReporterKey, List<NetworkModificationNodeInfoEntity> nodes) {
         return nodes.stream().collect(Collectors.toMap(
-            node -> node.getReportUuid(),
+                AbstractNodeInfoEntity::getReportUuid,
             node -> node.getId() + "@" + subReporterKey)
         );
     }

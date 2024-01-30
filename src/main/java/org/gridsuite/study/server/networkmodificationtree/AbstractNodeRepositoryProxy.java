@@ -24,17 +24,17 @@ import java.util.stream.Collectors;
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  */
-public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends AbstractNodeInfoEntity, NodeInfoEntityRepository extends NodeInfoRepository<NodeInfoEntity>, NodeDto extends AbstractNode> {
+public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEntity, U extends NodeInfoRepository<T>, V extends AbstractNode> {
 
-    final NodeInfoEntityRepository nodeInfoRepository;
+    final U nodeInfoRepository;
 
-    protected AbstractNodeRepositoryProxy(NodeInfoEntityRepository nodeInfoRepository) {
+    protected AbstractNodeRepositoryProxy(U nodeInfoRepository) {
         this.nodeInfoRepository = nodeInfoRepository;
     }
 
-    public abstract NodeInfoEntity toEntity(AbstractNode node);
+    public abstract T toEntity(AbstractNode node);
 
-    public abstract NodeDto toDto(NodeInfoEntity node);
+    public abstract V toDto(T node);
 
     public String getVariantId(AbstractNode node) {
         return null;
@@ -83,11 +83,11 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         nodeInfoRepository.deleteById(id);
     }
 
-    public NodeDto getNode(UUID id) {
+    public V getNode(UUID id) {
         return toDto(nodeInfoRepository.findById(id).orElseThrow(() -> new StudyException(StudyException.Type.ELEMENT_NOT_FOUND)));
     }
 
-    protected NodeDto completeNodeInfo(AbstractNodeInfoEntity nodeInfoEntity, NodeDto node) {
+    protected V completeNodeInfo(AbstractNodeInfoEntity nodeInfoEntity, V node) {
         node.setId(nodeInfoEntity.getId());
         node.setName(nodeInfoEntity.getName());
         node.setDescription(nodeInfoEntity.getDescription());
@@ -96,7 +96,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return node;
     }
 
-    protected NodeInfoEntity completeEntityNodeInfo(AbstractNode node, NodeInfoEntity entity) {
+    protected T completeEntityNodeInfo(AbstractNode node, T entity) {
         entity.setIdNode(node.getId());
         entity.setName(node.getName());
         entity.setDescription(node.getDescription());
@@ -106,21 +106,21 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     }
 
     public void updateNode(AbstractNode node, String... authorizedNullProperties) {
-        NodeDto persistedNode = getNode(node.getId());
+        V persistedNode = getNode(node.getId());
         /* using only DTO values not jpa Entity */
         PropertyUtils.copyNonNullProperties(node, persistedNode, authorizedNullProperties);
 
-        NodeInfoEntity entity = toEntity(persistedNode);
+        T entity = toEntity(persistedNode);
         entity.markNotNew();
         nodeInfoRepository.save(entity);
     }
 
-    public Map<UUID, NodeDto> getAll(Collection<UUID> ids) {
-        return nodeInfoRepository.findAllById(ids).stream().map(this::toDto).collect(Collectors.toMap(NodeDto::getId, Function.identity()));
+    public Map<UUID, V> getAll(Collection<UUID> ids) {
+        return nodeInfoRepository.findAllById(ids).stream().map(this::toDto).collect(Collectors.toMap(V::getId, Function.identity()));
     }
 
-    public List<NodeDto> getAllInOrder(List<UUID> ids) {
-        ArrayList<NodeDto> res = new ArrayList<>();
+    public List<V> getAllInOrder(List<UUID> ids) {
+        ArrayList<V> res = new ArrayList<>();
         ids.forEach(nodeId -> res.add(nodeInfoRepository.findById(nodeId).map(this::toDto).orElseThrow()));
         return res;
     }
