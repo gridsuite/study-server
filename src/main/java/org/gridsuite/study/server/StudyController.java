@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
@@ -1432,6 +1433,26 @@ public class StudyController {
         String result = sensitivityAnalysisService.getSensitivityAnalysisResult(nodeUuid, selector);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get a sensitivity analysis result as csv")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Csv of sensitivity analysis results"),
+        @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
+    public ResponseEntity<byte[]> exportSensitivityResultsAsCsv(
+        @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+        @RequestBody SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
+        byte[] result = sensitivityAnalysisService.exportSensitivityResultsAsCsv(nodeUuid, sensitivityAnalysisCsvFileInfos);
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        responseHeaders.setContentDispositionFormData("attachment", "sensitivity_results.csv");
+
+        return ResponseEntity
+                .ok()
+                .headers(responseHeaders)
+                .body(result);
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options")

@@ -14,6 +14,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
@@ -44,6 +45,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class SensitivityAnalysisService {
 
     static final String RESULT_UUID = "resultUuid";
+    private static final String RESULTS = "results";
 
     private String sensitivityAnalysisServerBaseUri;
 
@@ -115,7 +117,7 @@ public class SensitivityAnalysisService {
 
         // initializing from uri string (not from path string) allows build() to escape selector content
         URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
-            .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, "results", resultUuidOpt.get().toString())
+            .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuidOpt.get().toString())
             .queryParam("selector", selector).build().encode().toUri();
         try {
             result = restTemplate.getForObject(uri, String.class);
@@ -129,6 +131,35 @@ public class SensitivityAnalysisService {
         return result;
     }
 
+    public byte[] exportSensitivityResultsAsCsv(UUID nodeUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        if (resultUuidOpt.isEmpty()) {
+            throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
+        }
+
+        // initializing from uri string (not from path string) allows build() to escape selector content
+        URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
+                .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuidOpt.get().toString(), "csv")
+                .build()
+                .encode()
+                .toUri();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<SensitivityAnalysisCsvFileInfos> httpEntity = new HttpEntity<>(sensitivityAnalysisCsvFileInfos, headers);
+        try {
+            return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class).getBody();
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
+            } else {
+                throw handleHttpError(e, SENSITIVITY_ANALYSIS_ERROR);
+            }
+        }
+
+    }
+
     public String getSensitivityResultsFilterOptions(UUID nodeUuid, String selector) {
         String options;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
@@ -138,7 +169,7 @@ public class SensitivityAnalysisService {
 
         // initializing from uri string (not from path string) allows build() to escape selector content
         URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
-                .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, "results", resultUuidOpt.get().toString(), "filter-options")
+                .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuidOpt.get().toString(), "filter-options")
                 .queryParam("selector", selector).build().encode().toUri();
         try {
             options = restTemplate.getForObject(uri, String.class);
