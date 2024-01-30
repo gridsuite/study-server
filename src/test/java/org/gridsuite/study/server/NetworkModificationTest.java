@@ -1082,7 +1082,6 @@ public class NetworkModificationTest {
                 .andExpect(status().isOk());
         wireMockUtils.verifyDeleteRequest(stubId, "/v1/network-modifications", false, Map.of("uuids", WireMock.equalTo(modificationUuid.toString())));
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
-        checkNodesBuildStatusUpdatedMessageReceived(studyUuid, List.of(modificationNode.getId()));
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
 

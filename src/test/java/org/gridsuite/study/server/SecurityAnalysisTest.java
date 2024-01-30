@@ -296,22 +296,10 @@ public class SecurityAnalysisTest {
                                 .addHeader("Content-Type", "application/json; charset=utf-8")
                                 .setBody(objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
                     }
-                } else if (path.matches("/v1/parameters")) {
-                    if (method.equals("GET")) {
-                        return new MockResponse().setResponseCode(200)
-                                .addHeader("Content-Type", "application/json; charset=utf-8")
-                                .setBody(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
-                    } else if (method.equals("GET")) {
-                        //Method PUT
-                        return new MockResponse().setResponseCode(200)
-                                .addHeader("Content-Type", "application/json; charset=utf-8")
-                                .setBody(objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
-                    } else {
-                        //Method POST
-                        return new MockResponse().setResponseCode(200)
-                                .addHeader("Content-Type", "application/json; charset=utf-8")
-                                .setBody(objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
-                    }
+                } else if (path.matches("/v1/parameters") && method.equals("POST")) {
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8")
+                            .setBody(objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
                 } else if (path.matches("/v1/parameters/default") && method.equals("POST")) {
                         return new MockResponse().setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8")
@@ -677,9 +665,7 @@ public class SecurityAnalysisTest {
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mnBodyJson))
-                .andExpectAll(
-                    status().isOk());
-                    //content().string(SECURITY_ANALYSIS_PARAMETERS_UUID.toString()));
+                .andExpect(status().isOk());
 
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyUuid).orElseThrow().getSecurityAnalysisParametersUuid());
         Set<String> requests = TestUtils.getRequestsDone(1, server);
