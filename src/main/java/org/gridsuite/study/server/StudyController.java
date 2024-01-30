@@ -40,6 +40,7 @@ import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
 import org.springframework.http.*;
 import org.springframework.util.CollectionUtils;
@@ -823,8 +824,10 @@ public class StudyController {
     @Operation(summary = "Get limit violations.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The limit violations")})
     public ResponseEntity<List<LimitViolationInfos>> getLimitViolations(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                       @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid));
+                                                       @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                       @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+                                                       Sort sort) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, filters, sort));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")

@@ -20,6 +20,7 @@ import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.LoadFlowSpecificParameterEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -263,15 +264,22 @@ public class LoadFlowService {
         }
     }
 
-    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid) {
+    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid, String filters, Sort sort) {
         List<LimitViolationInfos> result = new ArrayList<>();
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
 
         if (resultUuidOpt.isPresent()) {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations")
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations");
+            if (filters != null && !filters.isEmpty()) {
+                uriComponentsBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+            }
+            for (Sort.Order order : sort) {
+                uriComponentsBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection());
+            }
+           String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
             try {
-                var responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() { });
+                var responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() {
+                });
                 result = responseEntity.getBody();
             } catch (HttpStatusCodeException e) {
                 if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
