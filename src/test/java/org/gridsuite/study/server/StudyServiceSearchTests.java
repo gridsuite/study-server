@@ -25,6 +25,7 @@ import org.springframework.data.elasticsearch.NoSuchIndexException;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -217,5 +218,26 @@ public class StudyServiceSearchTests {
         assertTrue(hits.contains(generatorInfos));
         assertTrue(hits.contains(newGeneratorInfos));
         assertTrue(hits.contains(newLineInfos));
+    }
+
+    @Test
+    public void searchModifiedEquipment() {
+        EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
+        equipmentInfosService.addEquipmentInfos(loadInfos);
+
+        List<EquipmentInfos> list = studyService.searchEquipments(STUDY_UUID, NODE_UUID, "loadId1", EquipmentInfosService.FieldSelector.ID, null, false);
+        assertEquals(1, list.size());
+
+        EquipmentInfos loadInfos2 = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VARIANT_NODE_UUID.toString()).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
+        equipmentInfosService.addEquipmentInfos(loadInfos2);
+        list = studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "loadId1", EquipmentInfosService.FieldSelector.ID, "LOAD", false);
+        assertEquals(1, list.size());
+        assertTrue(list.contains(loadInfos2));
+
+        loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load2").variantId(UUID.randomUUID().toString()).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
+        equipmentInfosService.addEquipmentInfos(loadInfos);
+        list = studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "loadId1", EquipmentInfosService.FieldSelector.ID, null, false);
+        assertEquals(1, list.size());
+        assertTrue(list.contains(loadInfos));
     }
 }

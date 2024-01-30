@@ -354,6 +354,10 @@ public class EquipmentInfosServiceTests {
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(1));
 
+        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_RAW_FIELD, "*e E*")._toQuery()).build();
+        hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
+        pbsc.checkThat(hits.size(), is(1));
+
         query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_RAW_FIELD, "*e\\ E*")._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(1));

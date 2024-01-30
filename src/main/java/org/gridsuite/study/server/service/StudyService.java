@@ -6,8 +6,6 @@
  */
 package org.gridsuite.study.server.service;
 
-import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
@@ -57,7 +55,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.elasticsearch.client.elc.Queries;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,7 +80,6 @@ import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSI
 import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT;
 import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_BUS;
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
-import static org.gridsuite.study.server.elasticsearch.EquipmentInfosService.EQUIPMENT_TYPE_SCORES;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
@@ -97,16 +93,6 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
-
-    static final String EQUIPMENT_NAME = "equipmentName.fullascii";
-
-    static final String EQUIPMENT_ID = "equipmentId.fullascii";
-
-    static final String NETWORK_UUID = "networkUuid.keyword";
-
-    static final String VARIANT_ID = "variantId.keyword";
-
-    static final String EQUIPMENT_TYPE = "equipmentType.keyword";
 
     NotificationService notificationService;
 
@@ -386,45 +372,6 @@ public class StudyService {
         return studyInfosService.search(query);
     }
 
-    public static String escapeLucene(String s) {
-        StringBuilder sb = new StringBuilder();
-
-        for (int i = 0; i < s.length(); ++i) {
-            char c = s.charAt(i);
-            switch (c) {
-                case '+':
-                case '\\':
-                case '-':
-                case '!':
-                case '(':
-                case ')':
-                case ':':
-                case '^':
-                case '[':
-                case ']':
-                case '"':
-                case '{':
-                case '}':
-                case '~':
-                case '*':
-                case '?':
-                case '|':
-                case '&':
-                case '/':
-
-                case ' ': // white space has to be escaped, too
-                    sb.append('\\');
-                    break;
-                default:
-                    // do nothing but appease sonarlint
-            }
-
-            sb.append(c);
-        }
-
-        return sb.toString();
-    }
-
     private UUID getNodeUuidToSearchIn(UUID initialNodeUuid, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = initialNodeUuid;
         if (inUpstreamBuiltParentNode) {
@@ -433,112 +380,13 @@ public class StudyService {
         return nodeUuidToSearchIn;
     }
 
-    private List<EquipmentInfos> cleanModifiedAndRemovedEquipments(UUID networkUuid, String variantId, List<EquipmentInfos> equipmentInfos) {
-        cleanModifiedEquipments(equipmentInfos);
-        return cleanRemovedEquipments(networkUuid, variantId, equipmentInfos);
-    }
-
     public List<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
                                                  @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
                                                  boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn);
-
-        if (variantId.isEmpty()) {
-            variantId = VariantManagerConstants.INITIAL_VARIANT_ID;
-        }
-
-        BoolQuery query = buildSearchEquipmentsQuery(userInput, fieldSelector, networkUuid,
-                VariantManagerConstants.INITIAL_VARIANT_ID, variantId, equipmentType);
-        List<EquipmentInfos> equipmentInfos = equipmentInfosService.searchEquipments(query);
-        return variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ? equipmentInfos : cleanModifiedAndRemovedEquipments(networkUuid, variantId, equipmentInfos);
-    }
-
-    private void cleanModifiedEquipments(List<EquipmentInfos> equipmentInfos) {
-        Set<EquipmentInfos> equipmentToDelete = new HashSet<>();
-        Map<String, List<EquipmentInfos>> groupedById = equipmentInfos.stream()
-                .collect(Collectors.groupingBy(EquipmentInfos::getId));
-
-        groupedById.forEach((id, equipments) -> {
-            if (equipments.size() > 1) {
-                equipmentToDelete.addAll(
-                        equipments.stream()
-                                .filter(e -> VariantManagerConstants.INITIAL_VARIANT_ID.equals(e.getVariantId()))
-                                .collect(Collectors.toList())
-                );
-            }
-        });
-        equipmentInfos.removeAll(equipmentToDelete);
-    }
-
-    private List<EquipmentInfos> cleanRemovedEquipments(UUID networkUuid, String variantId, List<EquipmentInfos> equipmentInfos) {
-        String queryTombstonedEquipments = buildTombstonedEquipmentSearchQuery(networkUuid, variantId);
-        Set<String> removedEquipmentIdsInVariant = equipmentInfosService.searchTombstonedEquipments(queryTombstonedEquipments)
-                .stream()
-                .map(TombstonedEquipmentInfos::getId)
-                .collect(Collectors.toSet());
-
-        return equipmentInfos
-                .stream()
-                .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId()))
-                .collect(Collectors.toList());
-    }
-
-    private BoolQuery buildSearchEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId, String equipmentType) {
-        WildcardQuery equipmentSearchQuery = Queries.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
-        TermQuery networkUuidSearchQuery = Queries.termQuery(NETWORK_UUID, networkUuid.toString());
-        TermsQuery variantIdSearchQuery = variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ?
-                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(initialVariantId))).build()).build() :
-                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(initialVariantId), FieldValue.of(variantId))).build()).build();
-
-        BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder()
-                .filter(
-                        equipmentSearchQuery._toQuery(),
-                        networkUuidSearchQuery._toQuery(),
-                        variantIdSearchQuery._toQuery()
-                );
-
-        if (equipmentType != null && !equipmentType.isBlank()) {
-            boolQueryBuilder.filter(Queries.termQuery(EQUIPMENT_TYPE, equipmentType)._toQuery());
-        } else {
-            List<FunctionScore> functionScores = buildFunctionScores(fieldSelector, userInput);
-            FunctionScoreQuery functionScoreQuery = new FunctionScoreQuery.Builder().functions(functionScores).build();
-            boolQueryBuilder.must(functionScoreQuery._toQuery());
-        }
-        return boolQueryBuilder.build();
-    }
-
-    private List<FunctionScore> buildFunctionScores(EquipmentInfosService.FieldSelector fieldSelector, String userInput) {
-        List<FunctionScore> functionScores = new ArrayList<>();
-        FunctionScore functionScore = new FunctionScore.Builder()
-                .filter(builder ->
-                        builder.match(
-                                matchBuilder -> matchBuilder
-                                        .field(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID)
-                                        .query(FieldValue.of(escapeLucene(userInput))))
-                )
-                .weight((double) EQUIPMENT_TYPE_SCORES.size())
-                .build();
-        functionScores.add(functionScore);
-
-        for (Map.Entry<String, Integer> equipmentTypeScore : EQUIPMENT_TYPE_SCORES.entrySet()) {
-            functionScore = new FunctionScore.Builder()
-                    .filter(builder ->
-                            builder.match(
-                                    matchBuilder -> matchBuilder
-                                            .field("equipmentType")
-                                            .query(FieldValue.of(equipmentTypeScore.getKey())))
-                    )
-                    .weight((double) equipmentTypeScore.getValue())
-                    .build();
-            functionScores.add(functionScore);
-        }
-        return functionScores;
-    }
-
-    private String buildTombstonedEquipmentSearchQuery(UUID networkUuid, String variantId) {
-        return String.format(NETWORK_UUID + ":(%s) AND " + VARIANT_ID + ":(%s)", networkUuid, variantId);
+        return equipmentInfosService.searchEquipments(networkUuid, variantId, userInput, fieldSelector, equipmentType);
     }
 
     @Transactional
