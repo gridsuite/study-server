@@ -28,17 +28,15 @@ import static org.gridsuite.study.server.StudyConstants.*;
 
 @Service
 public class ActionsService {
-
-    @Autowired
-    private RestTemplate restTemplate;
-
     private static final String NETWORK_UUID = "networkUuid";
 
+    private final RestTemplate restTemplate;
     private String actionsServerBaseUri;
 
     @Autowired
-    public ActionsService(RemoteServicesProperties remoteServicesProperties) {
+    public ActionsService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         this.actionsServerBaseUri = remoteServicesProperties.getServiceUri("actions-server");
+        this.restTemplate = restTemplate;
     }
 
     public Integer getContingencyCount(UUID networkUuid, String variantId, List<String> contingencyListNames) {

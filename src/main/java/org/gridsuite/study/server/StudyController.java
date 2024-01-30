@@ -326,7 +326,7 @@ public class StudyController {
                 voltageLevelId,
                 diagramParameters,
                 nodeUuid);
-        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
+        return result.length != 0 ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
 
@@ -660,7 +660,7 @@ public class StudyController {
                                                             "NONE (no fault)") @RequestParam(name = "mode", required = false, defaultValue = "FULL") FaultResultsMode mode,
                                                         @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type,
                                                         @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
-                                                        @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false) boolean paged,
+                                                        @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false) Boolean paged,
                                                         Pageable pageable) {
         String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid, mode, type, filters, paged, pageable);
         return result != null ? ResponseEntity.ok().body(result) :
@@ -673,7 +673,7 @@ public class StudyController {
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The short circuit analysis status has not been found")})
     public ResponseEntity<String> getShortCircuitAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                 @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type) {
         String result = shortCircuitService.getShortCircuitAnalysisStatus(nodeUuid, type);
         return result != null ? ResponseEntity.ok().body(result) :
@@ -959,7 +959,7 @@ public class StudyController {
                 .build();
         byte[] result = studyService.getSubstationSvg(studyUuid, substationId,
                 diagramParameters, substationLayout, nodeUuid);
-        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
+        return result.length != 0 ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
                 ResponseEntity.noContent().build();
     }
 
@@ -1497,9 +1497,8 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The dynamic simulation models has not been found")})
     public ResponseEntity<List<ModelInfos>> getDynamicSimulationModels(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid, nodeUuid);
-        return models != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(models) :
-                ResponseEntity.noContent().build();
+        List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid);
+        return models.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(models);
     }
 
     @PostMapping(value = "/studies/{studyUuid}/dynamic-simulation/parameters")

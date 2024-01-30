@@ -55,25 +55,26 @@ public class NetworkModificationTreeService {
 
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    @Autowired
-    private NetworkModificationService networkModificationService;
-
-    @Autowired
-    private NotificationService notificationService;
+    private final NetworkModificationService networkModificationService;
+    private final NotificationService notificationService;
 
     @Autowired
     private NetworkModificationTreeService self;
 
-    @Autowired
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
-                                          NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository
+                                          NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
+//                                          NetworkModificationTreeService self,
+                                          NotificationService notificationService,
+                                          NetworkModificationService networkModificationService
     ) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         repositories.put(NodeType.ROOT, new RootNodeInfoRepositoryProxy(rootNodeInfoRepository));
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
-
+//        this.self = self;
+        this.notificationService = notificationService;
+        this.networkModificationService = networkModificationService;
     }
 
     @Transactional

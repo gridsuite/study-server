@@ -15,7 +15,6 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
-import org.gridsuite.study.server.notification.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -42,25 +41,22 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class VoltageInitService {
 
     static final String RESULT_UUID = "resultUuid";
+    static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
 
     private String voltageInitServerBaseUri;
-
-    @Autowired
-    NotificationService notificationService;
-
     NetworkModificationTreeService networkModificationTreeService;
 
     private final ObjectMapper objectMapper;
-
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     @Autowired
     public VoltageInitService(RemoteServicesProperties remoteServicesProperties,
-                              NetworkModificationTreeService networkModificationTreeService, ObjectMapper objectMapper) {
+                              NetworkModificationTreeService networkModificationTreeService, ObjectMapper objectMapper,
+                              RestTemplate restTemplate) {
         this.voltageInitServerBaseUri = remoteServicesProperties.getServiceUri("voltage-init-server");
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
+        this.restTemplate = restTemplate;
     }
 
     public UUID runVoltageInit(UUID networkUuid, String variantId, UUID parametersUuid, UUID nodeUuid, String userId) {
@@ -128,7 +124,7 @@ public class VoltageInitService {
     public String getVoltageInitParameters(UUID parametersUuid) {
         String parameters;
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters/{parametersUuid}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid).toUriString();
         try {
             parameters = restTemplate.getForObject(voltageInitServerBaseUri + path, String.class);
@@ -171,7 +167,7 @@ public class VoltageInitService {
         Objects.requireNonNull(parameters);
 
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters/{parametersUuid}")
+                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid)
                 .toUriString();
 
@@ -209,7 +205,7 @@ public class VoltageInitService {
     }
 
     public void deleteVoltageInitParameters(UUID parametersUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters/{parametersUuid}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid).toUriString();
 
         restTemplate.delete(voltageInitServerBaseUri + path);

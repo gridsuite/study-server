@@ -32,15 +32,13 @@ import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
 public class CaseService {
 
     private String caseServerBaseUri;
-
-    @Autowired
-    private RestTemplate restTemplate;
-
+    private final RestTemplate restTemplate;
     private static final Logger LOGGER = LoggerFactory.getLogger(CaseService.class);
 
     @Autowired
-    public CaseService(@Value("${powsybl.services.case-server.base-uri:http://case-server/}") String caseServerBaseUri) {
+    public CaseService(@Value("${powsybl.services.case-server.base-uri:http://case-server/}") String caseServerBaseUri, RestTemplate restTemplate) {
         this.caseServerBaseUri = caseServerBaseUri;
+        this.restTemplate = restTemplate;
     }
 
     public Boolean caseExists(UUID caseUuid) {

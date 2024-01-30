@@ -104,9 +104,11 @@ public class NotificationService {
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
 
     private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
+    private final StreamBridge updatePublisher;
 
-    @Autowired
-    private StreamBridge updatePublisher;
+    public NotificationService(StreamBridge updatePublisher) {
+        this.updatePublisher = updatePublisher;
+    }
 
     private void sendUpdateMessage(Message<?> message) {
         MESSAGE_OUTPUT_LOGGER.debug(MESSAGE_LOG, message);

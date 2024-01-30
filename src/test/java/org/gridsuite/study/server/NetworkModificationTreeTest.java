@@ -905,11 +905,11 @@ public class NetworkModificationTreeTest {
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
     }
 
-    @Test
-    public void verifyEqualsNetworkModificationNode() {
-        var networkModif1 = NetworkModificationNode.builder().description("test1").build();
-        var networkModif2 = NetworkModificationNode.builder().description("test2").build();
-    }
+//    @Test
+//    public void verifyEqualsNetworkModificationNode() {
+//        var networkModif1 = NetworkModificationNode.builder().description("test1").build();
+//        var networkModif2 = NetworkModificationNode.builder().description("test2").build();
+//    }
 
     @SneakyThrows
     @Test

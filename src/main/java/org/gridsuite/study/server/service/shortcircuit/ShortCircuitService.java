@@ -64,8 +64,6 @@ public class ShortCircuitService {
     );
 
     private String shortCircuitServerBaseUri;
-
-    @Autowired
     NotificationService notificationService;
 
     private final NetworkService networkStoreService;
@@ -73,18 +71,20 @@ public class ShortCircuitService {
     NetworkModificationTreeService networkModificationTreeService;
 
     private final ObjectMapper objectMapper;
-
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     @Autowired
     public ShortCircuitService(RemoteServicesProperties remoteServicesProperties,
                                NetworkModificationTreeService networkModificationTreeService,
-                               NetworkService networkStoreService, ObjectMapper objectMapper) {
+                               NetworkService networkStoreService, ObjectMapper objectMapper,
+                               RestTemplate restTemplate,
+                               NotificationService notificationService) {
         this.shortCircuitServerBaseUri = remoteServicesProperties.getServiceUri("shortcircuit-server");
         this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
+        this.restTemplate = restTemplate;
+        this.notificationService = notificationService;
     }
 
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String busId, ShortCircuitParameters shortCircuitParameters, String userId) {

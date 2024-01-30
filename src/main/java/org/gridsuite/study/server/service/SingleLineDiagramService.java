@@ -47,14 +47,14 @@ public class SingleLineDiagramService {
     static final String QUERY_PARAM_DISPLAY_MODE = "sldDisplayMode";
     static final String LANGUAGE = "language";
     static final String VOLTAGE_LEVEL = "Voltage level ";
-
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     private String singleLineDiagramServerBaseUri;
 
-    public SingleLineDiagramService(@Value("${powsybl.services.single-line-diagram-server.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri) {
+    public SingleLineDiagramService(@Value("${powsybl.services.single-line-diagram-server.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri,
+                                    RestTemplate restTemplate) {
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
+        this.restTemplate = restTemplate;
     }
 
     public List<String> getAvailableSvgComponentLibraries() {

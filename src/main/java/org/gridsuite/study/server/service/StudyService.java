@@ -208,7 +208,9 @@ public class StudyService {
             DynamicSimulationService dynamicSimulationService,
             VoltageInitService voltageInitService,
             DynamicSimulationEventService dynamicSimulationEventService,
-            FilterService filterService) {
+            FilterService filterService
+//            StudyService self
+    ) {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
         this.defaultSensitivityAnalysisProvider = defaultSensitivityAnalysisProvider;
@@ -240,6 +242,7 @@ public class StudyService {
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.filterService = filterService;
+//        this.self = self;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -621,7 +624,7 @@ public class StudyService {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            LOGGER.error(e.toString(), e);
+//            LOGGER.error(e.toString(), e);
             throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
         }
     }
@@ -739,7 +742,7 @@ public class StudyService {
         if (networkStoreService.existVariant(networkUuid, variantId)) {
             return singleLineDiagramService.getVoltageLevelSvg(networkUuid, variantId, voltageLevelId, diagramParameters);
         } else {
-            return null;
+            return new byte[]{};
         }
     }
 
@@ -1155,7 +1158,7 @@ public class StudyService {
         if (networkStoreService.existVariant(networkUuid, variantId)) {
             return singleLineDiagramService.getSubstationSvg(networkUuid, variantId, substationId, diagramParameters, substationLayout);
         } else {
-            return null;
+            return new byte[]{};
         }
     }
 
@@ -1490,7 +1493,7 @@ public class StudyService {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            LOGGER.error(e.toString(), e);
+//            LOGGER.error(e.toString(), e);
             throw new StudyException(INVALIDATE_BUILD_FAILED, e.getMessage());
         }
 
@@ -1617,7 +1620,7 @@ public class StudyService {
                 if (e instanceof InterruptedException) {
                     Thread.currentThread().interrupt();
                 }
-                LOGGER.error(e.toString(), e);
+//                LOGGER.error(e.toString(), e);
                 throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
             }
 
@@ -1984,7 +1987,7 @@ public class StudyService {
 
     }
 
-    public List<ModelInfos> getDynamicSimulationModels(UUID studyUuid, UUID nodeUuid) {
+    public List<ModelInfos> getDynamicSimulationModels(UUID studyUuid) {
         // load configured parameters persisted in the study server DB
         DynamicSimulationParametersInfos configuredParameters = getDynamicSimulationParameters(studyUuid);
         String mapping = configuredParameters.getMapping();

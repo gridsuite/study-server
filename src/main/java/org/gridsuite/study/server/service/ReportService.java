@@ -40,15 +40,15 @@ public class ReportService {
     private static final String DELIMITER = "/";
 
     private String reportServerBaseUri;
-
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     @Autowired
     public ReportService(
                          ObjectMapper objectMapper,
-                         RemoteServicesProperties remoteServicesProperties) {
+                         RemoteServicesProperties remoteServicesProperties,
+                         RestTemplate restTemplate) {
         this.reportServerBaseUri = remoteServicesProperties.getServiceUri("report-server");
+        this.restTemplate = restTemplate;
         ReporterModelJsonModule reporterModelJsonModule = new ReporterModelJsonModule();
         reporterModelJsonModule.setSerializers(null); // FIXME: remove when dicos will be used on the front side
         objectMapper.registerModule(reporterModelJsonModule);
