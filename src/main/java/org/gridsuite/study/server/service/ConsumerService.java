@@ -12,10 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
-import org.gridsuite.study.server.dto.CaseImportReceiver;
-import org.gridsuite.study.server.dto.NetworkInfos;
-import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -34,20 +31,13 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import org.gridsuite.study.server.dto.ComputationType;
-import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
-import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
-import static org.gridsuite.study.server.dto.ComputationType.NON_EVACUATED_ENERGY_ANALYSIS;
-import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
-import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
-import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT;
-import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_BUS;
-import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
+import static org.gridsuite.study.server.dto.ComputationType.*;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -69,6 +59,7 @@ public class ConsumerService {
     private final NotificationService notificationService;
     private final StudyService studyService;
     private final SecurityAnalysisService securityAnalysisService;
+    private final SensitivityAnalysisService sensitivityAnalysisService;
     private final CaseService caseService;
     private final LoadFlowService loadFlowService;
     private final NetworkModificationTreeService networkModificationTreeService;
@@ -82,6 +73,7 @@ public class ConsumerService {
                            CaseService caseService,
                            LoadFlowService loadFlowService,
                            NetworkModificationTreeService networkModificationTreeService,
+                           SensitivityAnalysisService sensitivityAnalysisService,
                            StudyRepository studyRepository) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
@@ -90,6 +82,7 @@ public class ConsumerService {
         this.caseService = caseService;
         this.loadFlowService = loadFlowService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.studyRepository = studyRepository;
     }
 
@@ -203,7 +196,7 @@ public class ConsumerService {
                         // we only update network infos sent by network conversion server
                         studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
                     } else {
-                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, createDefaultLoadFlowParameters(), ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, createDefaultSecurityAnalysisParameters(), importParameters, importReportUuid);
+                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, createDefaultLoadFlowParameters(), ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, createDefaultSecurityAnalysisParameters(), createDefaultSensitivityAnalysisParameters(), importParameters, importReportUuid);
                     }
 
                     caseService.disableCaseExpiration(caseUuid);
@@ -224,6 +217,15 @@ public class ConsumerService {
     private UUID createDefaultLoadFlowParameters() {
         try {
             return loadFlowService.createDefaultLoadFlowParameters();
+        } catch (Exception e) {
+            LOGGER.error(e.toString(), e);
+        }
+        return null;
+    }
+
+    private UUID createDefaultSensitivityAnalysisParameters() {
+        try {
+            return sensitivityAnalysisService.createDefaultSensitivityAnalysisParameters();
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         }

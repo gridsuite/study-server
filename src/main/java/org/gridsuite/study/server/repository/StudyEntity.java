@@ -6,14 +6,12 @@
  */
 package org.gridsuite.study.server.repository;
 
+import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-
-import jakarta.persistence.*;
 
 import java.util.Map;
 import java.util.UUID;
@@ -119,13 +117,8 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "securityAnalysisParametersUuid")
     private UUID securityAnalysisParametersUuid;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "sensitivityAnalysisParametersEntity_id",
-            referencedColumnName = "id",
-            foreignKey = @ForeignKey(
-                    name = "sensitivityAnalysisParameters_id_fk"
-            ))
-    private SensitivityAnalysisParametersEntity sensitivityAnalysisParameters;
+    @Column(name = "sensitivityAnalysisParametersUuid")
+    private UUID sensitivityAnalysisParametersUuid;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "nonEvacuatedEnergyParametersEntity_id",
