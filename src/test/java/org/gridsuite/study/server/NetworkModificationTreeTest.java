@@ -32,6 +32,7 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
@@ -66,12 +67,14 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.junit.Assert.*;
@@ -905,12 +908,6 @@ public class NetworkModificationTreeTest {
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
     }
 
-//    @Test
-//    public void verifyEqualsNetworkModificationNode() {
-//        var networkModif1 = NetworkModificationNode.builder().description("test1").build();
-//        var networkModif2 = NetworkModificationNode.builder().description("test2").build();
-//    }
-
     @SneakyThrows
     @Test
     public void testLightNode() {
@@ -945,14 +942,14 @@ public class NetworkModificationTreeTest {
         createNode(root.getStudyId(), node4, node5, userId);
         createNode(root.getStudyId(), node5, node6, userId);
 
-        assertEquals(node5.getId(), networkModificationTreeService.getParentNode(node6.getId(), NodeType.NETWORK_MODIFICATION));
-        assertEquals(node3.getId(), networkModificationTreeService.getParentNode(node2.getId(), NodeType.NETWORK_MODIFICATION));
-        assertEquals(rootId, networkModificationTreeService.getParentNode(node5.getId(), NodeType.ROOT));
-        assertEquals(rootId, networkModificationTreeService.getParentNode(rootId, NodeType.ROOT));
+        assertEquals(node5.getId(), getParentNode(node6.getId(), NodeType.NETWORK_MODIFICATION));
+        assertEquals(node3.getId(), getParentNode(node2.getId(), NodeType.NETWORK_MODIFICATION));
+        assertEquals(rootId, getParentNode(node5.getId(), NodeType.ROOT));
+        assertEquals(rootId, getParentNode(rootId, NodeType.ROOT));
 
         UUID badUuid = UUID.randomUUID();
-        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getParentNode(badUuid, NodeType.ROOT));
-        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getParentNode(rootId, NodeType.NETWORK_MODIFICATION));
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> getParentNode(badUuid, NodeType.ROOT));
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> getParentNode(rootId, NodeType.NETWORK_MODIFICATION));
     }
 
     @Test
@@ -1329,5 +1326,26 @@ public class NetworkModificationTreeTest {
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodesUuids, headersStatus.get(NotificationService.HEADER_NODES));
         assertEquals(NODE_BUILD_STATUS_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
+    }
+
+    private UUID getParentNode(UUID nodeUuid, NodeType nodeType) {
+        Optional<UUID> parentNodeUuidOpt = doGetParentNode(nodeUuid, nodeType);
+        if (parentNodeUuidOpt.isEmpty()) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+
+        return parentNodeUuidOpt.get();
+    }
+
+    private Optional<UUID> doGetParentNode(UUID nodeUuid, NodeType nodeType) {
+        NodeEntity nodeEntity = nodeRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        if (nodeEntity.getType() == NodeType.ROOT && nodeType != NodeType.ROOT) {
+            return Optional.empty();
+        }
+        if (nodeEntity.getType() == NodeType.ROOT || nodeEntity.getParentNode().getType() == nodeType) {
+            return Optional.of(nodeEntity.getParentNode() != null ? nodeEntity.getParentNode().getIdNode() : nodeEntity.getIdNode());
+        } else {
+            return doGetParentNode(nodeEntity.getParentNode().getIdNode(), nodeType);
+        }
     }
 }

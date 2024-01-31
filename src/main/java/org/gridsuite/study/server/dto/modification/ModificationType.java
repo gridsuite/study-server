@@ -76,10 +76,12 @@ public enum ModificationType {
     }
 
     public static ModificationType getTypeFromUri(String uri) {
-        if (uri.equals("generators-modification")) {
-            return GENERATOR_MODIFICATION;
+        switch (uri) {
+            case "generators-modification":
+                return GENERATOR_MODIFICATION;
+            default:
+                throw new IllegalArgumentException("Enum unknown entry");
         }
-        throw new IllegalArgumentException("Enum unknown entry");
     }
 }
 

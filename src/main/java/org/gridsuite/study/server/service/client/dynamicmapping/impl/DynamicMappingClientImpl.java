@@ -63,7 +63,7 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
     @Override
     public List<ModelInfos> getModels(String mapping) {
         if (StringUtils.isBlank(mapping)) {
-            return List.of();
+            return null;
         }
 
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);

@@ -14,7 +14,6 @@ package org.gridsuite.study.server.service;
 import com.powsybl.contingency.Contingency;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
@@ -33,7 +32,6 @@ public class ActionsService {
     private final RestTemplate restTemplate;
     private String actionsServerBaseUri;
 
-    @Autowired
     public ActionsService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         this.actionsServerBaseUri = remoteServicesProperties.getServiceUri("actions-server");
         this.restTemplate = restTemplate;

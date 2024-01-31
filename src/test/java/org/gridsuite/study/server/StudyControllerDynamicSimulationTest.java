@@ -787,7 +787,7 @@ public class StudyControllerDynamicSimulationTest {
         Mockito.doAnswer(new Answer() {
             @Override
             public List<ModelInfos> answer(InvocationOnMock invocation) {
-                return List.of();
+                return null;
             }
         }).when(dynamicSimulationService).getModels("");
 

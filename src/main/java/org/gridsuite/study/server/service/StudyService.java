@@ -19,6 +19,7 @@ import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
+import jakarta.annotation.Resource;
 import lombok.NonNull;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
@@ -173,7 +174,7 @@ public class StudyService {
         }
     }
 
-    @Autowired
+    @Resource
     StudyService self;
 
     @Autowired
@@ -366,7 +367,7 @@ public class StudyService {
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             LOGGER.trace("Create study '{}' from source {} : {} seconds", basicStudyInfos.getId(), sourceStudyUuid,
                     TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
@@ -521,8 +522,7 @@ public class StudyService {
         return String.format(NETWORK_UUID + ":(%s) AND " + VARIANT_ID + ":(%s)", networkUuid, variantId);
     }
 
-    @Transactional
-    public Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
+    private Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         DeleteStudyInfos deleteStudyInfos = null;
@@ -598,11 +598,11 @@ public class StudyService {
                     LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                 }
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
         } catch (Exception e) {
-            throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            LOGGER.error(e.toString(), e);
         }
     }
 
@@ -719,7 +719,7 @@ public class StudyService {
         if (networkStoreService.existVariant(networkUuid, variantId)) {
             return singleLineDiagramService.getVoltageLevelSvg(networkUuid, variantId, voltageLevelId, diagramParameters);
         } else {
-            return new byte[]{};
+            return null;
         }
     }
 
@@ -1135,7 +1135,7 @@ public class StudyService {
         if (networkStoreService.existVariant(networkUuid, variantId)) {
             return singleLineDiagramService.getSubstationSvg(networkUuid, variantId, substationId, diagramParameters, substationLayout);
         } else {
-            return new byte[]{};
+            return null;
         }
     }
 
@@ -1233,8 +1233,7 @@ public class StudyService {
         return study;
     }
 
-    @Transactional
-    public StudyEntity insertDuplicatedStudy(StudyEntity studyEntity, UUID sourceStudyUuid, UUID reportUuid) {
+    private StudyEntity insertDuplicatedStudy(StudyEntity studyEntity, UUID sourceStudyUuid, UUID reportUuid) {
         var study = studyRepository.save(studyEntity);
 
         networkModificationTreeService.createRoot(study, reportUuid);
@@ -1466,10 +1465,11 @@ public class StudyService {
         );
         try {
             executeInParallel.get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new StudyException(INVALIDATE_BUILD_FAILED, e.getMessage());
         } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            LOGGER.error(e.toString(), e);
             throw new StudyException(INVALIDATE_BUILD_FAILED, e.getMessage());
         }
 
@@ -1592,10 +1592,11 @@ public class StudyService {
 
             try {
                 executeInParallel.get();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
             } catch (Exception e) {
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+                LOGGER.error(e.toString(), e);
                 throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
             }
 

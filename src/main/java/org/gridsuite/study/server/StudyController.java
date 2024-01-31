@@ -326,7 +326,7 @@ public class StudyController {
                 voltageLevelId,
                 diagramParameters,
                 nodeUuid);
-        return result.length != 0 ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
+        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
 
