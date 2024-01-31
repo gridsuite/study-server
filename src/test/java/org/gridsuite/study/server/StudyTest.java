@@ -836,6 +836,8 @@ public class StudyTest {
     public void testDeleteStudy() throws Exception {
         UUID studyUuid = createStudy("userId", CASE_UUID);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
+        studyEntity.setVoltageInitParametersUuid(UUID.randomUUID()); // does not have default params
+        studyRepository.save(studyEntity);
 
         UUID stubUuid = wireMockUtils.stubNetworkModificationDeleteGroup();
         mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
@@ -846,9 +848,10 @@ public class StudyTest {
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
         //TODO FM why 6 not 5 ? where comes from the report ?
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(6, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(7, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + CASE_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getVoltageInitParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getLoadFlowParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSecurityAnalysisParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSensitivityAnalysisParametersUuid())));
@@ -1380,7 +1383,7 @@ public class StudyTest {
     public void testDuplicateStudyWithParametersUuid() throws Exception {
         UUID study1Uuid = createStudy("userId", CASE_UUID);
         StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
-        studyEntity.setVoltageInitParametersUuid(UUID.randomUUID());
+        studyEntity.setVoltageInitParametersUuid(UUID.randomUUID()); // does not have default params
         studyRepository.save(studyEntity);
 
         testDuplicateStudy(study1Uuid);
