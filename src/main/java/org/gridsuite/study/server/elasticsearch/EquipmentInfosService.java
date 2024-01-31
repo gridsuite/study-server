@@ -10,6 +10,7 @@ import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 
 import com.powsybl.iidm.network.VariantManagerConstants;
+import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.springframework.data.domain.PageRequest;
@@ -208,7 +209,7 @@ public class EquipmentInfosService {
                         variantIdSearchQuery._toQuery()
                 );
 
-        if (equipmentType != null && !equipmentType.isBlank()) {
+        if (!StringUtils.isEmpty(equipmentType)) {
             boolQueryBuilder.filter(Queries.termQuery(EQUIPMENT_TYPE, equipmentType)._toQuery());
         } else {
             List<FunctionScore> functionScores = buildFunctionScores(fieldSelector, userInput);
