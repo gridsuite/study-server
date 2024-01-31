@@ -127,10 +127,10 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Setter(AccessLevel.PROTECTED)
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "sensitivityAnalysisParametersEntity_id",
-        referencedColumnName = "id",
-        foreignKey = @ForeignKey(
-            name = "sensitivityAnalysisParameters_id_fk"
-        ))
+            referencedColumnName = "id",
+            foreignKey = @ForeignKey(
+                name = "sensitivityAnalysisParameters_id_fk"
+            ))
     private SensitivityAnalysisParametersEntity sensitivityAnalysisParameters;
 
     @Column(name = "sensitivityAnalysisParametersUuid")
