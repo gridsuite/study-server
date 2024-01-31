@@ -129,7 +129,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @JoinColumn(name = "sensitivityAnalysisParametersEntity_id",
             referencedColumnName = "id",
             foreignKey = @ForeignKey(
-                name = "sensitivityAnalysisParameters_id_fk"
+                    name = "sensitivityAnalysisParameters_id_fk"
             ))
     private SensitivityAnalysisParametersEntity sensitivityAnalysisParameters;
 
