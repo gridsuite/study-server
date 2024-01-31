@@ -1208,7 +1208,7 @@ public class StudyService {
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
                 defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
                 loadFlowParametersUuid, null, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, securityAnalysisParametersUuid,
-                sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED);
+                null, sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED);
         return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
     }
 
