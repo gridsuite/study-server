@@ -335,15 +335,6 @@ public class ShortCircuitTest {
                 .content(CSV_HEADERS)).andExpectAll(status().isOk(), content().bytes(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv")));
 
-        // NOT_FOUND short circuit analysis result csv
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, modificationNode3Uuid)
-                .param("type", "ONE_BUS")
-                .content(CSV_HEADERS)).andExpectAll(status().isNotFound());
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, modificationNode3Uuid)
-                .param("type", "ALL_BUSES")
-                .content("")).andExpectAll(status().isBadRequest());
-
         // get short circuit result but with unknown node
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, unknownModificationNodeUuid)).andExpect(
                 status().isNoContent());
@@ -610,6 +601,11 @@ public class ShortCircuitTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode1Uuid)
                     .param("type", ShortcircuitAnalysisType.ONE_BUS.name()))
                 .andExpectAll(status().isNoContent());
+
+        // NOT_FOUND short circuit analysis result csv
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, modificationNode1Uuid)
+                .param("type", ShortcircuitAnalysisType.ONE_BUS.name())
+                .content(CSV_HEADERS)).andExpectAll(status().isNotFound());
 
         // No short circuit status
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(

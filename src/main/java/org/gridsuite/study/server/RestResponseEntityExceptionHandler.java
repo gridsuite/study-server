@@ -70,6 +70,7 @@ public class RestResponseEntityExceptionHandler {
                     GET_NETWORK_ELEMENT_FAILED,
                     SENSITIVITY_ANALYSIS_ERROR,
                     NON_EVACUATED_ENERGY_ERROR,
+                    SHORT_CIRCUIT_ANALYSIS_ERROR,
                     NODE_BUILD_ERROR, URI_SYNTAX,
                     CREATE_VOLTAGE_INIT_PARAMETERS_FAILED,
                     UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED,

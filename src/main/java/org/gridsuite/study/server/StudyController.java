@@ -690,9 +690,7 @@ public class StudyController {
             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "type") @RequestParam(value = "type") ShortcircuitAnalysisType type,
             @Parameter(description = "headersCsv") @RequestBody String headersCsv) {
-        byte[] result = shortCircuitService.getShortCircuitAnalysisCsvResult(nodeUuid, type, headersCsv);
-        return result != null ? ResponseEntity.ok().body(result) :
-                ResponseEntity.noContent().build();
+        return ResponseEntity.ok().body(shortCircuitService.getShortCircuitAnalysisCsvResult(nodeUuid, type, headersCsv));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run")
