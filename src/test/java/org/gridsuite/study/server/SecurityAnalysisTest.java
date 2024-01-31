@@ -27,7 +27,6 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
-import okio.Buffer;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
