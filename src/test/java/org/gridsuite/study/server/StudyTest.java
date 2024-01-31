@@ -877,10 +877,10 @@ public class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        //TODO FM should be 3 ?
         Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(6, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*"))); // x 2 (what we want to test here I guess)
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + nonExistingCaseUuid)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/.*"))); // x 3
     }
 
     @Test
