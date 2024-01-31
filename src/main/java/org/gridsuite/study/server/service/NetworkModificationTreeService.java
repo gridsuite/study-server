@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.service;
 
-import jakarta.annotation.Resource;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
@@ -21,6 +20,8 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,14 +59,15 @@ public class NetworkModificationTreeService {
     private final NetworkModificationService networkModificationService;
     private final NotificationService notificationService;
 
-    @Resource
-    private NetworkModificationTreeService self;
+    private final NetworkModificationTreeService self;
 
+    @Autowired
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
                                           NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                                           NotificationService notificationService,
-                                          NetworkModificationService networkModificationService
+                                          NetworkModificationService networkModificationService,
+                                          @Lazy NetworkModificationTreeService networkModificationTreeService
     ) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
@@ -73,6 +75,7 @@ public class NetworkModificationTreeService {
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
         this.notificationService = notificationService;
         this.networkModificationService = networkModificationService;
+        this.self = networkModificationTreeService;
     }
 
     @Transactional
@@ -110,7 +113,7 @@ public class NetworkModificationTreeService {
     public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
         NodeEntity anchorNode = nodesRepository.findById(anchorNodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         NodeEntity parent = insertMode == InsertMode.BEFORE ? anchorNode.getParentNode() : anchorNode;
-        UUID newNodeUUID = self.duplicateNode(nodeToCopyUuid, anchorNodeUuid, insertMode);
+        UUID newNodeUUID = duplicateNode(nodeToCopyUuid, anchorNodeUuid, insertMode);
         notificationService.emitNodeInserted(anchorNode.getStudy().getId(), parent.getIdNode(), newNodeUUID, insertMode, anchorNodeUuid);
         return newNodeUUID;
     }

@@ -66,8 +66,8 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.util.*;
@@ -172,6 +172,7 @@ public class NetworkModificationTreeTest {
     @MockBean
     private VariantManager variantManager;
 
+//    private NetworkModificationTreeService self;
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
     private static final String VARIANT_ID = "variant_1";
@@ -187,13 +188,16 @@ public class NetworkModificationTreeTest {
     @MockBean
     private Network network;
 
-    private String studyUpdateDestination = "study.update";
-    private String elementUpdateDestination = "element.update";
+    private final String studyUpdateDestination = "study.update";
+    private final String elementUpdateDestination = "element.update";
 
     @Before
     public void setUp() throws IOException {
         Configuration.defaultConfiguration();
         MockitoAnnotations.initMocks(this);
+
+//        ReflectionTestUtils.setField(self, "self", networkModificationTreeService);
+
         objectMapper.enable(DeserializationFeature.USE_LONG_FOR_INTS);
         objectMapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
         objectMapper.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
@@ -384,7 +388,7 @@ public class NetworkModificationTreeTest {
         List<AbstractNode> children = root.getChildren();
         assertEquals(1, children.size());
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) children.get(0);
-        assertEquals(false, networkModificationNode.getNodeBuildStatus().isBuilt());
+        assertFalse(networkModificationNode.getNodeBuildStatus().isBuilt());
         assertEquals("not_built", networkModificationNode.getName());
         assertEquals("not built node", networkModificationNode.getDescription());
         deleteNode(root.getStudyId(), children, false, Set.of(children.get(0)), true, userId);

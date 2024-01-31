@@ -250,6 +250,8 @@ public class StudyTest {
     @Autowired
     private StudyCreationRequestRepository studyCreationRequestRepository;
 
+    private StudyService studyService;
+
     //used by testGetStudyCreationRequests to control asynchronous case import
     CountDownLatch countDownLatch;
 

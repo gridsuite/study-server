@@ -959,7 +959,7 @@ public class StudyController {
                 .build();
         byte[] result = studyService.getSubstationSvg(studyUuid, substationId,
                 diagramParameters, substationLayout, nodeUuid);
-        return result.length != 0 ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
+        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
                 ResponseEntity.noContent().build();
     }
 
@@ -1498,7 +1498,8 @@ public class StudyController {
     public ResponseEntity<List<ModelInfos>> getDynamicSimulationModels(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid);
-        return models.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(models);
+        return models != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(models) :
+                ResponseEntity.noContent().build();
     }
 
     @PostMapping(value = "/studies/{studyUuid}/dynamic-simulation/parameters")
