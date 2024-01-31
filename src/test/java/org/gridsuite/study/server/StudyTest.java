@@ -847,8 +847,8 @@ public class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        //TODO FM why 6 not 5 ? where comes from the report ?
         Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(7, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getVoltageInitParametersUuid())));
@@ -878,7 +878,8 @@ public class StudyTest {
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
         Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(6, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*"))); // x 2 (what we want to test here I guess)
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + nonExistingCaseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/.*"))); // x 3
     }
