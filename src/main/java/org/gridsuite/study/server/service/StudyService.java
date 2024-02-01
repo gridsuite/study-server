@@ -1560,7 +1560,7 @@ public class StudyService {
             if (modificationsUuids != null) {
                 networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
             }
-            updateStatuses(studyUuid, nodeUuid, false);
+            updateStatuses(studyUuid, nodeUuid, false, false, false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
