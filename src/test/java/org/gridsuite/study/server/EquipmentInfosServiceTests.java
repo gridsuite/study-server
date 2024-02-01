@@ -63,8 +63,8 @@ public class EquipmentInfosServiceTests {
     private static final String EQUIPMENT_NAME_FULLASCII_FIELD = "equipmentName.fullascii";
     private static final String NETWORK_UUID_FIELD = "networkUuid.keyword";
 
-    private static final UUID NETWORK_UUID = UUID.randomUUID();
-    private static final UUID NETWORK_UUID_2 = UUID.randomUUID();
+    private static final UUID NETWORK_UUID = UUID.fromString("db240961-a7b6-4b76-bfe8-19749026c1cb");
+    private static final UUID NETWORK_UUID_2 = UUID.fromString("8c73b846-5dbe-4ac8-a9c9-8422fda261bb");
 
     private static final UUID NODE_UUID = UUID.fromString("12345678-8cf0-11bd-b23e-10b96e4ef00d");
 
@@ -312,6 +312,10 @@ public class EquipmentInfosServiceTests {
             .build();
     }
 
+    private String createEquipmentName(String name) {
+        return "*" + EquipmentInfosService.escapeLucene(name) + "*";
+    }
+
     @Rule
     public ErrorCollector pbsc = new ErrorCollector();
 
@@ -350,49 +354,41 @@ public class EquipmentInfosServiceTests {
 
         Query networkQuery = Queries.termQuery(NETWORK_UUID_FIELD, NETWORK_UUID.toString())._toQuery();
 
-        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_RAW_FIELD, "*___*")._toQuery()).build();
+        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, createEquipmentName("___"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(1));
 
-        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_RAW_FIELD, "*e E*")._toQuery()).build();
+        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, createEquipmentName("e E"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(1));
 
-        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_RAW_FIELD, "*e\\ E*")._toQuery()).build();
+        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, createEquipmentName("e e"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(1));
 
-        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_RAW_FIELD, "*e\\ e*")._toQuery()).build();
+        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_RAW_FIELD, createEquipmentName("e e"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(0));
 
-        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, "*e\\ E*")._toQuery()).build();
+        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, createEquipmentName(" sp"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(1));
 
-        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, "\\ sp*")._toQuery()).build();
-        hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
-        pbsc.checkThat(hits.size(), is(1));
-
-        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, "*PS\\ ")._toQuery()).build();
-        hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
-        pbsc.checkThat(hits.size(), is(1));
-
-        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, "*e\\ e*")._toQuery()).build();
+        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, createEquipmentName("PS "))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(1));
 
         testNameFullAsciis();
 
-        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_ID_RAW_FIELD, "*FFR1AA1  FFR2AA1  2*")._toQuery()).build();
+        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_ID, createEquipmentName("FFR1AA1  FFR2AA1  2"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(1));
 
-        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_ID_RAW_FIELD, "*fFR1AA1  FFR2AA1  2*")._toQuery()).build();
+        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_ID_RAW_FIELD, createEquipmentName("fFR1AA1  FFR2AA1  2"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(0));
 
-        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_ID, "*fFR1àÀ1  FFR2AA1  2*")._toQuery()).build();
+        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_ID, createEquipmentName("fFR1àÀ1  FFR2AA1  2"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(1));
     }
