@@ -445,11 +445,10 @@ public class StudyService {
                     LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                 }
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
         } catch (Exception e) {
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-            LOGGER.error(e.toString(), e);
             throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
         }
     }
@@ -1257,11 +1256,10 @@ public class StudyService {
         );
         try {
             executeInParallel.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new StudyException(INVALIDATE_BUILD_FAILED, e.getMessage());
         } catch (Exception e) {
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-            LOGGER.error(e.toString(), e);
             throw new StudyException(INVALIDATE_BUILD_FAILED, e.getMessage());
         }
 
@@ -1384,17 +1382,18 @@ public class StudyService {
 
             try {
                 executeInParallel.get();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
             } catch (Exception e) {
-                if (e instanceof InterruptedException) {
-                    Thread.currentThread().interrupt();
-                }
-                LOGGER.error(e.toString(), e);
                 throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
             }
 
             if (startTime.get() != null) {
-                LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
-                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
+                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                }
             }
 
             if (invalidateChildrenBuild) {
