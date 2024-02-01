@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
@@ -832,7 +833,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set")})
     public ResponseEntity<Void> setLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) LoadFlowParametersValues lfParameter,
+            @RequestBody(required = false) String lfParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setLoadFlowParameters(studyUuid, lfParameter, userId);
         return ResponseEntity.ok().build();
@@ -841,9 +842,9 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/loadflow/parameters")
     @Operation(summary = "Get loadflow parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters")})
-    public ResponseEntity<LoadFlowParametersValues> getLoadflowParameters(
+    public ResponseEntity<LoadFlowParametersInfos> getLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getLoadFlowParametersValues(studyUuid));
+        return ResponseEntity.ok().body(studyService.getLoadFlowParametersInfos(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/provider")
@@ -1421,6 +1422,26 @@ public class StudyController {
             ResponseEntity.noContent().build();
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get a sensitivity analysis result as csv")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Csv of sensitivity analysis results"),
+        @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
+    public ResponseEntity<byte[]> exportSensitivityResultsAsCsv(
+        @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+        @RequestBody SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
+        byte[] result = sensitivityAnalysisService.exportSensitivityResultsAsCsv(nodeUuid, sensitivityAnalysisCsvFileInfos);
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        responseHeaders.setContentDispositionFormData("attachment", "sensitivity_results.csv");
+
+        return ResponseEntity
+                .ok()
+                .headers(responseHeaders)
+                .body(result);
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options")
     @Operation(summary = "Get sensitivity analysis filter options on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis filter options"),
@@ -1632,7 +1653,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/security-analysis/parameters")
     @Operation(summary = "Get security analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters")})
-    public ResponseEntity<SecurityAnalysisParametersValues> getSecurityAnalysisParametersValues(
+    public ResponseEntity<String> getSecurityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid));
     }
@@ -1642,7 +1663,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters are set")})
     public ResponseEntity<Void> setSecurityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) SecurityAnalysisParametersValues securityAnalysisParametersValues,
+            @RequestBody(required = false) String securityAnalysisParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId);
         return ResponseEntity.ok().build();

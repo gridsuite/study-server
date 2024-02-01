@@ -18,6 +18,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.iidm.network.EnergySource;
 import com.powsybl.loadflow.LoadFlowParameters;
+
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
@@ -25,7 +26,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.LoadFlowSpecificParameterInfos;
+import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.dto.sensianalysis.EquipmentsContainer;
@@ -42,8 +43,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
-import org.gridsuite.study.server.repository.LoadFlowSpecificParameterEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -51,6 +50,7 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.ActionsService;
+import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NonEvacuatedEnergyService;
 import org.gridsuite.study.server.service.ReportService;
@@ -73,6 +73,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.MediaType;
@@ -86,6 +87,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -98,6 +100,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -131,6 +134,8 @@ public class NonEvacuatedEnergyTest {
     private static final UUID CASE_2_UUID = UUID.fromString(CASE_2_UUID_STRING);
     private static final String CASE_3_UUID_STRING = "790769f9-bd31-43be-be46-e50296951e32";
     private static final UUID CASE_3_UUID = UUID.fromString(CASE_3_UUID_STRING);
+
+    private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
 
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
@@ -180,6 +185,9 @@ public class NonEvacuatedEnergyTest {
     @Autowired
     private ReportService reportService;
 
+    @MockBean
+    private LoadFlowService loadFlowService;
+
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String nonEvacuatedEnergyResultDestination = "nonEvacuatedEnergy.result";
@@ -198,6 +206,15 @@ public class NonEvacuatedEnergyTest {
         // Start the server.
         server.start();
         wireMock.start();
+
+        when(loadFlowService.getLoadFlowParameters(LOADFLOW_PARAMETERS_UUID))
+            .thenReturn(LoadFlowParametersInfos.builder()
+                .commonParameters(LoadFlowParameters.load())
+                .specificParametersPerProvider(Map.of())
+                .build());
+
+        when(loadFlowService.getLoadFlowParametersOrDefaultsUuid(any()))
+            .thenReturn(LOADFLOW_PARAMETERS_UUID);
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
@@ -529,12 +546,6 @@ public class NonEvacuatedEnergyTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
-        LoadFlowParametersEntity defaultLoadflowParametersEntity = LoadFlowParametersEntity.builder()
-            .voltageInitMode(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES)
-            .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
-            .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
-            .dcPowerFactor(1.0)
-            .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues = SensitivityAnalysisParametersInfos.builder()
                 .flowFlowSensitivityValueThreshold(0.0)
@@ -548,7 +559,7 @@ public class NonEvacuatedEnergyTest {
                 .build();
         SensitivityAnalysisParametersEntity sensitivityParametersEntity = SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues);
         NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, sensitivityParametersEntity,
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, UUID.randomUUID(), defaultShortCircuitParametersEntity, null, sensitivityParametersEntity,
                                                              nonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
@@ -556,19 +567,7 @@ public class NonEvacuatedEnergyTest {
     }
 
     private StudyEntity insertDummyStudyWithSpecificParams(UUID networkUuid, UUID caseUuid) {
-        List<LoadFlowSpecificParameterInfos> specificParams = List.of(LoadFlowSpecificParameterInfos.builder()
-                .provider("OpenLoadFlow")
-                .value("FULL_VOLTAGE")
-                .name("voltageInitModeOverride")
-                .build()
-        );
-        LoadFlowParametersEntity defaultLoadflowParametersEntity = LoadFlowParametersEntity.builder()
-                .voltageInitMode(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES)
-                .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
-                .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
-                .dcPowerFactor(1.0)
-                .specificParameters(LoadFlowSpecificParameterEntity.toLoadFlowSpecificParameters(specificParams))
-                .build();
+
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues = SensitivityAnalysisParametersInfos.builder()
                 .flowFlowSensitivityValueThreshold(0.0)
@@ -582,7 +581,7 @@ public class NonEvacuatedEnergyTest {
                 .build();
         SensitivityAnalysisParametersEntity sensitivityParametersEntity = SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues);
         NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null, sensitivityParametersEntity,
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, UUID.randomUUID(), defaultShortCircuitParametersEntity, null, sensitivityParametersEntity,
                                                              nonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);

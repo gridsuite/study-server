@@ -17,6 +17,7 @@ import org.gridsuite.study.server.dto.BasicStudyInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.CaseService;
+import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkConversionService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.utils.SendInput;
@@ -95,6 +96,7 @@ public class StudyServiceTest {
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
     private static final String USER_ID_HEADER = "userId";
     private static final String HEADER_UPDATE_TYPE = "updateType";
+    private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
 
     @Autowired
     private StudyRepository studyRepository;
@@ -104,6 +106,9 @@ public class StudyServiceTest {
 
     @MockBean
     private NetworkStoreService networkStoreService;
+
+    @MockBean
+    private LoadFlowService loadFlowService;
 
     @Before
     public void setup() throws IOException {
@@ -266,6 +271,8 @@ public class StudyServiceTest {
         UUID postNetworkStubId = wireMockUtils.stubImportNetwork(caseUuid.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE", countDownLatch);
 
         UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(caseUuid.toString());
+
+        when(loadFlowService.createDefaultLoadFlowParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
 
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid).header("userId", userId))
             .andExpect(status().isOk())
