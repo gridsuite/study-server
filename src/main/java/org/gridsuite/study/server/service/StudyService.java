@@ -19,7 +19,6 @@ import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
-import jakarta.annotation.Resource;
 import lombok.NonNull;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
@@ -57,6 +56,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.elasticsearch.client.elc.QueryBuilders;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -174,7 +174,6 @@ public class StudyService {
         }
     }
 
-    @Resource
     StudyService self;
 
     @Autowired
@@ -209,7 +208,8 @@ public class StudyService {
             DynamicSimulationService dynamicSimulationService,
             VoltageInitService voltageInitService,
             DynamicSimulationEventService dynamicSimulationEventService,
-            FilterService filterService
+            FilterService filterService,
+            @Lazy StudyService studyService
     ) {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
@@ -242,6 +242,7 @@ public class StudyService {
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.filterService = filterService;
+        this.self = studyService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -602,7 +603,7 @@ public class StudyService {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            LOGGER.error(e.toString(), e);
+            throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
         }
     }
 
@@ -1469,7 +1470,6 @@ public class StudyService {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            LOGGER.error(e.toString(), e);
             throw new StudyException(INVALIDATE_BUILD_FAILED, e.getMessage());
         }
 
@@ -1596,11 +1596,10 @@ public class StudyService {
                 if (e instanceof InterruptedException) {
                     Thread.currentThread().interrupt();
                 }
-                LOGGER.error(e.toString(), e);
                 throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
             }
 
-            if (startTime.get() != null) {
+            if (startTime.get() != null && LOGGER.isTraceEnabled()) {
                 LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
                         TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
             }

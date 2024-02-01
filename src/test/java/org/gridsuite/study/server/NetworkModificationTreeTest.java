@@ -68,6 +68,7 @@ import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.util.*;
@@ -946,14 +947,14 @@ public class NetworkModificationTreeTest {
         createNode(root.getStudyId(), node4, node5, userId);
         createNode(root.getStudyId(), node5, node6, userId);
 
-        assertEquals(node5.getId(), getParentNode(node6.getId(), NodeType.NETWORK_MODIFICATION));
-        assertEquals(node3.getId(), getParentNode(node2.getId(), NodeType.NETWORK_MODIFICATION));
-        assertEquals(rootId, getParentNode(node5.getId(), NodeType.ROOT));
-        assertEquals(rootId, getParentNode(rootId, NodeType.ROOT));
+        assertEquals(node5.getId(), networkModificationTreeService.getParentNode(node6.getId(), NodeType.NETWORK_MODIFICATION));
+        assertEquals(node3.getId(), networkModificationTreeService.getParentNode(node2.getId(), NodeType.NETWORK_MODIFICATION));
+        assertEquals(rootId, networkModificationTreeService.getParentNode(node5.getId(), NodeType.ROOT));
+        assertEquals(rootId, networkModificationTreeService.getParentNode(rootId, NodeType.ROOT));
 
         UUID badUuid = UUID.randomUUID();
-        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> getParentNode(badUuid, NodeType.ROOT));
-        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> getParentNode(rootId, NodeType.NETWORK_MODIFICATION));
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getParentNode(badUuid, NodeType.ROOT));
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getParentNode(rootId, NodeType.NETWORK_MODIFICATION));
     }
 
     @Test
@@ -1330,26 +1331,5 @@ public class NetworkModificationTreeTest {
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodesUuids, headersStatus.get(NotificationService.HEADER_NODES));
         assertEquals(NODE_BUILD_STATUS_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
-    }
-
-    private UUID getParentNode(UUID nodeUuid, NodeType nodeType) {
-        Optional<UUID> parentNodeUuidOpt = doGetParentNode(nodeUuid, nodeType);
-        if (parentNodeUuidOpt.isEmpty()) {
-            throw new StudyException(ELEMENT_NOT_FOUND);
-        }
-
-        return parentNodeUuidOpt.get();
-    }
-
-    private Optional<UUID> doGetParentNode(UUID nodeUuid, NodeType nodeType) {
-        NodeEntity nodeEntity = nodeRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        if (nodeEntity.getType() == NodeType.ROOT && nodeType != NodeType.ROOT) {
-            return Optional.empty();
-        }
-        if (nodeEntity.getType() == NodeType.ROOT || nodeEntity.getParentNode().getType() == nodeType) {
-            return Optional.of(nodeEntity.getParentNode() != null ? nodeEntity.getParentNode().getIdNode() : nodeEntity.getIdNode());
-        } else {
-            return doGetParentNode(nodeEntity.getParentNode().getIdNode(), nodeType);
-        }
     }
 }

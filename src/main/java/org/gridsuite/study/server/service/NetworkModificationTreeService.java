@@ -20,7 +20,6 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -61,7 +60,6 @@ public class NetworkModificationTreeService {
 
     private final NetworkModificationTreeService self;
 
-    @Autowired
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
                                           NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
@@ -587,7 +585,7 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public boolean hasModifications(@NonNull UUID nodeUuid, boolean stashed) {
-        return self.getNetworkModificationsCount(nodeUuid, stashed) > 0;
+        return getNetworkModificationsCount(nodeUuid, stashed) > 0;
     }
 
     @Transactional
@@ -636,7 +634,7 @@ public class NetworkModificationTreeService {
             nodeToRestore.setStashDate(null);
             nodesRepository.save(nodeToRestore);
             notificationService.emitNodeInserted(studyId, anchorNodeId, nodeId, InsertMode.AFTER, anchorNodeId);
-            self.restoreNodeChildren(studyId, nodeId);
+            restoreNodeChildren(studyId, nodeId);
         }
     }
 
@@ -652,7 +650,7 @@ public class NetworkModificationTreeService {
             nodeEntity.setStashDate(null);
             nodesRepository.save(nodeEntity);
             notificationService.emitNodeInserted(studyId, parentNodeId, nodeEntity.getIdNode(), InsertMode.AFTER, parentNodeId);
-            self.restoreNodeChildren(studyId, nodeEntity.getIdNode());
+            restoreNodeChildren(studyId, nodeEntity.getIdNode());
         });
     }
 
@@ -947,5 +945,28 @@ public class NetworkModificationTreeService {
                     children.add(child.getIdNode());
                     doGetChildren(child.getIdNode(), children);
                 }));
+    }
+
+    // only used for tests
+    @Transactional
+    public UUID getParentNode(UUID nodeUuid, NodeType nodeType) {
+        Optional<UUID> parentNodeUuidOpt = doGetParentNode(nodeUuid, nodeType);
+        if (parentNodeUuidOpt.isEmpty()) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+
+        return parentNodeUuidOpt.get();
+    }
+
+    private Optional<UUID> doGetParentNode(UUID nodeUuid, NodeType nodeType) {
+        NodeEntity nodeEntity = nodesRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        if (nodeEntity.getType() == NodeType.ROOT && nodeType != NodeType.ROOT) {
+            return Optional.empty();
+        }
+        if (nodeEntity.getType() == NodeType.ROOT || nodeEntity.getParentNode().getType() == nodeType) {
+            return Optional.of(nodeEntity.getParentNode() != null ? nodeEntity.getParentNode().getIdNode() : nodeEntity.getIdNode());
+        } else {
+            return doGetParentNode(nodeEntity.getParentNode().getIdNode(), nodeType);
+        }
     }
 }
