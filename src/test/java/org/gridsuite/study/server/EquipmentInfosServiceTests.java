@@ -61,6 +61,7 @@ public class EquipmentInfosServiceTests {
     private static final String EQUIPMENT_NAME_RAW_FIELD = "equipmentName.raw";
 
     private static final String EQUIPMENT_NAME_FULLASCII_FIELD = "equipmentName.fullascii";
+    private static final String EQUIPMENT_NAME = "equipmentName";
     private static final String NETWORK_UUID_FIELD = "networkUuid.keyword";
 
     private static final UUID NETWORK_UUID = UUID.fromString("db240961-a7b6-4b76-bfe8-19749026c1cb");
@@ -361,6 +362,10 @@ public class EquipmentInfosServiceTests {
         query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, createEquipmentName("e E"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(1));
+
+        query = new BoolQuery.Builder().must(networkQuery, Queries.queryStringQuery(EQUIPMENT_NAME, "*e E*", null)._toQuery()).build();
+        hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
+        pbsc.checkThat(hits.size(), is(4));
 
         query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, createEquipmentName("e e"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
