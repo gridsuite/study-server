@@ -21,11 +21,12 @@ import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
 @ControllerAdvice
 public class RestResponseEntityExceptionHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestResponseEntityExceptionHandler.class);
+    private static final String MESSAGE = "Caught in handler";
 
     @ExceptionHandler(StudyException.class)
     protected ResponseEntity<Object> handleStudyException(StudyException exception) {
         if (LOGGER.isErrorEnabled()) {
-            LOGGER.error(exception.toString(), exception);
+            LOGGER.error(MESSAGE, exception);
         }
         StudyException.Type type = exception.getType();
         return switch (type) {
@@ -112,7 +113,7 @@ public class RestResponseEntityExceptionHandler {
     @ExceptionHandler(ServerWebInputException.class)
     protected ResponseEntity<Object> handleServerWebInputException(ServerWebInputException exception) {
         if (LOGGER.isErrorEnabled()) {
-            LOGGER.error(exception.toString(), exception);
+            LOGGER.error(MESSAGE, exception);
         }
         Throwable cause = exception.getCause();
         if (cause instanceof TypeMismatchException && cause.getCause() != null && cause.getCause() != cause) {
@@ -124,7 +125,7 @@ public class RestResponseEntityExceptionHandler {
     @ExceptionHandler(TypeMismatchException.class)
     protected ResponseEntity<Object> handleTypeMismatchException(TypeMismatchException exception) {
         if (LOGGER.isErrorEnabled()) {
-            LOGGER.error(exception.toString(), exception);
+            LOGGER.error(MESSAGE, exception);
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getCause().getMessage());
     }
