@@ -9,14 +9,10 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
-import org.gridsuite.study.server.dto.CaseImportReceiver;
-import org.gridsuite.study.server.dto.NetworkInfos;
-import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -35,20 +31,14 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import org.gridsuite.study.server.dto.ComputationType;
-import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
-import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
-import static org.gridsuite.study.server.dto.ComputationType.NON_EVACUATED_ENERGY_ANALYSIS;
-import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
-import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
-import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT;
-import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_BUS;
-import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
+import static org.gridsuite.study.server.dto.ComputationType.*;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -67,23 +57,29 @@ public class ConsumerService {
 
     private final ObjectMapper objectMapper;
 
-    NotificationService notificationService;
-    StudyService studyService;
-    CaseService caseService;
-    NetworkModificationTreeService networkModificationTreeService;
-    StudyRepository studyRepository;
+    private final NotificationService notificationService;
+    private final StudyService studyService;
+    private final SecurityAnalysisService securityAnalysisService;
+    private final CaseService caseService;
+    private final LoadFlowService loadFlowService;
+    private final NetworkModificationTreeService networkModificationTreeService;
+    private final StudyRepository studyRepository;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
                            StudyService studyService,
+                           SecurityAnalysisService securityAnalysisService,
                            CaseService caseService,
+                           LoadFlowService loadFlowService,
                            NetworkModificationTreeService networkModificationTreeService,
                            StudyRepository studyRepository) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
+        this.securityAnalysisService = securityAnalysisService;
         this.caseService = caseService;
+        this.loadFlowService = loadFlowService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.studyRepository = studyRepository;
     }
@@ -169,8 +165,12 @@ public class ConsumerService {
             String networkId = message.getHeaders().get(NETWORK_ID, String.class);
             String caseFormat = message.getHeaders().get(HEADER_CASE_FORMAT, String.class);
             String caseName = message.getHeaders().get(HEADER_CASE_NAME, String.class);
-            Map<String, String> importParameters = message.getHeaders().get(HEADER_IMPORT_PARAMETERS, Map.class);
-
+            Map<String, Object> rawParameters = message.getHeaders().get(HEADER_IMPORT_PARAMETERS, Map.class);
+            // String longer than 1024 bytes are converted to com.rabbitmq.client.LongString (https://docs.spring.io/spring-amqp/docs/3.0.0/reference/html/#message-properties-converters)
+            Map<String, String> importParameters = new HashMap<>();
+            if (rawParameters != null) {
+                rawParameters.forEach((key, value) -> importParameters.put(key, value.toString()));
+            }
             NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
 
             if (receiverString != null) {
@@ -191,7 +191,6 @@ public class ConsumerService {
 
                 StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
                 try {
-                    LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                     ShortCircuitParameters shortCircuitParameters = ShortCircuitService.getDefaultShortCircuitParameters();
                     DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
                     if (studyEntity != null) {
@@ -199,7 +198,7 @@ public class ConsumerService {
                         // we only update network infos sent by network conversion server
                         studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
                     } else {
-                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadFlowService.toEntity(loadFlowParameters, List.of()), ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, importParameters, importReportUuid);
+                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, createDefaultLoadFlowParameters(), ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, createDefaultSecurityAnalysisParameters(), importParameters, importReportUuid);
                     }
 
                     caseService.disableCaseExpiration(caseUuid);
@@ -215,6 +214,15 @@ public class ConsumerService {
                 }
             }
         };
+    }
+
+    private UUID createDefaultLoadFlowParameters() {
+        try {
+            return loadFlowService.createDefaultLoadFlowParameters();
+        } catch (Exception e) {
+            LOGGER.error(e.toString(), e);
+        }
+        return null;
     }
 
     @Bean
@@ -447,5 +455,14 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeVoltageInitFailed() {
         return message -> consumeCalculationFailed(message, VOLTAGE_INITIALIZATION);
+    }
+
+    private UUID createDefaultSecurityAnalysisParameters() {
+        try {
+            return securityAnalysisService.createDefaultSecurityAnalysisParameters();
+        } catch (Exception e) {
+            LOGGER.error(e.toString(), e);
+        }
+        return null;
     }
 }
