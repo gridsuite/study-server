@@ -225,7 +225,6 @@ public class StudyServiceSearchTests {
 
     @Test
     public void searchModifiedEquipment() {
-
         // Adding an equipment with type "LOAD" and a specific variant to the EquipmentInfosService.
         EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
         equipmentInfosService.addEquipmentInfos(loadInfos);
@@ -256,12 +255,10 @@ public class StudyServiceSearchTests {
         list = studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "loadId1", EquipmentInfosService.FieldSelector.ID, null, false);
         assertEquals(1, list.size());
         assertTrue(list.contains(loadInfos1));
-
     }
 
     @Test
     public void testSearchForModifiedEquipmentsFilteredByType() {
-
         // Adding LOAD and GENERATOR type equipment to the EquipmentInfosService with initial variant.
         EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
         EquipmentInfos generatorInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
@@ -310,5 +307,4 @@ public class StudyServiceSearchTests {
         assertEquals(1, list.size());
         assertTrue(list.contains(generatorInfos1));
     }
-
 }

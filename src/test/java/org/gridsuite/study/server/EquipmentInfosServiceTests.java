@@ -55,13 +55,13 @@ import static org.mockito.Mockito.when;
 public class EquipmentInfosServiceTests {
 
     private static final String TEST_FILE = "testCase.xiidm";
-    private static final String EQUIPMENT_TYPE = "equipmentType.keyword";
-    private static final String EQUIPMENT_ID = "equipmentId.fullascii";
+    private static final String EQUIPMENT_TYPE_FIELD = "equipmentType.keyword";
+    private static final String EQUIPMENT_ID_FIELD = "equipmentId.fullascii";
     private static final String EQUIPMENT_ID_RAW_FIELD = "equipmentId.raw";
     private static final String EQUIPMENT_NAME_RAW_FIELD = "equipmentName.raw";
 
     private static final String EQUIPMENT_NAME_FULLASCII_FIELD = "equipmentName.fullascii";
-    private static final String EQUIPMENT_NAME = "equipmentName";
+    private static final String EQUIPMENT_NAME_FIELD = "equipmentName";
     private static final String NETWORK_UUID_FIELD = "networkUuid.keyword";
 
     private static final UUID NETWORK_UUID = UUID.fromString("db240961-a7b6-4b76-bfe8-19749026c1cb");
@@ -94,7 +94,7 @@ public class EquipmentInfosServiceTests {
     }
 
     private BoolQuery buildBoolQueryEquipmentType(String equipmentType) {
-        return new BoolQuery.Builder().filter(Queries.termQuery(EQUIPMENT_TYPE, equipmentType)._toQuery()).build();
+        return new BoolQuery.Builder().filter(Queries.termQuery(EQUIPMENT_TYPE_FIELD, equipmentType)._toQuery()).build();
     }
 
     @Test
@@ -264,21 +264,21 @@ public class EquipmentInfosServiceTests {
         EquipmentInfos configuredBus = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_bus").name("name_bus").type("CONFIGURED_BUS").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl7").name("vl7").build())).build();
 
         Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos, configuredBus).forEach(equipmentInfosService::addEquipmentInfos);
-        query = new BoolQuery.Builder().must(Queries.wildcardQuery(EQUIPMENT_ID, "*")._toQuery()).build();
+        query = new BoolQuery.Builder().must(Queries.wildcardQuery(EQUIPMENT_ID_FIELD, "*")._toQuery()).build();
         assertEquals(7, equipmentInfosService.searchEquipments(query).size());
 
-        query = new BoolQuery.Builder().must(Queries.wildcardQuery(EQUIPMENT_ID, "id_l*")._toQuery()).build();
+        query = new BoolQuery.Builder().must(Queries.wildcardQuery(EQUIPMENT_ID_FIELD, "id_l*")._toQuery()).build();
         Set<EquipmentInfos> hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         assertEquals(2, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
-        query = new BoolQuery.Builder().must(Queries.wildcardQuery(EQUIPMENT_ID, "id_tw*")._toQuery()).build();
+        query = new BoolQuery.Builder().must(Queries.wildcardQuery(EQUIPMENT_ID_FIELD, "id_tw*")._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         assertEquals(2, hits.size());
         assertTrue(hits.contains(tw1Infos));
         assertTrue(hits.contains(tw2Infos));
 
-        query = new BoolQuery.Builder().should(Queries.wildcardQuery(EQUIPMENT_ID, "id_l*")._toQuery(), Queries.wildcardQuery(EQUIPMENT_ID, "id_tw*")._toQuery()).build();
+        query = new BoolQuery.Builder().should(Queries.wildcardQuery(EQUIPMENT_ID_FIELD, "id_l*")._toQuery(), Queries.wildcardQuery(EQUIPMENT_ID_FIELD, "id_tw*")._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         assertEquals(4, hits.size());
         assertTrue(hits.contains(line1Infos));
@@ -286,7 +286,7 @@ public class EquipmentInfosServiceTests {
         assertTrue(hits.contains(tw1Infos));
         assertTrue(hits.contains(tw2Infos));
 
-        query = new BoolQuery.Builder().should(Queries.wildcardQuery(EQUIPMENT_ID, "id_l*")._toQuery(), Queries.wildcardQuery(EQUIPMENT_ID, "id_tw*")._toQuery()).build();
+        query = new BoolQuery.Builder().should(Queries.wildcardQuery(EQUIPMENT_ID_FIELD, "id_l*")._toQuery(), Queries.wildcardQuery(EQUIPMENT_ID_FIELD, "id_tw*")._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         assertEquals(4, hits.size());
         assertEquals(4, hits.size());
@@ -294,10 +294,10 @@ public class EquipmentInfosServiceTests {
         assertTrue(hits.contains(line2Infos));
         assertTrue(hits.contains(tw1Infos));
         assertTrue(hits.contains(tw2Infos));
-        query = new BoolQuery.Builder().must(Queries.wildcardQuery(EQUIPMENT_ID, "id_l*")._toQuery(), Queries.wildcardQuery(EQUIPMENT_ID, "id_tw*")._toQuery()).build();
+        query = new BoolQuery.Builder().must(Queries.wildcardQuery(EQUIPMENT_ID_FIELD, "id_l*")._toQuery(), Queries.wildcardQuery(EQUIPMENT_ID_FIELD, "id_tw*")._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         assertEquals(0, hits.size());
-        hits = new HashSet<>(equipmentInfosService.searchEquipments(new BoolQuery.Builder().must(Queries.wildcardQuery(EQUIPMENT_ID, "*other*")._toQuery(), Queries.termQuery(EQUIPMENT_TYPE, "LINE")._toQuery()).build()));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments(new BoolQuery.Builder().must(Queries.wildcardQuery(EQUIPMENT_ID_FIELD, "*other*")._toQuery(), Queries.termQuery(EQUIPMENT_TYPE_FIELD, "LINE")._toQuery()).build()));
         assertEquals(1, hits.size());
         assertTrue(hits.contains(otherLineInfos));
     }
@@ -363,7 +363,7 @@ public class EquipmentInfosServiceTests {
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(1));
 
-        query = new BoolQuery.Builder().must(networkQuery, Queries.queryStringQuery(EQUIPMENT_NAME, "*e E*", null)._toQuery()).build();
+        query = new BoolQuery.Builder().must(networkQuery, Queries.queryStringQuery(EQUIPMENT_NAME_FIELD, "*e E*", null)._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(4));
 
@@ -385,7 +385,7 @@ public class EquipmentInfosServiceTests {
 
         testNameFullAsciis();
 
-        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_ID, createEquipmentName("FFR1AA1  FFR2AA1  2"))._toQuery()).build();
+        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_ID_FIELD, createEquipmentName("FFR1AA1  FFR2AA1  2"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(1));
 
@@ -393,7 +393,7 @@ public class EquipmentInfosServiceTests {
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(0));
 
-        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_ID, createEquipmentName("fFR1àÀ1  FFR2AA1  2"))._toQuery()).build();
+        query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_ID_FIELD, createEquipmentName("fFR1àÀ1  FFR2AA1  2"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(1));
     }
