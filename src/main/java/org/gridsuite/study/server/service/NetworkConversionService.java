@@ -53,7 +53,7 @@ public class NetworkConversionService {
         this.objectMapper = objectMapper;
     }
 
-    public void persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
+    public void persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(
@@ -69,6 +69,7 @@ public class NetworkConversionService {
                 .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
                 .queryParam(REPORT_UUID, importReportUuid)
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
+                .queryParam(CASE_FORMAT, caseFormat)
                 .buildAndExpand()
                 .toUriString();
 

@@ -164,6 +164,8 @@ public final class TestUtils {
     public static void assertWiremockServerRequestsEmptyThenShutdown(WireMockServer wireMockServer) throws UncheckedInterruptedException, IOException {
         try {
             wireMockServer.checkForUnmatchedRequests(); // requests no matched ? (it returns an exception if a request was not matched by wireMock, but does not complain if it was not verified by 'verify')
+            var req = wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl())); // requests no verified ?
+            req.forEach(r -> System.out.println("++++++++++" + r.getAbsoluteUrl()));
             assertEquals(0, wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl())).size()); // requests no verified ?
         } finally {
             wireMockServer.stop();

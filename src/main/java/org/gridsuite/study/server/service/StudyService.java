@@ -260,15 +260,15 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean duplicateCase) {
+    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean duplicateCase, String caseFormat) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         UUID importReportUuid = UUID.randomUUID();
         UUID caseUuidToUse = caseUuid;
         try {
             if (duplicateCase) {
-                caseUuidToUse = caseService.duplicateCase(caseUuid, true);
+                caseUuidToUse = caseService.duplicateCase(caseUuid, true, caseFormat);
             }
-            persistentStoreWithNotificationOnError(caseUuidToUse, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
+            persistentStoreWithNotificationOnError(caseUuidToUse, basicStudyInfos.getId(), userId, importReportUuid, caseFormat, importParameters);
         } catch (Exception e) {
             self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             throw e;
@@ -289,8 +289,8 @@ public class StudyService {
      * @param studyUuid
      * @param importParameters
      */
-    public void recreateStudyRootNetwork(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters) {
-        recreateStudyRootNetwork(caseUuid, userId, studyUuid, importParameters, false);
+    public void recreateStudyRootNetwork(UUID caseUuid, String userId, UUID studyUuid, String caseFormat, Map<String, Object> importParameters) {
+        recreateStudyRootNetwork(caseUuid, userId, studyUuid, caseFormat, importParameters, false);
     }
 
     /**
@@ -298,19 +298,19 @@ public class StudyService {
      * @param userId
      * @param studyUuid
      */
-    public void recreateStudyRootNetwork(String userId, UUID studyUuid) {
+    public void recreateStudyRootNetwork(String userId, UUID studyUuid, String caseFormat) {
         UUID caseUuid = self.getStudyCaseUuid(studyUuid);
-        recreateStudyRootNetwork(caseUuid, userId, studyUuid, null, true);
+        recreateStudyRootNetwork(caseUuid, userId, studyUuid, caseFormat, null, true);
     }
 
-    private void recreateStudyRootNetwork(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters) {
+    private void recreateStudyRootNetwork(UUID caseUuid, String userId, UUID studyUuid, String caseFormat, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters) {
         caseService.assertCaseExists(caseUuid);
         UUID importReportUuid = UUID.randomUUID();
         Map<String, Object> importParametersToUse = shouldLoadPreviousImportParameters
             ? new HashMap<>(self.getStudyImportParameters(studyUuid))
             : importParameters;
 
-        persistentStoreWithNotificationOnError(caseUuid, studyUuid, userId, importReportUuid, importParametersToUse);
+        persistentStoreWithNotificationOnError(caseUuid, studyUuid, userId, importReportUuid, caseFormat, importParametersToUse);
     }
 
     public BasicStudyInfos duplicateStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
@@ -508,7 +508,7 @@ public class StudyService {
         Network clonedNetwork = networkStoreService.cloneNetwork(sourceStudy.getNetworkUuid(), targetVariantIds);
         UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
 
-        UUID clonedCaseUuid = caseService.duplicateCase(sourceStudy.getCaseUuid(), false);
+        UUID clonedCaseUuid = caseService.duplicateCase(sourceStudy.getCaseUuid(), false, sourceStudy.getCaseFormat());
 
         Map<String, String> newImportParameters = Map.copyOf(sourceStudy.getImportParameters());
 
@@ -596,9 +596,9 @@ public class StudyService {
         }
     }
 
-    private void persistentStoreWithNotificationOnError(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
+    private void persistentStoreWithNotificationOnError(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters) {
         try {
-            networkConversionService.persistentStore(caseUuid, studyUuid, userId, importReportUuid, importParameters);
+            networkConversionService.persistentStore(caseUuid, studyUuid, userId, importReportUuid, caseFormat, importParameters);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, STUDY_CREATION_FAILED);
         }

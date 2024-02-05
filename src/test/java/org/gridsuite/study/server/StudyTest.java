@@ -166,6 +166,8 @@ public class StudyTest {
     private static final Map DEFAULT_IMPORT_PARAMETERS = Map.of("param1", "defaultValue1", "param2", "defaultValue2");
     private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
+    private static final String CASE_FORMAT = "caseFormat";
+
     private static final String DEFAULT_MODIFICATION_LIST_RESULT = "[{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}]";
 
     @Value("${loadflow.default-provider}")
@@ -545,8 +547,8 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody("false")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     // duplicate case
-                    case "/v1/cases?duplicateFrom=" + CASE_UUID_STRING + "&withExpiration=true":
-                    case "/v1/cases?duplicateFrom=" + CASE_UUID_STRING + "&withExpiration=false":
+                    case "/v1/cases?duplicateFrom=" + CASE_UUID_STRING + "&withExpiration=true" + "&" + CASE_FORMAT + "=UCTE":
+                    case "/v1/cases?duplicateFrom=" + CASE_UUID_STRING + "&withExpiration=false" + "&" + CASE_FORMAT + "=UCTE":
                         return new MockResponse().setResponseCode(200).setBody(clonedCaseUuidAsString)
                                 .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                     // delete case
@@ -730,7 +732,7 @@ public class StudyTest {
 
         //insert a study with a non existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}",
-                NOT_EXISTING_CASE_UUID, "false").header(USER_ID_HEADER, "userId"))
+                NOT_EXISTING_CASE_UUID, "false").header(USER_ID_HEADER, "userId").param(CASE_FORMAT, "XIIDM"))
                      .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.valueOf("text/plain;charset=UTF-8"))).andReturn();
         assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", result.getResponse().getContentAsString());
 
@@ -822,7 +824,7 @@ public class StudyTest {
         randomListParam.add("paramValue1");
         randomListParam.add("paramValue2");
         importParameters.put("param1", randomListParam);
-        UUID studyUuid = createStudyWithImportParameters("userId", CASE_UUID, importParameters);
+        UUID studyUuid = createStudyWithImportParameters("userId", CASE_UUID, "UCTE", importParameters);
 
         StudyEntity studyEntity = studyRepository.findById(studyUuid).get();
         assertEquals(studyUuid, studyEntity.getId());
@@ -980,7 +982,9 @@ public class StudyTest {
     }
 
     private UUID createStudy(String userId, UUID caseUuid) throws Exception {
-        MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid).header("userId", userId))
+        MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
+                        .header("userId", userId)
+                        .param(CASE_FORMAT, "UCTE"))
                 .andExpect(status().isOk())
                 .andReturn();
         String resultAsString = result.getResponse().getContentAsString();
@@ -992,15 +996,18 @@ public class StudyTest {
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(6, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*" + "&caseFormat=UCTE")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", caseUuid)));
 
         return studyUuid;
     }
 
-    protected UUID createStudyWithImportParameters(String userId, UUID caseUuid, Map<String, Object> importParameters) throws Exception {
-        MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid).header("userId", userId).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(importParameters)))
+    protected UUID createStudyWithImportParameters(String userId, UUID caseUuid, String caseFormat, Map<String, Object> importParameters) throws Exception {
+        MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
+                        .header("userId", userId).contentType(MediaType.APPLICATION_JSON)
+                        .param(CASE_FORMAT, caseFormat)
+                        .content(mapper.writeValueAsString(importParameters)))
                 .andExpect(status().isOk())
                 .andReturn();
         String resultAsString = result.getResponse().getContentAsString();
@@ -1025,6 +1032,7 @@ public class StudyTest {
     private UUID createStudyWithDuplicateCase(String userId, UUID caseUuid) throws Exception {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                         .param("duplicateCase", "true")
+                        .param(CASE_FORMAT, "UCTE")
                         .header("userId", userId))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -1037,7 +1045,7 @@ public class StudyTest {
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(7, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
-        assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=true", caseUuid)));
+        assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=true&caseFormat=UCTE", caseUuid)));
         // note : it's a new case UUID
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CLONED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CLONED_CASE_UUID_STRING)));
@@ -1079,7 +1087,9 @@ public class StudyTest {
     @Test
     public void testCreateStudyWithErrorDuringCaseImport() throws Exception {
         String userId = "userId";
-        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_IMPORT_ERROR).header("userId", userId))
+        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_IMPORT_ERROR)
+                        .header("userId", userId)
+                        .param(CASE_FORMAT, "UCTE"))
             .andExpect(status().is5xxServerError());
 
        // assert that the broker message has been sent a study creation request message
@@ -1107,7 +1117,9 @@ public class StudyTest {
     @Test
     public void testCreateStudyWithErrorDuringStudyCreation() throws Exception {
         String userId = "userId";
-        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_STUDY_CREATION_ERROR).header("userId", userId))
+        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_STUDY_CREATION_ERROR)
+                        .header("userId", userId)
+                        .param(CASE_FORMAT, "UCTE"))
             .andExpect(status().isOk());
 
         // assert that the broker message has been sent a study creation request message
@@ -1175,7 +1187,8 @@ public class StudyTest {
 
         //insert a study
         mvcResult = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", NEW_STUDY_CASE_UUID, "false")
-                                        .header(USER_ID_HEADER, "userId"))
+                                        .header(USER_ID_HEADER, "userId")
+                        .param(CASE_FORMAT, "XIIDM"))
                         .andExpect(status().isOk())
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
@@ -1372,7 +1385,7 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         // duplicate the study
-        StudyEntity duplicatedStudy = duplicateStudy(study1Uuid, userId);
+        StudyEntity duplicatedStudy = duplicateStudy(study1Uuid, userId, "UCTE");
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
 
         //Test duplication from a non existing source study
@@ -1387,8 +1400,8 @@ public class StudyTest {
         StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID()); // does not have default params
         studyRepository.save(studyEntity);
-
         testDuplicateStudy(study1Uuid);
+
     }
 
     @Test
@@ -1399,15 +1412,15 @@ public class StudyTest {
         studyEntity.setSecurityAnalysisParametersUuid(null);
         studyEntity.setSensitivityAnalysisParametersUuid(null);
         studyRepository.save(studyEntity);
-
         testDuplicateStudy(study1Uuid);
     }
 
-    private StudyEntity duplicateStudy(UUID studyUuid, String userId) throws Exception {
+    private StudyEntity duplicateStudy(UUID studyUuid, String userId, String caseFormat) throws Exception {
         UUID stubUuid = wireMockUtils.stubDuplicateModificationGroup();
         mockMvc.perform(post(STUDIES_URL)
                         .param("duplicateFrom", studyUuid.toString())
                         .param("studyUuid", DUPLICATED_STUDY_UUID)
+                        .param(CASE_FORMAT, caseFormat)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
 
@@ -1478,7 +1491,7 @@ public class StudyTest {
         }
         requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + duplicatedStudy.getNetworkUuid() + "/reindex-all")).count());
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false&caseFormat=.*")).count());
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getVoltageInitParametersUuid())).count());
         }
