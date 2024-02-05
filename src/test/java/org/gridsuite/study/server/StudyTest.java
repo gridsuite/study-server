@@ -96,8 +96,7 @@ import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherSt
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -269,6 +268,7 @@ public class StudyTest {
             .id(line.getId())
             .name(line.getNameOrId())
             .type("LINE")
+            .variantId("InitialState")
             .voltageLevels(Set.of(VoltageLevelInfos.builder().id(line.getTerminal1().getVoltageLevel().getId()).name(line.getTerminal1().getVoltageLevel().getNameOrId()).build()))
             .build();
     }
@@ -284,10 +284,10 @@ public class StudyTest {
         when(studyInfosService.search(String.format("userId:%s", "userId")))
                 .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
+        when(equipmentInfosService.searchEquipments(any(), any(), any(), any(), any())).thenCallRealMethod();
         when(equipmentInfosService.searchEquipments(any(BoolQuery.class))).then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
         when(equipmentInfosService.getEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("32"));
         when(equipmentInfosService.getEquipmentInfosCount(NETWORK_UUID)).then((Answer<Long>) invocation -> Long.parseLong("16"));
-
         when(equipmentInfosService.getTombstonedEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("8"));
         when(equipmentInfosService.getTombstonedEquipmentInfosCount(NETWORK_UUID)).then((Answer<Long>) invocation -> Long.parseLong("4"));
 
