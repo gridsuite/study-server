@@ -11,7 +11,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.iidm.network.Branch;
+import com.powsybl.iidm.network.TwoSides;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.security.LimitViolationType;
 import lombok.SneakyThrows;
@@ -34,6 +34,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -177,8 +178,8 @@ public class LoadFlowTest {
         String loadFlowErrorResultUuidStr = objectMapper.writeValueAsString(LOADFLOW_ERROR_RESULT_UUID);
         String loadflowResult = TestUtils.resourceToString("/loadflow-result.json");
 
-        List<LimitViolationInfos> limitViolations = List.of(new LimitViolationInfos("lineId1", 200., "lineName1", null, 60, 150., Branch.Side.ONE.name(), LimitViolationType.CURRENT),
-            new LimitViolationInfos("lineId2", 100., "lineName2", null, 300, 80., Branch.Side.TWO.name(), LimitViolationType.CURRENT),
+        List<LimitViolationInfos> limitViolations = List.of(new LimitViolationInfos("lineId1", 200., "lineName1", null, 60, 150., TwoSides.ONE.name(), LimitViolationType.CURRENT),
+            new LimitViolationInfos("lineId2", 100., "lineName2", null, 300, 80., TwoSides.TWO.name(), LimitViolationType.CURRENT),
             new LimitViolationInfos("genId1", 500., "genName1", null, null, 370., null, LimitViolationType.HIGH_VOLTAGE));
         LIMIT_VIOLATIONS_JSON = objectMapper.writeValueAsString(limitViolations);
 

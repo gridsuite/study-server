@@ -68,6 +68,7 @@ import java.util.*;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
+import static org.gridsuite.study.server.utils.TestUtils.getBinaryAsBuffer;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -791,12 +792,6 @@ public class SecurityAnalysisTest {
     private void cleanDB() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
-    }
-
-    public static Buffer getBinaryAsBuffer(byte[] binary) {
-        Buffer buf = new Buffer();
-        buf.write(binary);
-        return buf;
     }
 
     @After

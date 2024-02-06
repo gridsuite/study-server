@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -167,8 +168,12 @@ public class ConsumerService {
             String networkId = message.getHeaders().get(NETWORK_ID, String.class);
             String caseFormat = message.getHeaders().get(HEADER_CASE_FORMAT, String.class);
             String caseName = message.getHeaders().get(HEADER_CASE_NAME, String.class);
-            Map<String, String> importParameters = message.getHeaders().get(HEADER_IMPORT_PARAMETERS, Map.class);
-
+            Map<String, Object> rawParameters = message.getHeaders().get(HEADER_IMPORT_PARAMETERS, Map.class);
+            // String longer than 1024 bytes are converted to com.rabbitmq.client.LongString (https://docs.spring.io/spring-amqp/docs/3.0.0/reference/html/#message-properties-converters)
+            Map<String, String> importParameters = new HashMap<>();
+            if (rawParameters != null) {
+                rawParameters.forEach((key, value) -> importParameters.put(key, value.toString()));
+            }
             NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
 
             if (receiverString != null) {
