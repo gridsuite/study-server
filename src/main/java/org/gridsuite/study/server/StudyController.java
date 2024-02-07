@@ -595,8 +595,10 @@ public class StudyController {
         @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
         @ApiResponse(responseCode = "404", description = "The loadflow result has not been found")})
     public ResponseEntity<String> getLoadflowResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = loadflowService.getLoadFlowResult(nodeUuid);
+                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                    @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+                                                    Sort sort) {
+        String result = loadflowService.getLoadFlowResult(nodeUuid, filters, sort);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
