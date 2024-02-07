@@ -119,6 +119,12 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "securityAnalysisParametersUuid")
     private UUID securityAnalysisParametersUuid;
 
+    /**
+     * @deprecated to remove when the data is migrated into the sensitivity-analysis-server
+     */
+    @Deprecated(forRemoval = true)
+    @Getter(AccessLevel.PROTECTED)
+    @Setter(AccessLevel.PROTECTED)
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "sensitivityAnalysisParametersEntity_id",
             referencedColumnName = "id",
@@ -126,6 +132,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
                     name = "sensitivityAnalysisParameters_id_fk"
             ))
     private SensitivityAnalysisParametersEntity sensitivityAnalysisParameters;
+
+    @Column(name = "sensitivityAnalysisParametersUuid")
+    private UUID sensitivityAnalysisParametersUuid;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "nonEvacuatedEnergyParametersEntity_id",
