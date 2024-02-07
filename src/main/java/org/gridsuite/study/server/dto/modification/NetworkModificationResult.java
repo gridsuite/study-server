@@ -53,10 +53,10 @@ public class NetworkModificationResult {
         networkImpacts.stream()
             .filter(impact -> impact.getImpactType() != ImpactType.DELETION)
             .forEach(impact -> {
-                if (impact instanceof SimpleElementImpact) {
-                    ids.addAll(((SimpleElementImpact) impact).getSubstationIds());
+                if (impact instanceof SimpleElementImpact simpleImpact) {
+                    ids.addAll(simpleImpact.getSubstationIds());
                 } else if (impact instanceof CollectionElementImpact) {
-                    // DO nothing;
+                    // TODO: Do nothing for now
                 }
             });
         return ids;
