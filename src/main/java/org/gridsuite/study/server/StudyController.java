@@ -27,7 +27,6 @@ import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
-import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.exception.PartialResultException;
@@ -681,6 +680,19 @@ public class StudyController {
         String result = shortCircuitService.getShortCircuitAnalysisStatus(nodeUuid, type);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result/csv")
+    @Operation(summary = "Get a short circuit analysis csv result")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis csv export"),
+        @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
+    public ResponseEntity<byte[]> getShortCircuitAnalysisCsvResult(
+            @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "type") @RequestParam(value = "type") ShortcircuitAnalysisType type,
+            @Parameter(description = "headersCsv") @RequestBody String headersCsv) {
+        return ResponseEntity.ok().body(shortCircuitService.getShortCircuitAnalysisCsvResult(nodeUuid, type, headersCsv));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run")
@@ -1740,19 +1752,19 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
     @Operation(summary = "Get sensitivity analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters")})
-    public ResponseEntity<SensitivityAnalysisParametersInfos> getSensitivityAnalysisParametersValues(
+    public ResponseEntity<String> getSensitivityAnalysisParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParametersValues(studyUuid));
+        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParameters(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
     @Operation(summary = "set sensitivity analysis parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set")})
-    public ResponseEntity<Void> setSensitivityAnalysisParametersValues(
+    public ResponseEntity<Void> setSensitivityAnalysisParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues,
+            @RequestBody(required = false) String sensitivityAnalysisParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setSensitivityAnalysisParametersValues(studyUuid, sensitivityAnalysisParametersValues, userId);
+        studyService.setSensitivityAnalysisParameters(studyUuid, sensitivityAnalysisParameters, userId);
         return ResponseEntity.ok().build();
     }
 

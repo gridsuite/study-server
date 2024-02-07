@@ -6,13 +6,11 @@
  */
 package org.gridsuite.study.server.service;
 
-import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.TypedValue;
-import com.powsybl.iidm.network.*;
+import com.powsybl.iidm.network.Network;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
@@ -27,26 +25,21 @@ import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
-import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
-import org.gridsuite.study.server.dto.sensianalysis.*;
-import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyContingencies;
-import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyGeneratorCappingsByType;
-import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyGeneratorsCappings;
-import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyInputData;
-import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyMonitoredBranches;
-import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyStagesSelection;
+import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
-import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
+import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -56,8 +49,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+<<<<<<< HEAD
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.client.elc.QueryBuilders;
+=======
+>>>>>>> main
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,15 +71,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
-import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
-import static org.gridsuite.study.server.dto.ComputationType.NON_EVACUATED_ENERGY_ANALYSIS;
-import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
-import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
-import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT;
-import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_BUS;
-import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
-import static org.gridsuite.study.server.elasticsearch.EquipmentInfosService.EQUIPMENT_TYPE_SCORES;
+import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
@@ -97,16 +85,6 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
-
-    static final String EQUIPMENT_NAME = "equipmentName.fullascii";
-
-    static final String EQUIPMENT_ID = "equipmentId.fullascii";
-
-    static final String NETWORK_UUID = "networkUuid.keyword";
-
-    static final String VARIANT_ID = "variantId.keyword";
-
-    static final String EQUIPMENT_TYPE = "equipmentType.keyword";
 
     NotificationService notificationService;
 
@@ -386,45 +364,6 @@ public class StudyService {
         return studyInfosService.search(query);
     }
 
-    public static String escapeLucene(String s) {
-        StringBuilder sb = new StringBuilder();
-
-        for (int i = 0; i < s.length(); ++i) {
-            char c = s.charAt(i);
-            switch (c) {
-                case '+':
-                case '\\':
-                case '-':
-                case '!':
-                case '(':
-                case ')':
-                case ':':
-                case '^':
-                case '[':
-                case ']':
-                case '"':
-                case '{':
-                case '}':
-                case '~':
-                case '*':
-                case '?':
-                case '|':
-                case '&':
-                case '/':
-
-                case ' ': // white space has to be escaped, too
-                    sb.append('\\');
-                    break;
-                default:
-                    // do nothing but appease sonarlint
-            }
-
-            sb.append(c);
-        }
-
-        return sb.toString();
-    }
-
     private UUID getNodeUuidToSearchIn(UUID initialNodeUuid, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = initialNodeUuid;
         if (inUpstreamBuiltParentNode) {
@@ -439,106 +378,7 @@ public class StudyService {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn);
-
-        if (variantId.isEmpty()) {
-            variantId = VariantManagerConstants.INITIAL_VARIANT_ID;
-        }
-
-        if (equipmentType == null) {
-            BoolQuery query = buildSearchAllEquipmentsQuery(userInput, fieldSelector, networkUuid,
-                    VariantManagerConstants.INITIAL_VARIANT_ID, variantId);
-            List<EquipmentInfos> equipmentInfos = equipmentInfosService.searchEquipments(query);
-
-            return variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ? equipmentInfos : cleanRemovedEquipments(networkUuid, variantId, equipmentInfos);
-        } else {
-            String queryInitialVariant = buildSearchEquipmentsByTypeQuery(userInput, fieldSelector, networkUuid,
-                    VariantManagerConstants.INITIAL_VARIANT_ID, equipmentType);
-
-            List<EquipmentInfos> equipmentInfosInInitVariant = equipmentInfosService.searchEquipments(queryInitialVariant);
-
-            return (variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID)) ? equipmentInfosInInitVariant
-                    : completeSearchWithCurrentVariant(networkUuid, variantId, userInput, fieldSelector,
-                    equipmentInfosInInitVariant, equipmentType);
-        }
-    }
-
-    private List<EquipmentInfos> cleanRemovedEquipments(UUID networkUuid, String variantId, List<EquipmentInfos> equipmentInfos) {
-        String queryTombstonedEquipments = buildTombstonedEquipmentSearchQuery(networkUuid, variantId);
-        Set<String> removedEquipmentIdsInVariant = equipmentInfosService.searchTombstonedEquipments(queryTombstonedEquipments)
-                .stream()
-                .map(TombstonedEquipmentInfos::getId)
-                .collect(Collectors.toSet());
-
-        return equipmentInfos
-                .stream()
-                .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId()))
-                .collect(Collectors.toList());
-    }
-
-    private List<EquipmentInfos> completeSearchWithCurrentVariant(UUID networkUuid, String variantId, String userInput,
-                                                                  EquipmentInfosService.FieldSelector fieldSelector, List<EquipmentInfos> equipmentInfosInInitVariant,
-                                                                  String equipmentType) {
-        // Clean equipments that have been removed in the current variant
-        List<EquipmentInfos> cleanedEquipmentsInInitVariant = cleanRemovedEquipments(networkUuid, variantId, equipmentInfosInInitVariant);
-
-        // Get the equipments of the current variant
-        String queryVariant = buildSearchEquipmentsByTypeQuery(userInput, fieldSelector, networkUuid, variantId, equipmentType);
-        List<EquipmentInfos> addedEquipmentInfosInVariant = equipmentInfosService.searchEquipments(queryVariant);
-
-        // Add equipments of the current variant to the ones of the init variant
-        cleanedEquipmentsInInitVariant.addAll(addedEquipmentInfosInVariant);
-
-        return cleanedEquipmentsInInitVariant;
-    }
-
-    private String buildSearchEquipmentsByTypeQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId, String equipmentType) {
-        String query = NETWORK_UUID + ":(%s) AND " + VARIANT_ID + ":(%s) AND %s:(*%s*)"
-                + (equipmentType == null ? "" : " AND " + EQUIPMENT_TYPE + ":(%s)");
-        return String.format(query, networkUuid, variantId,
-                fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID,
-                escapeLucene(userInput), equipmentType);
-    }
-
-    private BoolQuery buildSearchAllEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId) {
-        WildcardQuery equipmentSearchQuery = QueryBuilders.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
-        TermQuery networkUuidSearchQuery = QueryBuilders.termQuery(NETWORK_UUID, networkUuid.toString());
-        TermsQuery variantIdSearchQuery = variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ?
-                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(initialVariantId))).build()).build() :
-                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(initialVariantId), FieldValue.of(variantId))).build()).build();
-
-        List<FunctionScore> functionScores = new ArrayList<>();
-        FunctionScore functionScore = new FunctionScore.Builder()
-                .filter(builder ->
-                        builder.match(
-                                matchBuilder -> matchBuilder
-                                        .field(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID)
-                                        .query(FieldValue.of(escapeLucene(userInput))))
-                                )
-                .weight((double) EQUIPMENT_TYPE_SCORES.size())
-                .build();
-        functionScores.add(functionScore);
-
-        for (Map.Entry<String, Integer> equipmentTypeScore : EQUIPMENT_TYPE_SCORES.entrySet()) {
-            functionScore = new FunctionScore.Builder()
-                    .filter(builder ->
-                            builder.match(
-                                    matchBuilder -> matchBuilder
-                                            .field("equipmentType")
-                                            .query(FieldValue.of(equipmentTypeScore.getKey())))
-                    )
-                    .weight((double) equipmentTypeScore.getValue())
-                    .build();
-            functionScores.add(functionScore);
-        }
-
-        FunctionScoreQuery functionScoreQuery = new FunctionScoreQuery.Builder().functions(functionScores).build();
-
-        return new BoolQuery.Builder()
-                .filter(equipmentSearchQuery._toQuery(), networkUuidSearchQuery._toQuery(), variantIdSearchQuery._toQuery()).must(functionScoreQuery._toQuery()).build();
-    }
-
-    private String buildTombstonedEquipmentSearchQuery(UUID networkUuid, String variantId) {
-        return String.format(NETWORK_UUID + ":(%s) AND " + VARIANT_ID + ":(%s)", networkUuid, variantId);
+        return equipmentInfosService.searchEquipments(networkUuid, variantId, userInput, fieldSelector, equipmentType);
     }
 
     @Transactional
@@ -564,6 +404,9 @@ public class StudyService {
                 }
                 if (s.getVoltageInitParametersUuid() != null) {
                     voltageInitService.deleteVoltageInitParameters(s.getVoltageInitParametersUuid());
+                }
+                if (s.getSensitivityAnalysisParametersUuid() != null) {
+                    sensitivityAnalysisService.deleteSensitivityAnalysisParameters(s.getSensitivityAnalysisParametersUuid());
                 }
             });
             deleteStudyInfos = new DeleteStudyInfos(networkUuid, caseUuid.get(), nodesModificationInfos);
@@ -637,8 +480,9 @@ public class StudyService {
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
                                               UUID caseUuid, String caseName, UUID loadFlowParametersUuid,
                                               ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
-                                              UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, Map<String, String> importParameters, UUID importReportUuid) {
-        StudyEntity studyEntity = insertStudyEntity(studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParametersUuid, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersUuid, securityAnalysisParametersUuid, importParameters);
+                                              UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
+                                              Map<String, String> importParameters, UUID importReportUuid) {
+        StudyEntity studyEntity = insertStudyEntity(studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParametersUuid, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
@@ -684,9 +528,11 @@ public class StudyService {
             copiedSecurityAnalysisParametersUuid = securityAnalysisService.duplicateSecurityAnalysisParameters(securityAnalysisParametersUuid);
         }
 
-        SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues = sourceStudy.getSensitivityAnalysisParameters() == null ?
-                SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues() :
-                SensitivityAnalysisService.fromEntity(sourceStudy.getSensitivityAnalysisParameters());
+        UUID sensitivityAnalysisParametersUuid = sourceStudy.getSensitivityAnalysisParametersUuid();
+        UUID copiedSensitivityAnalysisParametersUuid = null;
+        if (sensitivityAnalysisParametersUuid != null) {
+            copiedSensitivityAnalysisParametersUuid = sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(sensitivityAnalysisParametersUuid);
+        }
 
         NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos = sourceStudy.getNonEvacuatedEnergyParameters() == null ?
             NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos() :
@@ -715,8 +561,8 @@ public class StudyService {
                 .dynamicSimulationParameters(DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper))
                 .shortCircuitParameters(ShortCircuitService.toEntity(shortCircuitParameters, shortCircuitPredefinedConfiguration))
                 .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
-                .sensitivityAnalysisParameters(SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues))
-            .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
+                .sensitivityAnalysisParametersUuid(copiedSensitivityAnalysisParametersUuid)
+                .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
                 .importParameters(newImportParameters)
                 .build();
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), UUID.randomUUID()));
@@ -959,14 +805,6 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public SensitivityAnalysisParametersInfos getSensitivityAnalysisParametersValues(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(studyEntity -> studyEntity.getSensitivityAnalysisParameters() != null ?
-                        SensitivityAnalysisService.fromEntity(studyEntity.getSensitivityAnalysisParameters()) :
-                        SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues())
-                .orElse(null);
-    }
-
     public NonEvacuatedEnergyParametersInfos getNonEvacuatedEnergyParametersInfos(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
             .map(studyEntity -> studyEntity.getNonEvacuatedEnergyParameters() != null ?
@@ -1207,7 +1045,9 @@ public class StudyService {
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
                                           String caseFormat, UUID caseUuid, String caseName, UUID loadFlowParametersUuid,
-                                          UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, Map<String, String> importParameters) {
+                                          UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters,
+                                          UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
+                                          Map<String, String> importParameters) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
@@ -1218,9 +1058,9 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider, 
-                loadFlowParametersUuid, null, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, securityAnalysisParametersUuid, 
-                null, null, importParameters, StudyIndexationStatus.INDEXED);
+                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
+                loadFlowParametersUuid, null, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, securityAnalysisParametersUuid,
+                null, sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED);
         return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
     }
 
@@ -1876,43 +1716,10 @@ public class StudyService {
         String provider = getSensitivityAnalysisProvider(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
-
-        SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues = getSensitivityAnalysisParametersValues(studyUuid);
-        SensitivityAnalysisParameters sensitivityAnalysisParameters = SensitivityAnalysisParameters.load();
-        sensitivityAnalysisParameters.setAngleFlowSensitivityValueThreshold(sensitivityAnalysisParametersValues.getAngleFlowSensitivityValueThreshold());
-        sensitivityAnalysisParameters.setFlowFlowSensitivityValueThreshold(sensitivityAnalysisParametersValues.getFlowFlowSensitivityValueThreshold());
-        sensitivityAnalysisParameters.setFlowVoltageSensitivityValueThreshold(sensitivityAnalysisParametersValues.getFlowVoltageSensitivityValueThreshold());
-
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParametersValues loadFlowParameters = getLoadFlowParametersValues(study, ComputationUsingLoadFlow.SENSITIVITY_ANALYSIS);
-        sensitivityAnalysisParameters.setLoadFlowParameters(loadFlowParameters.getCommonParameters());
 
-        SensitivityAnalysisInputData sensitivityAnalysisInputData = new SensitivityAnalysisInputData();
-        sensitivityAnalysisInputData.setParameters(sensitivityAnalysisParameters);
-        sensitivityAnalysisInputData.setLoadFlowSpecificParameters(loadFlowParameters.getSpecificParameters());
-
-        sensitivityAnalysisInputData.setSensitivityInjectionsSets(sensitivityAnalysisParametersValues.getSensitivityInjectionsSet()
-                .stream()
-                .filter(SensitivityAnalysisInputData.SensitivityInjectionsSet::isActivated)
-                .toList());
-        sensitivityAnalysisInputData.setSensitivityInjections(sensitivityAnalysisParametersValues.getSensitivityInjection()
-                .stream()
-                .filter(SensitivityAnalysisInputData.SensitivityInjection::isActivated)
-                .toList());
-        sensitivityAnalysisInputData.setSensitivityHVDCs(sensitivityAnalysisParametersValues.getSensitivityHVDC()
-                .stream()
-                .filter(SensitivityAnalysisInputData.SensitivityHVDC::isActivated)
-                .toList());
-        sensitivityAnalysisInputData.setSensitivityPSTs(sensitivityAnalysisParametersValues.getSensitivityPST()
-                .stream()
-                .filter(SensitivityAnalysisInputData.SensitivityPST::isActivated)
-                .toList());
-        sensitivityAnalysisInputData.setSensitivityNodes(sensitivityAnalysisParametersValues.getSensitivityNodes()
-                .stream()
-                .filter(SensitivityAnalysisInputData.SensitivityNodes::isActivated)
-                .toList());
-
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(
-                nodeUuid, networkUuid, variantId, reportUuid, provider, sensitivityAnalysisInputData, userId);
+        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider, userId, studyEntity.getSensitivityAnalysisParametersUuid(), loadFlowParameters);
 
         updateComputationResultUuid(nodeUuid, result, SENSITIVITY_ANALYSIS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
@@ -2171,10 +1978,16 @@ public class StudyService {
     }
 
     @Transactional
-    public void setSensitivityAnalysisParametersValues(UUID studyUuid, SensitivityAnalysisParametersInfos parameters, String userId) {
-        updateSensitivityAnalysisParameters(studyUuid,
-                SensitivityAnalysisService.toEntity(parameters != null ? parameters :
-                        SensitivityAnalysisService.getDefaultSensitivityAnalysisParametersValues()));
+    public String getSensitivityAnalysisParameters(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return sensitivityAnalysisService.getSensitivityAnalysisParameters(
+            sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity));
+    }
+
+    @Transactional
+    public void setSensitivityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
+        createOrUpdateSensitivityAnalysisParameters(studyUuid, parameters);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -2186,9 +1999,16 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public void updateSensitivityAnalysisParameters(UUID studyUuid, SensitivityAnalysisParametersEntity sensitivityParametersEntity) {
-        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setSensitivityAnalysisParameters(sensitivityParametersEntity));
+    public void createOrUpdateSensitivityAnalysisParameters(UUID studyUuid, String parameters) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID sensitivityAnalysisParametersUuid = studyEntity.getSensitivityAnalysisParametersUuid();
+        if (sensitivityAnalysisParametersUuid == null) {
+            sensitivityAnalysisParametersUuid = sensitivityAnalysisService.createSensitivityAnalysisParameters(parameters);
+            studyEntity.setSensitivityAnalysisParametersUuid(sensitivityAnalysisParametersUuid);
+        } else {
+            sensitivityAnalysisService.updateSensitivityAnalysisParameters(sensitivityAnalysisParametersUuid, parameters);
+        }
+        invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
     }
 
     public void updateNonEvacuatedEnergyParameters(UUID studyUuid, NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {

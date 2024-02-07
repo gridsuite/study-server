@@ -28,13 +28,15 @@ public class RestResponseEntityExceptionHandler {
                     NODE_NOT_FOUND,
                     SECURITY_ANALYSIS_NOT_FOUND,
                     SENSITIVITY_ANALYSIS_NOT_FOUND,
+                    SHORT_CIRCUIT_ANALYSIS_NOT_FOUND,
                     NON_EVACUATED_ENERGY_NOT_FOUND,
                     DYNAMIC_SIMULATION_NOT_FOUND,
                     DYNAMIC_MAPPING_NOT_FOUND,
                     EQUIPMENT_NOT_FOUND,
                     VOLTAGE_INIT_PARAMETERS_NOT_FOUND,
                     SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND,
-                    LOADFLOW_PARAMETERS_NOT_FOUND
+                    LOADFLOW_PARAMETERS_NOT_FOUND,
+                    SENSITIVITY_ANALYSIS_PARAMETERS_NOT_FOUND
                     -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getType());
             case CASE_NOT_FOUND -> ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(exception.getMessage());
             case STUDY_ALREADY_EXISTS -> ResponseEntity.status(HttpStatus.CONFLICT).body(type);
@@ -69,6 +71,7 @@ public class RestResponseEntityExceptionHandler {
                     GET_NETWORK_ELEMENT_FAILED,
                     SENSITIVITY_ANALYSIS_ERROR,
                     NON_EVACUATED_ENERGY_ERROR,
+                    SHORT_CIRCUIT_ANALYSIS_ERROR,
                     NODE_BUILD_ERROR, URI_SYNTAX,
                     CREATE_VOLTAGE_INIT_PARAMETERS_FAILED,
                     UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED,
@@ -81,7 +84,11 @@ public class RestResponseEntityExceptionHandler {
                     CREATE_LOADFLOW_PARAMETERS_FAILED,
                     UPDATE_LOADFLOW_PARAMETERS_FAILED,
                     GET_LOADFLOW_PARAMETERS_FAILED,
-                    DELETE_LOADFLOW_PARAMETERS_FAILED
+                    DELETE_LOADFLOW_PARAMETERS_FAILED,
+                    GET_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED,
+                    CREATE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED,
+                    UPDATE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED,
+                    DELETE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED
                     -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
             case SVG_NOT_FOUND,
                     NO_VOLTAGE_INIT_RESULTS_FOR_NODE,
