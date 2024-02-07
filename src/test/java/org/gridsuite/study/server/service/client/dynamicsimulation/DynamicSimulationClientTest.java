@@ -10,23 +10,20 @@ package org.gridsuite.study.server.service.client.dynamicsimulation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
-import org.gridsuite.study.server.dto.dynamicsimulation.network.NetworkInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.solver.IdaSolverInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.solver.SimSolverInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverTypeInfos;
-import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
-import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.client.dynamicsimulation.impl.DynamicSimulationClientImpl;
+import org.gridsuite.study.server.service.client.util.UrlUtil;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient.*;
@@ -73,64 +70,10 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
     public void testRun() throws JsonProcessingException {
 
         // prepare parameters
-        DynamicSimulationParametersInfos parameters = new DynamicSimulationParametersInfos();
+        DynamicSimulationParametersInfos parameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
         parameters.setStartTime(0.0);
         parameters.setStopTime(500.0);
         parameters.setMapping(MAPPING_NAME_01);
-
-        // solvers
-        IdaSolverInfos idaSolver = new IdaSolverInfos();
-        idaSolver.setId("1");
-        idaSolver.setType(SolverTypeInfos.IDA);
-        idaSolver.setOrder(1);
-        idaSolver.setInitStep(0.000001);
-        idaSolver.setMinStep(0.000001);
-        idaSolver.setMaxStep(10);
-        idaSolver.setAbsAccuracy(0.0001);
-        idaSolver.setRelAccuracy(0.0001);
-
-        SimSolverInfos simSolver = new SimSolverInfos();
-        simSolver.setId("3");
-        simSolver.setType(SolverTypeInfos.SIM);
-        simSolver.setHMin(0.000001);
-        simSolver.setHMax(1);
-        simSolver.setKReduceStep(0.5);
-        simSolver.setNEff(10);
-        simSolver.setNDeadband(2);
-        simSolver.setMaxRootRestart(3);
-        simSolver.setMaxNewtonTry(10);
-        simSolver.setLinearSolverName("KLU");
-        simSolver.setRecalculateStep(false);
-
-        List<SolverInfos> solvers = List.of(idaSolver, simSolver);
-
-        parameters.setSolverId(idaSolver.getId());
-        parameters.setSolvers(solvers);
-
-        // network
-        NetworkInfos network = new NetworkInfos();
-        network.setCapacitorNoReclosingDelay(300);
-        network.setDanglingLineCurrentLimitMaxTimeOperation(90);
-        network.setLineCurrentLimitMaxTimeOperation(90);
-        network.setLoadTp(90);
-        network.setLoadTq(90);
-        network.setLoadAlpha(1);
-        network.setLoadAlphaLong(0);
-        network.setLoadBeta(2);
-        network.setLoadBetaLong(0);
-        network.setLoadIsControllable(false);
-        network.setLoadIsRestorative(false);
-        network.setLoadZPMax(100);
-        network.setLoadZQMax(100);
-        network.setReactanceNoReclosingDelay(0);
-        network.setTransformerCurrentLimitMaxTimeOperation(90);
-        network.setTransformerT1StHT(60);
-        network.setTransformerT1StTHT(30);
-        network.setTransformerTNextHT(10);
-        network.setTransformerTNextTHT(10);
-        network.setTransformerTolV(0.015);
-
-        parameters.setNetwork(network);
 
         // configure mock server response for test case run - networks/{networkUuid}/run?
         String runEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
@@ -140,7 +83,7 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
                         .withHeader("Content-Type", "application/json; charset=utf-8")
                 ));
 
-        UUID resultUuid = dynamicSimulationClient.run("", "", UUID.fromString(NETWORK_UUID_STRING), VARIANT_1_ID, parameters);
+        UUID resultUuid = dynamicSimulationClient.run("", "", UUID.fromString(NETWORK_UUID_STRING), VARIANT_1_ID, parameters, "testUserId");
 
         // check result
         assertEquals(RESULT_UUID_STRING, resultUuid.toString());

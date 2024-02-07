@@ -10,6 +10,7 @@ package org.gridsuite.study.server.service.dynamicsimulation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.*;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelVariableDefinitionInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.VariablesSetInfos;
@@ -129,16 +130,16 @@ public class DynamicSimulationServiceTest {
     @Before
     public void setup() {
         // setup networkModificationTreeService mock in all normal cases
-        given(networkModificationTreeService.getDynamicSimulationResultUuid(NODE_UUID)).willReturn(Optional.of(RESULT_UUID));
+        given(networkModificationTreeService.getComputationResultUuid(NODE_UUID, ComputationType.DYNAMIC_SIMULATION)).willReturn(Optional.of(RESULT_UUID));
     }
 
     @Test
     public void testRunDynamicSimulation() {
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.run(eq(""), eq(""), eq(NETWORK_UUID), eq(VARIANT_1_ID), any())).willReturn(RESULT_UUID);
+        given(dynamicSimulationClient.run(eq(""), eq(""), eq(NETWORK_UUID), eq(VARIANT_1_ID), any(), any())).willReturn(RESULT_UUID);
 
         // call method to be tested
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", "", NETWORK_UUID, VARIANT_1_ID, null);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", "", NETWORK_UUID, VARIANT_1_ID, null, "testUserId");
 
         // check result
         assertEquals(RESULT_UUID_STRING, resultUuid.toString());
@@ -285,7 +286,7 @@ public class DynamicSimulationServiceTest {
     public void testAssertDynamicSimulationRunning() {
         // setup for running node
         given(dynamicSimulationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSimulationStatus.RUNNING);
-        given(networkModificationTreeService.getDynamicSimulationResultUuid(NODE_UUID_RUNNING)).willReturn(Optional.of(RESULT_UUID_RUNNING));
+        given(networkModificationTreeService.getComputationResultUuid(NODE_UUID_RUNNING, ComputationType.DYNAMIC_SIMULATION)).willReturn(Optional.of(RESULT_UUID_RUNNING));
 
         // test running
         dynamicSimulationService.assertDynamicSimulationNotRunning(NODE_UUID_RUNNING);

@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -46,10 +47,8 @@ public class NetworkModificationService {
 
     private static final String DELIMITER = "/";
     private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
-    private static final String MODIFICATIONS_PATH = "modifications";
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
-    private static final String MODIFICATIONS_RESTORE_PATH = NETWORK_MODIFICATIONS_PATH + "/restore";
-    private static final String MODIFICATIONS_STASH_PATH = NETWORK_MODIFICATIONS_PATH + "/stash";
+    private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
     private static final String NETWORK_UUID = "networkUuid";
     private static final String REPORT_UUID = "reportUuid";
     private static final String REPORTER_ID = "reporterId";
@@ -83,11 +82,12 @@ public class NetworkModificationService {
     }
 
     // Return json string because modification dtos are not available here
-    public String getModifications(UUID groupUUid, boolean stashedModifications) {
+    public String getModifications(UUID groupUUid, boolean stashedModifications, boolean onlyMetadata) {
         Objects.requireNonNull(groupUUid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH)
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH)
             .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
-            .queryParam("stashed", stashedModifications)
+            .queryParam(QUERY_PARAM_ONLY_STASHED, stashedModifications)
+            .queryParam("onlyMetadata", onlyMetadata)
             .buildAndExpand(groupUUid)
             .toUriString();
 
@@ -95,6 +95,20 @@ public class NetworkModificationService {
             return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, GET_MODIFICATIONS_FAILED);
+        }
+    }
+
+    public Integer getModificationsCount(UUID groupUUid, boolean stashedModifications) {
+        Objects.requireNonNull(groupUUid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_COUNT_PATH)
+            .queryParam(QUERY_PARAM_STASHED, stashedModifications)
+            .buildAndExpand(groupUUid)
+            .toUriString();
+
+        try {
+            return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, Integer.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, GET_MODIFICATIONS_COUNT_FAILED);
         }
     }
 
@@ -112,13 +126,13 @@ public class NetworkModificationService {
         }
     }
 
-    public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
+    public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids, boolean onlyStashed) {
         Objects.requireNonNull(groupUuid);
-        Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
                 .queryParam(UUIDS, modificationsUuids)
                 .queryParam(GROUP_UUID, groupUuid)
+                .queryParam(QUERY_PARAM_ONLY_STASHED, onlyStashed)
                 .buildAndExpand()
                 .toUriString();
         try {
@@ -193,9 +207,10 @@ public class NetworkModificationService {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
-                .fromUriString(getNetworkModificationServerURI(false) + MODIFICATIONS_STASH_PATH)
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
                 .queryParam(UUIDS, modificationsUuids)
                 .queryParam(GROUP_UUID, groupUUid)
+                .queryParam(QUERY_PARAM_STASHED, true)
                 .buildAndExpand()
                 .toUriString();
 
@@ -204,7 +219,7 @@ public class NetworkModificationService {
 
         HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
         try {
-            restTemplate.exchange(path, HttpMethod.POST, httpEntity, Void.class);
+            restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
         }
@@ -214,9 +229,10 @@ public class NetworkModificationService {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
-                .fromUriString(getNetworkModificationServerURI(false) + MODIFICATIONS_RESTORE_PATH)
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
                 .queryParam(UUIDS, modificationsUuids)
                 .queryParam(GROUP_UUID, groupUUid)
+                .queryParam(QUERY_PARAM_STASHED, false)
                 .buildAndExpand()
                 .toUriString();
 
@@ -226,7 +242,7 @@ public class NetworkModificationService {
         HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
 
         try {
-            restTemplate.exchange(path, HttpMethod.POST, httpEntity, Void.class);
+            restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
         }

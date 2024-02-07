@@ -30,6 +30,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.*;
 
+import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
@@ -104,9 +105,9 @@ public class StudyServiceDynamicSimulationTest {
 
         // setup NetworkModificationTreeService mock
         // suppose always having an existing result in a previous run
-        given(networkModificationTreeService.getDynamicSimulationResultUuid(any(UUID.class))).willReturn(Optional.of(RESULT_UUID));
+        given(networkModificationTreeService.getComputationResultUuid(any(UUID.class), eq(DYNAMIC_SIMULATION))).willReturn(Optional.of(RESULT_UUID));
         given(networkModificationTreeService.getVariantId(any(UUID.class))).willReturn(VARIANT_1_ID);
-        willDoNothing().given(networkModificationTreeService).updateDynamicSimulationResultUuid(NODE_UUID, RESULT_UUID);
+        willDoNothing().given(networkModificationTreeService).updateComputationResultUuid(NODE_UUID, RESULT_UUID, DYNAMIC_SIMULATION);
 
         // setup NotificationService mock
         willDoNothing().given(notificationService).emitStudyChanged(STUDY_UUID, NODE_UUID, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
@@ -115,7 +116,7 @@ public class StudyServiceDynamicSimulationTest {
     @Test
     public void testRunDynamicSimulation() {
         // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(eq(""), anyString(), eq(NETWORK_UUID), anyString(), any())).willReturn(RESULT_UUID);
+        given(dynamicSimulationService.runDynamicSimulation(eq(""), anyString(), eq(NETWORK_UUID), anyString(), any(), any())).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
         given(loadFlowService.getLoadFlowStatus(NODE_UUID)).willReturn(LoadFlowStatus.CONVERGED.name());
 
@@ -126,7 +127,7 @@ public class StudyServiceDynamicSimulationTest {
         parameters.setMapping(MAPPING_NAME_01);
 
         // call method to be tested
-        UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, parameters);
+        UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, parameters, "testUserId");
 
         // check result
         assertEquals(RESULT_UUID_STRING, resultUuid.toString());

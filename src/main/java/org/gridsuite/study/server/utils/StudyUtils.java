@@ -27,6 +27,7 @@ public final class StudyUtils {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private StudyUtils() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
     public static StudyException handleHttpError(HttpStatusCodeException httpException, StudyException.Type type) {
@@ -34,7 +35,7 @@ public final class StudyUtils {
 
         String errorMessage = responseBody.isEmpty() ? httpException.getStatusCode().toString() : parseHttpError(responseBody);
 
-        LOGGER.error(errorMessage);
+        LOGGER.error(errorMessage, httpException);
 
         return new StudyException(type, errorMessage);
     }

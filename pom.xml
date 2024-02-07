@@ -42,8 +42,7 @@
     </developers>
 
     <properties>
-        <gridsuite-dependencies.version>27</gridsuite-dependencies.version>
-        <commons-lang3.version>3.9</commons-lang3.version>
+        <powsybl-ws-dependencies.version>2.7.0</powsybl-ws-dependencies.version>
         <log4j2-mock-version>0.0.2</log4j2-mock-version>
         <testcontainers.version>1.18.3</testcontainers.version>
         <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
@@ -85,19 +84,14 @@
 
             <!-- imports -->
             <dependency>
-                <groupId>org.gridsuite</groupId>
-                <artifactId>gridsuite-dependencies</artifactId>
-                <version>${gridsuite-dependencies.version}</version>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-ws-dependencies</artifactId>
+                <version>${powsybl-ws-dependencies.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
 
             <!-- project specific dependencies -->
-            <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>commons-lang3</artifactId>
-                <version>${commons-lang3.version}</version>
-            </dependency>
             <dependency>
                 <groupId>de.dentrassi.elasticsearch</groupId>
                 <artifactId>log4j2-mock</artifactId>
@@ -169,8 +163,8 @@
         </dependency>
 
         <dependency>
-          <groupId>com.jayway.jsonpath</groupId>
-          <artifactId>json-path-assert</artifactId>
+            <groupId>com.jayway.jsonpath</groupId>
+            <artifactId>json-path-assert</artifactId>
         </dependency>
 
         <!-- jpa, crud repository -->
@@ -209,6 +203,10 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-actuator</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-stream-binder-rabbit</artifactId>
             <scope>runtime</scope>
@@ -227,7 +225,7 @@
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-iidm-xml-converter</artifactId>
+            <artifactId>powsybl-iidm-serde</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

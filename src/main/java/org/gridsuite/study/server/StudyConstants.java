@@ -32,6 +32,7 @@ public final class StudyConstants {
     public static final String VOLTAGE_INIT_API_VERSION = "v1";
     public static final String TIME_SERIES_API_VERSION = "v1";
     public static final String DYNAMIC_MAPPING_API_VERSION = ""; // mapping server is now without version, must be v1 in the next time
+    public static final String FILTER_API_VERSION = "v1";
 
     public static final String NETWORK_UUID = "networkUuid";
     public static final String CASE_UUID = "caseUuid";
@@ -41,6 +42,7 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_EQUIPMENT_TYPE = "equipmentType";
     public static final String QUERY_PARAM_ELEMENT_TYPE = "elementType";
     public static final String QUERY_PARAM_INFO_TYPE = "infoType";
+    public static final String QUERY_PARAM_OPERATION = "operation";
     public static final String QUERY_PARAM_SUBSTATIONS_IDS = "substationsIds";
     public static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
     public static final String QUERY_PARAM_DC_POWERFACTOR = "dcPowerFactor";
@@ -53,16 +55,22 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_REPORT_DEFAULT_NAME = "defaultName";
     public static final String QUERY_PARAM_REPORT_SEVERITY_LEVEL = "severityLevels";
     public static final String QUERY_PARAM_REPORT_WITH_ELEMENTS = "withElements";
-    public static final String QUERY_PARAM_REPORT_TASKKEY_FILTER = "taskKeyFilter";
+    public static final String QUERY_PARAM_REPORT_NAME_FILTER = "reportNameFilter";
+    public static final String QUERY_PARAM_REPORT_NAME_MATCHING_TYPE = "reportNameMatchingType";
     public static final String QUERY_PARAM_RECEIVER = "receiver";
+    public static final String QUERY_PARAM_REPORT_UUID = "reportUuid";
+    public static final String QUERY_PARAM_REPORTER_ID = "reporterId";
+    public static final String QUERY_PARAM_REPORT_TYPE = "reportType";
     public static final String HEADER_RECEIVER = "receiver";
     public static final String HEADER_BUS_ID = "busId";
     public static final String HEADER_IMPORT_PARAMETERS = "importParameters";
     public static final String HEADER_MESSAGE = "message";
     public static final String HEADER_USER_ID = "userId";
+    public static final String QUERY_PARAM_ONLY_STASHED = "onlyStashed";
+    public static final String QUERY_PARAM_STASHED = "stashed";
 
     public enum SldDisplayMode {
         FEEDER_POSITION,
-        STATE_VARIABLE;
+        STATE_VARIABLE
     }
 }

@@ -8,10 +8,10 @@
 package org.gridsuite.study.server.service.client.dynamicmapping.impl;
 
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
-import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.springframework.beans.factory.annotation.Autowired;

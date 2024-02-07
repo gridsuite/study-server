@@ -13,22 +13,23 @@ import com.powsybl.timeseries.IrregularTimeSeriesIndex;
 import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
+import jakarta.validation.constraints.NotNull;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesMetadataRest;
-import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractRestClientTest;
-import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.client.timeseries.impl.TimeSeriesClientImpl;
+import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.RestTemplate;
 
-import jakarta.validation.constraints.NotNull;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -47,6 +48,7 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
 
     public static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
     public static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
+    public static final String TIME_SERIES_NAME_UNKNOWN = "TIME_SERIES_NAME_UNKNOWN";
     public static final String TIME_LINE_NAME = "TimeLine";
 
     private final Map<String, List<TimeSeries>> database = new HashMap<>();
@@ -110,7 +112,7 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
                             timeseries = database.get(groupUuid).stream().filter(series -> timeSeriesNames.contains(series.getMetadata().getName())).collect(Collectors.toList());
                         }
 
-                        if (timeseries == null) {
+                        if (CollectionUtils.isEmpty(timeseries)) {
                             return new MockResponse().setResponseCode(HttpStatus.NO_CONTENT.value());
                         }
 
@@ -189,6 +191,7 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
     @Test
     public void testGetTimeSeriesGroupGivenTimeSeriesNames() throws JsonProcessingException {
         List<TimeSeries> timeSeries = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_SERIES_GROUP_UUID), List.of(TIME_SERIES_NAME_1));
+        List<TimeSeries> timeSeriesNameUnknown = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_SERIES_GROUP_UUID), List.of(TIME_SERIES_NAME_UNKNOWN));
         List<TimeSeries> timeLines = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_LINE_GROUP_UUID), List.of(TIME_LINE_NAME));
 
         // --- check result --- //
@@ -202,6 +205,11 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
         String resultTimeSeriesJson = TimeSeries.toJson(timeSeries);
         getLogger().info("resultTimeSeriesJson = " + resultTimeSeriesJson);
         assertEquals(objectMapper.readTree(expectedTimeSeriesJson), objectMapper.readTree(resultTimeSeriesJson));
+
+        // check time series unknown
+        // must contain only zero element
+        getLogger().info("Timeseries size = " + timeSeriesNameUnknown.size());
+        assertEquals(0, timeSeriesNameUnknown.size());
 
         // check timeline
         // must contain only one element

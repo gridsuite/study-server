@@ -11,14 +11,9 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import static org.gridsuite.study.server.StudyConstants.ACTIONS_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-
-import java.util.List;
-import java.util.UUID;
-
+import com.powsybl.contingency.Contingency;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -26,7 +21,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import com.powsybl.contingency.Contingency;
+import java.util.List;
+import java.util.UUID;
+
+import static org.gridsuite.study.server.StudyConstants.*;
 
 @Service
 public class ActionsService {

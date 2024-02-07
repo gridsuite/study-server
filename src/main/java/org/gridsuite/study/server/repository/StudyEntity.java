@@ -7,8 +7,10 @@
 package org.gridsuite.study.server.repository;
 
 import lombok.*;
+import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
+import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 
 import jakarta.persistence.*;
@@ -58,15 +60,27 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "sensitivityAnalysisProvider")
     private String sensitivityAnalysisProvider;
 
+    @Column(name = "nonEvacuatedEnergyProvider")
+    private String nonEvacuatedEnergyProvider;
+
     @Column(name = "dynamicSimulationProvider")
     private String dynamicSimulationProvider;
 
+    @Column(name = "loadFlowParametersUuid")
+    private UUID loadFlowParametersUuid;
+
+    /**
+    * @deprecated (to be removed when the migration of load flow parameters is done)
+    */
+    @Deprecated(forRemoval = true)
+    @Getter(AccessLevel.PROTECTED)
+    @Setter(AccessLevel.PROTECTED)
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "loadFlowParametersEntity_id",
             referencedColumnName = "id",
             foreignKey = @ForeignKey(
                     name = "loadFlowParameters_id_fk"
-            ), nullable = false)
+            ))
     private LoadFlowParametersEntity loadFlowParameters;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
@@ -88,6 +102,12 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "voltageInitParametersUuid")
     private UUID voltageInitParametersUuid;
 
+    /**
+     * @deprecated to remove when the data is migrated into the security-analysis-server
+     */
+    @Deprecated(forRemoval = true)
+    @Getter(AccessLevel.PROTECTED)
+    @Setter(AccessLevel.PROTECTED)
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "securityAnalysisParametersEntity_id",
             referencedColumnName = "id",
@@ -96,6 +116,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             ))
     private SecurityAnalysisParametersEntity securityAnalysisParameters;
 
+    @Column(name = "securityAnalysisParametersUuid")
+    private UUID securityAnalysisParametersUuid;
+
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "sensitivityAnalysisParametersEntity_id",
             referencedColumnName = "id",
@@ -103,6 +126,14 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
                     name = "sensitivityAnalysisParameters_id_fk"
             ))
     private SensitivityAnalysisParametersEntity sensitivityAnalysisParameters;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "nonEvacuatedEnergyParametersEntity_id",
+        referencedColumnName = "id",
+        foreignKey = @ForeignKey(
+            name = "nonEvacuatedEnergyParameters_id_fk"
+        ))
+    private NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParameters;
 
     @ElementCollection
     @CollectionTable(name = "importParameters",
@@ -116,7 +147,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     public ShortCircuitParametersEntity getShortCircuitParameters() {
         if (this.shortCircuitParameters == null) {
-            this.setShortCircuitParameters(ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters()));
+            this.setShortCircuitParameters(ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP));
         }
         return this.shortCircuitParameters;
     }
