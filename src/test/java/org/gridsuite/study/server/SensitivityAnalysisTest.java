@@ -54,7 +54,6 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
@@ -121,9 +120,6 @@ public class SensitivityAnalysisTest {
     private static final String VARIANT_ID_3 = "variant_3";
 
     private static final long TIMEOUT = 1000;
-
-    @Value("${loadflow.default-provider}")
-    String defaultLoadflowProvider;
 
     @Autowired
     private MockMvc mockMvc;
@@ -592,7 +588,7 @@ public class SensitivityAnalysisTest {
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, LOADFLOW_PARAMETERS_UUID, defaultShortCircuitParametersEntity, null, SENSITIVITY_ANALYSIS_PARAMETERS_UUID,
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", LOADFLOW_PARAMETERS_UUID, defaultShortCircuitParametersEntity, null, SENSITIVITY_ANALYSIS_PARAMETERS_UUID,
                                                              defaultNonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);

@@ -863,17 +863,10 @@ public class StudyController {
     @Operation(summary = "set load flow provider for the specified study, no body means reset to default provider")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load flow provider is set")})
     public ResponseEntity<Void> setLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid,
-                                                          @RequestBody(required = false) String provider,
-                                                          @RequestHeader(HEADER_USER_ID) String userId) {
+                                                    @RequestBody(required = false) String provider,
+                                                    @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.updateLoadFlowProvider(studyUuid, provider, userId);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/loadflow/provider")
-    @Operation(summary = "Get load flow provider for a specified study, empty string means default provider")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load flow provider is returned")})
-    public ResponseEntity<String> getLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/security-analysis/provider")

@@ -51,6 +51,12 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "caseName", nullable = false)
     private String caseName;
 
+    /**
+    * @deprecated (to be removed when the migration of load flow parameters is done)
+    */
+    @Deprecated(forRemoval = true)
+    @Getter(AccessLevel.PROTECTED)
+    @Setter(AccessLevel.PROTECTED)
     @Column(name = "loadFlowProvider")
     private String loadFlowProvider;
 

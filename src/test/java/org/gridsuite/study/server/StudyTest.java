@@ -162,14 +162,9 @@ public class StudyTest {
     private static final NetworkInfos NETWORK_INFOS_3 = new NetworkInfos(UUID.fromString(NETWORK_UUID_3_STRING), "file_3.xiidm");
     private static final String CASE_NAME = "DefaultCaseName";
     private static final UUID EMPTY_MODIFICATION_GROUP_UUID = UUID.randomUUID();
-    private static final String EMPTY_ARRAY = "[]";
-    private static final Map DEFAULT_IMPORT_PARAMETERS = Map.of("param1", "defaultValue1", "param2", "defaultValue2");
     private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
-    private static final String DEFAULT_MODIFICATION_LIST_RESULT = "[{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}]";
-
-    @Value("${loadflow.default-provider}")
-    String defaultLoadflowProvider;
+    private static final String DEFAULT_PROVIDER = "defaultLoadflowProvider";
 
     @Value("${security-analysis.default-provider}")
     String defaultSecurityAnalysisProvider;
@@ -475,6 +470,10 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.matches("/v1/parameters/.*") && DELETE.equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/parameters/.*/provider")) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/default-provider")) {
+                    return new MockResponse().setResponseCode(200).setBody(DEFAULT_PROVIDER);
                 }
 
                 switch (path) {
@@ -1315,7 +1314,6 @@ public class StudyTest {
         createStudy("userId", CASE_UUID);
         StudyEntity study = studyRepository.findAll().get(0);
 
-        assertEquals(study.getLoadFlowProvider(), defaultLoadflowProvider);
         assertEquals(study.getSecurityAnalysisProvider(), defaultSecurityAnalysisProvider);
         assertEquals(study.getSensitivityAnalysisProvider(), defaultSensitivityAnalysisProvider);
         assertEquals(study.getNonEvacuatedEnergyProvider(), defaultNonEvacuatedEnergyProvider);
@@ -2253,7 +2251,9 @@ public class StudyTest {
     public void getDefaultLoadflowProvider() throws Exception {
         mockMvc.perform(get("/v1/loadflow-default-provider")).andExpectAll(
                 status().isOk(),
-                content().string(defaultLoadflowProvider));
+                content().string(DEFAULT_PROVIDER));
+        var requests = TestUtils.getRequestsDone(1, server);
+        assertTrue(requests.contains("/v1/default-provider"));
     }
 
     @Test
@@ -2366,9 +2366,6 @@ public class StudyTest {
     public void providerTest() throws Exception {
         UUID studyUuid = createStudy(USER_ID_HEADER, CASE_UUID);
         assertNotNull(studyUuid);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyUuid))
-                .andExpectAll(status().isOk(),
-                              content().string(defaultLoadflowProvider));
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid))
                 .andExpectAll(status().isOk(),
                         content().string(defaultSecurityAnalysisProvider));
@@ -2419,9 +2416,6 @@ public class StudyTest {
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyUuid))
-                .andExpectAll(status().isOk(),
-                        content().string("SuperLF"));
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid))
                 .andExpectAll(status().isOk(),
                         content().string("SuperSA"));
@@ -2431,6 +2425,9 @@ public class StudyTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
             .andExpectAll(status().isOk(),
                 content().string("SuperNEE"));
+
+        var requests = TestUtils.getRequestsDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/.*/provider")));
     }
 
     @Test

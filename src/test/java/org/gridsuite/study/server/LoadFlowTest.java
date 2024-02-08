@@ -50,7 +50,6 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
@@ -103,6 +102,8 @@ public class LoadFlowTest {
 
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString(LOADFLOW_PARAMETERS_UUID_STRING);
 
+    private static final String PROVIDER = "LF_PROVIDER";
+
     private static final String LOADFLOW_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String VARIANT_ID = "variant_1";
 
@@ -131,9 +132,6 @@ public class LoadFlowTest {
     private ObjectMapper objectMapper;
 
     private ObjectWriter objectWriter;
-
-    @Value("${loadflow.default-provider}")
-    String defaultLoadflowProvider;
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
@@ -183,6 +181,7 @@ public class LoadFlowTest {
         LIMIT_VIOLATIONS_JSON = objectMapper.writeValueAsString(limitViolations);
 
         LoadFlowParametersInfos loadFlowParametersInfos = LoadFlowParametersInfos.builder()
+            .provider(PROVIDER)
             .commonParameters(LoadFlowParameters.load())
             .specificParametersPerProvider(Map.of())
             .build();
@@ -551,6 +550,7 @@ public class LoadFlowTest {
                 status().isOk()).andReturn();
 
         String loadflowParameters = objectMapper.writeValueAsString(LoadFlowParametersInfos.builder()
+                .provider(PROVIDER)
                 .commonParameters(LoadFlowParameters.load())
                 .specificParametersPerProvider(Map.of())
                 .build());
@@ -587,7 +587,7 @@ public class LoadFlowTest {
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID loadFlowParametersUuid) {
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider,
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "",
                 loadFlowParametersUuid, defaultShortCircuitParametersEntity, null, null,
                 defaultNonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);

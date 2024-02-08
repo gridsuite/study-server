@@ -67,7 +67,7 @@ public class LoadFlowService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID parametersUuid, String provider, String userId, Float limitReduction) {
+    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID parametersUuid, String userId, Float limitReduction) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
         UUID reportUuid = getReportUuid(nodeUuid);
@@ -85,9 +85,6 @@ public class LoadFlowService {
                 .queryParam(QUERY_PARAM_REPORT_UUID, reportUuid.toString())
                 .queryParam(QUERY_PARAM_REPORTER_ID, nodeUuid.toString())
                 .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.LOADFLOW.reportKey);
-        if (!provider.isEmpty()) {
-            uriComponentsBuilder.queryParam("provider", provider);
-        }
         if (parametersUuid != null) {
             uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
         }
@@ -312,6 +309,38 @@ public class LoadFlowService {
             restTemplate.delete(loadFlowServerBaseUri + path);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, DELETE_LOADFLOW_PARAMETERS_FAILED);
+        }
+    }
+
+    public void updateLoadFlowProvider(UUID parameterUuid, String provider) {
+        Objects.requireNonNull(provider);
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI + "/provider")
+                .buildAndExpand(parameterUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(provider, headers);
+
+        try {
+            restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PATCH, httpEntity, Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_LOADFLOW_PROVIDER_FAILED);
+        }
+    }
+
+    public String getLoadFlowDefaultProvider() {
+        String path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/default-provider")
+                .buildAndExpand()
+                .toUriString();
+
+        try {
+            return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, GET_LOADFLOW_DEFAULT_PROVIDER_FAILED);
         }
     }
 

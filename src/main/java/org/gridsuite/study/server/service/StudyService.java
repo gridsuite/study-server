@@ -87,8 +87,6 @@ public class StudyService {
 
     StudyServerExecutionService studyServerExecutionService;
 
-    private final String defaultLoadflowProvider;
-
     private final String defaultSecurityAnalysisProvider;
 
     private final String defaultSensitivityAnalysisProvider;
@@ -152,7 +150,6 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-            @Value("${loadflow.default-provider}") String defaultLoadflowProvider,
             @Value("${security-analysis.default-provider}") String defaultSecurityAnalysisProvider,
             @Value("${sensitivity-analysis.default-provider}") String defaultSensitivityAnalysisProvider,
             @Value("${non-evacuated-energy.default-provider}") String defaultNonEvacuatedEnergyProvider,
@@ -183,7 +180,6 @@ public class StudyService {
             VoltageInitService voltageInitService,
             DynamicSimulationEventService dynamicSimulationEventService,
             FilterService filterService) {
-        this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
         this.defaultSensitivityAnalysisProvider = defaultSensitivityAnalysisProvider;
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
@@ -546,7 +542,6 @@ public class StudyService {
                 .id(studyInfos.getId())
                 .networkUuid(clonedNetworkUuid).networkId(sourceStudy.getNetworkId())
                 .caseFormat(sourceStudy.getCaseFormat()).caseUuid(clonedCaseUuid).caseName(sourceStudy.getCaseName())
-                .loadFlowProvider(sourceStudy.getLoadFlowProvider())
                 .loadFlowParametersUuid(copiedLoadFlowParametersUuid)
                 .securityAnalysisProvider(sourceStudy.getSecurityAnalysisProvider())
                 .securityAnalysisParametersUuid(copiedSecurityAnalysisParametersUuid)
@@ -681,7 +676,7 @@ public class StudyService {
         prevResultUuidOpt.ifPresent(loadflowService::deleteLoadFlowResult);
 
         UUID lfParametersUuid = loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
-        UUID result = loadflowService.runLoadFlow(studyUuid, nodeUuid, lfParametersUuid, studyEntity.getLoadFlowProvider(), userId, limitReduction);
+        UUID result = loadflowService.runLoadFlow(studyUuid, nodeUuid, lfParametersUuid, userId, limitReduction);
 
         updateComputationResultUuid(nodeUuid, result, LOAD_FLOW);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
@@ -779,7 +774,7 @@ public class StudyService {
         final String lfProvider = switch (computation) {
             case SECURITY_ANALYSIS -> studyEntity.getSecurityAnalysisProvider();
             case SENSITIVITY_ANALYSIS -> studyEntity.getSensitivityAnalysisProvider();
-            case LOAD_FLOW -> studyEntity.getLoadFlowProvider();
+            default -> null;
         };
         return LoadFlowParametersValues.builder()
                 .commonParameters(params.getCommonParameters())
@@ -826,13 +821,7 @@ public class StudyService {
     }
 
     public String getDefaultLoadflowProvider() {
-        return defaultLoadflowProvider;
-    }
-
-    public String getLoadFlowProvider(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(StudyEntity::getLoadFlowProvider)
-                .orElse("");
+        return loadflowService.getLoadFlowDefaultProvider();
     }
 
     private void updateProvider(UUID studyUuid, String userId, Consumer<StudyEntity> providerSetter) {
@@ -841,10 +830,9 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    @Transactional
     public void updateLoadFlowProvider(UUID studyUuid, String provider, String userId) {
         updateProvider(studyUuid, userId, studyEntity -> {
-            studyEntity.setLoadFlowProvider(provider != null ? provider : defaultLoadflowProvider);
+            loadflowService.updateLoadFlowProvider(studyEntity.getLoadFlowParametersUuid(), provider);
             invalidateLoadFlowStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         });
@@ -1052,7 +1040,7 @@ public class StudyService {
         Objects.requireNonNull(shortCircuitParameters);
         Objects.requireNonNull(importParameters);
 
-        StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
+        StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, null,
                 defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
                 loadFlowParametersUuid, null, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, securityAnalysisParametersUuid,
                 null, sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED);
