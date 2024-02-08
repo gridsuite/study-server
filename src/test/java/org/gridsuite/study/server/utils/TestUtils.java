@@ -19,7 +19,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.junit.platform.commons.util.StringUtils;
@@ -79,7 +78,7 @@ public final class TestUtils {
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
                                                UUID voltageInitParametersUuid,
                                                UUID securityAnalysisParametersUuid,
-                                               SensitivityAnalysisParametersEntity sensitivityParametersEntity,
+                                               UUID sensitivityParametersUuid,
                                                NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .networkId("netId")
@@ -89,7 +88,7 @@ public final class TestUtils {
             .shortCircuitParameters(shortCircuitParametersEntity)
             .voltageInitParametersUuid(voltageInitParametersUuid)
             .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
-            .sensitivityAnalysisParameters(sensitivityParametersEntity)
+            .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
             .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
             .build();
     }
@@ -98,7 +97,7 @@ public final class TestUtils {
                                                UUID loadFlowParametersUuid,
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
                                                UUID securityAnalysisParametersUuid,
-                                               SensitivityAnalysisParametersEntity sensitivityParametersEntity,
+                                               UUID sensitivityParametersUuid,
                                                NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
                 .networkId("netId")
@@ -107,7 +106,7 @@ public final class TestUtils {
                 .loadFlowParametersUuid(loadFlowParametersUuid)
                 .shortCircuitParameters(shortCircuitParametersEntity)
                 .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
-                .sensitivityAnalysisParameters(sensitivityParametersEntity)
+                .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
                 .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
                 .build();
     }

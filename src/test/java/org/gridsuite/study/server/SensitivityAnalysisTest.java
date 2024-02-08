@@ -18,32 +18,27 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.sensitivity.SensitivityFunctionType;
-
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
-import org.gridsuite.study.server.dto.LoadFlowSpecificParameterInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
-import org.gridsuite.study.server.dto.sensianalysis.EquipmentsContainer;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
-import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData;
-import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.SendInput;
@@ -72,12 +67,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
@@ -85,15 +75,10 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.study.server.utils.TestUtils.getBinaryAsBuffer;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -134,7 +119,6 @@ public class SensitivityAnalysisTest {
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String VARIANT_ID_3 = "variant_3";
-    private static String SENSITIVITY_INPUT = null;
 
     private static final long TIMEOUT = 1000;
 
@@ -185,6 +169,7 @@ public class SensitivityAnalysisTest {
 
     //output destinations
     private final String studyUpdateDestination = "study.update";
+    private final String elementUpdateDestination = "element.update";
     private final String sensitivityAnalysisResultDestination = "sensitivityanalysis.result";
     private final String sensitivityAnalysisStoppedDestination = "sensitivityanalysis.stopped";
     private final String sensitivityAnalysisFailedDestination = "sensitivityanalysis.failed";
@@ -194,6 +179,8 @@ public class SensitivityAnalysisTest {
     public static final String SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":90.0,\"angleFlowSensitivityValueThreshold\":0.6,\"flowVoltageSensitivityValueThreshold\":0.1,\"sensitivityInjectionsSet\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"injections\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"distributionType\":\"PROPORTIONAL\",\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityInjection\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"injections\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityHVDC\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"sensitivityType\":\"DELTA_MW\",\"hvdcs\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityPST\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"sensitivityType\":\"DELTA_MW\",\"psts\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityNodes\":[{\"monitoredVoltageLevels\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"equipmentsInVoltageRegulation\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}]}";
 
     private static final byte[] SENSITIVITY_RESULTS_AS_CSV = {0x00, 0x01};
+
+    private static final UUID SENSITIVITY_ANALYSIS_PARAMETERS_UUID = UUID.randomUUID();
 
     @Before
     public void setup() throws IOException {
@@ -221,33 +208,6 @@ public class SensitivityAnalysisTest {
             .specificParametersPerProvider(Map.of())
             .build();
         String loadFlowParameters = objectMapper.writeValueAsString(loadFlowParametersInfos);
-
-        SensitivityAnalysisInputData sensitivityAnalysisInputData = SensitivityAnalysisInputData.builder()
-            .sensitivityInjectionsSets(List.of(SensitivityAnalysisInputData.SensitivityInjectionsSet.builder()
-                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name1")))
-                .injections(List.of(new EquipmentsContainer(UUID.randomUUID(), "name2")))
-                .distributionType(SensitivityAnalysisInputData.DistributionType.PROPORTIONAL)
-                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name3"))).build()))
-            .sensitivityInjections(List.of(SensitivityAnalysisInputData.SensitivityInjection.builder()
-                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name4")))
-                .injections(List.of(new EquipmentsContainer(UUID.randomUUID(), "name5")))
-                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name6"))).build()))
-            .sensitivityHVDCs(List.of(SensitivityAnalysisInputData.SensitivityHVDC.builder()
-                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name7")))
-                .sensitivityType(SensitivityAnalysisInputData.SensitivityType.DELTA_MW)
-                .hvdcs(List.of(new EquipmentsContainer(UUID.randomUUID(), "name8")))
-                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name9"))).build()))
-            .sensitivityPSTs(List.of(SensitivityAnalysisInputData.SensitivityPST.builder()
-                .monitoredBranches(List.of(new EquipmentsContainer(UUID.randomUUID(), "name10")))
-                .sensitivityType(SensitivityAnalysisInputData.SensitivityType.DELTA_A)
-                .psts(List.of(new EquipmentsContainer(UUID.randomUUID(), "name11")))
-                    .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name12"))).build()))
-            .sensitivityNodes(List.of(SensitivityAnalysisInputData.SensitivityNodes.builder()
-                .monitoredVoltageLevels(List.of(new EquipmentsContainer(UUID.randomUUID(), "name13")))
-                .equipmentsInVoltageRegulation(List.of(new EquipmentsContainer(UUID.randomUUID(), "name14")))
-                .contingencies(List.of(new EquipmentsContainer(UUID.randomUUID(), "name15"))).build()))
-            .build();
-        SENSITIVITY_INPUT = objectWriter.writeValueAsString(sensitivityAnalysisInputData);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -347,9 +307,8 @@ public class SensitivityAnalysisTest {
 
         // run sensitivity analysis
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, nodeUuid)
-            .contentType(MediaType.APPLICATION_JSON).header("userId", "userId")
-            .header(HEADER_USER_ID, "testUserId")
-            .content(SENSITIVITY_INPUT)).andExpect(status().isOk());
+            .header("userId", "userId")
+            .header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
 
         Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -433,9 +392,7 @@ public class SensitivityAnalysisTest {
 
         // run sensitivity analysis on root node (not allowed)
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyNameUserIdUuid, rootNodeUuid)
-            .contentType(MediaType.APPLICATION_JSON)
-            .header(HEADER_USER_ID, "testUserId")
-            .content(SENSITIVITY_INPUT))
+            .header(HEADER_USER_ID, "testUserId"))
             .andExpect(status().isForbidden());
 
         testSensitivityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
@@ -451,9 +408,7 @@ public class SensitivityAnalysisTest {
 
         // run additional sensitivity analysis for deletion test
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyNameUserIdUuid, modificationNode2Uuid)
-                .contentType(MediaType.APPLICATION_JSON)
-                .header(HEADER_USER_ID, "testUserId")
-                .content(SENSITIVITY_INPUT)).andExpect(status().isOk())
+                .header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk())
             .andReturn();
 
         Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
@@ -521,14 +476,10 @@ public class SensitivityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID notFoundSensitivityUuid = UUID.randomUUID();
         UUID studyUuid = studyEntity.getId();
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(SENSITIVITY_INPUT))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
                 .andExpect(status().isNoContent()).andReturn();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(SENSITIVITY_INPUT))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
                 .andExpect(status().isNoContent()).andReturn();
 
         String baseUrlWireMock = wireMock.baseUrl();
@@ -547,14 +498,10 @@ public class SensitivityAnalysisTest {
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid + "/filter-options" + ".*"))
                 .willReturn(WireMock.notFound()));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(SENSITIVITY_INPUT))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON))
                 .andExpect(status().isNotFound()).andReturn();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(SENSITIVITY_INPUT))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON))
                 .andExpect(status().isNotFound()).andReturn();
     }
 
@@ -599,9 +546,7 @@ public class SensitivityAnalysisTest {
 
         //run failing sensitivity analysis (because in network 2)
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, modificationNode1Uuid)
-            .contentType(MediaType.APPLICATION_JSON)
-            .header(HEADER_USER_ID, "testUserId")
-            .content(SENSITIVITY_INPUT))
+            .header(HEADER_USER_ID, "testUserId"))
             .andExpect(status().isOk());
 
         // failed sensitivity analysis
@@ -622,16 +567,14 @@ public class SensitivityAnalysisTest {
         /*
          *  what follows is mostly for test coverage -> a failed message without receiver is sent -> will be ignored by consumer
          */
-        studyEntity = insertDummyStudyWithSpecificParams(UUID.fromString(NETWORK_UUID_3_STRING), CASE_3_UUID);
+        studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_3_STRING), CASE_3_UUID);
         UUID studyUuid2 = studyEntity.getId();
         UUID rootNodeUuid2 = getRootNodeUuid(studyUuid2);
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyUuid2, rootNodeUuid2, UUID.randomUUID(), VARIANT_ID, "node 2");
         UUID modificationNode1Uuid2 = modificationNode2.getId();
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid2, modificationNode1Uuid2)
-            .contentType(MediaType.APPLICATION_JSON)
-            .header(HEADER_USER_ID, "testUserId")
-            .content(SENSITIVITY_INPUT))
+            .header(HEADER_USER_ID, "testUserId"))
             .andExpect(status().isOk());
 
         // failed sensitivity analysis without receiver -> no failure message sent to frontend
@@ -648,46 +591,8 @@ public class SensitivityAnalysisTest {
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
-        SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues = SensitivityAnalysisParametersInfos.builder()
-                .flowFlowSensitivityValueThreshold(0.0)
-                .angleFlowSensitivityValueThreshold(0.0)
-                .flowVoltageSensitivityValueThreshold(0.0)
-                .sensitivityInjectionsSet(new ArrayList<>())
-                .sensitivityInjection(new ArrayList<>())
-                .sensitivityHVDC(new ArrayList<>())
-                .sensitivityPST(new ArrayList<>())
-                .sensitivityNodes(new ArrayList<>())
-                .build();
-        SensitivityAnalysisParametersEntity sensitivityParametersEntity = SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues);
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, LOADFLOW_PARAMETERS_UUID, defaultShortCircuitParametersEntity, null, sensitivityParametersEntity,
-                                                             defaultNonEvacuatedEnergyParametersEntity);
-        var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity, null);
-        return study;
-    }
-
-    private StudyEntity insertDummyStudyWithSpecificParams(UUID networkUuid, UUID caseUuid) {
-        List<LoadFlowSpecificParameterInfos> specificParams = List.of(LoadFlowSpecificParameterInfos.builder()
-                .provider("OpenLoadFlow")
-                .value("FULL_VOLTAGE")
-                .name("voltageInitModeOverride")
-                .build()
-        );
-        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
-        SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues = SensitivityAnalysisParametersInfos.builder()
-                .flowFlowSensitivityValueThreshold(0.0)
-                .angleFlowSensitivityValueThreshold(0.0)
-                .flowVoltageSensitivityValueThreshold(0.0)
-                .sensitivityInjectionsSet(new ArrayList<>())
-                .sensitivityInjection(new ArrayList<>())
-                .sensitivityHVDC(new ArrayList<>())
-                .sensitivityPST(new ArrayList<>())
-                .sensitivityNodes(new ArrayList<>())
-                .build();
-        SensitivityAnalysisParametersEntity sensitivityParametersEntity = SensitivityAnalysisService.toEntity(sensitivityAnalysisParametersValues);
-        NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, LOADFLOW_PARAMETERS_UUID, defaultShortCircuitParametersEntity, null, sensitivityParametersEntity,
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, LOADFLOW_PARAMETERS_UUID, defaultShortCircuitParametersEntity, null, SENSITIVITY_ANALYSIS_PARAMETERS_UUID,
                                                              defaultNonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
@@ -750,47 +655,58 @@ public class SensitivityAnalysisTest {
 
     @Test
     public void testSensitivityAnalysisParameters() throws Exception {
+        // Mocking with WireMock
+        String baseUrlWireMock = wireMock.baseUrl();
+        sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrlWireMock);
+
+        wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID))
+            .willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON)));
+        wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID))
+            .willReturn(WireMock.ok()));
+
+        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
+            .willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody(mapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID))));
+
+        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters/default"))
+            .willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody(mapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID))));
+        // end mocking
+
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         UUID studyNameUserIdUuid = studyEntity.getId();
-        //get sensitivity analysis parameters
+        assertNotNull(studyNameUserIdUuid);
+
+        // Get sensitivity analysis parameters (on existing)
         mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk(),
-                content().string(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
+            status().isOk(),
+            content().string(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
 
-        //create sensitivity analysis Parameters
-        EquipmentsContainer equipments1 = new EquipmentsContainer(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da321"), "identifiable1");
-        EquipmentsContainer equipments2 = new EquipmentsContainer(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da322"), "identifiable2");
-        EquipmentsContainer equipments3 = new EquipmentsContainer(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da323"), "identifiable3");
-        SensitivityAnalysisInputData.SensitivityInjectionsSet injectionsSet = new SensitivityAnalysisInputData.SensitivityInjectionsSet(List.of(equipments2), List.of(equipments1), SensitivityAnalysisInputData.DistributionType.PROPORTIONAL, List.of(equipments3), true);
-        SensitivityAnalysisInputData.SensitivityInjection injections = new SensitivityAnalysisInputData.SensitivityInjection(List.of(equipments1), List.of(equipments2), List.of(equipments3), true);
-        SensitivityAnalysisInputData.SensitivityHVDC hvdc = new SensitivityAnalysisInputData.SensitivityHVDC(List.of(equipments1), SensitivityAnalysisInputData.SensitivityType.DELTA_MW, List.of(equipments2), List.of(equipments3), true);
-        SensitivityAnalysisInputData.SensitivityPST pst = new SensitivityAnalysisInputData.SensitivityPST(List.of(equipments2), SensitivityAnalysisInputData.SensitivityType.DELTA_MW, List.of(equipments1), List.of(equipments3), true);
-        SensitivityAnalysisInputData.SensitivityNodes nodes = new SensitivityAnalysisInputData.SensitivityNodes(List.of(equipments1), List.of(equipments2), List.of(equipments3), true);
+        wireMock.verify(WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID)));
 
-        //create sensitivity analysis Parameters
-        SensitivityAnalysisParametersInfos sensitivityAnalysisParametersValues = SensitivityAnalysisParametersInfos.builder()
-                .flowFlowSensitivityValueThreshold(90)
-                .angleFlowSensitivityValueThreshold(0.6)
-                .flowVoltageSensitivityValueThreshold(0.1)
-                .sensitivityInjectionsSet(List.of(injectionsSet))
-                .sensitivityInjection(List.of(injections))
-                .sensitivityHVDC(List.of(hvdc))
-                .sensitivityPST(List.of(pst))
-                .sensitivityNodes(List.of(nodes))
-                .build();
-        String mnBodyJson = objectWriter.writeValueAsString(sensitivityAnalysisParametersValues);
+        // Set sensitivity analysis parameters (will update)
+        setParametersAndDoChecks(studyNameUserIdUuid, SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON);
 
-        mockMvc.perform(
-                post("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)
-                        .header("userId", "userId")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mnBodyJson)).andExpect(
-                status().isOk());
+        wireMock.verify(WireMock.putRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID)));
 
-        //getting set values
+        // Get sensitivity analysis (not existing, so it will create default)
+        studyEntity.setSensitivityAnalysisParametersUuid(null);
+        studyRepository.save(studyEntity);
+
         mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk(),
-                content().string(SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON));
+            status().isOk(),
+            content().string(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
+
+        wireMock.verify(WireMock.postRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/default")));
+        wireMock.verify(WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID)));
+        assertEquals(SENSITIVITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSensitivityAnalysisParametersUuid());
+
+        // Set sensitivity analysis parameters (will create)
+        studyEntity.setSensitivityAnalysisParametersUuid(null);
+        studyRepository.save(studyEntity);
+
+        setParametersAndDoChecks(studyNameUserIdUuid, SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON);
+
+        wireMock.verify(WireMock.postRequestedFor(WireMock.urlPathEqualTo("/v1/parameters")));
+        assertEquals(SENSITIVITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSensitivityAnalysisParametersUuid());
     }
 
     @Test
@@ -808,5 +724,21 @@ public class SensitivityAnalysisTest {
         assertEquals("4", resultAsString);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + ".*" + "/factors-count.*")));
+    }
+
+    private void setParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters) throws Exception {
+        mockMvc.perform(
+            post("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)
+                .header("userId", "userId")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(parameters)).andExpect(
+            status().isOk());
+
+        Message<byte[]> sensiStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, sensiStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, sensiStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);
+        assertEquals(studyNameUserIdUuid, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
     }
 }
