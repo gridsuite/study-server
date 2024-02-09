@@ -32,6 +32,8 @@ public class LimitViolationInfos {
 
     private Integer upComingOverloadDuration;
 
+    private Double overload;
+
     private Double value;
 
     private String side;
