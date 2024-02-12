@@ -1112,7 +1112,7 @@ public class NetworkModificationTest {
         UUID modificationNode2Uuid = modificationNode2.getId();
 
         HashMap<String, Object> bodyLineInfos = new HashMap<>();
-        bodyLineInfos.put("type", ModificationType.BRANCH_STATUS_MODIFICATION);
+        bodyLineInfos.put("type", ModificationType.OPERATING_STATUS_MODIFICATION);
         bodyLineInfos.put("equipmentId", "line12");
         bodyLineInfos.put("action", "lockout");
         String bodyJsonCreate1 = mapper.writeValueAsString(bodyLineInfos);
