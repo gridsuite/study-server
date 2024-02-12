@@ -233,7 +233,7 @@ public class LoadFlowService {
             }
             String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
             try {
-                var responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() {
+                ResponseEntity<List<LimitViolationInfos>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() {
                 });
                 result = responseEntity.getBody();
             } catch (HttpStatusCodeException e) {
