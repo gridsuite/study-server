@@ -164,15 +164,9 @@ public class StudyTest {
     private static final UUID EMPTY_MODIFICATION_GROUP_UUID = UUID.randomUUID();
     private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
-    private static final String DEFAULT_PROVIDER = "defaultLoadflowProvider";
+    private static final String DEFAULT_PROVIDER = "defaultProvider";
 
-    @Value("${security-analysis.default-provider}")
-    String defaultSecurityAnalysisProvider;
-
-    @Value("${sensitivity-analysis.default-provider}")
-    String defaultSensitivityAnalysisProvider;
-
-    @Value("${sensitivity-analysis.default-provider}")
+    @Value("${non-evacuated-energy.default-provider}")
     String defaultNonEvacuatedEnergyProvider;
 
     @Autowired
@@ -1313,9 +1307,6 @@ public class StudyTest {
     public void testCreateStudyWithDefaultLoadflow() throws Exception {
         createStudy("userId", CASE_UUID);
         StudyEntity study = studyRepository.findAll().get(0);
-
-        assertEquals(study.getSecurityAnalysisProvider(), defaultSecurityAnalysisProvider);
-        assertEquals(study.getSensitivityAnalysisProvider(), defaultSensitivityAnalysisProvider);
         assertEquals(study.getNonEvacuatedEnergyProvider(), defaultNonEvacuatedEnergyProvider);
     }
 
@@ -2248,30 +2239,19 @@ public class StudyTest {
     }
 
     @Test
-    public void getDefaultLoadflowProvider() throws Exception {
+    public void testGetDefaultProviders() throws Exception {
         mockMvc.perform(get("/v1/loadflow-default-provider")).andExpectAll(
                 status().isOk(),
                 content().string(DEFAULT_PROVIDER));
-        var requests = TestUtils.getRequestsDone(1, server);
-        assertTrue(requests.contains("/v1/default-provider"));
-    }
-
-    @Test
-    public void getDefaultSecurityAnalysisProvider() throws Exception {
         mockMvc.perform(get("/v1/security-analysis-default-provider")).andExpectAll(
                 status().isOk(),
-                content().string(defaultSecurityAnalysisProvider));
-    }
-
-    @Test
-    public void getDefaultSensitivityAnalysisProvider() throws Exception {
+                content().string(DEFAULT_PROVIDER));
         mockMvc.perform(get("/v1/sensitivity-analysis-default-provider")).andExpectAll(
-                status().isOk(),
-                content().string(defaultSensitivityAnalysisProvider));
-    }
+                    status().isOk(),
+                    content().string(DEFAULT_PROVIDER));
+        var requests = TestUtils.getRequestsDone(3, server);
+        assertTrue(requests.stream().allMatch(r -> r.matches("/v1/default-provider")));
 
-    @Test
-    public void getDefaultNonEvacuatedEnergyProvider() throws Exception {
         mockMvc.perform(get("/v1/non-evacuated-energy-default-provider")).andExpectAll(
             status().isOk(),
             content().string(defaultNonEvacuatedEnergyProvider));
@@ -2366,15 +2346,9 @@ public class StudyTest {
     public void providerTest() throws Exception {
         UUID studyUuid = createStudy(USER_ID_HEADER, CASE_UUID);
         assertNotNull(studyUuid);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid))
-                .andExpectAll(status().isOk(),
-                        content().string(defaultSecurityAnalysisProvider));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid))
-            .andExpectAll(status().isOk(),
-                content().string(defaultSensitivityAnalysisProvider));
         mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
             .andExpectAll(status().isOk(),
-                content().string(defaultSensitivityAnalysisProvider));  // same default provider as for sensitivity analysis
+                content().string(defaultNonEvacuatedEnergyProvider));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/provider", studyUuid)
                         .content("SuperLF")
@@ -2396,16 +2370,6 @@ public class StudyTest {
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid)
-                        .content("SuperSE")
-                        .contentType(MediaType.TEXT_PLAIN)
-                        .header(USER_ID_HEADER, USER_ID_HEADER))
-                .andExpect(status().isOk());
-        message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertNotNull(message);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
-        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
-
         mockMvc.perform(post("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid)
                 .content("SuperNEE")
                 .contentType(MediaType.TEXT_PLAIN)
@@ -2416,18 +2380,12 @@ public class StudyTest {
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid))
-                .andExpectAll(status().isOk(),
-                        content().string("SuperSA"));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid))
-                .andExpectAll(status().isOk(),
-                        content().string("SuperSE"));
         mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
             .andExpectAll(status().isOk(),
                 content().string("SuperNEE"));
 
-        var requests = TestUtils.getRequestsDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/.*/provider")));
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().allMatch(r -> r.matches("/v1/parameters/.*/provider")));
     }
 
     @Test

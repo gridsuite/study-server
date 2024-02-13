@@ -879,30 +879,6 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/security-analysis/provider")
-    @Operation(summary = "Get security analysis provider for a specified study, empty string means default provider")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis provider is returned")})
-    public ResponseEntity<String> getSecurityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getSecurityAnalysisProvider(studyUuid));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/provider")
-    @Operation(summary = "set sensitivity analysis provider for the specified study, no body means reset to default provider")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis provider is set")})
-    public ResponseEntity<Void> setSensitivityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid,
-                                                               @RequestBody(required = false) String provider,
-                                                               @RequestHeader("userId") String userId) {
-        studyService.updateSensitivityAnalysisProvider(studyUuid, provider, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/sensitivity-analysis/provider")
-    @Operation(summary = "Get sensitivity analysis provider for a specified study, empty string means default provider")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis provider is returned")})
-    public ResponseEntity<String> getSensitivityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisProvider(studyUuid));
-    }
-
     @PostMapping(value = "/studies/{studyUuid}/dynamic-simulation/provider")
     @Operation(summary = "Set dynamic simulation provider for the specified study, no body means reset to default provider")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation provider is set")})
