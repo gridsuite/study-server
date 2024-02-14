@@ -28,6 +28,7 @@ import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.StudyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -145,11 +146,12 @@ public class ShortCircuitService {
         return resultPath + "/paged";
     }
 
-    public String getShortCircuitAnalysisResult(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, boolean paged, Pageable pageable) {
+    public String getShortCircuitAnalysisResult(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type,
+                                                String filters, boolean paged, Pageable pageable, Sort.Order secSort) {
         if (paged) {
-            return getShortCircuitAnalysisResultsPage(nodeUuid, mode, type, filters, pageable);
+            return getShortCircuitAnalysisResultsPage(nodeUuid, mode, type, filters, pageable, secSort);
         } else {
-            return getShortCircuitAnalysisResult(nodeUuid, mode, type);
+            return getShortCircuitAnalysisResult(nodeUuid, mode, type, secSort);
         }
     }
 
@@ -184,18 +186,27 @@ public class ShortCircuitService {
         return getShortCircuitAnalysisCsvResultResource(builder.build().toUri(), headersCsv);
     }
 
-    public String getShortCircuitAnalysisResult(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type) {
+    public String getShortCircuitAnalysisResult(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, Sort.Order secSort) {
         String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, type);
         if (resultPath == null) {
             return null;
         }
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath)
                 .queryParam("mode", mode);
+        if (secSort != null) {
+            builder = builder.queryParam("sec_sort_key", secSort.getProperty())
+                    .queryParam("sec_sort_dir", secSort.getDirection());
+        }
 
         return getShortCircuitAnalysisResource(builder.build().toUri());
     }
 
-    public String getShortCircuitAnalysisResultsPage(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, Pageable pageable) {
+    public String getShortCircuitAnalysisResultsPage(UUID nodeUuid,
+                                                     FaultResultsMode mode,
+                                                     ShortcircuitAnalysisType type,
+                                                     String filters,
+                                                     Pageable pageable,
+                                                     Sort.Order secSort) {
         String resultsPath = getShortCircuitAnalysisResultsPageResourcePath(nodeUuid, type);
         if (resultsPath == null) {
             return null;
@@ -203,6 +214,10 @@ public class ShortCircuitService {
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultsPath)
                 .queryParam("mode", mode);
+        if (secSort != null) {
+            builder = builder.queryParam("sec_sort_key", secSort.getProperty())
+                    .queryParam("sec_sort_dir", secSort.getDirection());
+        }
 
         if (filters != null && !filters.isEmpty()) {
             builder.queryParam("filters", filters);

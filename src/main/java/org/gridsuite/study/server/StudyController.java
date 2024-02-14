@@ -40,6 +40,7 @@ import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
 import org.springframework.http.*;
 import org.springframework.util.CollectionUtils;
@@ -659,9 +660,16 @@ public class StudyController {
                                                             "NONE (no fault)") @RequestParam(name = "mode", required = false, defaultValue = "FULL") FaultResultsMode mode,
                                                         @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type,
                                                         @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+                                                        @Parameter(description = "secSortKey") @RequestParam(name = "sec_sort_key", defaultValue = "") String secSortKey,
+                                                        @Parameter(description = "secSortDirection") @RequestParam(name = "sec_sort_dir", required = false) String secSortDirection,
                                                         @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false) boolean paged,
                                                         Pageable pageable) {
-        String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid, mode, type, filters, paged, pageable);
+        // parse to get secondary sorting :
+        Sort.Order secSort = null;
+        if (StringUtils.isNotBlank(secSortKey)) {
+            secSort = new Sort.Order(Sort.Direction.fromString(secSortDirection), secSortKey);
+        }
+        String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid, mode, type, filters, paged, pageable, secSort);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
