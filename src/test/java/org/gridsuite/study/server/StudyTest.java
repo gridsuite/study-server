@@ -1032,7 +1032,6 @@ public class StudyTest {
     private UUID createStudyWithDuplicateCase(String userId, UUID caseUuid) throws Exception {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                         .param("duplicateCase", "true")
-                        .param(CASE_FORMAT, "UCTE")
                         .header("userId", userId))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -1045,7 +1044,7 @@ public class StudyTest {
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(7, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
-        assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=true&caseFormat=UCTE", caseUuid)));
+        assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=true", caseUuid)));
         // note : it's a new case UUID
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CLONED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CLONED_CASE_UUID_STRING)));
