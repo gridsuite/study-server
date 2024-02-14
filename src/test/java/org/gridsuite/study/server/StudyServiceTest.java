@@ -154,7 +154,6 @@ public class StudyServiceTest {
 
         mockMvc.perform(head("/v1/studies/{studyUuid}/network", studyUuid)
                 .header(USER_ID_HEADER, userId))
-//                .param(CASE_FORMAT_PARAM, "UCTE"))
 
             .andExpect(status().isNoContent());
     }
