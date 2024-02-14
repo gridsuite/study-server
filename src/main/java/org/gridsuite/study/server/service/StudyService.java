@@ -266,7 +266,7 @@ public class StudyService {
         UUID caseUuidToUse = caseUuid;
         try {
             if (duplicateCase) {
-                caseUuidToUse = caseService.duplicateCase(caseUuid, true, caseFormat);
+                caseUuidToUse = caseService.duplicateCase(caseUuid, true);
             }
             persistentStoreWithNotificationOnError(caseUuidToUse, basicStudyInfos.getId(), userId, importReportUuid, caseFormat, importParameters);
         } catch (Exception e) {
@@ -508,7 +508,7 @@ public class StudyService {
         Network clonedNetwork = networkStoreService.cloneNetwork(sourceStudy.getNetworkUuid(), targetVariantIds);
         UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
 
-        UUID clonedCaseUuid = caseService.duplicateCase(sourceStudy.getCaseUuid(), false, sourceStudy.getCaseFormat());
+        UUID clonedCaseUuid = caseService.duplicateCase(sourceStudy.getCaseUuid(), false);
 
         Map<String, String> newImportParameters = Map.copyOf(sourceStudy.getImportParameters());
 

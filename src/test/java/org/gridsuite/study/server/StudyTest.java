@@ -547,8 +547,8 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody("false")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     // duplicate case
-                    case "/v1/cases?duplicateFrom=" + CASE_UUID_STRING + "&withExpiration=true" + "&" + CASE_FORMAT + "=UCTE":
-                    case "/v1/cases?duplicateFrom=" + CASE_UUID_STRING + "&withExpiration=false" + "&" + CASE_FORMAT + "=UCTE":
+                    case "/v1/cases?duplicateFrom=" + CASE_UUID_STRING + "&withExpiration=true":
+                    case "/v1/cases?duplicateFrom=" + CASE_UUID_STRING + "&withExpiration=false":
                         return new MockResponse().setResponseCode(200).setBody(clonedCaseUuidAsString)
                                 .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                     // delete case
@@ -1032,6 +1032,7 @@ public class StudyTest {
     private UUID createStudyWithDuplicateCase(String userId, UUID caseUuid) throws Exception {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                         .param("duplicateCase", "true")
+                        .param(CASE_FORMAT, "UCTE")
                         .header("userId", userId))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -1490,7 +1491,7 @@ public class StudyTest {
         }
         requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + duplicatedStudy.getNetworkUuid() + "/reindex-all")).count());
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false&caseFormat=.*")).count());
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getVoltageInitParametersUuid())).count());
         }
