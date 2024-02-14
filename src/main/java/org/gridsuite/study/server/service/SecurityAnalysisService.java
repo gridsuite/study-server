@@ -153,12 +153,11 @@ public class SecurityAnalysisService {
         if (parametersInfos.getSecurityAnalysisParametersUuid() != null) {
             uriComponentsBuilder.queryParam("parametersUuid", parametersInfos.getSecurityAnalysisParametersUuid());
         }
-        var path = uriComponentsBuilder.queryParam("contingencyListName", parametersInfos.getContingencyListNames())
-                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
-
         if (parametersInfos.getLoadFlowParametersUuid() != null) {
             uriComponentsBuilder.queryParam("loadFlowParametersUuid", parametersInfos.getLoadFlowParametersUuid());
         }
+        var path = uriComponentsBuilder.queryParam("contingencyListName", parametersInfos.getContingencyListNames())
+                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
