@@ -1,5 +1,5 @@
 /**
-  Copyright (c) 2023, All partners of the iTesla project (http://www.itesla-project.eu/consortium)
+  Copyright (c) 2024, All partners of the iTesla project (http://www.itesla-project.eu/consortium)
   This Source Code Form is subject to the terms of the Mozilla Public
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -15,12 +15,14 @@ import lombok.experimental.SuperBuilder;
  *
  * @author Sylvain Bouzols <sylvain.bouzols at rte-france.com>
  */
-@Setter
-@Getter
 @SuperBuilder
+@Data
+// @AllArgsConstructor // TODO activate if one member is added
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-@ToString
 public class CollectionElementImpact extends AbstractBaseImpact {
-
+    @Override
+    public ImpactType getImpactType() {
+        return ImpactType.COLLECTION;
+    }
 }

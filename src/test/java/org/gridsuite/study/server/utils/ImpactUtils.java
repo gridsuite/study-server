@@ -9,7 +9,7 @@ package org.gridsuite.study.server.utils;
 import com.powsybl.iidm.network.IdentifiableType;
 
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
-import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact.ImpactType;
+import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.impacts.CollectionElementImpact;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 
@@ -25,7 +25,7 @@ public final class ImpactUtils {
     private ImpactUtils() {
     }
 
-    public static Optional<NetworkModificationResult> createModificationResultWithElementImpact(ImpactType impactType, IdentifiableType elementType, String elementId, Set<String> substationIds) {
+    public static Optional<NetworkModificationResult> createModificationResultWithElementImpact(SimpleImpactType impactType, IdentifiableType elementType, String elementId, Set<String> substationIds) {
         return Optional.of(NetworkModificationResult.builder()
             .networkImpacts(List.of(createElementImpact(impactType, elementType, elementId, substationIds)))
             .build());
@@ -38,12 +38,12 @@ public final class ImpactUtils {
     }
 
     public static SimpleElementImpact createCreationImpactType(IdentifiableType elementType, String elementId, Set<String> substationIds) {
-        return createElementImpact(ImpactType.CREATION, elementType, elementId, substationIds);
+        return createElementImpact(SimpleImpactType.CREATION, elementType, elementId, substationIds);
     }
 
-    public static SimpleElementImpact createElementImpact(ImpactType impactType, IdentifiableType elementType, String elementId, Set<String> substationIds) {
+    public static SimpleElementImpact createElementImpact(SimpleImpactType impactType, IdentifiableType elementType, String elementId, Set<String> substationIds) {
         return SimpleElementImpact.builder()
-            .impactType(impactType)
+            .simpleImpactType(impactType)
             .elementType(elementType)
             .elementId(elementId)
             .substationIds(substationIds).build();
@@ -51,7 +51,6 @@ public final class ImpactUtils {
 
     public static CollectionElementImpact createCollectionElementImpact(IdentifiableType elementType) {
         return CollectionElementImpact.builder()
-            .impactType(ImpactType.COLLECTION)
             .elementType(elementType)
             .build();
     }

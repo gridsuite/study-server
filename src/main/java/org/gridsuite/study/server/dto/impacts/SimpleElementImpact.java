@@ -18,18 +18,29 @@ import java.util.Set;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  * @author Sylvain Bouzols <sylvain.bouzols at rte-france.com>
  */
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Setter
-@Getter
 @SuperBuilder
+@Data
+@AllArgsConstructor
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-@ToString
 public class SimpleElementImpact extends AbstractBaseImpact {
+
+    public enum SimpleImpactType {
+        CREATION,
+        MODIFICATION,
+        DELETION
+    }
+
+    private SimpleImpactType simpleImpactType;
 
     /** The impacted element ID */
     private String elementId;
 
     /** The impacted substations IDs */
     private Set<String> substationIds;
+
+    @Override
+    public ImpactType getImpactType() {
+        return ImpactType.SIMPLE;
+    }
 }

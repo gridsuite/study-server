@@ -29,6 +29,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
 import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact.ImpactType;
+import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -1680,7 +1681,7 @@ public class StudyService {
 
         Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
             networkModificationResult.getNetworkImpacts().stream()
-                .filter(impact -> impact.getImpactType() == ImpactType.DELETION)
+                .filter(impact -> impact.getImpactType() == ImpactType.SIMPLE && ((SimpleElementImpact) impact).getSimpleImpactType() == SimpleImpactType.DELETION)
                 .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(((SimpleElementImpact) impact).getElementId(), impact.getElementType().name()))
             .collect(Collectors.toSet());
 

@@ -1,5 +1,5 @@
 /**
-  Copyright (c) 2023, All partners of the iTesla project (http://www.itesla-project.eu/consortium)
+  Copyright (c) 2024, All partners of the iTesla project (http://www.itesla-project.eu/consortium)
   This Source Code Form is subject to the terms of the Mozilla Public
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -26,22 +26,17 @@ import lombok.experimental.SuperBuilder;
     visible = true
 )
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = SimpleElementImpact.class, names = { "CREATION", "MODIFICATION", "DELETION" }),
+    @JsonSubTypes.Type(value = SimpleElementImpact.class, name = "SIMPLE"),
     @JsonSubTypes.Type(value = CollectionElementImpact.class, name = "COLLECTION")
 })
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Setter
-@Getter
 @SuperBuilder
+@Data
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor
-@EqualsAndHashCode(callSuper = false)
-@ToString
 public abstract class AbstractBaseImpact {
 
     public enum ImpactType {
-        CREATION,
-        MODIFICATION,
-        DELETION,
+        SIMPLE,
         COLLECTION
     }
 

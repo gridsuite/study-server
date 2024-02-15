@@ -12,12 +12,13 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeSet;
 
 import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact;
-import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact.ImpactType;
 import org.gridsuite.study.server.dto.impacts.CollectionElementImpact;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
+import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult.ApplicationStatus;
 import org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos;
@@ -40,19 +41,19 @@ public class ElementImpactTest {
     @Test
     @SneakyThrows
     public void testNetworkModificationResult() {
-        SimpleElementImpact creationImpact = createElementImpact(ImpactType.CREATION, IdentifiableType.LINE, "lineId", new TreeSet<>(List.of("s2", "s1")));
-        SimpleElementImpact modificationImpact = createElementImpact(ImpactType.MODIFICATION, IdentifiableType.LOAD, "loadId", new TreeSet<>(List.of("s3")));
-        SimpleElementImpact injectionDeletionImpact = createElementImpact(ImpactType.DELETION, IdentifiableType.GENERATOR, "generatorId", new TreeSet<>(List.of("s4")));
-        SimpleElementImpact substationModificationImpact = createElementImpact(ImpactType.MODIFICATION, IdentifiableType.SUBSTATION, "substationId1", new TreeSet<>(List.of("substationId1")));
-        SimpleElementImpact substationDeletionImpact = createElementImpact(ImpactType.DELETION, IdentifiableType.SUBSTATION, "substationId2", new TreeSet<>(List.of("substationId2")));
+        SimpleElementImpact creationImpact = createElementImpact(SimpleImpactType.CREATION, IdentifiableType.LINE, "lineId", new TreeSet<>(List.of("s2", "s1")));
+        SimpleElementImpact modificationImpact = createElementImpact(SimpleImpactType.MODIFICATION, IdentifiableType.LOAD, "loadId", new TreeSet<>(List.of("s3")));
+        SimpleElementImpact injectionDeletionImpact = createElementImpact(SimpleImpactType.DELETION, IdentifiableType.GENERATOR, "generatorId", new TreeSet<>(List.of("s4")));
+        SimpleElementImpact substationModificationImpact = createElementImpact(SimpleImpactType.MODIFICATION, IdentifiableType.SUBSTATION, "substationId1", new TreeSet<>(List.of("substationId1")));
+        SimpleElementImpact substationDeletionImpact = createElementImpact(SimpleImpactType.DELETION, IdentifiableType.SUBSTATION, "substationId2", new TreeSet<>(List.of("substationId2")));
 
         List<AbstractBaseImpact> impacts = List.of(creationImpact, modificationImpact, injectionDeletionImpact, substationModificationImpact, substationDeletionImpact);
 
-        assertEquals("{\"impactType\":\"CREATION\",\"elementType\":\"LINE\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}", mapper.writeValueAsString(creationImpact));
-        assertEquals("{\"impactType\":\"MODIFICATION\",\"elementType\":\"LOAD\",\"elementId\":\"loadId\",\"substationIds\":[\"s3\"]}", mapper.writeValueAsString(modificationImpact));
-        assertEquals("{\"impactType\":\"DELETION\",\"elementType\":\"GENERATOR\",\"elementId\":\"generatorId\",\"substationIds\":[\"s4\"]}", mapper.writeValueAsString(injectionDeletionImpact));
-        assertEquals("{\"impactType\":\"MODIFICATION\",\"elementType\":\"SUBSTATION\",\"elementId\":\"substationId1\",\"substationIds\":[\"substationId1\"]}", mapper.writeValueAsString(substationModificationImpact));
-        assertEquals("{\"impactType\":\"DELETION\",\"elementType\":\"SUBSTATION\",\"elementId\":\"substationId2\",\"substationIds\":[\"substationId2\"]}", mapper.writeValueAsString(substationDeletionImpact));
+        assertEquals("{\"impactType\":\"SIMPLE\",\"elementType\":\"LINE\",\"simpleImpactType\":\"CREATION\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}", mapper.writeValueAsString(creationImpact));
+        assertEquals("{\"impactType\":\"SIMPLE\",\"elementType\":\"LOAD\",\"simpleImpactType\":\"MODIFICATION\",\"elementId\":\"loadId\",\"substationIds\":[\"s3\"]}", mapper.writeValueAsString(modificationImpact));
+        assertEquals("{\"impactType\":\"SIMPLE\",\"elementType\":\"GENERATOR\",\"simpleImpactType\":\"DELETION\",\"elementId\":\"generatorId\",\"substationIds\":[\"s4\"]}", mapper.writeValueAsString(injectionDeletionImpact));
+        assertEquals("{\"impactType\":\"SIMPLE\",\"elementType\":\"SUBSTATION\",\"simpleImpactType\":\"MODIFICATION\",\"elementId\":\"substationId1\",\"substationIds\":[\"substationId1\"]}", mapper.writeValueAsString(substationModificationImpact));
+        assertEquals("{\"impactType\":\"SIMPLE\",\"elementType\":\"SUBSTATION\",\"simpleImpactType\":\"DELETION\",\"elementId\":\"substationId2\",\"substationIds\":[\"substationId2\"]}", mapper.writeValueAsString(substationDeletionImpact));
 
         NetworkModificationResult result = NetworkModificationResult.builder()
             .applicationStatus(ApplicationStatus.ALL_OK)
@@ -73,7 +74,7 @@ public class ElementImpactTest {
 
         HashSet<AbstractBaseImpact> impactsSet = new HashSet<>(List.of(creationImpact, creationImpact, creationImpact));
 
-        assertEquals("[{\"impactType\":\"CREATION\",\"elementType\":\"LINE\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}]", mapper.writeValueAsString(impactsSet));
+        assertEquals("[{\"impactType\":\"SIMPLE\",\"elementType\":\"LINE\",\"simpleImpactType\":\"CREATION\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}]", mapper.writeValueAsString(impactsSet));
     }
 
     @Test
@@ -97,8 +98,7 @@ public class ElementImpactTest {
             .build();
         assertEquals(TestUtils.resourceToString("/network-modification-result-collection-impacts-with-all-ok.json"), mapper.writeValueAsString(result));
 
-        // TODO impacted substations
-        // assertEquals(Set.of(), result.getImpactedSubstationsIds());
+        assertEquals(Set.of(), result.getImpactedSubstationsIds());
 
         HashSet<AbstractBaseImpact> impactsSet = new HashSet<>(List.of(linesCollectionImpact, linesCollectionImpact, linesCollectionImpact));
 
