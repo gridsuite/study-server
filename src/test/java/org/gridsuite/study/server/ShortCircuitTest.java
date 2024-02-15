@@ -221,7 +221,7 @@ public class ShortCircuitTest {
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=FULL")) {
                     return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged" + "\\?mode=FULL&page=0&size=20&sort=id,DESC")) {
+                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged" + "\\?mode=FULL&sec_sort_key=connectableId&sec_sort_dir=ASC&page=0&size=20&sort=id,DESC")) {
                     return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv")) {
@@ -477,14 +477,17 @@ public class ShortCircuitTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
         // get short circuit result with pagination
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20&sort=id,DESC", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20&sort=id,DESC&sec_sort_key=connectableId&sec_sort_dir=asc",
+                studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged\\?mode=FULL&page=0&size=20&sort=id,DESC")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged\\?mode=FULL&sec_sort_key=connectableId&sec_sort_dir=ASC&page=0&size=20&sort=id,DESC")));
 
         // get short circuit result with pagination but with unknown node
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20", studyNameUserIdUuid, unknownModificationNodeUuid)).andExpect(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20",
+                studyNameUserIdUuid, unknownModificationNodeUuid))
+                .andExpect(
                 status().isNoContent());
 
         assertTrue(TestUtils.getRequestsDone(0, server).isEmpty());

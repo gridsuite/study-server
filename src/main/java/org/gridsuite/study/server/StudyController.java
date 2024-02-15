@@ -660,8 +660,8 @@ public class StudyController {
                                                             "NONE (no fault)") @RequestParam(name = "mode", required = false, defaultValue = "FULL") FaultResultsMode mode,
                                                         @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type,
                                                         @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
-                                                        @Parameter(description = "secSortKey") @RequestParam(name = "sec_sort_key", defaultValue = "") String secSortKey,
-                                                        @Parameter(description = "secSortDirection") @RequestParam(name = "sec_sort_dir", required = false) String secSortDirection,
+                                                        @Parameter(description = "key of the secondary sort") @RequestParam(name = "sec_sort_key", defaultValue = "") String secSortKey,
+                                                        @Parameter(description = "direction of the secondary sort") @RequestParam(name = "sec_sort_dir", required = false) String secSortDirection,
                                                         @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false) boolean paged,
                                                         Pageable pageable) {
         // parse to get secondary sorting :
