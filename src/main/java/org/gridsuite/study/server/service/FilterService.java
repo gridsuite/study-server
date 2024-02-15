@@ -34,6 +34,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class FilterService {
 
     public static final String FILTER_END_POINT_EVALUATE = "/filters/evaluate";
+    public static final String FILTER_END_POINT_EXPORT = "/filters/{id}/export";
 
     private final RestTemplate restTemplate;
 
@@ -69,6 +70,28 @@ public class FilterService {
         // call filter-server REST API
         try {
             return restTemplate.postForObject(uriComponent.toUriString(), request, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(NETWORK_NOT_FOUND);
+            } else {
+                throw handleHttpError(e, EVALUATE_FILTER_FAILED);
+            }
+        }
+    }
+
+    public String exportFilter(UUID networkUuid, String variantId, UUID filterUuid) {
+        Objects.requireNonNull(networkUuid);
+        String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EXPORT;
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
+        uriComponentsBuilder.queryParam("networkUuid", networkUuid);
+        if (variantId != null && !variantId.isBlank()) {
+            uriComponentsBuilder.queryParam("variantId", variantId);
+        }
+        var uriComponent = uriComponentsBuilder.buildAndExpand(filterUuid);
+
+        try {
+            return restTemplate.getForObject(uriComponent.toUriString(), String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(NETWORK_NOT_FOUND);

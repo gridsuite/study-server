@@ -1917,7 +1917,15 @@ public class StudyController {
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
             @RequestBody String filter) {
-
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFilter(studyUuid, nodeUuid, inUpstreamBuiltParentNode, filter));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/filter/export")
+    @Operation(summary = "Export a filter applied to root node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched elements")})
+    public ResponseEntity<String> exportFilter(
+            @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Filter uuid to be applied") @RequestParam(value = "filterId") UUID filterUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(studyUuid, filterUuid));
     }
 }
