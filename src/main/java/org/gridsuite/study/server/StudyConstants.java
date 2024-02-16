@@ -36,6 +36,7 @@ public final class StudyConstants {
 
     public static final String NETWORK_UUID = "networkUuid";
     public static final String CASE_UUID = "caseUuid";
+    public static final String CASE_FORMAT = "caseFormat";
 
     public static final String DELIMITER = "/";
     public static final String QUERY_PARAM_VARIANT_ID = "variantId";
