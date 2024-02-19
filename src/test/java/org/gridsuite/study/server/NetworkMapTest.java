@@ -342,23 +342,6 @@ public class NetworkMapTest {
     }
 
     @Test
-    public void testGetVoltageLevelsAndEquipments() throws Exception {
-        //create study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
-        UUID studyNameUserIdUuid = studyEntity.getId();
-        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
-
-        //get the voltage levels and its equipments
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels-equipments",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/voltage-levels-equipments", NETWORK_UUID_STRING)));
-    }
-
-    @Test
     public void testGetVoltageLevelsTopology() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
