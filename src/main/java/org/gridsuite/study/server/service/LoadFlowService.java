@@ -17,6 +17,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -131,7 +132,7 @@ public class LoadFlowService {
         return restTemplate.getForObject(loadFlowServerBaseUri + path, Integer.class);
     }
 
-    public String getLoadFlowResultOrStatus(UUID nodeUuid, String suffix) {
+    public String getLoadFlowResultOrStatus(UUID nodeUuid, String filters, Sort sort, String suffix) {
         String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
 
@@ -139,8 +140,15 @@ public class LoadFlowService {
             return null;
         }
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}" + suffix)
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}" + suffix);
+        if (!StringUtils.isEmpty(filters)) {
+            uriComponentsBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+        }
+        if (sort != null) {
+            sort.forEach(order -> uriComponentsBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection()));
+        }
+        String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+
         try {
             result = restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
@@ -152,12 +160,12 @@ public class LoadFlowService {
         return result;
     }
 
-    public String getLoadFlowResult(UUID nodeUuid) {
-        return getLoadFlowResultOrStatus(nodeUuid, "");
+    public String getLoadFlowResult(UUID nodeUuid, String filters, Sort sort) {
+        return getLoadFlowResultOrStatus(nodeUuid, filters, sort, "");
     }
 
     public String getLoadFlowStatus(UUID nodeUuid) {
-        return getLoadFlowResultOrStatus(nodeUuid, "/status");
+        return getLoadFlowResultOrStatus(nodeUuid, null, null, "/status");
     }
 
     public void stopLoadFlow(UUID studyUuid, UUID nodeUuid) {
@@ -211,15 +219,22 @@ public class LoadFlowService {
         }
     }
 
-    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid) {
+    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid, String filters, Sort sort) {
         List<LimitViolationInfos> result = new ArrayList<>();
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
 
         if (resultUuidOpt.isPresent()) {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations")
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations");
+            if (filters != null && !filters.isEmpty()) {
+                uriComponentsBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+            }
+            if (sort != null) {
+                sort.forEach(order -> uriComponentsBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection()));
+            }
+            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
             try {
-                var responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() { });
+                ResponseEntity<List<LimitViolationInfos>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() {
+                });
                 result = responseEntity.getBody();
             } catch (HttpStatusCodeException e) {
                 if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
