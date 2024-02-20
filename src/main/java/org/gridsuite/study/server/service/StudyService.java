@@ -2117,7 +2117,7 @@ public class StudyService {
     }
 
     public String exportFilter(UUID studyUuid, UUID filterUuid) {
-        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        return filterService.exportFilter(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(rootNodeUuid), filterUuid);
+        // will use root node network of the study
+        return filterService.exportFilter(networkStoreService.getNetworkUuid(studyUuid), filterUuid);
     }
 }

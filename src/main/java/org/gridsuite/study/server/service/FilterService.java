@@ -79,25 +79,14 @@ public class FilterService {
         }
     }
 
-    public String exportFilter(UUID networkUuid, String variantId, UUID filterUuid) {
+    public String exportFilter(UUID networkUuid, UUID filterUuid) {
         Objects.requireNonNull(networkUuid);
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EXPORT;
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
         uriComponentsBuilder.queryParam("networkUuid", networkUuid);
-        if (variantId != null && !variantId.isBlank()) {
-            uriComponentsBuilder.queryParam("variantId", variantId);
-        }
         var uriComponent = uriComponentsBuilder.buildAndExpand(filterUuid);
 
-        try {
-            return restTemplate.getForObject(uriComponent.toUriString(), String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(NETWORK_NOT_FOUND);
-            } else {
-                throw handleHttpError(e, EVALUATE_FILTER_FAILED);
-            }
-        }
+        return restTemplate.getForObject(uriComponent.toUriString(), String.class);
     }
 }
