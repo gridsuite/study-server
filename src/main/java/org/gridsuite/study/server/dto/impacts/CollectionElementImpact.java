@@ -17,7 +17,6 @@ import lombok.experimental.SuperBuilder;
  */
 @SuperBuilder
 @Data
-// @AllArgsConstructor // TODO activate if one member is added
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class CollectionElementImpact extends AbstractBaseImpact {
