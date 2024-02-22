@@ -81,6 +81,7 @@ public class FilterService {
 
     public String exportFilter(UUID networkUuid, UUID filterUuid) {
         Objects.requireNonNull(networkUuid);
+        Objects.requireNonNull(filterUuid);
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EXPORT;
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);

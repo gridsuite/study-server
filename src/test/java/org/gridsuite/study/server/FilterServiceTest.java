@@ -259,7 +259,7 @@ public class FilterServiceTest {
             """;
         UUID stubUuid = wireMockUtils.stubFilterExport(NETWORK_UUID_STRING, FILTER_UUID_STRING, responseBody);
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/filter/export?filterId={filterId}",
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/filters/{filterId}/elements",
                         studyUuid, FILTER_UUID_STRING))
                 .andExpect(status().isOk())
                 .andReturn();

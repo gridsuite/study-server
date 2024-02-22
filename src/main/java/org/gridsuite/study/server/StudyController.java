@@ -1930,12 +1930,12 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFilter(studyUuid, nodeUuid, inUpstreamBuiltParentNode, filter));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/filter/export")
-    @Operation(summary = "Export a filter applied to root node")
+    @GetMapping(value = "/studies/{studyUuid}/filters/{filterUuid}/elements")
+    @Operation(summary = "Evaluate a filter on root node to get matched elements")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched elements")})
     public ResponseEntity<String> exportFilter(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-            @Parameter(description = "Filter uuid to be applied") @RequestParam(value = "filterId") UUID filterUuid) {
+            @Parameter(description = "Filter uuid to be applied") @PathVariable("filterUuid") UUID filterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(studyUuid, filterUuid));
     }
 }
