@@ -161,7 +161,7 @@ public class ReportServiceTest {
     }
 
     private RootNode createRoot() {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.randomUUID(), UUID.randomUUID(), "caseName", "", "testProvider");
+        StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.randomUUID(), UUID.randomUUID(), "caseName", "");
         studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, ROOT_NODE_REPORT_UUID);
         return networkModificationTreeService.getStudyTree(studyEntity.getId());

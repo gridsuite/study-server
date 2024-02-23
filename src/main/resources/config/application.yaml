@@ -110,17 +110,6 @@ powsybl-ws:
   database:
     name: study
 
-
-# default values for loadflow providers "Hades2" or "OpenLoadFlow"
-loadflow:
-  default-provider: OpenLoadFlow
-
-security-analysis:
-  default-provider: OpenLoadFlow
-
-sensitivity-analysis:
-  default-provider: OpenLoadFlow
-
 non-evacuated-energy:
   default-provider: OpenLoadFlow
 

@@ -88,12 +88,6 @@ public class StudyService {
 
     StudyServerExecutionService studyServerExecutionService;
 
-    private final String defaultLoadflowProvider;
-
-    private final String defaultSecurityAnalysisProvider;
-
-    private final String defaultSensitivityAnalysisProvider;
-
     private final String defaultNonEvacuatedEnergyProvider;
 
     private final String defaultDynamicSimulationProvider;
@@ -124,7 +118,7 @@ public class StudyService {
     private final ObjectMapper objectMapper;
 
     public enum ComputationUsingLoadFlow {
-        LOAD_FLOW, SECURITY_ANALYSIS, SENSITIVITY_ANALYSIS
+        LOAD_FLOW, SECURITY_ANALYSIS, SENSITIVITY_ANALYSIS, NON_EVACUATED_ENERGY_ANALYSIS
     }
 
     public enum ReportNameMatchingType {
@@ -153,9 +147,6 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-            @Value("${loadflow.default-provider}") String defaultLoadflowProvider,
-            @Value("${security-analysis.default-provider}") String defaultSecurityAnalysisProvider,
-            @Value("${sensitivity-analysis.default-provider}") String defaultSensitivityAnalysisProvider,
             @Value("${non-evacuated-energy.default-provider}") String defaultNonEvacuatedEnergyProvider,
             @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
             StudyRepository studyRepository,
@@ -184,9 +175,6 @@ public class StudyService {
             VoltageInitService voltageInitService,
             DynamicSimulationEventService dynamicSimulationEventService,
             FilterService filterService) {
-        this.defaultLoadflowProvider = defaultLoadflowProvider;
-        this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
-        this.defaultSensitivityAnalysisProvider = defaultSensitivityAnalysisProvider;
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
@@ -547,11 +535,8 @@ public class StudyService {
                 .id(studyInfos.getId())
                 .networkUuid(clonedNetworkUuid).networkId(sourceStudy.getNetworkId())
                 .caseFormat(sourceStudy.getCaseFormat()).caseUuid(clonedCaseUuid).caseName(sourceStudy.getCaseName())
-                .loadFlowProvider(sourceStudy.getLoadFlowProvider())
                 .loadFlowParametersUuid(copiedLoadFlowParametersUuid)
-                .securityAnalysisProvider(sourceStudy.getSecurityAnalysisProvider())
                 .securityAnalysisParametersUuid(copiedSecurityAnalysisParametersUuid)
-                .sensitivityAnalysisProvider(sourceStudy.getSensitivityAnalysisProvider())
                 .nonEvacuatedEnergyProvider(sourceStudy.getNonEvacuatedEnergyProvider())
                 .dynamicSimulationProvider(sourceStudy.getDynamicSimulationProvider())
                 .dynamicSimulationParameters(DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper))
@@ -676,7 +661,7 @@ public class StudyService {
         prevResultUuidOpt.ifPresent(loadflowService::deleteLoadFlowResult);
 
         UUID lfParametersUuid = loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
-        UUID result = loadflowService.runLoadFlow(studyUuid, nodeUuid, lfParametersUuid, studyEntity.getLoadFlowProvider(), userId, limitReduction);
+        UUID result = loadflowService.runLoadFlow(studyUuid, nodeUuid, lfParametersUuid, userId, limitReduction);
 
         updateComputationResultUuid(nodeUuid, result, LOAD_FLOW);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
@@ -759,6 +744,7 @@ public class StudyService {
         return lfParameters.getCommonParameters();
     }
 
+    @Transactional
     public LoadFlowParametersInfos getLoadFlowParametersInfos(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return getLoadFlowParametersInfos(studyEntity);
@@ -767,19 +753,6 @@ public class StudyService {
     public LoadFlowParametersInfos getLoadFlowParametersInfos(StudyEntity studyEntity) {
         UUID loadFlowParamsUuid = loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
         return loadflowService.getLoadFlowParameters(loadFlowParamsUuid);
-    }
-
-    private LoadFlowParametersValues getLoadFlowParametersValues(StudyEntity studyEntity, ComputationUsingLoadFlow computation) {
-        LoadFlowParametersInfos params = getLoadFlowParametersInfos(studyEntity);
-        final String lfProvider = switch (computation) {
-            case SECURITY_ANALYSIS -> studyEntity.getSecurityAnalysisProvider();
-            case SENSITIVITY_ANALYSIS -> studyEntity.getSensitivityAnalysisProvider();
-            case LOAD_FLOW -> studyEntity.getLoadFlowProvider();
-        };
-        return LoadFlowParametersValues.builder()
-                .commonParameters(params.getCommonParameters())
-                .specificParameters(lfProvider != null ? params.getSpecificParametersPerProvider().getOrDefault(lfProvider, Map.of()) : Map.of())
-                .build();
     }
 
     @Transactional
@@ -821,13 +794,7 @@ public class StudyService {
     }
 
     public String getDefaultLoadflowProvider() {
-        return defaultLoadflowProvider;
-    }
-
-    public String getLoadFlowProvider(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(StudyEntity::getLoadFlowProvider)
-                .orElse("");
+        return loadflowService.getLoadFlowDefaultProvider();
     }
 
     private void updateProvider(UUID studyUuid, String userId, Consumer<StudyEntity> providerSetter) {
@@ -836,55 +803,32 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    @Transactional
     public void updateLoadFlowProvider(UUID studyUuid, String provider, String userId) {
         updateProvider(studyUuid, userId, studyEntity -> {
-            studyEntity.setLoadFlowProvider(provider != null ? provider : defaultLoadflowProvider);
+            loadflowService.updateLoadFlowProvider(studyEntity.getLoadFlowParametersUuid(), provider);
             invalidateLoadFlowStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         });
     }
 
     public String getDefaultSecurityAnalysisProvider() {
-        return defaultSecurityAnalysisProvider;
+        return securityAnalysisService.getSecurityAnalysisDefaultProvider();
     }
 
-    public String getSecurityAnalysisProvider(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(StudyEntity::getSecurityAnalysisProvider)
-                .orElse("");
-    }
-
-    @Transactional
     public void updateSecurityAnalysisProvider(UUID studyUuid, String provider, String userId) {
         updateProvider(studyUuid, userId, studyEntity -> {
-            studyEntity.setSecurityAnalysisProvider(provider != null ? provider : defaultSecurityAnalysisProvider);
+            securityAnalysisService.updateSecurityAnalysisProvider(studyEntity.getSecurityAnalysisParametersUuid(), provider);
             invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         });
     }
 
     public String getDefaultSensitivityAnalysisProvider() {
-        return defaultSensitivityAnalysisProvider;
+        return sensitivityAnalysisService.getSensitivityAnalysisDefaultProvider();
     }
 
     public String getDefaultNonEvacuatedEnergyProvider() {
         return defaultNonEvacuatedEnergyProvider;
-    }
-
-    public String getSensitivityAnalysisProvider(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(StudyEntity::getSensitivityAnalysisProvider)
-                .orElse("");
-    }
-
-    @Transactional
-    public void updateSensitivityAnalysisProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, userId, studyEntity -> {
-            studyEntity.setSensitivityAnalysisProvider(provider != null ? provider : defaultSensitivityAnalysisProvider);
-            invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        });
     }
 
     public String getDefaultDynamicSimulationProvider() {
@@ -934,7 +878,6 @@ public class StudyService {
         Objects.requireNonNull(nodeUuid);
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String provider = getSecurityAnalysisProvider(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
@@ -948,12 +891,10 @@ public class StudyService {
 
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, SECURITY_ANALYSIS);
         prevResultUuidOpt.ifPresent(securityAnalysisService::deleteSaResult);
-
-        LoadFlowParametersValues loadFlowParameters = getLoadFlowParametersValues(study, ComputationUsingLoadFlow.SECURITY_ANALYSIS);
        
-        var runSecurityAnalysisParametersInfos = new RunSecurityAnalysisParametersInfos(study.getSecurityAnalysisParametersUuid(), loadFlowParameters.getSpecificParameters(), loadFlowParameters.getCommonParameters(), contingencyListNames);
+        var runSecurityAnalysisParametersInfos = new RunSecurityAnalysisParametersInfos(study.getSecurityAnalysisParametersUuid(), study.getLoadFlowParametersUuid(), contingencyListNames);
         UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, variantId, runSecurityAnalysisParametersInfos,
-                new ReportInfos(reportUuid, nodeUuid.toString()), provider, receiver, userId);
+                new ReportInfos(reportUuid, nodeUuid.toString()), receiver, userId);
         updateComputationResultUuid(nodeUuid, result, SECURITY_ANALYSIS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         return result;
@@ -1047,8 +988,7 @@ public class StudyService {
         Objects.requireNonNull(shortCircuitParameters);
         Objects.requireNonNull(importParameters);
 
-        StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
+        StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, null, null, null, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
                 loadFlowParametersUuid, null, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, securityAnalysisParametersUuid,
                 null, sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED);
         return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
@@ -1703,13 +1643,10 @@ public class StudyService {
         prevResultUuidOpt.ifPresent(sensitivityAnalysisService::deleteSensitivityAnalysisResult);
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String provider = getSensitivityAnalysisProvider(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
-        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        LoadFlowParametersValues loadFlowParameters = getLoadFlowParametersValues(study, ComputationUsingLoadFlow.SENSITIVITY_ANALYSIS);
 
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider, userId, studyEntity.getSensitivityAnalysisParametersUuid(), loadFlowParameters);
+        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, userId, study.getSensitivityAnalysisParametersUuid(), study.getLoadFlowParametersUuid());
 
         updateComputationResultUuid(nodeUuid, result, SENSITIVITY_ANALYSIS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
@@ -2041,12 +1978,8 @@ public class StudyService {
         SensitivityAnalysisParameters sensitivityAnalysisParameters = SensitivityAnalysisParameters.load();
         sensitivityAnalysisParameters.setFlowFlowSensitivityValueThreshold(nonEvacuatedEnergyParametersInfos.getGeneratorsCappings().getSensitivityThreshold());
 
-        LoadFlowParametersValues loadFlowParameters = getLoadFlowParametersValues(studyEntity, ComputationUsingLoadFlow.SENSITIVITY_ANALYSIS);
-        sensitivityAnalysisParameters.setLoadFlowParameters(loadFlowParameters.getCommonParameters());
-
         NonEvacuatedEnergyInputData nonEvacuatedEnergyInputData = new NonEvacuatedEnergyInputData();
         nonEvacuatedEnergyInputData.setParameters(sensitivityAnalysisParameters);
-        nonEvacuatedEnergyInputData.setLoadFlowSpecificParameters(loadFlowParameters.getSpecificParameters());
 
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyStagesDefinition(nonEvacuatedEnergyParametersInfos.getStagesDefinition());
 
@@ -2072,7 +2005,7 @@ public class StudyService {
             .filter(NonEvacuatedEnergyContingencies::isActivated)
             .collect(Collectors.toList()));
 
-        UUID result = nonEvacuatedEnergyService.runNonEvacuatedEnergy(nodeUuid, networkUuid, variantId, reportUuid, provider, nonEvacuatedEnergyInputData, userId);
+        UUID result = nonEvacuatedEnergyService.runNonEvacuatedEnergy(nodeUuid, networkUuid, variantId, reportUuid, provider, nonEvacuatedEnergyInputData, studyEntity.getLoadFlowParametersUuid(), userId);
 
         updateComputationResultUuid(nodeUuid, result, NON_EVACUATED_ENERGY_ANALYSIS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);

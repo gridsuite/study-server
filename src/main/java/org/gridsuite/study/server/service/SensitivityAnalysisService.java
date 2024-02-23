@@ -12,7 +12,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.LoadFlowParametersValues;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
@@ -73,10 +72,9 @@ public class SensitivityAnalysisService {
     public UUID runSensitivityAnalysis(UUID nodeUuid, UUID networkUuid,
                                        String variantId,
                                        UUID reportUuid,
-                                       String provider,
                                        String userId,
                                        UUID parametersUuid,
-                                       LoadFlowParametersValues loadFlowParametersValues) {
+                                       UUID loadFlowParametersUuid) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
@@ -91,8 +89,8 @@ public class SensitivityAnalysisService {
         if (parametersUuid != null) {
             uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
         }
-        if (!provider.isEmpty()) {
-            uriComponentsBuilder.queryParam("provider", provider);
+        if (loadFlowParametersUuid != null) {
+            uriComponentsBuilder.queryParam("loadFlowParametersUuid", loadFlowParametersUuid);
         }
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
@@ -105,7 +103,7 @@ public class SensitivityAnalysisService {
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<LoadFlowParametersValues> httpEntity = new HttpEntity<>(loadFlowParametersValues, headers);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
@@ -380,6 +378,19 @@ public class SensitivityAnalysisService {
             throw handleHttpError(e, DELETE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED);
         }
 
+    }
+
+    public String getSensitivityAnalysisDefaultProvider() {
+        String path = UriComponentsBuilder
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/default-provider")
+                .buildAndExpand()
+                .toUriString();
+
+        try {
+            return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, GET_SENSITIVITY_ANALYSIS_DEFAULT_PROVIDER_FAILED);
+        }
     }
 
     public Long getSensitivityAnalysisFactorsCount(UUID networkUuid, SensitivityFactorsIdsByGroup factorsIds, Boolean isInjectionsSet) {

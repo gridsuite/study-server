@@ -861,17 +861,10 @@ public class StudyController {
     @Operation(summary = "set load flow provider for the specified study, no body means reset to default provider")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load flow provider is set")})
     public ResponseEntity<Void> setLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid,
-                                                          @RequestBody(required = false) String provider,
-                                                          @RequestHeader(HEADER_USER_ID) String userId) {
+                                                    @RequestBody(required = false) String provider,
+                                                    @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.updateLoadFlowProvider(studyUuid, provider, userId);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/loadflow/provider")
-    @Operation(summary = "Get load flow provider for a specified study, empty string means default provider")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load flow provider is returned")})
-    public ResponseEntity<String> getLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/security-analysis/provider")
@@ -882,30 +875,6 @@ public class StudyController {
                                                             @RequestHeader("userId") String userId) {
         studyService.updateSecurityAnalysisProvider(studyUuid, provider, userId);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/security-analysis/provider")
-    @Operation(summary = "Get security analysis provider for a specified study, empty string means default provider")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis provider is returned")})
-    public ResponseEntity<String> getSecurityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getSecurityAnalysisProvider(studyUuid));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/provider")
-    @Operation(summary = "set sensitivity analysis provider for the specified study, no body means reset to default provider")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis provider is set")})
-    public ResponseEntity<Void> setSensitivityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid,
-                                                               @RequestBody(required = false) String provider,
-                                                               @RequestHeader("userId") String userId) {
-        studyService.updateSensitivityAnalysisProvider(studyUuid, provider, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/sensitivity-analysis/provider")
-    @Operation(summary = "Get sensitivity analysis provider for a specified study, empty string means default provider")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis provider is returned")})
-    public ResponseEntity<String> getSensitivityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisProvider(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/dynamic-simulation/provider")

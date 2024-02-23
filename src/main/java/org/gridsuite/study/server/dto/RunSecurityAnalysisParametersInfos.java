@@ -6,12 +6,10 @@
  */
 package org.gridsuite.study.server.dto;
 
-import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -23,9 +21,7 @@ public class RunSecurityAnalysisParametersInfos {
 
     private UUID securityAnalysisParametersUuid;
 
-    private Map<String, String> specificParams;
-
-    private LoadFlowParameters loadFlowParameters;
+    private UUID loadFlowParametersUuid;
 
     private List<String> contingencyListNames;
 
