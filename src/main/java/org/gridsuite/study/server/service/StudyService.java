@@ -2042,4 +2042,9 @@ public class StudyService {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         return filterService.evaluateFilter(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn), filter);
     }
+
+    public String exportFilter(UUID studyUuid, UUID filterUuid) {
+        // will use root node network of the study
+        return filterService.exportFilter(networkStoreService.getNetworkUuid(studyUuid), filterUuid);
+    }
 }
