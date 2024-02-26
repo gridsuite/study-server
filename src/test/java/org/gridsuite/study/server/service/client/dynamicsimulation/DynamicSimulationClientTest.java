@@ -28,7 +28,7 @@ import java.util.UUID;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient.*;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -188,10 +188,8 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
                         .withHeader("Content-Type", "application/json; charset=utf-8")
                 ));
 
-        dynamicSimulationClient.invalidateStatus(List.of(UUID.fromString(RESULT_UUID_STRING)));
-
-        // check result
-        assertTrue(true);
+        // test service
+        assertDoesNotThrow(() -> dynamicSimulationClient.invalidateStatus(List.of(UUID.fromString(RESULT_UUID_STRING))));
     }
 
     @Test(expected = StudyException.class)
@@ -217,10 +215,8 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
                         .withHeader("Content-Type", "application/json; charset=utf-8")
                 ));
 
-        dynamicSimulationClient.deleteResult(UUID.fromString(RESULT_UUID_STRING));
-
-        // check result
-        assertTrue(true);
+        // test service
+        assertDoesNotThrow(() -> dynamicSimulationClient.deleteResult(UUID.fromString(RESULT_UUID_STRING)));
     }
 
     @Test

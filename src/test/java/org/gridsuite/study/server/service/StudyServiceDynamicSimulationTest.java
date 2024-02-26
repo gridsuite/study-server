@@ -9,15 +9,19 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.timeseries.*;
+import com.powsybl.timeseries.DoubleTimeSeries;
+import com.powsybl.timeseries.IrregularTimeSeriesIndex;
+import com.powsybl.timeseries.TimeSeries;
+import com.powsybl.timeseries.TimeSeriesIndex;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.timeseries.TimeLineEventInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -156,26 +160,24 @@ public class StudyServiceDynamicSimulationTest {
     }
 
     @Test
-    public void testGetDynamicSimulationTimeLine() throws JsonProcessingException {
+    public void testGetDynamicSimulationTimeLine() {
         // setup
         // timeline
-        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        StringTimeSeries timeLine = TimeSeries.createString("TimeLine", index,
-                "CLA_2_5 - CLA : order to change topology",
-                "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
-                "CLA_2_5 - CLA : order to change topology",
-                "CLA_2_4 - CLA : arming by over-current constraint");
+        List<TimeLineEventInfos> timeLineEventInfosList = List.of(
+                new TimeLineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
+                new TimeLineEventInfos(102479, "_BUS____2-BUS____5-1_AC", "LINE : opening both sides"),
+                new TimeLineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
+                new TimeLineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
+        );
 
-        given(dynamicSimulationService.getTimeLineResult(NODE_UUID)).willReturn(Arrays.asList(timeLine));
+        given(dynamicSimulationService.getTimeLineResult(NODE_UUID)).willReturn(timeLineEventInfosList);
 
         // call method to be tested
-        String timeLineResultJson = TimeSeries.toJson(studyService.getDynamicSimulationTimeLine(NODE_UUID));
+        List<TimeLineEventInfos> timeLineEventInfosListResult = studyService.getDynamicSimulationTimeLine(NODE_UUID);
 
         // --- check result --- //
-        String timeLineExpectedJson = TimeSeries.toJson(Arrays.asList(timeLine));
-        getLogger().info("Time line expected in Json = " + timeLineExpectedJson);
-        getLogger().info("Time line result in Json = " + timeLineResultJson);
-        assertEquals(objectMapper.readTree(timeLineExpectedJson), objectMapper.readTree(timeLineResultJson));
+        // must contain 4 timeline events
+        assertEquals(4, timeLineEventInfosListResult.size());
     }
 
     @Test

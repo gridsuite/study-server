@@ -16,7 +16,6 @@ import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
-import com.powsybl.timeseries.StringTimeSeries;
 import lombok.NonNull;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
@@ -29,6 +28,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
+import org.gridsuite.study.server.dto.timeseries.TimeLineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -1856,7 +1856,7 @@ public class StudyService {
         return dynamicSimulationService.getTimeSeriesResult(nodeUuid, timeSeriesNames);
     }
 
-    public List<StringTimeSeries> getDynamicSimulationTimeLine(UUID nodeUuid) {
+    public List<TimeLineEventInfos> getDynamicSimulationTimeLine(UUID nodeUuid) {
         // get timeline from node uuid
         return dynamicSimulationService.getTimeLineResult(nodeUuid); // timeline has only one element
     }

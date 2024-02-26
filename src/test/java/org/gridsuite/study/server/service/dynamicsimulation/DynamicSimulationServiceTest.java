@@ -9,15 +9,19 @@ package org.gridsuite.study.server.service.dynamicsimulation;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.timeseries.*;
+import com.powsybl.commons.PowsyblException;
+import com.powsybl.timeseries.DoubleTimeSeries;
+import com.powsybl.timeseries.IrregularTimeSeriesIndex;
+import com.powsybl.timeseries.TimeSeries;
+import com.powsybl.timeseries.TimeSeriesIndex;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelVariableDefinitionInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.VariablesSetInfos;
-import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.timeseries.TimeLineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesMetadataRest;
@@ -25,6 +29,7 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,10 +39,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -163,7 +167,7 @@ public class DynamicSimulationServiceTest {
 
         // check result
         // metadata must be identical to expected
-        List<TimeSeriesMetadataInfos> expectedTimeSeriesMetadataList = timeSeriesGroupMetadata.getMetadatas().stream().map(TimeSeriesMetadataInfos::fromRest).collect(Collectors.toUnmodifiableList());
+        List<TimeSeriesMetadataInfos> expectedTimeSeriesMetadataList = timeSeriesGroupMetadata.getMetadatas().stream().map(TimeSeriesMetadataInfos::fromRest).toList();
         String expectedTimeSeriesMetadataListJson = objectMapper.writeValueAsString(expectedTimeSeriesMetadataList);
         String resultTimeSeriesMetadataListJson = objectMapper.writeValueAsString(resultTimeSeriesMetadataList);
         assertEquals(objectMapper.readTree(expectedTimeSeriesMetadataListJson), objectMapper.readTree(resultTimeSeriesMetadataListJson));
@@ -217,20 +221,33 @@ public class DynamicSimulationServiceTest {
 
         // setup timeSeriesClient mock
         // timeline
-        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        StringTimeSeries timeLine = TimeSeries.createString(TIME_LINE_NAME, index,
-                "CLA_2_5 - CLA : order to change topology",
-                "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
-                "CLA_2_5 - CLA : order to change topology",
-                "CLA_2_4 - CLA : arming by over-current constraint");
-        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(Arrays.asList(timeLine));
+        List<TimeLineEventInfos> timeLineEventInfosList = List.of(
+                new TimeLineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
+                new TimeLineEventInfos(102479, "_BUS____2-BUS____5-1_AC", "LINE : opening both sides"),
+                new TimeLineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
+                new TimeLineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
+        );
+        List<TimeSeries> timeLineSeries = new ArrayList<>();
+
+        // collect and convert timeline event list to StringTimeSeries
+        long[] timeLineIndexes = timeLineEventInfosList.stream().mapToLong(event -> (long) event.time()).toArray();
+        String[] timeLineValues = timeLineEventInfosList.stream().map(event -> {
+            try {
+                return objectMapper.writeValueAsString(event);
+            } catch (JsonProcessingException e) {
+                throw new PowsyblException("Error while serializing time line event: " + event.toString(), e);
+            }
+        }).toArray(String[]::new);
+        timeLineSeries.add(TimeSeries.createString("timeLine", new IrregularTimeSeriesIndex(timeLineIndexes), timeLineValues));
+
+        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timeLineSeries);
 
         // call method to be tested
-        List<StringTimeSeries> timeLineResult = dynamicSimulationService.getTimeLineResult(NODE_UUID);
+        List<TimeLineEventInfos> timeLineResult = dynamicSimulationService.getTimeLineResult(NODE_UUID);
 
         // check result
-        // must contain only one
-        assertEquals(1, timeLineResult.size());
+        // must contain 4 timeline events
+        assertEquals(4, timeLineResult.size());
     }
 
     @Test(expected = StudyException.class)
@@ -264,22 +281,19 @@ public class DynamicSimulationServiceTest {
 
     @Test
     public void testInvalidateStatus() {
-        dynamicSimulationService.invalidateStatus(List.of(RESULT_UUID));
-        assertTrue(true);
+        assertDoesNotThrow(() -> dynamicSimulationService.invalidateStatus(List.of(RESULT_UUID)));
     }
 
     @Test
     public void testDeleteResult() {
-        dynamicSimulationService.deleteResult(RESULT_UUID);
-        assertTrue(true);
+        assertDoesNotThrow(() -> dynamicSimulationService.deleteResult(RESULT_UUID));
     }
 
     @Test
     public void testAssertDynamicSimulationNotRunning() {
 
         // test not running
-        dynamicSimulationService.assertDynamicSimulationNotRunning(NODE_UUID);
-        assertTrue(true);
+        assertDoesNotThrow(() -> dynamicSimulationService.assertDynamicSimulationNotRunning(NODE_UUID));
     }
 
     @Test(expected = StudyException.class)

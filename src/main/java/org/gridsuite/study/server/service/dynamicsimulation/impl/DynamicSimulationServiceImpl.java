@@ -7,6 +7,8 @@
 
 package org.gridsuite.study.server.service.dynamicsimulation.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
@@ -16,6 +18,7 @@ import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.timeseries.TimeLineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -28,6 +31,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_RUNNING;
@@ -39,6 +43,8 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 @Service
 public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
+    private final ObjectMapper objectMapper;
+
     private final DynamicMappingClient dynamicMappingClient;
 
     private final TimeSeriesClient timeSeriesClient;
@@ -47,10 +53,12 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     private final NetworkModificationTreeService networkModificationTreeService;
 
-    public DynamicSimulationServiceImpl(DynamicMappingClient dynamicMappingClient,
+    public DynamicSimulationServiceImpl(ObjectMapper objectMapper,
+                                        DynamicMappingClient dynamicMappingClient,
                                         TimeSeriesClient timeSeriesClient,
                                         DynamicSimulationClient dynamicSimulationClient,
                                         NetworkModificationTreeService networkModificationTreeService) {
+        this.objectMapper = objectMapper;
         this.dynamicMappingClient = dynamicMappingClient;
         this.timeSeriesClient = timeSeriesClient;
         this.dynamicSimulationClient = dynamicSimulationClient;
@@ -114,8 +122,8 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public List<StringTimeSeries> getTimeLineResult(UUID nodeUuid) {
-        List<TimeSeries> timeLines = new ArrayList<>();
+    public List<TimeLineEventInfos> getTimeLineResult(UUID nodeUuid) {
+        List<TimeLineEventInfos> timeLineEvents = new ArrayList<>();
 
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
@@ -123,19 +131,34 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
             UUID timeLineUuid = dynamicSimulationClient.getTimeLineResult(resultUuidOpt.get()); // get timeline uuid
             if (timeLineUuid != null) {
                 // get timeline data
-                timeLines = timeSeriesClient.getTimeSeriesGroup(timeLineUuid, null);
+                List<TimeSeries> timeLines = timeSeriesClient.getTimeSeriesGroup(timeLineUuid, null);
 
                 // get first element to check type
                 if (!CollectionUtils.isEmpty(timeLines) &&
                     !(timeLines.get(0) instanceof StringTimeSeries)) {
                     throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time lines can not be a type: "
-                       + timeLines.get(0).getClass().getSimpleName()
-                       + ", expected type: " + StringTimeSeries.class.getSimpleName());
+                                                                                       + timeLines.get(0).getClass().getSimpleName()
+                                                                                       + ", expected type: " + StringTimeSeries.class.getSimpleName());
+                }
+
+                // convert {@link StringTimeSeries} to {@link TimeLineEventInfos}
+                // note that each {@link StringTimeSeries} corresponds to an array of {@link TimeLineEventInfos}
+                if (!CollectionUtils.isEmpty(timeLines)) {
+                    timeLines.stream()
+                            .flatMap(series -> Stream.of(((StringTimeSeries) series).toArray()))
+                            .forEach(eventJson -> {
+                                try {
+                                    timeLineEvents.add(objectMapper.readValue(eventJson, TimeLineEventInfos.class));
+                                } catch (JsonProcessingException e) {
+                                    throw new StudyException(StudyException.Type.TIME_LINE_BAD_TYPE, "Error while deserializing time line event: " + eventJson);
+                                }
+                            });
                 }
             }
+
         }
 
-        return (List) timeLines;
+        return timeLineEvents;
     }
 
     @Override

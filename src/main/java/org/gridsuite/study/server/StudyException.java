@@ -73,6 +73,7 @@ public class StudyException extends RuntimeException {
         GENERATOR_SCALING_FAILED,
         URI_SYNTAX,
         TIME_SERIES_BAD_TYPE,
+        TIME_LINE_BAD_TYPE,
         FILTERS_NOT_FOUND,
         NO_VOLTAGE_INIT_RESULTS_FOR_NODE,
         NO_VOLTAGE_INIT_MODIFICATIONS_GROUP_FOR_NODE,
