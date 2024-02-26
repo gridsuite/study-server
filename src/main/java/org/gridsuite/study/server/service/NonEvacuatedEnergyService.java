@@ -105,6 +105,7 @@ public class NonEvacuatedEnergyService {
                                       UUID reportUuid,
                                       String provider,
                                       NonEvacuatedEnergyInputData nonEvacuatedEnergyInputData,
+                                      UUID loadFlowParametersUuid,
                                       String userId) {
         String receiver;
         try {
@@ -119,6 +120,9 @@ public class NonEvacuatedEnergyService {
             .queryParam("reportType", StudyService.ReportType.NON_EVACUATED_ENERGY_ANALYSIS.reportKey);
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
+        }
+        if (loadFlowParametersUuid != null) {
+            uriComponentsBuilder.queryParam("loadFlowParametersUuid", loadFlowParametersUuid);
         }
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);

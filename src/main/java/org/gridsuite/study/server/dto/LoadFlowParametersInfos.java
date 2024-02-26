@@ -23,6 +23,8 @@ import java.util.Map;
 @NoArgsConstructor
 public class LoadFlowParametersInfos {
 
+    private String provider;
+
     private LoadFlowParameters commonParameters;
 
     private Map<String, Map<String, String>> specificParametersPerProvider;
