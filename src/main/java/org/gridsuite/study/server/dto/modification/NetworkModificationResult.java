@@ -52,7 +52,7 @@ public class NetworkModificationResult {
     public Set<String> getImpactedSubstationsIds() {
         return networkImpacts.stream()
             // ignore DELETION simple impacts here
-            .filter(impact -> impact.getImpactType() == ImpactType.SIMPLE && ((SimpleElementImpact) impact).getSimpleImpactType() != SimpleImpactType.DELETION)
+            .filter(impact -> impact.getType() == ImpactType.SIMPLE && ((SimpleElementImpact) impact).getSimpleImpactType() != SimpleImpactType.DELETION)
             .flatMap(impact -> ((SimpleElementImpact) impact).getSubstationIds().stream())
             .collect(Collectors.toCollection(TreeSet::new)); // using TreeSet to keep natural order
     }

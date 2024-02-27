@@ -49,11 +49,11 @@ public class ElementImpactTest {
 
         List<AbstractBaseImpact> impacts = List.of(creationImpact, modificationImpact, injectionDeletionImpact, substationModificationImpact, substationDeletionImpact);
 
-        assertEquals("{\"impactType\":\"SIMPLE\",\"elementType\":\"LINE\",\"simpleImpactType\":\"CREATION\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}", mapper.writeValueAsString(creationImpact));
-        assertEquals("{\"impactType\":\"SIMPLE\",\"elementType\":\"LOAD\",\"simpleImpactType\":\"MODIFICATION\",\"elementId\":\"loadId\",\"substationIds\":[\"s3\"]}", mapper.writeValueAsString(modificationImpact));
-        assertEquals("{\"impactType\":\"SIMPLE\",\"elementType\":\"GENERATOR\",\"simpleImpactType\":\"DELETION\",\"elementId\":\"generatorId\",\"substationIds\":[\"s4\"]}", mapper.writeValueAsString(injectionDeletionImpact));
-        assertEquals("{\"impactType\":\"SIMPLE\",\"elementType\":\"SUBSTATION\",\"simpleImpactType\":\"MODIFICATION\",\"elementId\":\"substationId1\",\"substationIds\":[\"substationId1\"]}", mapper.writeValueAsString(substationModificationImpact));
-        assertEquals("{\"impactType\":\"SIMPLE\",\"elementType\":\"SUBSTATION\",\"simpleImpactType\":\"DELETION\",\"elementId\":\"substationId2\",\"substationIds\":[\"substationId2\"]}", mapper.writeValueAsString(substationDeletionImpact));
+        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"LINE\",\"simpleImpactType\":\"CREATION\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}", mapper.writeValueAsString(creationImpact));
+        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"LOAD\",\"simpleImpactType\":\"MODIFICATION\",\"elementId\":\"loadId\",\"substationIds\":[\"s3\"]}", mapper.writeValueAsString(modificationImpact));
+        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"GENERATOR\",\"simpleImpactType\":\"DELETION\",\"elementId\":\"generatorId\",\"substationIds\":[\"s4\"]}", mapper.writeValueAsString(injectionDeletionImpact));
+        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"SUBSTATION\",\"simpleImpactType\":\"MODIFICATION\",\"elementId\":\"substationId1\",\"substationIds\":[\"substationId1\"]}", mapper.writeValueAsString(substationModificationImpact));
+        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"SUBSTATION\",\"simpleImpactType\":\"DELETION\",\"elementId\":\"substationId2\",\"substationIds\":[\"substationId2\"]}", mapper.writeValueAsString(substationDeletionImpact));
 
         NetworkModificationResult result = NetworkModificationResult.builder()
             .applicationStatus(ApplicationStatus.ALL_OK)
@@ -74,7 +74,7 @@ public class ElementImpactTest {
 
         HashSet<AbstractBaseImpact> impactsSet = new HashSet<>(List.of(creationImpact, creationImpact, creationImpact));
 
-        assertEquals("[{\"impactType\":\"SIMPLE\",\"elementType\":\"LINE\",\"simpleImpactType\":\"CREATION\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}]", mapper.writeValueAsString(impactsSet));
+        assertEquals("[{\"type\":\"SIMPLE\",\"elementType\":\"LINE\",\"simpleImpactType\":\"CREATION\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}]", mapper.writeValueAsString(impactsSet));
     }
 
     @Test
@@ -85,9 +85,9 @@ public class ElementImpactTest {
         CollectionElementImpact loadsCollectionImpact = createCollectionElementImpact(IdentifiableType.LOAD);
         CollectionElementImpact generatorsCollectionImpact = createCollectionElementImpact(IdentifiableType.GENERATOR);
 
-        assertEquals("{\"impactType\":\"COLLECTION\",\"elementType\":\"LINE\"}", mapper.writeValueAsString(linesCollectionImpact));
-        assertEquals("{\"impactType\":\"COLLECTION\",\"elementType\":\"LOAD\"}", mapper.writeValueAsString(loadsCollectionImpact));
-        assertEquals("{\"impactType\":\"COLLECTION\",\"elementType\":\"GENERATOR\"}", mapper.writeValueAsString(generatorsCollectionImpact));
+        assertEquals("{\"type\":\"COLLECTION\",\"elementType\":\"LINE\"}", mapper.writeValueAsString(linesCollectionImpact));
+        assertEquals("{\"type\":\"COLLECTION\",\"elementType\":\"LOAD\"}", mapper.writeValueAsString(loadsCollectionImpact));
+        assertEquals("{\"type\":\"COLLECTION\",\"elementType\":\"GENERATOR\"}", mapper.writeValueAsString(generatorsCollectionImpact));
 
         List<AbstractBaseImpact> impacts = List.of(linesCollectionImpact, loadsCollectionImpact, generatorsCollectionImpact);
 
@@ -102,7 +102,7 @@ public class ElementImpactTest {
 
         HashSet<AbstractBaseImpact> impactsSet = new HashSet<>(List.of(linesCollectionImpact, linesCollectionImpact, linesCollectionImpact));
 
-        assertEquals("[{\"impactType\":\"COLLECTION\",\"elementType\":\"LINE\"}]", mapper.writeValueAsString(impactsSet));
+        assertEquals("[{\"type\":\"COLLECTION\",\"elementType\":\"LINE\"}]", mapper.writeValueAsString(impactsSet));
     }
 
     @Test

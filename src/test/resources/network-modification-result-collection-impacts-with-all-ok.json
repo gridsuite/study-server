@@ -3,15 +3,15 @@
     "lastGroupApplicationStatus": "ALL_OK",
     "networkImpacts": [
       {
-        "impactType": "COLLECTION",
+        "type": "COLLECTION",
         "elementType": "LINE"
       },
       {
-        "impactType": "COLLECTION",
+        "type": "COLLECTION",
         "elementType": "LOAD"
       },
       {
-        "impactType": "COLLECTION",
+        "type": "COLLECTION",
         "elementType": "GENERATOR"
       }
     ],

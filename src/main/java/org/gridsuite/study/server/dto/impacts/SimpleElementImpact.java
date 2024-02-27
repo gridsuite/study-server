@@ -40,7 +40,7 @@ public class SimpleElementImpact extends AbstractBaseImpact {
     private Set<String> substationIds;
 
     @Override
-    public ImpactType getImpactType() {
+    public ImpactType getType() {
         return ImpactType.SIMPLE;
     }
 }

@@ -1681,12 +1681,12 @@ public class StudyService {
 
         Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
             networkModificationResult.getNetworkImpacts().stream()
-                .filter(impact -> impact.getImpactType() == ImpactType.SIMPLE && ((SimpleElementImpact) impact).getSimpleImpactType() == SimpleImpactType.DELETION)
+                .filter(impact -> impact.getType() == ImpactType.SIMPLE && ((SimpleElementImpact) impact).getSimpleImpactType() == SimpleImpactType.DELETION)
                 .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(((SimpleElementImpact) impact).getElementId(), impact.getElementType().name()))
             .collect(Collectors.toSet());
 
         Set<String> collectionElementImpacts = networkModificationResult.getNetworkImpacts().stream()
-                .filter(impact -> impact.getImpactType() == ImpactType.COLLECTION)
+                .filter(impact -> impact.getType() == ImpactType.COLLECTION)
                 .map(impact -> impact.getElementType().name())
                 .collect(Collectors.toSet());
 

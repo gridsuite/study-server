@@ -22,7 +22,7 @@ import lombok.experimental.SuperBuilder;
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
     include = JsonTypeInfo.As.EXISTING_PROPERTY,
-    property = "impactType",
+    property = "type",
     visible = true
 )
 @JsonSubTypes({
@@ -40,7 +40,8 @@ public abstract class AbstractBaseImpact {
         COLLECTION
     }
 
-    private ImpactType impactType;
+    @Setter(AccessLevel.NONE)
+    private ImpactType type;
 
     private IdentifiableType elementType;
 }
