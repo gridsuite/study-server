@@ -50,7 +50,6 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
@@ -103,6 +102,8 @@ public class LoadFlowTest {
 
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString(LOADFLOW_PARAMETERS_UUID_STRING);
 
+    private static final String PROVIDER = "LF_PROVIDER";
+
     private static final String LOADFLOW_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String VARIANT_ID = "variant_1";
 
@@ -131,9 +132,6 @@ public class LoadFlowTest {
     private ObjectMapper objectMapper;
 
     private ObjectWriter objectWriter;
-
-    @Value("${loadflow.default-provider}")
-    String defaultLoadflowProvider;
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
@@ -176,13 +174,43 @@ public class LoadFlowTest {
 
         String loadFlowErrorResultUuidStr = objectMapper.writeValueAsString(LOADFLOW_ERROR_RESULT_UUID);
         String loadflowResult = TestUtils.resourceToString("/loadflow-result.json");
-
-        List<LimitViolationInfos> limitViolations = List.of(new LimitViolationInfos("lineId1", 200., "lineName1", null, 60, 150., TwoSides.ONE.name(), LimitViolationType.CURRENT),
-            new LimitViolationInfos("lineId2", 100., "lineName2", null, 300, 80., TwoSides.TWO.name(), LimitViolationType.CURRENT),
-            new LimitViolationInfos("genId1", 500., "genName1", null, null, 370., null, LimitViolationType.HIGH_VOLTAGE));
+        List<LimitViolationInfos> limitViolations = List.of(LimitViolationInfos.builder()
+                        .subjectId("lineId2")
+                        .limit(100.)
+                        .limitName("lineName2")
+                        .actualOverloadDuration(null)
+                        .upComingOverloadDuration(300)
+                        .overload(null)
+                        .value(80.)
+                        .side(TwoSides.TWO.name())
+                        .limitType(LimitViolationType.CURRENT)
+                        .build(),
+                LimitViolationInfos.builder()
+                        .subjectId("lineId1")
+                        .limit(200.)
+                        .limitName("lineName1")
+                        .actualOverloadDuration(null)
+                        .upComingOverloadDuration(60)
+                        .overload(null)
+                        .value(150.0)
+                        .side(TwoSides.ONE.name())
+                        .limitType(LimitViolationType.CURRENT)
+                        .build(),
+                LimitViolationInfos.builder()
+                        .subjectId("genId1")
+                        .limit(500.)
+                        .limitName("genName1")
+                        .actualOverloadDuration(null)
+                        .upComingOverloadDuration(null)
+                        .overload(null)
+                        .value(370.)
+                        .side(null)
+                        .limitType(LimitViolationType.HIGH_VOLTAGE)
+                        .build());
         LIMIT_VIOLATIONS_JSON = objectMapper.writeValueAsString(limitViolations);
 
         LoadFlowParametersInfos loadFlowParametersInfos = LoadFlowParametersInfos.builder()
+            .provider(PROVIDER)
             .commonParameters(LoadFlowParameters.load())
             .specificParametersPerProvider(Map.of())
             .build();
@@ -214,12 +242,18 @@ public class LoadFlowTest {
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID)) {
                     return new MockResponse().setResponseCode(200).setBody(loadflowResult)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "\\?filters=.*sort=.*")) {
+                    return new MockResponse().setResponseCode(200).setBody(loadflowResult)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/status")) {
                     return new MockResponse().setResponseCode(200).setBody(LOADFLOW_STATUS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations")) {
                     return new MockResponse().setResponseCode(200).setBody(LIMIT_VIOLATIONS_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations\\?filters=.*sort=.*")) {
+                    return new MockResponse().setResponseCode(200).setBody(LIMIT_VIOLATIONS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -360,6 +394,13 @@ public class LoadFlowTest {
                 content().string(LIMIT_VIOLATIONS_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations")));
+
+        // get limit violations with filters and sort
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations?filters=lineId2&sort=subjectId,ASC", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
+                status().isOk(),
+                content().string(LIMIT_VIOLATIONS_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations\\?filters=lineId2&sort=subjectId,ASC")));
 
         // get limit violations on non existing node
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations", studyNameUserIdUuid, UUID.randomUUID())).andExpectAll(
@@ -551,6 +592,7 @@ public class LoadFlowTest {
                 status().isOk()).andReturn();
 
         String loadflowParameters = objectMapper.writeValueAsString(LoadFlowParametersInfos.builder()
+                .provider(PROVIDER)
                 .commonParameters(LoadFlowParameters.load())
                 .specificParametersPerProvider(Map.of())
                 .build());
@@ -587,7 +629,7 @@ public class LoadFlowTest {
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID loadFlowParametersUuid) {
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider,
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "",
                 loadFlowParametersUuid, defaultShortCircuitParametersEntity, null, null,
                 defaultNonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);

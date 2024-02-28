@@ -57,6 +57,7 @@ public class FilterServiceTest {
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final String FILTER_UUID_STRING = "c6c15d08-81e9-47a1-9cdb-7be22f017ad5";
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
 
     @Autowired
@@ -109,7 +110,7 @@ public class FilterServiceTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", null, UUID.randomUUID(), null, null, null, null);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", null, null, null, null, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
@@ -243,5 +244,28 @@ public class FilterServiceTest {
                 .andReturn();
 
         wireMockUtils.verifyFilterEvaluate(stubUuid, NETWORK_UUID_STRING);
+    }
+
+    @Test
+    public void testExportFilter() throws Exception {
+
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        String responseBody = """
+                [
+                    {"id":"MANDA7COND.41","type":"SHUNT_COMPENSATOR","distributionKey":null},
+                    {"id":"MANDA7COND.31","type":"SHUNT_COMPENSATOR","distributionKey":null}
+                ]
+            """;
+        UUID stubUuid = wireMockUtils.stubFilterExport(NETWORK_UUID_STRING, FILTER_UUID_STRING, responseBody);
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/filters/{filterId}/elements",
+                        studyUuid, FILTER_UUID_STRING))
+                .andExpect(status().isOk())
+                .andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        assertEquals(responseBody, resultAsString);
+
+        wireMockUtils.verifyFilterExport(stubUuid, FILTER_UUID_STRING, NETWORK_UUID_STRING);
     }
 }

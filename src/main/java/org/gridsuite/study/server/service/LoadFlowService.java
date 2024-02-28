@@ -17,6 +17,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -67,7 +68,7 @@ public class LoadFlowService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID parametersUuid, String provider, String userId, Float limitReduction) {
+    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID parametersUuid, String userId, Float limitReduction) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
         UUID reportUuid = getReportUuid(nodeUuid);
@@ -85,9 +86,6 @@ public class LoadFlowService {
                 .queryParam(QUERY_PARAM_REPORT_UUID, reportUuid.toString())
                 .queryParam(QUERY_PARAM_REPORTER_ID, nodeUuid.toString())
                 .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.LOADFLOW.reportKey);
-        if (!provider.isEmpty()) {
-            uriComponentsBuilder.queryParam("provider", provider);
-        }
         if (parametersUuid != null) {
             uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
         }
@@ -131,7 +129,7 @@ public class LoadFlowService {
         return restTemplate.getForObject(loadFlowServerBaseUri + path, Integer.class);
     }
 
-    public String getLoadFlowResultOrStatus(UUID nodeUuid, String suffix) {
+    public String getLoadFlowResultOrStatus(UUID nodeUuid, String filters, Sort sort, String suffix) {
         String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
 
@@ -139,8 +137,15 @@ public class LoadFlowService {
             return null;
         }
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}" + suffix)
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}" + suffix);
+        if (!StringUtils.isEmpty(filters)) {
+            uriComponentsBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+        }
+        if (sort != null) {
+            sort.forEach(order -> uriComponentsBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection()));
+        }
+        String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+
         try {
             result = restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
@@ -152,12 +157,12 @@ public class LoadFlowService {
         return result;
     }
 
-    public String getLoadFlowResult(UUID nodeUuid) {
-        return getLoadFlowResultOrStatus(nodeUuid, "");
+    public String getLoadFlowResult(UUID nodeUuid, String filters, Sort sort) {
+        return getLoadFlowResultOrStatus(nodeUuid, filters, sort, "");
     }
 
     public String getLoadFlowStatus(UUID nodeUuid) {
-        return getLoadFlowResultOrStatus(nodeUuid, "/status");
+        return getLoadFlowResultOrStatus(nodeUuid, null, null, "/status");
     }
 
     public void stopLoadFlow(UUID studyUuid, UUID nodeUuid) {
@@ -211,15 +216,22 @@ public class LoadFlowService {
         }
     }
 
-    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid) {
+    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid, String filters, Sort sort) {
         List<LimitViolationInfos> result = new ArrayList<>();
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
 
         if (resultUuidOpt.isPresent()) {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations")
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations");
+            if (filters != null && !filters.isEmpty()) {
+                uriComponentsBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+            }
+            if (sort != null) {
+                sort.forEach(order -> uriComponentsBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection()));
+            }
+            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
             try {
-                var responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() { });
+                ResponseEntity<List<LimitViolationInfos>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() {
+                });
                 result = responseEntity.getBody();
             } catch (HttpStatusCodeException e) {
                 if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
@@ -312,6 +324,38 @@ public class LoadFlowService {
             restTemplate.delete(loadFlowServerBaseUri + path);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, DELETE_LOADFLOW_PARAMETERS_FAILED);
+        }
+    }
+
+    public void updateLoadFlowProvider(UUID parameterUuid, String provider) {
+        Objects.requireNonNull(provider);
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI + "/provider")
+                .buildAndExpand(parameterUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(provider, headers);
+
+        try {
+            restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PATCH, httpEntity, Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_LOADFLOW_PROVIDER_FAILED);
+        }
+    }
+
+    public String getLoadFlowDefaultProvider() {
+        String path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/default-provider")
+                .buildAndExpand()
+                .toUriString();
+
+        try {
+            return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, GET_LOADFLOW_DEFAULT_PROVIDER_FAILED);
         }
     }
 

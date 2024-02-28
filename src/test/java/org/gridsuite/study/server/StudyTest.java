@@ -162,22 +162,13 @@ public class StudyTest {
     private static final NetworkInfos NETWORK_INFOS_3 = new NetworkInfos(UUID.fromString(NETWORK_UUID_3_STRING), "file_3.xiidm");
     private static final String CASE_NAME = "DefaultCaseName";
     private static final UUID EMPTY_MODIFICATION_GROUP_UUID = UUID.randomUUID();
-    private static final String EMPTY_ARRAY = "[]";
-    private static final Map DEFAULT_IMPORT_PARAMETERS = Map.of("param1", "defaultValue1", "param2", "defaultValue2");
     private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
-    private static final String DEFAULT_MODIFICATION_LIST_RESULT = "[{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}]";
+    private static final String CASE_FORMAT = "caseFormat";
 
-    @Value("${loadflow.default-provider}")
-    String defaultLoadflowProvider;
+    private static final String DEFAULT_PROVIDER = "defaultProvider";
 
-    @Value("${security-analysis.default-provider}")
-    String defaultSecurityAnalysisProvider;
-
-    @Value("${sensitivity-analysis.default-provider}")
-    String defaultSensitivityAnalysisProvider;
-
-    @Value("${sensitivity-analysis.default-provider}")
+    @Value("${non-evacuated-energy.default-provider}")
     String defaultNonEvacuatedEnergyProvider;
 
     @Autowired
@@ -475,6 +466,10 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.matches("/v1/parameters/.*") && DELETE.equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/parameters/.*/provider")) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/default-provider")) {
+                    return new MockResponse().setResponseCode(200).setBody(DEFAULT_PROVIDER);
                 }
 
                 switch (path) {
@@ -730,7 +725,7 @@ public class StudyTest {
 
         //insert a study with a non existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}",
-                NOT_EXISTING_CASE_UUID, "false").header(USER_ID_HEADER, "userId"))
+                NOT_EXISTING_CASE_UUID, "false").header(USER_ID_HEADER, "userId").param(CASE_FORMAT, "XIIDM"))
                      .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.valueOf("text/plain;charset=UTF-8"))).andReturn();
         assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", result.getResponse().getContentAsString());
 
@@ -822,7 +817,7 @@ public class StudyTest {
         randomListParam.add("paramValue1");
         randomListParam.add("paramValue2");
         importParameters.put("param1", randomListParam);
-        UUID studyUuid = createStudyWithImportParameters("userId", CASE_UUID, importParameters);
+        UUID studyUuid = createStudyWithImportParameters("userId", CASE_UUID, "UCTE", importParameters);
 
         StudyEntity studyEntity = studyRepository.findById(studyUuid).get();
         assertEquals(studyUuid, studyEntity.getId());
@@ -980,7 +975,9 @@ public class StudyTest {
     }
 
     private UUID createStudy(String userId, UUID caseUuid) throws Exception {
-        MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid).header("userId", userId))
+        MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
+                        .header("userId", userId)
+                        .param(CASE_FORMAT, "UCTE"))
                 .andExpect(status().isOk())
                 .andReturn();
         String resultAsString = result.getResponse().getContentAsString();
@@ -992,15 +989,18 @@ public class StudyTest {
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(6, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*" + "&caseFormat=UCTE")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", caseUuid)));
 
         return studyUuid;
     }
 
-    protected UUID createStudyWithImportParameters(String userId, UUID caseUuid, Map<String, Object> importParameters) throws Exception {
-        MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid).header("userId", userId).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(importParameters)))
+    protected UUID createStudyWithImportParameters(String userId, UUID caseUuid, String caseFormat, Map<String, Object> importParameters) throws Exception {
+        MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
+                        .header("userId", userId).contentType(MediaType.APPLICATION_JSON)
+                        .param(CASE_FORMAT, caseFormat)
+                        .content(mapper.writeValueAsString(importParameters)))
                 .andExpect(status().isOk())
                 .andReturn();
         String resultAsString = result.getResponse().getContentAsString();
@@ -1025,6 +1025,7 @@ public class StudyTest {
     private UUID createStudyWithDuplicateCase(String userId, UUID caseUuid) throws Exception {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                         .param("duplicateCase", "true")
+                        .param(CASE_FORMAT, "UCTE")
                         .header("userId", userId))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -1079,7 +1080,9 @@ public class StudyTest {
     @Test
     public void testCreateStudyWithErrorDuringCaseImport() throws Exception {
         String userId = "userId";
-        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_IMPORT_ERROR).header("userId", userId))
+        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_IMPORT_ERROR)
+                        .header("userId", userId)
+                        .param(CASE_FORMAT, "UCTE"))
             .andExpect(status().is5xxServerError());
 
        // assert that the broker message has been sent a study creation request message
@@ -1107,7 +1110,9 @@ public class StudyTest {
     @Test
     public void testCreateStudyWithErrorDuringStudyCreation() throws Exception {
         String userId = "userId";
-        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_STUDY_CREATION_ERROR).header("userId", userId))
+        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_STUDY_CREATION_ERROR)
+                        .header("userId", userId)
+                        .param(CASE_FORMAT, "UCTE"))
             .andExpect(status().isOk());
 
         // assert that the broker message has been sent a study creation request message
@@ -1175,7 +1180,8 @@ public class StudyTest {
 
         //insert a study
         mvcResult = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", NEW_STUDY_CASE_UUID, "false")
-                                        .header(USER_ID_HEADER, "userId"))
+                                        .header(USER_ID_HEADER, "userId")
+                        .param(CASE_FORMAT, "XIIDM"))
                         .andExpect(status().isOk())
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
@@ -1314,10 +1320,6 @@ public class StudyTest {
     public void testCreateStudyWithDefaultLoadflow() throws Exception {
         createStudy("userId", CASE_UUID);
         StudyEntity study = studyRepository.findAll().get(0);
-
-        assertEquals(study.getLoadFlowProvider(), defaultLoadflowProvider);
-        assertEquals(study.getSecurityAnalysisProvider(), defaultSecurityAnalysisProvider);
-        assertEquals(study.getSensitivityAnalysisProvider(), defaultSensitivityAnalysisProvider);
         assertEquals(study.getNonEvacuatedEnergyProvider(), defaultNonEvacuatedEnergyProvider);
     }
 
@@ -1372,7 +1374,7 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         // duplicate the study
-        StudyEntity duplicatedStudy = duplicateStudy(study1Uuid, userId);
+        StudyEntity duplicatedStudy = duplicateStudy(study1Uuid, userId, "UCTE");
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
 
         //Test duplication from a non existing source study
@@ -1387,8 +1389,8 @@ public class StudyTest {
         StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID()); // does not have default params
         studyRepository.save(studyEntity);
-
         testDuplicateStudy(study1Uuid);
+
     }
 
     @Test
@@ -1399,15 +1401,15 @@ public class StudyTest {
         studyEntity.setSecurityAnalysisParametersUuid(null);
         studyEntity.setSensitivityAnalysisParametersUuid(null);
         studyRepository.save(studyEntity);
-
         testDuplicateStudy(study1Uuid);
     }
 
-    private StudyEntity duplicateStudy(UUID studyUuid, String userId) throws Exception {
+    private StudyEntity duplicateStudy(UUID studyUuid, String userId, String caseFormat) throws Exception {
         UUID stubUuid = wireMockUtils.stubDuplicateModificationGroup();
         mockMvc.perform(post(STUDIES_URL)
                         .param("duplicateFrom", studyUuid.toString())
                         .param("studyUuid", DUPLICATED_STUDY_UUID)
+                        .param(CASE_FORMAT, caseFormat)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
 
@@ -2250,28 +2252,19 @@ public class StudyTest {
     }
 
     @Test
-    public void getDefaultLoadflowProvider() throws Exception {
+    public void testGetDefaultProviders() throws Exception {
         mockMvc.perform(get("/v1/loadflow-default-provider")).andExpectAll(
                 status().isOk(),
-                content().string(defaultLoadflowProvider));
-    }
-
-    @Test
-    public void getDefaultSecurityAnalysisProvider() throws Exception {
+                content().string(DEFAULT_PROVIDER));
         mockMvc.perform(get("/v1/security-analysis-default-provider")).andExpectAll(
                 status().isOk(),
-                content().string(defaultSecurityAnalysisProvider));
-    }
-
-    @Test
-    public void getDefaultSensitivityAnalysisProvider() throws Exception {
+                content().string(DEFAULT_PROVIDER));
         mockMvc.perform(get("/v1/sensitivity-analysis-default-provider")).andExpectAll(
-                status().isOk(),
-                content().string(defaultSensitivityAnalysisProvider));
-    }
+                    status().isOk(),
+                    content().string(DEFAULT_PROVIDER));
+        var requests = TestUtils.getRequestsDone(3, server);
+        assertTrue(requests.stream().allMatch(r -> r.matches("/v1/default-provider")));
 
-    @Test
-    public void getDefaultNonEvacuatedEnergyProvider() throws Exception {
         mockMvc.perform(get("/v1/non-evacuated-energy-default-provider")).andExpectAll(
             status().isOk(),
             content().string(defaultNonEvacuatedEnergyProvider));
@@ -2366,18 +2359,9 @@ public class StudyTest {
     public void providerTest() throws Exception {
         UUID studyUuid = createStudy(USER_ID_HEADER, CASE_UUID);
         assertNotNull(studyUuid);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyUuid))
-                .andExpectAll(status().isOk(),
-                              content().string(defaultLoadflowProvider));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid))
-                .andExpectAll(status().isOk(),
-                        content().string(defaultSecurityAnalysisProvider));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid))
-            .andExpectAll(status().isOk(),
-                content().string(defaultSensitivityAnalysisProvider));
         mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
             .andExpectAll(status().isOk(),
-                content().string(defaultSensitivityAnalysisProvider));  // same default provider as for sensitivity analysis
+                content().string(defaultNonEvacuatedEnergyProvider));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/provider", studyUuid)
                         .content("SuperLF")
@@ -2399,16 +2383,6 @@ public class StudyTest {
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid)
-                        .content("SuperSE")
-                        .contentType(MediaType.TEXT_PLAIN)
-                        .header(USER_ID_HEADER, USER_ID_HEADER))
-                .andExpect(status().isOk());
-        message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertNotNull(message);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
-        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
-
         mockMvc.perform(post("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid)
                 .content("SuperNEE")
                 .contentType(MediaType.TEXT_PLAIN)
@@ -2419,18 +2393,12 @@ public class StudyTest {
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyUuid))
-                .andExpectAll(status().isOk(),
-                        content().string("SuperLF"));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid))
-                .andExpectAll(status().isOk(),
-                        content().string("SuperSA"));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid))
-                .andExpectAll(status().isOk(),
-                        content().string("SuperSE"));
         mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
             .andExpectAll(status().isOk(),
                 content().string("SuperNEE"));
+
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().allMatch(r -> r.matches("/v1/parameters/.*/provider")));
     }
 
     @Test
