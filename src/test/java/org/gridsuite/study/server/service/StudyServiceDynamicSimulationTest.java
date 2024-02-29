@@ -34,9 +34,9 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.*;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
-import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
@@ -134,7 +134,7 @@ public class StudyServiceDynamicSimulationTest {
         UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, parameters, "testUserId");
 
         // check result
-        assertEquals(RESULT_UUID_STRING, resultUuid.toString());
+        assertThat(resultUuid).hasToString(RESULT_UUID_STRING);
     }
 
     @Test
@@ -156,7 +156,7 @@ public class StudyServiceDynamicSimulationTest {
         String timeSeriesExpectedJson = TimeSeries.toJson(timeSeries);
         getLogger().info("Time series expected in Json = " + timeSeriesExpectedJson);
         getLogger().info("Time series result in Json = " + timeSeriesResultJson);
-        assertEquals(objectMapper.readTree(timeSeriesExpectedJson), objectMapper.readTree(timeSeriesResultJson));
+        assertThat(objectMapper.readTree(timeSeriesResultJson)).isEqualTo(objectMapper.readTree(timeSeriesExpectedJson));
     }
 
     @Test
@@ -177,7 +177,7 @@ public class StudyServiceDynamicSimulationTest {
 
         // --- check result --- //
         // must contain 4 timeline events
-        assertEquals(4, timeLineEventInfosListResult.size());
+        assertThat(timeLineEventInfosListResult).hasSize(4);
     }
 
     @Test
@@ -191,7 +191,7 @@ public class StudyServiceDynamicSimulationTest {
         // --- check result --- //
         getLogger().info("Status expected = " + DynamicSimulationStatus.CONVERGED.name());
         getLogger().info("Status result = " + status);
-        assertEquals(DynamicSimulationStatus.CONVERGED, status);
+        assertThat(status).isEqualTo(DynamicSimulationStatus.CONVERGED);
     }
 
     @Test
@@ -206,6 +206,6 @@ public class StudyServiceDynamicSimulationTest {
         // must return 2 mappings
         getLogger().info("Mapping infos expected in Json = " + objectMapper.writeValueAsString(MAPPINGS));
         getLogger().info("Mapping infos result in Json = " + objectMapper.writeValueAsString(mappingInfos));
-        assertEquals(MAPPINGS.size(), mappingInfos.size());
+        assertThat(mappingInfos).hasSameSizeAs(MAPPINGS);
     }
 }

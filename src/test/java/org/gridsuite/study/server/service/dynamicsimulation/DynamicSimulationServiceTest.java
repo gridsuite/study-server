@@ -14,6 +14,7 @@ import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.IrregularTimeSeriesIndex;
 import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
+import org.assertj.core.api.Assertions;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -40,7 +41,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.*;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -146,7 +147,7 @@ public class DynamicSimulationServiceTest {
         UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", "", NETWORK_UUID, VARIANT_1_ID, null, "testUserId");
 
         // check result
-        assertEquals(RESULT_UUID_STRING, resultUuid.toString());
+        assertThat(resultUuid).hasToString(RESULT_UUID_STRING);
     }
 
     @Test
@@ -170,7 +171,7 @@ public class DynamicSimulationServiceTest {
         List<TimeSeriesMetadataInfos> expectedTimeSeriesMetadataList = timeSeriesGroupMetadata.getMetadatas().stream().map(TimeSeriesMetadataInfos::fromRest).toList();
         String expectedTimeSeriesMetadataListJson = objectMapper.writeValueAsString(expectedTimeSeriesMetadataList);
         String resultTimeSeriesMetadataListJson = objectMapper.writeValueAsString(resultTimeSeriesMetadataList);
-        assertEquals(objectMapper.readTree(expectedTimeSeriesMetadataListJson), objectMapper.readTree(resultTimeSeriesMetadataListJson));
+        assertThat(objectMapper.readTree(resultTimeSeriesMetadataListJson)).isEqualTo(objectMapper.readTree(expectedTimeSeriesMetadataListJson));
     }
 
     @Test
@@ -192,7 +193,7 @@ public class DynamicSimulationServiceTest {
 
         // check result
         // must contain two elements
-        assertEquals(2, timeSeriesResult.size());
+        assertThat(timeSeriesResult).hasSize(2);
     }
 
     @Test(expected = StudyException.class)
@@ -247,7 +248,7 @@ public class DynamicSimulationServiceTest {
 
         // check result
         // must contain 4 timeline events
-        assertEquals(4, timeLineResult.size());
+        Assertions.assertThat(timeLineResult).hasSize(4);
     }
 
     @Test(expected = StudyException.class)
@@ -276,7 +277,7 @@ public class DynamicSimulationServiceTest {
 
         // check result
         // status must be "CONVERGED"
-        assertEquals(DynamicSimulationStatus.CONVERGED, status);
+        assertThat(status).isEqualTo(DynamicSimulationStatus.CONVERGED);
     }
 
     @Test
@@ -316,7 +317,7 @@ public class DynamicSimulationServiceTest {
 
         // check result
         // must return 2 mappings
-        assertEquals(MAPPINGS.size(), mappingInfos.size());
+        assertThat(mappingInfos).hasSameSizeAs(MAPPINGS);
     }
 
     @Test
@@ -329,6 +330,6 @@ public class DynamicSimulationServiceTest {
 
         // check result
         // must return 2 models
-        assertEquals(MODELS.size(), modelInfosList.size());
+        assertThat(modelInfosList).hasSameSizeAs(MODELS);
     }
 }

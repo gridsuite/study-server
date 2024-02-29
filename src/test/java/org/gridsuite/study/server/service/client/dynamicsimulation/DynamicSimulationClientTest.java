@@ -26,8 +26,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient.*;
-import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 /**
@@ -86,7 +86,7 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
         UUID resultUuid = dynamicSimulationClient.run("", "", UUID.fromString(NETWORK_UUID_STRING), VARIANT_1_ID, parameters, "testUserId");
 
         // check result
-        assertEquals(RESULT_UUID_STRING, resultUuid.toString());
+        assertThat(resultUuid).hasToString(RESULT_UUID_STRING);
     }
 
     @Test
@@ -103,7 +103,7 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
         UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(UUID.fromString(RESULT_UUID_STRING));
 
         // check result
-        assertEquals(TIME_SERIES_UUID_STRING, timeSeriesUuid.toString());
+        assertThat(timeSeriesUuid).hasToString(TIME_SERIES_UUID_STRING);
     }
 
     @Test(expected = StudyException.class)
@@ -132,7 +132,7 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
         UUID timeLineUuid = dynamicSimulationClient.getTimeLineResult(UUID.fromString(RESULT_UUID_STRING));
 
         // check result
-        assertEquals(TIME_LINE_UUID_STRING, timeLineUuid.toString());
+        assertThat(timeLineUuid).hasToString(TIME_LINE_UUID_STRING);
     }
 
     @Test(expected = StudyException.class)
@@ -161,7 +161,7 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
         DynamicSimulationStatus status = dynamicSimulationClient.getStatus(UUID.fromString(RESULT_UUID_STRING));
 
         // check result
-        assertEquals(DynamicSimulationStatus.CONVERGED, status);
+        assertThat(status).isEqualTo(DynamicSimulationStatus.CONVERGED);
     }
 
     @Test(expected = StudyException.class)
@@ -239,6 +239,6 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
         Integer resultCount = dynamicSimulationClient.getResultsCount();
 
         // check result
-        assertEquals(0, resultCount.intValue());
+        assertThat(resultCount.intValue()).isZero();
     }
 }

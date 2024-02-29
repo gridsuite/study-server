@@ -123,8 +123,6 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<TimeLineEventInfos> getTimeLineResult(UUID nodeUuid) {
-        List<TimeLineEventInfos> timeLineEvents = new ArrayList<>();
-
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
 
         if (resultUuidOpt.isPresent()) {
@@ -143,22 +141,19 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
                 // convert {@link StringTimeSeries} to {@link TimeLineEventInfos}
                 // note that each {@link StringTimeSeries} corresponds to an array of {@link TimeLineEventInfos}
-                if (!CollectionUtils.isEmpty(timeLines)) {
-                    timeLines.stream()
-                            .flatMap(series -> Stream.of(((StringTimeSeries) series).toArray()))
-                            .forEach(eventJson -> {
-                                try {
-                                    timeLineEvents.add(objectMapper.readValue(eventJson, TimeLineEventInfos.class));
-                                } catch (JsonProcessingException e) {
-                                    throw new StudyException(StudyException.Type.TIME_LINE_BAD_TYPE, "Error while deserializing time line event: " + eventJson);
-                                }
-                            });
-                }
+                return timeLines.stream()
+                        .flatMap(series -> Stream.of(((StringTimeSeries) series).toArray()))
+                        .map(eventJson -> {
+                            try {
+                                return objectMapper.readValue(eventJson, TimeLineEventInfos.class);
+                            } catch (JsonProcessingException e) {
+                                throw new StudyException(StudyException.Type.TIME_LINE_BAD_TYPE, "Error while deserializing time line event: " + eventJson);
+                            }
+                        }).toList();
             }
-
         }
 
-        return timeLineEvents;
+        return Collections.emptyList();
     }
 
     @Override
