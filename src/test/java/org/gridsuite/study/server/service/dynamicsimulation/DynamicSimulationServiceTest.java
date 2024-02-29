@@ -10,10 +10,7 @@ package org.gridsuite.study.server.service.dynamicsimulation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.PowsyblException;
-import com.powsybl.timeseries.DoubleTimeSeries;
-import com.powsybl.timeseries.IrregularTimeSeriesIndex;
-import com.powsybl.timeseries.TimeSeries;
-import com.powsybl.timeseries.TimeSeriesIndex;
+import com.powsybl.timeseries.*;
 import org.assertj.core.api.Assertions;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
@@ -40,8 +37,10 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.*;
+import java.util.stream.LongStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -251,20 +250,50 @@ public class DynamicSimulationServiceTest {
         Assertions.assertThat(timeLineResult).hasSize(4);
     }
 
-    @Test(expected = StudyException.class)
-    public void testGetTimeLineResultGivenBadType() {
+    @Test
+    public void testGetTimeLineResultGivenBadType() throws JsonProcessingException {
         // setup DynamicSimulationClient mock
         given(dynamicSimulationClient.getTimeLineResult(RESULT_UUID)).willReturn(TIME_LINE_UUID);
 
         // setup timeSeriesClient mock
-        // create a bad type timeline
+        // --- create a bad type series --- //
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
         List<TimeSeries> timeLines = List.of(TimeSeries.createDouble(TIME_SERIES_NAME_1, index, 333.847331, 333.847321, 333.847300, 333.847259));
 
         given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timeLines);
 
         // call method to be tested
-        dynamicSimulationService.getTimeLineResult(NODE_UUID);
+        assertThatExceptionOfType(StudyException.class).isThrownBy(() ->
+            dynamicSimulationService.getTimeLineResult(NODE_UUID)
+        ).withMessage("Time lines can not be a type: %s, expected type: %s",
+                timeLines.get(0).getClass().getSimpleName(),
+                StringTimeSeries.class.getSimpleName());
+
+        // --- create bad type time line events --- //
+        List<String> timeLineEventInfosList = List.of(
+                "CLA : order to change topology",
+                "LINE : opening both sides",
+                "CLA : order to change topology",
+                "CLA : arming by over-current constraint"
+        );
+
+        // collect and convert timeline event list to StringTimeSeries
+        long[] timeLineIndexes = LongStream.range(0, timeLineEventInfosList.size()).toArray();
+        String[] timeLineValues = timeLineEventInfosList.stream().map(event -> {
+            try {
+                return objectMapper.writeValueAsString(event);
+            } catch (JsonProcessingException e) {
+                throw new PowsyblException("Error while serializing time line event: " + event, e);
+            }
+        }).toArray(String[]::new);
+        timeLines = List.of(TimeSeries.createString("timeLine", new IrregularTimeSeriesIndex(timeLineIndexes), timeLineValues));
+
+        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timeLines);
+
+        // call method to be tested
+        assertThatExceptionOfType(StudyException.class).isThrownBy(() ->
+            dynamicSimulationService.getTimeLineResult(NODE_UUID)
+        ).withMessage("Error while deserializing time line event: %s", objectMapper.writeValueAsString(timeLineEventInfosList.get(0)));
     }
 
     @Test
