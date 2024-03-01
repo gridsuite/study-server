@@ -227,9 +227,8 @@ public class DynamicSimulationServiceTest {
                 new TimeLineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
                 new TimeLineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
         );
-        List<TimeSeries> timeLineSeries = new ArrayList<>();
 
-        // collect and convert timeline event list to StringTimeSeries
+        // convert timeline event list to StringTimeSeries
         long[] timeLineIndexes = timeLineEventInfosList.stream().mapToLong(event -> (long) event.time()).toArray();
         String[] timeLineValues = timeLineEventInfosList.stream().map(event -> {
             try {
@@ -238,7 +237,7 @@ public class DynamicSimulationServiceTest {
                 throw new PowsyblException("Error while serializing time line event: " + event.toString(), e);
             }
         }).toArray(String[]::new);
-        timeLineSeries.add(TimeSeries.createString("timeLine", new IrregularTimeSeriesIndex(timeLineIndexes), timeLineValues));
+        List<TimeSeries> timeLineSeries = List.of(TimeSeries.createString("timeLine", new IrregularTimeSeriesIndex(timeLineIndexes), timeLineValues));
 
         given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timeLineSeries);
 

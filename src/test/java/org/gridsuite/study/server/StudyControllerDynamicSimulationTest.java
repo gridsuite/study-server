@@ -13,7 +13,6 @@ import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.IrregularTimeSeriesIndex;
 import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
-import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -610,7 +609,7 @@ public class StudyControllerDynamicSimulationTest {
                 .andExpect(status().isOk()).andReturn();
         String content = result.getResponse().getContentAsString();
 
-        assertThat(Strings.isBlank(content)).as("Content not null or empty").isFalse();
+        assertThat(content).isNotBlank();
 
         List<MappingInfos> mappingInfos = objectMapper.readValue(content, new TypeReference<>() { });
 
