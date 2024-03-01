@@ -34,9 +34,9 @@ import lombok.SneakyThrows;
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-public class ElementImpactTest {
+public class NetworkImpactTest {
 
-    ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = new ObjectMapper();
 
     @Test
     @SneakyThrows
@@ -72,7 +72,7 @@ public class ElementImpactTest {
 
         assertEquals("[s1, s2, s3, substationId1]", result.getImpactedSubstationsIds().toString());
 
-        HashSet<AbstractBaseImpact> impactsSet = new HashSet<>(List.of(creationImpact, creationImpact, creationImpact));
+        Set<AbstractBaseImpact> impactsSet = Set.copyOf(List.of(creationImpact, creationImpact, creationImpact));
 
         assertEquals("[{\"type\":\"SIMPLE\",\"elementType\":\"LINE\",\"simpleImpactType\":\"CREATION\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}]", mapper.writeValueAsString(impactsSet));
     }
@@ -100,7 +100,7 @@ public class ElementImpactTest {
 
         assertEquals(Set.of(), result.getImpactedSubstationsIds());
 
-        HashSet<AbstractBaseImpact> impactsSet = new HashSet<>(List.of(linesCollectionImpact, linesCollectionImpact, linesCollectionImpact));
+        Set<AbstractBaseImpact> impactsSet = Set.copyOf(List.of(linesCollectionImpact, linesCollectionImpact, linesCollectionImpact));
 
         assertEquals("[{\"type\":\"COLLECTION\",\"elementType\":\"LINE\"}]", mapper.writeValueAsString(impactsSet));
     }

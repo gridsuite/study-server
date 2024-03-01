@@ -28,6 +28,6 @@ public class NetworkImpactsInfos {
 
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     @Builder.Default
-    private Set<String> collectionElementImpacts = Set.of();
+    private Set<String> impactedElementTypes = Set.of();
 }
 

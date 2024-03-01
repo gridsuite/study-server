@@ -24,4 +24,12 @@ public class CollectionElementImpact extends AbstractBaseImpact {
     public ImpactType getType() {
         return ImpactType.COLLECTION;
     }
+
+    public boolean isSimple() {
+        return false;
+    }
+
+    public boolean isCollection() {
+        return true;
+    }
 }

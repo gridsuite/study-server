@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.dto.impacts;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.powsybl.iidm.network.IdentifiableType;
@@ -44,4 +45,10 @@ public abstract class AbstractBaseImpact {
     private ImpactType type;
 
     private IdentifiableType elementType;
+
+    @JsonIgnore
+    public abstract boolean isSimple();
+
+    @JsonIgnore
+    public abstract boolean isCollection();
 }

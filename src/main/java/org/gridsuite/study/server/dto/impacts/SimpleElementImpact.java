@@ -11,6 +11,8 @@ import lombok.experimental.SuperBuilder;
 
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * This class describes an element type network impact
  * This type of network impact only describes an individual impacted item and the list of associated substations
@@ -42,5 +44,28 @@ public class SimpleElementImpact extends AbstractBaseImpact {
     @Override
     public ImpactType getType() {
         return ImpactType.SIMPLE;
+    }
+
+    public boolean isSimple() {
+        return true;
+    }
+
+    public boolean isCollection() {
+        return false;
+    }
+
+    @JsonIgnore
+    public boolean isCreation() {
+        return getSimpleImpactType() == SimpleImpactType.CREATION;
+    }
+
+    @JsonIgnore
+    public boolean isModification() {
+        return getSimpleImpactType() == SimpleImpactType.MODIFICATION;
+    }
+
+    @JsonIgnore
+    public boolean isDeletion() {
+        return getSimpleImpactType() == SimpleImpactType.DELETION;
     }
 }

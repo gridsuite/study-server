@@ -28,8 +28,6 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
-import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact.ImpactType;
-import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -1616,12 +1614,12 @@ public class StudyService {
 
         Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
             networkModificationResult.getNetworkImpacts().stream()
-                .filter(impact -> impact.getType() == ImpactType.SIMPLE && ((SimpleElementImpact) impact).getSimpleImpactType() == SimpleImpactType.DELETION)
+                .filter(impact -> impact.isSimple() && ((SimpleElementImpact) impact).isDeletion())
                 .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(((SimpleElementImpact) impact).getElementId(), impact.getElementType().name()))
             .collect(Collectors.toSet());
 
-        Set<String> collectionElementImpacts = networkModificationResult.getNetworkImpacts().stream()
-                .filter(impact -> impact.getType() == ImpactType.COLLECTION)
+        Set<String> impactedElementTypes = networkModificationResult.getNetworkImpacts().stream()
+                .filter(impact -> impact.isCollection())
                 .map(impact -> impact.getElementType().name())
                 .collect(Collectors.toSet());
 
@@ -1629,7 +1627,7 @@ public class StudyService {
             NetworkImpactsInfos.builder()
                 .deletedEquipments(deletionsInfos)
                 .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
-                .collectionElementImpacts(collectionElementImpacts)
+                .impactedElementTypes(impactedElementTypes)
                 .build()
         );
     }

@@ -16,8 +16,6 @@ import java.util.stream.Collectors;
 
 import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
-import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact.ImpactType;
-import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -52,7 +50,7 @@ public class NetworkModificationResult {
     public Set<String> getImpactedSubstationsIds() {
         return networkImpacts.stream()
             // ignore DELETION simple impacts here
-            .filter(impact -> impact.getType() == ImpactType.SIMPLE && ((SimpleElementImpact) impact).getSimpleImpactType() != SimpleImpactType.DELETION)
+            .filter(impact -> impact.isSimple() && !((SimpleElementImpact) impact).isDeletion())
             .flatMap(impact -> ((SimpleElementImpact) impact).getSubstationIds().stream())
             .collect(Collectors.toCollection(TreeSet::new)); // using TreeSet to keep natural order
     }
