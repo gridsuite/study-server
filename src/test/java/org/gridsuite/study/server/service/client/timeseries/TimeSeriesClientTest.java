@@ -181,11 +181,11 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
         getLogger().info("Timeline size = " + timelines.size());
         assertThat(timelines).hasSize(1);
         // content must be the same
-        String expectedTimeLinesJson = TimeSeries.toJson(database.get(TIME_LINE_GROUP_UUID));
-        getLogger().info("expectedTimeLinesJson = " + expectedTimeLinesJson);
-        String resultTimeLinesJson = TimeSeries.toJson(timelines);
-        getLogger().info("resultTimeLinesJson = " + resultTimeLinesJson);
-        assertThat(objectMapper.readTree(resultTimeLinesJson)).isEqualTo(objectMapper.readTree(expectedTimeLinesJson));
+        String expectedTimelinesJson = TimeSeries.toJson(database.get(TIME_LINE_GROUP_UUID));
+        getLogger().info("expectedTimelinesJson = " + expectedTimelinesJson);
+        String resultTimelinesJson = TimeSeries.toJson(timelines);
+        getLogger().info("resultTimelinesJson = " + resultTimelinesJson);
+        assertThat(objectMapper.readTree(resultTimelinesJson)).isEqualTo(objectMapper.readTree(expectedTimelinesJson));
     }
 
     @Test
@@ -216,11 +216,11 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
         getLogger().info("Timeline size = " + timelines.size());
         assertThat(timelines).hasSize(1);
         // content must be the same
-        String expectedTimeLinesJson = TimeSeries.toJson(database.get(TIME_LINE_GROUP_UUID).stream().filter(series -> series.getMetadata().getName().equals(TIME_LINE_NAME)).collect(Collectors.toList()));
-        getLogger().info("expectedTimeLinesJson = " + expectedTimeLinesJson);
-        String resultTimeLinesJson = TimeSeries.toJson(timelines);
-        getLogger().info("resultTimeLinesJson = " + resultTimeLinesJson);
-        assertThat(objectMapper.readTree(resultTimeLinesJson)).isEqualTo(objectMapper.readTree(expectedTimeLinesJson));
+        String expectedTimelinesJson = TimeSeries.toJson(database.get(TIME_LINE_GROUP_UUID).stream().filter(series -> series.getMetadata().getName().equals(TIME_LINE_NAME)).collect(Collectors.toList()));
+        getLogger().info("expectedTimelinesJson = " + expectedTimelinesJson);
+        String resultTimelinesJson = TimeSeries.toJson(timelines);
+        getLogger().info("resultTimelinesJson = " + resultTimelinesJson);
+        assertThat(objectMapper.readTree(resultTimelinesJson)).isEqualTo(objectMapper.readTree(expectedTimelinesJson));
     }
 
     @Test
