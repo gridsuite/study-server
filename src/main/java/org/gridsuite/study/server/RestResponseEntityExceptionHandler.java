@@ -60,7 +60,7 @@ public class RestResponseEntityExceptionHandler {
                     BAD_MODIFICATION_TYPE,
                     BAD_JSON_FORMAT,
                     TIME_SERIES_BAD_TYPE,
-                    TIME_LINE_BAD_TYPE
+                    TIMELINE_BAD_TYPE
                     -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getMessage());
             case NETWORK_NOT_FOUND,
                     NETWORK_INDEXATION_FAILED,

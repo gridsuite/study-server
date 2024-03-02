@@ -20,8 +20,8 @@ import org.gridsuite.study.server.dto.dynamicsimulation.solver.IdaSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SimSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverTypeInfos;
-import org.gridsuite.study.server.dto.timeseries.TimeLineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.repository.DynamicSimulationParametersEntity;
 
 import java.util.Collections;
@@ -243,9 +243,9 @@ public interface DynamicSimulationService {
      * Get timeline from a given node UUID
      *
      * @param nodeUuid a given node UUID
-     * @return a list of {@link TimeLineEventInfos}
+     * @return a list of {@link TimelineEventInfos}
      */
-    List<TimeLineEventInfos> getTimeLineResult(UUID nodeUuid);
+    List<TimelineEventInfos> getTimelineResult(UUID nodeUuid);
 
     /**
      * Get the current status of the simulation
@@ -278,7 +278,7 @@ public interface DynamicSimulationService {
 
     /**
      * @param nodeUuid a given node UUID
-     * @throws StudyException with type DYNAMIC_SIMULATION_RUNNING if ce node in RUNNING status
+     * @throws StudyException with type DYNAMIC_SIMULATION_RUNNING if this node is in RUNNING status
      */
     void assertDynamicSimulationNotRunning(UUID nodeUuid);
 

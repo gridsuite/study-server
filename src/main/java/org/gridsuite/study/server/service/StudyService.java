@@ -28,8 +28,8 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
-import org.gridsuite.study.server.dto.timeseries.TimeLineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -1856,9 +1856,9 @@ public class StudyService {
         return dynamicSimulationService.getTimeSeriesResult(nodeUuid, timeSeriesNames);
     }
 
-    public List<TimeLineEventInfos> getDynamicSimulationTimeLine(UUID nodeUuid) {
+    public List<TimelineEventInfos> getDynamicSimulationTimeline(UUID nodeUuid) {
         // get timeline from node uuid
-        return dynamicSimulationService.getTimeLineResult(nodeUuid); // timeline has only one element
+        return dynamicSimulationService.getTimelineResult(nodeUuid); // timeline has only one element
     }
 
     public DynamicSimulationStatus getDynamicSimulationStatus(UUID nodeUuid) {

@@ -26,8 +26,8 @@ import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
-import org.gridsuite.study.server.dto.timeseries.TimeLineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -1608,9 +1608,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Timeline events of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation timeline events"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
-    public ResponseEntity<List<TimeLineEventInfos>> getDynamicSimulationTimeLineResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<TimeLineEventInfos> result = studyService.getDynamicSimulationTimeLine(nodeUuid);
+    public ResponseEntity<List<TimelineEventInfos>> getDynamicSimulationTimelineResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        List<TimelineEventInfos> result = studyService.getDynamicSimulationTimeline(nodeUuid);
         return CollectionUtils.isEmpty(result) ? ResponseEntity.noContent().build() :
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
     }

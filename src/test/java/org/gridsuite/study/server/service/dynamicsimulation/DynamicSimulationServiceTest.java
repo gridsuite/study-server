@@ -11,7 +11,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.timeseries.*;
-import org.assertj.core.api.Assertions;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -19,8 +18,8 @@ import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelVariableDefinitionInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.VariablesSetInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
-import org.gridsuite.study.server.dto.timeseries.TimeLineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesMetadataRest;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -215,61 +214,61 @@ public class DynamicSimulationServiceTest {
     }
 
     @Test
-    public void testGetTimeLineResult() {
+    public void testGetTimelineResult() {
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.getTimeLineResult(RESULT_UUID)).willReturn(TIME_LINE_UUID);
+        given(dynamicSimulationClient.getTimelineResult(RESULT_UUID)).willReturn(TIME_LINE_UUID);
 
         // setup timeSeriesClient mock
         // timeline
-        List<TimeLineEventInfos> timeLineEventInfosList = List.of(
-                new TimeLineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
-                new TimeLineEventInfos(102479, "_BUS____2-BUS____5-1_AC", "LINE : opening both sides"),
-                new TimeLineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
-                new TimeLineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
+        List<TimelineEventInfos> timelineEventInfosList = List.of(
+                new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
+                new TimelineEventInfos(102479, "_BUS____2-BUS____5-1_AC", "LINE : opening both sides"),
+                new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
+                new TimelineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
         );
 
         // convert timeline event list to StringTimeSeries
-        long[] timeLineIndexes = timeLineEventInfosList.stream().mapToLong(event -> (long) event.time()).toArray();
-        String[] timeLineValues = timeLineEventInfosList.stream().map(event -> {
+        long[] timelineIndexes = timelineEventInfosList.stream().mapToLong(event -> (long) event.time()).toArray();
+        String[] timelineValues = timelineEventInfosList.stream().map(event -> {
             try {
                 return objectMapper.writeValueAsString(event);
             } catch (JsonProcessingException e) {
-                throw new PowsyblException("Error while serializing time line event: " + event.toString(), e);
+                throw new PowsyblException("Error while serializing timeline event: " + event.toString(), e);
             }
         }).toArray(String[]::new);
-        List<TimeSeries> timeLineSeries = List.of(TimeSeries.createString("timeLine", new IrregularTimeSeriesIndex(timeLineIndexes), timeLineValues));
+        List<TimeSeries> timelineSeries = List.of(TimeSeries.createString("timeline", new IrregularTimeSeriesIndex(timelineIndexes), timelineValues));
 
-        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timeLineSeries);
+        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timelineSeries);
 
         // call method to be tested
-        List<TimeLineEventInfos> timeLineResult = dynamicSimulationService.getTimeLineResult(NODE_UUID);
+        List<TimelineEventInfos> timelineResult = dynamicSimulationService.getTimelineResult(NODE_UUID);
 
         // check result
         // must contain 4 timeline events
-        Assertions.assertThat(timeLineResult).hasSize(4);
+        assertThat(timelineResult).hasSize(4);
     }
 
     @Test
-    public void testGetTimeLineResultGivenBadType() throws JsonProcessingException {
+    public void testGetTimelineResultGivenBadType() throws JsonProcessingException {
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.getTimeLineResult(RESULT_UUID)).willReturn(TIME_LINE_UUID);
+        given(dynamicSimulationClient.getTimelineResult(RESULT_UUID)).willReturn(TIME_LINE_UUID);
 
         // setup timeSeriesClient mock
         // --- create a bad type series --- //
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        List<TimeSeries> timeLines = List.of(TimeSeries.createDouble(TIME_SERIES_NAME_1, index, 333.847331, 333.847321, 333.847300, 333.847259));
+        List<TimeSeries> timelines = List.of(TimeSeries.createDouble(TIME_SERIES_NAME_1, index, 333.847331, 333.847321, 333.847300, 333.847259));
 
-        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timeLines);
+        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timelines);
 
         // call method to be tested
         assertThatExceptionOfType(StudyException.class).isThrownBy(() ->
-            dynamicSimulationService.getTimeLineResult(NODE_UUID)
-        ).withMessage("Time lines can not be a type: %s, expected type: %s",
-                timeLines.get(0).getClass().getSimpleName(),
+            dynamicSimulationService.getTimelineResult(NODE_UUID)
+        ).withMessage("Timelines can not be a type: %s, expected type: %s",
+                timelines.get(0).getClass().getSimpleName(),
                 StringTimeSeries.class.getSimpleName());
 
-        // --- create bad type time line events --- //
-        List<String> timeLineEventInfosList = List.of(
+        // --- create bad type timeline events --- //
+        List<String> timelineEventInfosList = List.of(
                 "CLA : order to change topology",
                 "LINE : opening both sides",
                 "CLA : order to change topology",
@@ -277,22 +276,22 @@ public class DynamicSimulationServiceTest {
         );
 
         // collect and convert timeline event list to StringTimeSeries
-        long[] timeLineIndexes = LongStream.range(0, timeLineEventInfosList.size()).toArray();
-        String[] timeLineValues = timeLineEventInfosList.stream().map(event -> {
+        long[] timelineIndexes = LongStream.range(0, timelineEventInfosList.size()).toArray();
+        String[] timelineValues = timelineEventInfosList.stream().map(event -> {
             try {
                 return objectMapper.writeValueAsString(event);
             } catch (JsonProcessingException e) {
-                throw new PowsyblException("Error while serializing time line event: " + event, e);
+                throw new PowsyblException("Error while serializing timeline event: " + event, e);
             }
         }).toArray(String[]::new);
-        timeLines = List.of(TimeSeries.createString("timeLine", new IrregularTimeSeriesIndex(timeLineIndexes), timeLineValues));
+        timelines = List.of(TimeSeries.createString("timeline", new IrregularTimeSeriesIndex(timelineIndexes), timelineValues));
 
-        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timeLines);
+        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timelines);
 
         // call method to be tested
         assertThatExceptionOfType(StudyException.class).isThrownBy(() ->
-            dynamicSimulationService.getTimeLineResult(NODE_UUID)
-        ).withMessage("Error while deserializing time line event: %s", objectMapper.writeValueAsString(timeLineEventInfosList.get(0)));
+            dynamicSimulationService.getTimelineResult(NODE_UUID)
+        ).withMessage("Error while deserializing timeline event: %s", objectMapper.writeValueAsString(timelineEventInfosList.get(0)));
     }
 
     @Test

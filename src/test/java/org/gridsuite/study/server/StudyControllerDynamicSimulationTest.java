@@ -24,8 +24,8 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventPropertyInfos;
-import org.gridsuite.study.server.dto.timeseries.TimeLineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -502,9 +502,9 @@ public class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    public void testGetDynamicSimulationTimeLineResultGivenNodeNotDone() throws Exception {
+    public void testGetDynamicSimulationTimelineResultGivenNodeNotDone() throws Exception {
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> null).when(dynamicSimulationService).getTimeLineResult(NODE_NOT_DONE_UUID);
+        Mockito.doAnswer(invocation -> null).when(dynamicSimulationService).getTimelineResult(NODE_NOT_DONE_UUID);
 
         // --- call endpoint to be tested --- //
         // get result from a node not yet done
@@ -515,16 +515,16 @@ public class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    public void testGetDynamicSimulationTimeLineResult() throws Exception {
-        List<TimeLineEventInfos> timeLineEventInfosList = List.of(
-                new TimeLineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
-                new TimeLineEventInfos(102479, "_BUS____2-BUS____5-1_AC", "LINE : opening both sides"),
-                new TimeLineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
-                new TimeLineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
+    public void testGetDynamicSimulationTimelineResult() throws Exception {
+        List<TimelineEventInfos> timelineEventInfosList = List.of(
+                new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
+                new TimelineEventInfos(102479, "_BUS____2-BUS____5-1_AC", "LINE : opening both sides"),
+                new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
+                new TimelineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
         );
 
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> timeLineEventInfosList).when(dynamicSimulationService).getTimeLineResult(NODE_UUID);
+        Mockito.doAnswer(invocation -> timelineEventInfosList).when(dynamicSimulationService).getTimelineResult(NODE_UUID);
 
         // --- call endpoint to be tested --- //
         // get result from a node done
@@ -533,11 +533,11 @@ public class StudyControllerDynamicSimulationTest {
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
 
-        List<TimeLineEventInfos> timeLineEventInfosListResult = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
+        List<TimelineEventInfos> timelineEventInfosListResult = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
 
         // --- check result --- //
         // must contain 4 timeline events
-        assertThat(timeLineEventInfosListResult).hasSize(4);
+        assertThat(timelineEventInfosListResult).hasSize(4);
     }
 
     @Test

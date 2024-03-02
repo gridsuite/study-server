@@ -10,5 +10,5 @@ package org.gridsuite.study.server.dto.timeseries;
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-public record TimeLineEventInfos(double time, String modelName, String message) {
+public record TimelineEventInfos(double time, String modelName, String message) {
 }

@@ -15,11 +15,7 @@ import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -94,7 +90,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     @Override
-    public UUID getTimeLineResult(UUID resultUuid) {
+    public UUID getTimelineResult(UUID resultUuid) {
         Objects.requireNonNull(resultUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 

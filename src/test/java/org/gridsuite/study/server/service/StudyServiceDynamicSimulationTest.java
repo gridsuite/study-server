@@ -18,7 +18,7 @@ import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
-import org.gridsuite.study.server.dto.timeseries.TimeLineEventInfos;
+import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -163,21 +163,21 @@ public class StudyServiceDynamicSimulationTest {
     public void testGetDynamicSimulationTimeLine() {
         // setup
         // timeline
-        List<TimeLineEventInfos> timeLineEventInfosList = List.of(
-                new TimeLineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
-                new TimeLineEventInfos(102479, "_BUS____2-BUS____5-1_AC", "LINE : opening both sides"),
-                new TimeLineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
-                new TimeLineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
+        List<TimelineEventInfos> timelineEventInfosList = List.of(
+                new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
+                new TimelineEventInfos(102479, "_BUS____2-BUS____5-1_AC", "LINE : opening both sides"),
+                new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
+                new TimelineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
         );
 
-        given(dynamicSimulationService.getTimeLineResult(NODE_UUID)).willReturn(timeLineEventInfosList);
+        given(dynamicSimulationService.getTimelineResult(NODE_UUID)).willReturn(timelineEventInfosList);
 
         // call method to be tested
-        List<TimeLineEventInfos> timeLineEventInfosListResult = studyService.getDynamicSimulationTimeLine(NODE_UUID);
+        List<TimelineEventInfos> timelineEventInfosListResult = studyService.getDynamicSimulationTimeline(NODE_UUID);
 
         // --- check result --- //
         // must contain 4 timeline events
-        assertThat(timeLineEventInfosListResult).hasSize(4);
+        assertThat(timelineEventInfosListResult).hasSize(4);
     }
 
     @Test

@@ -129,10 +129,10 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
                         .withHeader("Content-Type", "application/json; charset=utf-8")
                 ));
 
-        UUID timeLineUuid = dynamicSimulationClient.getTimeLineResult(UUID.fromString(RESULT_UUID_STRING));
+        UUID timelineUuid = dynamicSimulationClient.getTimelineResult(UUID.fromString(RESULT_UUID_STRING));
 
         // check result
-        assertThat(timeLineUuid).hasToString(TIME_LINE_UUID_STRING);
+        assertThat(timelineUuid).hasToString(TIME_LINE_UUID_STRING);
     }
 
     @Test(expected = StudyException.class)
@@ -144,7 +144,7 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
                 .willReturn(WireMock.notFound()
                 ));
 
-        dynamicSimulationClient.getTimeLineResult(UUID.fromString(RESULT_NOT_FOUND_UUID_STRING));
+        dynamicSimulationClient.getTimelineResult(UUID.fromString(RESULT_NOT_FOUND_UUID_STRING));
     }
 
     @Test
