@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @AllArgsConstructor
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 public class SimpleElementImpact extends AbstractBaseImpact {
 
     public enum SimpleImpactType {

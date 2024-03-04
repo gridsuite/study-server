@@ -19,6 +19,7 @@ import lombok.experimental.SuperBuilder;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 public class CollectionElementImpact extends AbstractBaseImpact {
     @Override
     public ImpactType getType() {
