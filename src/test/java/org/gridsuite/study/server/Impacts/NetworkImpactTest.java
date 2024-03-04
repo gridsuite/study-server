@@ -51,7 +51,7 @@ public class NetworkImpactTest {
         assertTrue(creationImpact.isSimple());
         assertTrue(creationImpact.isCreation());
         assertTrue(modificationImpact.isModification());
-        assertTrue(creationImpact.isDeletion());
+        assertTrue(substationDeletionImpact.isDeletion());
 
         List<AbstractBaseImpact> impacts = List.of(creationImpact, modificationImpact, injectionDeletionImpact, substationModificationImpact, substationDeletionImpact);
 
