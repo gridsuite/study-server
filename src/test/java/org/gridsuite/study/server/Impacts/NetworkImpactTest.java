@@ -9,6 +9,7 @@ package org.gridsuite.study.server.Impacts;
 import static org.gridsuite.study.server.utils.ImpactUtils.createCollectionElementImpact;
 import static org.gridsuite.study.server.utils.ImpactUtils.createElementImpact;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.HashSet;
 import java.util.List;
@@ -47,6 +48,12 @@ public class NetworkImpactTest {
         SimpleElementImpact substationModificationImpact = createElementImpact(SimpleImpactType.MODIFICATION, IdentifiableType.SUBSTATION, "substationId1", new TreeSet<>(List.of("substationId1")));
         SimpleElementImpact substationDeletionImpact = createElementImpact(SimpleImpactType.DELETION, IdentifiableType.SUBSTATION, "substationId2", new TreeSet<>(List.of("substationId2")));
 
+        assertTrue(creationImpact.isSimple());
+        assertTrue(creationImpact.isCreation());
+        assertTrue(modificationImpact.isModification());
+        assertTrue(creationImpact.isDeletion());
+
+
         List<AbstractBaseImpact> impacts = List.of(creationImpact, modificationImpact, injectionDeletionImpact, substationModificationImpact, substationDeletionImpact);
 
         assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"LINE\",\"simpleImpactType\":\"CREATION\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}", mapper.writeValueAsString(creationImpact));
@@ -84,6 +91,8 @@ public class NetworkImpactTest {
         CollectionElementImpact linesCollectionImpact = createCollectionElementImpact(IdentifiableType.LINE);
         CollectionElementImpact loadsCollectionImpact = createCollectionElementImpact(IdentifiableType.LOAD);
         CollectionElementImpact generatorsCollectionImpact = createCollectionElementImpact(IdentifiableType.GENERATOR);
+
+        assertTrue(linesCollectionImpact.isCollection());
 
         assertEquals("{\"type\":\"COLLECTION\",\"elementType\":\"LINE\"}", mapper.writeValueAsString(linesCollectionImpact));
         assertEquals("{\"type\":\"COLLECTION\",\"elementType\":\"LOAD\"}", mapper.writeValueAsString(loadsCollectionImpact));
