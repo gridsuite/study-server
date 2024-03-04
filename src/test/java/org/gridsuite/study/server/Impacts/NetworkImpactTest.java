@@ -53,7 +53,6 @@ public class NetworkImpactTest {
         assertTrue(modificationImpact.isModification());
         assertTrue(creationImpact.isDeletion());
 
-
         List<AbstractBaseImpact> impacts = List.of(creationImpact, modificationImpact, injectionDeletionImpact, substationModificationImpact, substationDeletionImpact);
 
         assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"LINE\",\"simpleImpactType\":\"CREATION\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}", mapper.writeValueAsString(creationImpact));
