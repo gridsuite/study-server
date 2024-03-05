@@ -27,7 +27,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
-import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
+import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -1614,14 +1614,20 @@ public class StudyService {
 
         Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
             networkModificationResult.getNetworkImpacts().stream()
-                .filter(impact -> impact.getImpactType() == SimpleImpactType.DELETION)
-                .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(impact.getElementId(), impact.getElementType().name()))
+                .filter(impact -> impact.isSimple() && ((SimpleElementImpact) impact).isDeletion())
+                .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(((SimpleElementImpact) impact).getElementId(), impact.getElementType().name()))
             .collect(Collectors.toSet());
+
+        Set<String> impactedElementTypes = networkModificationResult.getNetworkImpacts().stream()
+                .filter(impact -> impact.isCollection())
+                .map(impact -> impact.getElementType().name())
+                .collect(Collectors.toSet());
 
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
             NetworkImpactsInfos.builder()
                 .deletedEquipments(deletionsInfos)
                 .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
+                .impactedElementTypes(impactedElementTypes)
                 .build()
         );
     }
