@@ -34,9 +34,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections4.CollectionUtils.emptyIfNull;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient.API_VERSION;
 import static org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient.TIME_SERIES_END_POINT;
-import static org.junit.Assert.assertEquals;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -141,14 +141,14 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
 
         // timeline
         index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        StringTimeSeries timeLine = TimeSeries.createString(TIME_LINE_NAME, index,
+        StringTimeSeries timeline = TimeSeries.createString(TIME_LINE_NAME, index,
                 "CLA_2_5 - CLA : order to change topology",
                 "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
                 "CLA_2_5 - CLA : order to change topology",
                 "CLA_2_4 - CLA : arming by over-current constraint");
 
         database.put(TIME_SERIES_GROUP_UUID, timeSeries);
-        database.put(TIME_LINE_GROUP_UUID, new ArrayList<>(Arrays.asList(timeLine)));
+        database.put(TIME_LINE_GROUP_UUID, new ArrayList<>(Arrays.asList(timeline)));
 
         // group metadata for timeseries
         timeSeriesGroupMetadata.setId(UUID.fromString(TIME_SERIES_GROUP_UUID));
@@ -162,65 +162,65 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
     @Test
     public void testGetTimeSeriesGroup() throws JsonProcessingException {
         List<TimeSeries> timeSeries = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_SERIES_GROUP_UUID), null);
-        List<TimeSeries> timeLines = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_LINE_GROUP_UUID), null);
+        List<TimeSeries> timelines = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_LINE_GROUP_UUID), null);
 
         // --- check result --- //
         // check time series
         // must contain two elements
         getLogger().info("Timeseries size = " + timeSeries.size());
-        assertEquals(2, timeSeries.size());
+        assertThat(timeSeries).hasSize(2);
         // content must be the same
         String expectedTimeSeriesJson = TimeSeries.toJson(database.get(TIME_SERIES_GROUP_UUID));
         getLogger().info("expectedTimeSeriesJson = " + expectedTimeSeriesJson);
         String resultTimeSeriesJson = TimeSeries.toJson(timeSeries);
         getLogger().info("resultTimeSeriesJson = " + resultTimeSeriesJson);
-        assertEquals(objectMapper.readTree(expectedTimeSeriesJson), objectMapper.readTree(resultTimeSeriesJson));
+        assertThat(objectMapper.readTree(resultTimeSeriesJson)).isEqualTo(objectMapper.readTree(expectedTimeSeriesJson));
 
         // check timeline
         // must contain only one element
-        getLogger().info("Timeline size = " + timeLines.size());
-        assertEquals(1, timeLines.size());
+        getLogger().info("Timeline size = " + timelines.size());
+        assertThat(timelines).hasSize(1);
         // content must be the same
-        String expectedTimeLinesJson = TimeSeries.toJson(database.get(TIME_LINE_GROUP_UUID));
-        getLogger().info("expectedTimeLinesJson = " + expectedTimeLinesJson);
-        String resultTimeLinesJson = TimeSeries.toJson(timeLines);
-        getLogger().info("resultTimeLinesJson = " + resultTimeLinesJson);
-        assertEquals(objectMapper.readTree(expectedTimeLinesJson), objectMapper.readTree(resultTimeLinesJson));
+        String expectedTimelinesJson = TimeSeries.toJson(database.get(TIME_LINE_GROUP_UUID));
+        getLogger().info("expectedTimelinesJson = " + expectedTimelinesJson);
+        String resultTimelinesJson = TimeSeries.toJson(timelines);
+        getLogger().info("resultTimelinesJson = " + resultTimelinesJson);
+        assertThat(objectMapper.readTree(resultTimelinesJson)).isEqualTo(objectMapper.readTree(expectedTimelinesJson));
     }
 
     @Test
     public void testGetTimeSeriesGroupGivenTimeSeriesNames() throws JsonProcessingException {
         List<TimeSeries> timeSeries = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_SERIES_GROUP_UUID), List.of(TIME_SERIES_NAME_1));
         List<TimeSeries> timeSeriesNameUnknown = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_SERIES_GROUP_UUID), List.of(TIME_SERIES_NAME_UNKNOWN));
-        List<TimeSeries> timeLines = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_LINE_GROUP_UUID), List.of(TIME_LINE_NAME));
+        List<TimeSeries> timelines = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_LINE_GROUP_UUID), List.of(TIME_LINE_NAME));
 
         // --- check result --- //
         // check time series
         // must contain only one element
         getLogger().info("Timeseries size = " + timeSeries.size());
-        assertEquals(1, timeSeries.size());
+        assertThat(timeSeries).hasSize(1);
         // content must be the same
         String expectedTimeSeriesJson = TimeSeries.toJson(database.get(TIME_SERIES_GROUP_UUID).stream().filter(series -> series.getMetadata().getName().equals(TIME_SERIES_NAME_1)).collect(Collectors.toList()));
         getLogger().info("expectedTimeSeriesJson = " + expectedTimeSeriesJson);
         String resultTimeSeriesJson = TimeSeries.toJson(timeSeries);
         getLogger().info("resultTimeSeriesJson = " + resultTimeSeriesJson);
-        assertEquals(objectMapper.readTree(expectedTimeSeriesJson), objectMapper.readTree(resultTimeSeriesJson));
+        assertThat(objectMapper.readTree(resultTimeSeriesJson)).isEqualTo(objectMapper.readTree(expectedTimeSeriesJson));
 
         // check time series unknown
         // must contain only zero element
         getLogger().info("Timeseries size = " + timeSeriesNameUnknown.size());
-        assertEquals(0, timeSeriesNameUnknown.size());
+        assertThat(timeSeriesNameUnknown).isEmpty();
 
         // check timeline
         // must contain only one element
-        getLogger().info("Timeline size = " + timeLines.size());
-        assertEquals(1, timeLines.size());
+        getLogger().info("Timeline size = " + timelines.size());
+        assertThat(timelines).hasSize(1);
         // content must be the same
-        String expectedTimeLinesJson = TimeSeries.toJson(database.get(TIME_LINE_GROUP_UUID).stream().filter(series -> series.getMetadata().getName().equals(TIME_LINE_NAME)).collect(Collectors.toList()));
-        getLogger().info("expectedTimeLinesJson = " + expectedTimeLinesJson);
-        String resultTimeLinesJson = TimeSeries.toJson(timeLines);
-        getLogger().info("resultTimeLinesJson = " + resultTimeLinesJson);
-        assertEquals(objectMapper.readTree(expectedTimeLinesJson), objectMapper.readTree(resultTimeLinesJson));
+        String expectedTimelinesJson = TimeSeries.toJson(database.get(TIME_LINE_GROUP_UUID).stream().filter(series -> series.getMetadata().getName().equals(TIME_LINE_NAME)).collect(Collectors.toList()));
+        getLogger().info("expectedTimelinesJson = " + expectedTimelinesJson);
+        String resultTimelinesJson = TimeSeries.toJson(timelines);
+        getLogger().info("resultTimelinesJson = " + resultTimelinesJson);
+        assertThat(objectMapper.readTree(resultTimelinesJson)).isEqualTo(objectMapper.readTree(expectedTimelinesJson));
     }
 
     @Test
@@ -233,6 +233,6 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
         String resultTimeSeriesGroupMetadataJson = objectMapper.writeValueAsString(resultTimeSeriesGroupMetadata);
         getLogger().info("expectedTimeSeriesGroupMetadataJson = " + expectedTimeSeriesGroupMetadataJson);
         getLogger().info("resultTimeSeriesGroupMetadataJson = " + resultTimeSeriesGroupMetadataJson);
-        assertEquals(objectMapper.readTree(expectedTimeSeriesGroupMetadataJson), objectMapper.readTree(resultTimeSeriesGroupMetadataJson));
+        assertThat(objectMapper.readTree(resultTimeSeriesGroupMetadataJson)).isEqualTo(objectMapper.readTree(expectedTimeSeriesGroupMetadataJson));
     }
 }
