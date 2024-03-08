@@ -26,6 +26,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -105,6 +106,19 @@ public class ReportService {
             .buildAndExpand(reportUuid)
             .toUriString();
         restTemplate.delete(this.getReportsServerURI() + path);
+    }
+
+    public void deleteReportByType(UUID reportUuid, StudyService.ReportType reportType) {
+        Objects.requireNonNull(reportUuid);
+        Objects.requireNonNull(reportType);
+
+        var path = UriComponentsBuilder.fromPath("{reportUuid}")
+                .queryParam(QUERY_PARAM_REPORT_TYPE_FILTER, reportType.reportKey)
+                .buildAndExpand(reportUuid)
+                .toUriString();
+        var headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
     }
 
     public void deleteTreeReports(@NonNull Map<UUID, String> treeReportsKeys) {

@@ -9,6 +9,8 @@ package org.gridsuite.study.server.dto;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.gridsuite.study.server.service.StudyService;
+import org.springframework.data.util.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +27,8 @@ public class InvalidateNodeInfos {
     private UUID networkUuid;
 
     private List<UUID> reportUuids = new ArrayList<>();
+
+    private List<Pair<UUID, StudyService.ReportType>> reportTypes = new ArrayList<>();
 
     private List<String> variantIds = new ArrayList<>();
 
@@ -43,6 +47,10 @@ public class InvalidateNodeInfos {
 
     public void addReportUuid(UUID reportUuid) {
         reportUuids.add(reportUuid);
+    }
+
+    public void addReportType(UUID reportUuid, StudyService.ReportType reportType) {
+        reportTypes.add(Pair.of(reportUuid, reportType));
     }
 
     public void addVariantId(String variantId) {
