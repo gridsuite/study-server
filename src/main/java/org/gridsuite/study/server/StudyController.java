@@ -1044,14 +1044,6 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubReport(reportId, severityLevels));
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report")
-    @Operation(summary = "Delete node report")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report has been deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<Void> deleteNodeReport(@Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.deleteNodeReport(nodeUuid);
-        return ResponseEntity.ok().build();
-    }
-
     @GetMapping(value = "/svg-component-libraries")
     @Operation(summary = "Get a list of the available svg component libraries")
     @ApiResponse(responseCode = "200", description = "The list of the available svg component libraries")

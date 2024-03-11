@@ -1598,10 +1598,6 @@ public class StudyService {
         return Arrays.stream(reporter.getTaskKey().split("@")).findFirst().orElseThrow();
     }
 
-    public void deleteNodeReport(UUID nodeUuid) {
-        reportService.deleteReport(networkModificationTreeService.getReportUuid(nodeUuid));
-    }
-
     private void updateNode(UUID studyUuid, UUID nodeUuid, Optional<NetworkModificationResult> networkModificationResult) {
         networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, modificationResult));
         updateStatuses(studyUuid, nodeUuid);
