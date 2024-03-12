@@ -106,12 +106,14 @@ public class NetworkModificationTest {
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String VARIANT_ID_3 = "variant_3";
 
+    private static final UUID LOADFLOW_RESULT_UUID = UUID.randomUUID();
     private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
 
     private static final String SENSITIVITY_ANALYSIS_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
     private static final String SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
     private static final String SENSITIVITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+    private static final String LOADFLOW_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
 
     private static final String SHORTCIRCUIT_ANALYSIS_RESULT_UUID = "72f94d64-4fc6-11ed-bdc3-0242ac120002";
@@ -172,6 +174,9 @@ public class NetworkModificationTest {
     private SecurityAnalysisService securityAnalysisService;
 
     @Autowired
+    private LoadFlowService loadFlowService;
+
+    @Autowired
     private SensitivityAnalysisService sensitivityAnalysisService;
 
     @Autowired
@@ -219,6 +224,7 @@ public class NetworkModificationTest {
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         reportService.setReportServerBaseUri(baseUrl);
+        loadFlowService.setLoadFlowServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         nonEvacuatedEnergyService.setSensitivityAnalysisServerBaseUri(baseUrl);
@@ -324,6 +330,18 @@ public class NetworkModificationTest {
                 } else if (("/v1/results/" + VOLTAGE_INIT_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse().setResponseCode(200).setBody(VOLTAGE_INIT_STATUS_JSON)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
+                    return new MockResponse().setResponseCode(500);
+                } else if (("/v1/results/invalidate-status?resultUuid=" + LOADFLOW_RESULT_UUID).equals(path)) {
+                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
+                            "application/json; charset=utf-8");
+                } else if (("/v1/results/" + LOADFLOW_RESULT_UUID + "/status").equals(path)) {
+                    return new MockResponse().setResponseCode(200).setBody(LOADFLOW_STATUS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (("/v1/results/" + LOADFLOW_RESULT_UUID).equals(path)) {
+                    if (request.getMethod().equals("DELETE")) {
+                        return new MockResponse().setResponseCode(200).setBody(LOADFLOW_STATUS_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
                     return new MockResponse().setResponseCode(500);
@@ -2369,6 +2387,76 @@ public class NetworkModificationTest {
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
+    }
+
+    @Test
+    public void testRemoveLoadFlowComputationReport() throws Exception {
+        String userId = "userId";
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1", BuildStatus.BUILT, userId);
+        UUID modificationNode1Uuid = modificationNode1.getId();
+        // In this node, let's say we have all computations results
+        final UUID reportUuid = UUID.randomUUID();
+        modificationNode1.setReportUuid(reportUuid);
+        modificationNode1.setLoadFlowResultUuid(LOADFLOW_RESULT_UUID);
+        modificationNode1.setSecurityAnalysisResultUuid(UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
+        modificationNode1.setSensitivityAnalysisResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
+        modificationNode1.setNonEvacuatedEnergyResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID));
+        modificationNode1.setShortCircuitAnalysisResultUuid(UUID.fromString(SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
+        modificationNode1.setOneBusShortCircuitAnalysisResultUuid(UUID.fromString(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
+        modificationNode1.setVoltageInitResultUuid(UUID.fromString(VOLTAGE_INIT_RESULT_UUID));
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
+        checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
+        output.receive(TIMEOUT, studyUpdateDestination);
+
+        // A modification body
+        Map<String, Object> body = Map.of(
+                "type", ModificationType.EQUIPMENT_ATTRIBUTE_MODIFICATION,
+                "equipmentAttributeName", "open",
+                "equipmentAttributeValue", true,
+                "equipmentType", "SWITCH",
+                "equipmentId", "switchId"
+        );
+        String bodyJson = mapper.writeValueAsString(body);
+
+        // add this modification to the node => invalidate the LF
+        UUID stubId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
+                        .content(bodyJson).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        checkNodesInvalidationMessagesReceived(studyNameUserIdUuid, List.of(modificationNode1Uuid));
+        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
+        wireMockUtils.verifyNetworkModificationPostWithVariant(stubId, bodyJson, NETWORK_UUID_STRING, VARIANT_ID);
+
+        var requests = TestUtils.getRequestsDone(21, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + LOADFLOW_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + LOADFLOW_RESULT_UUID + "/status")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/status")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/status")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID + "/status")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status")));
+        // requests for computation sub-report deletion
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?reportTypeFilter=LoadFlow")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?reportTypeFilter=SecurityAnalysis")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?reportTypeFilter=SensitivityAnalysis")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?reportTypeFilter=NonEvacuatedEnergyAnalysis")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?reportTypeFilter=AllBusesShortCircuitAnalysis")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?reportTypeFilter=OneBusShortCircuitAnalysis")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?reportTypeFilter=VoltageInit")));
     }
 
     @SneakyThrows
