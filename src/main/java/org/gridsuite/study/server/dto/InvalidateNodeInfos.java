@@ -47,10 +47,15 @@ public class InvalidateNodeInfos {
 
     public void addReportUuid(UUID reportUuid) {
         reportUuids.add(reportUuid);
+        // no need to remove a report part (ex: a computation) if we remove the whole report
+        reportTypes.removeIf(p -> reportUuid.equals(p.getFirst()));
     }
 
     public void addReportType(UUID reportUuid, StudyService.ReportType reportType) {
-        reportTypes.add(Pair.of(reportUuid, reportType));
+        if (!getReportUuids().contains(reportUuid)) {
+            // no need to remove a report part (ex: a computation) if we remove the whole report
+            reportTypes.add(Pair.of(reportUuid, reportType));
+        }
     }
 
     public void addVariantId(String variantId) {
