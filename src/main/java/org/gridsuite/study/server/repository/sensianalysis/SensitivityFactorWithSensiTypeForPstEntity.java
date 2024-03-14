@@ -13,14 +13,16 @@ import jakarta.persistence.*;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
+ * @deprecated to remove when the data is migrated into the sensitivity-analysis-server
  */
+@Deprecated(forRemoval = true, since = "1.4.0")
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
 @Entity
 @Table(name = "sensitivityFactorWithSensiTypeForPstEntity")
-public class SensitivityFactorWithSensiTypeForPstEntity extends AbstractSensitivityFactorEntity {
+class SensitivityFactorWithSensiTypeForPstEntity extends AbstractSensitivityFactorEntity {
 
     @Column(name = "sensitivityType")
     @Enumerated(EnumType.STRING)
