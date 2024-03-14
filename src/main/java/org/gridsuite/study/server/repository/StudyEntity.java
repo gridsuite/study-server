@@ -53,27 +53,27 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private String caseName;
 
     /**
-    * @deprecated (to be removed when the migration of load flow provider is done)
-    */
-    @Deprecated(forRemoval = true)
+     * @deprecated to remove when the data is migrated into the loadflow-server
+     */
+    @Deprecated(forRemoval = true, since = "1.3.0")
     @Getter(AccessLevel.PROTECTED)
     @Setter(AccessLevel.PROTECTED)
     @Column(name = "loadFlowProvider")
     private String loadFlowProvider;
 
     /**
-    * @deprecated (to be removed when the migration of sa provider is done)
-    */
-    @Deprecated(forRemoval = true)
+     * @deprecated to remove when the data is migrated into the security-analysis-server
+     */
+    @Deprecated(forRemoval = true, since = "1.3.0")
     @Getter(AccessLevel.PROTECTED)
     @Setter(AccessLevel.PROTECTED)
     @Column(name = "securityAnalysisProvider")
     private String securityAnalysisProvider;
 
     /**
-    * @deprecated (to be removed when the migration of sensi provider is done)
-    */
-    @Deprecated(forRemoval = true)
+     * @deprecated to remove when the data is migrated into the sensitivity-analysis-server
+     */
+    @Deprecated(forRemoval = true, since = "1.4.0")
     @Getter(AccessLevel.PROTECTED)
     @Setter(AccessLevel.PROTECTED)
     @Column(name = "sensitivityAnalysisProvider")
@@ -89,9 +89,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private UUID loadFlowParametersUuid;
 
     /**
-    * @deprecated (to be removed when the migration of load flow parameters is done)
-    */
-    @Deprecated(forRemoval = true)
+     * @deprecated to remove when the data is migrated into the loadflow-server
+     */
+    @Deprecated(forRemoval = true, since = "1.3.0")
     @Getter(AccessLevel.PROTECTED)
     @Setter(AccessLevel.PROTECTED)
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
