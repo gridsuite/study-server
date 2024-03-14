@@ -62,9 +62,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private String loadFlowProvider;
 
     /**
-    * @deprecated (to be removed when the migration of sa provider is done)
-    */
-    @Deprecated(forRemoval = true)
+     * @deprecated to remove when the data is migrated into the security-analysis-server
+     */
+    @Deprecated(forRemoval = true, since = "1.3.0")
     @Getter(AccessLevel.PROTECTED)
     @Setter(AccessLevel.PROTECTED)
     @Column(name = "securityAnalysisProvider")
