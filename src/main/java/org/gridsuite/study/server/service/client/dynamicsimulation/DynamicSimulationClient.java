@@ -30,7 +30,7 @@ public interface DynamicSimulationClient extends RestClient {
 
     UUID getTimeSeriesResult(UUID resultUuid);
 
-    UUID getTimeLineResult(UUID resultUuid);
+    UUID getTimelineResult(UUID resultUuid);
 
     DynamicSimulationStatus getStatus(UUID resultUuid);
 

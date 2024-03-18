@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, RTE (http://www.rte-france.com)
+ * Copyright (c) 2021, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -14,8 +14,12 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact;
+import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
+
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
+ * @author Sylvain Bouzols <sylvain.bouzols at rte-france.com>
  */
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Setter
@@ -41,12 +45,14 @@ public class NetworkModificationResult {
 
     @Schema(description = "Network modification impacts")
     @Builder.Default
-    private List<SimpleElementImpact> networkImpacts = List.of();
+    private List<AbstractBaseImpact> networkImpacts = List.of();
 
     public Set<String> getImpactedSubstationsIds() {
         return networkImpacts.stream()
-            .filter(impact -> impact.getImpactType() != SimpleElementImpact.SimpleImpactType.DELETION)
-            .flatMap(impact -> impact.getSubstationIds().stream())
-            .collect(Collectors.toCollection(TreeSet::new));
+            // ignore DELETION simple impacts here
+            .filter(impact -> impact.isSimple() && !((SimpleElementImpact) impact).isDeletion())
+            .flatMap(impact -> ((SimpleElementImpact) impact).getSubstationIds().stream())
+            .collect(Collectors.toCollection(TreeSet::new)); // using TreeSet to keep natural order
     }
+
 }

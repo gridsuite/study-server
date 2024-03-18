@@ -73,7 +73,7 @@ public final class TestUtils {
         }).collect(Collectors.toSet());
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider,
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat,
                                                UUID loadFlowParametersUuid,
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
                                                UUID voltageInitParametersUuid,
@@ -83,7 +83,6 @@ public final class TestUtils {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .networkId("netId")
             .networkUuid(networkUuid)
-            .loadFlowProvider(loadflowProvider)
             .loadFlowParametersUuid(loadFlowParametersUuid)
             .shortCircuitParameters(shortCircuitParametersEntity)
             .voltageInitParametersUuid(voltageInitParametersUuid)
@@ -93,7 +92,7 @@ public final class TestUtils {
             .build();
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider,
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat,
                                                UUID loadFlowParametersUuid,
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
                                                UUID securityAnalysisParametersUuid,
@@ -102,7 +101,6 @@ public final class TestUtils {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
                 .networkId("netId")
                 .networkUuid(networkUuid)
-                .loadFlowProvider(loadflowProvider)
                 .loadFlowParametersUuid(loadFlowParametersUuid)
                 .shortCircuitParameters(shortCircuitParametersEntity)
                 .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
@@ -111,13 +109,12 @@ public final class TestUtils {
                 .build();
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, String loadFlowProvider) {
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat) {
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .caseName(caseName)
             .networkId("netId")
             .networkUuid(networkUuid)
-            .loadFlowProvider(loadFlowProvider)
             .shortCircuitParameters(defaultShortCircuitParametersEntity)
             .build();
     }

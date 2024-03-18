@@ -406,4 +406,16 @@ public class WireMockUtils {
         verifyPostRequest(stubUuid, "/v1/filters/evaluate",
                 Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid)));
     }
+
+    public UUID stubFilterExport(String networkUuid, String filterUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/filters/" + filterUuid + "/export"))
+                .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
+                .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
+    public void verifyFilterExport(UUID stubUuid, String filterUuid, String networkUuid) {
+        verifyGetRequest(stubUuid, "/v1/filters/" + filterUuid + "/export",
+                Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid)));
+    }
 }
