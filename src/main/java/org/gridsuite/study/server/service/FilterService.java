@@ -34,6 +34,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class FilterService {
 
     public static final String FILTER_END_POINT_EVALUATE = "/filters/evaluate";
+    public static final String FILTER_END_POINT_EXPORT = "/filters/{id}/export";
 
     private final RestTemplate restTemplate;
 
@@ -76,5 +77,17 @@ public class FilterService {
                 throw handleHttpError(e, EVALUATE_FILTER_FAILED);
             }
         }
+    }
+
+    public String exportFilter(UUID networkUuid, UUID filterUuid) {
+        Objects.requireNonNull(networkUuid);
+        Objects.requireNonNull(filterUuid);
+        String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EXPORT;
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
+        uriComponentsBuilder.queryParam("networkUuid", networkUuid);
+        var uriComponent = uriComponentsBuilder.buildAndExpand(filterUuid);
+
+        return restTemplate.getForObject(uriComponent.toUriString(), String.class);
     }
 }

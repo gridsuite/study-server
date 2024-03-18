@@ -16,7 +16,6 @@ import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
-import com.powsybl.timeseries.StringTimeSeries;
 import lombok.NonNull;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
@@ -27,9 +26,10 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
-import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
+import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -1597,10 +1597,6 @@ public class StudyService {
         return Arrays.stream(reporter.getTaskKey().split("@")).findFirst().orElseThrow();
     }
 
-    public void deleteNodeReport(UUID nodeUuid) {
-        reportService.deleteReport(networkModificationTreeService.getReportUuid(nodeUuid));
-    }
-
     private void updateNode(UUID studyUuid, UUID nodeUuid, Optional<NetworkModificationResult> networkModificationResult) {
         networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, modificationResult));
         updateStatuses(studyUuid, nodeUuid);
@@ -1613,14 +1609,20 @@ public class StudyService {
 
         Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
             networkModificationResult.getNetworkImpacts().stream()
-                .filter(impact -> impact.getImpactType() == SimpleImpactType.DELETION)
-                .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(impact.getElementId(), impact.getElementType().name()))
+                .filter(impact -> impact.isSimple() && ((SimpleElementImpact) impact).isDeletion())
+                .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(((SimpleElementImpact) impact).getElementId(), impact.getElementType().name()))
             .collect(Collectors.toSet());
+
+        Set<String> impactedElementTypes = networkModificationResult.getNetworkImpacts().stream()
+                .filter(impact -> impact.isCollection())
+                .map(impact -> impact.getElementType().name())
+                .collect(Collectors.toSet());
 
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
             NetworkImpactsInfos.builder()
                 .deletedEquipments(deletionsInfos)
                 .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
+                .impactedElementTypes(impactedElementTypes)
                 .build()
         );
     }
@@ -1855,9 +1857,9 @@ public class StudyService {
         return dynamicSimulationService.getTimeSeriesResult(nodeUuid, timeSeriesNames);
     }
 
-    public List<StringTimeSeries> getDynamicSimulationTimeLine(UUID nodeUuid) {
+    public List<TimelineEventInfos> getDynamicSimulationTimeline(UUID nodeUuid) {
         // get timeline from node uuid
-        return dynamicSimulationService.getTimeLineResult(nodeUuid); // timeline has only one element
+        return dynamicSimulationService.getTimelineResult(nodeUuid); // timeline has only one element
     }
 
     public DynamicSimulationStatus getDynamicSimulationStatus(UUID nodeUuid) {
@@ -2040,5 +2042,10 @@ public class StudyService {
     public String evaluateFilter(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode, String filter) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         return filterService.evaluateFilter(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn), filter);
+    }
+
+    public String exportFilter(UUID studyUuid, UUID filterUuid) {
+        // will use root node network of the study
+        return filterService.exportFilter(networkStoreService.getNetworkUuid(studyUuid), filterUuid);
     }
 }

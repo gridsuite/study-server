@@ -66,7 +66,8 @@ public class RestResponseEntityExceptionHandler {
                     DELETE_NETWORK_MODIFICATION_FAILED,
                     BAD_MODIFICATION_TYPE,
                     BAD_JSON_FORMAT,
-                    TIME_SERIES_BAD_TYPE
+                    TIME_SERIES_BAD_TYPE,
+                    TIMELINE_BAD_TYPE
                     -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getMessage());
             case NETWORK_NOT_FOUND,
                     NETWORK_INDEXATION_FAILED,

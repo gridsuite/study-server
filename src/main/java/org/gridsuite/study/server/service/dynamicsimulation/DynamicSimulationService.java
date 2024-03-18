@@ -9,7 +9,7 @@ package org.gridsuite.study.server.service.dynamicsimulation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.DoubleTimeSeries;
-import com.powsybl.timeseries.StringTimeSeries;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -21,6 +21,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.solver.SimSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverTypeInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.repository.DynamicSimulationParametersEntity;
 
 import java.util.Collections;
@@ -220,11 +221,11 @@ public interface DynamicSimulationService {
 
     /**
      * Run a dynamic simulation from a given network UUID and some configured parameters
-     * @param provider
-     * @param receiver
-     * @param networkUuid
-     * @param variantId
-     * @param parameters
+     * @param provider name of the dynamic simulation provider, e.g. DynaWaltz
+     * @param receiver receiver
+     * @param networkUuid network uuid
+     * @param variantId variant id
+     * @param parameters parameters of dynamic simulation
      * @return the UUID of the dynamic simulation
      */
     UUID runDynamicSimulation(String provider, String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters, String userId);
@@ -242,9 +243,9 @@ public interface DynamicSimulationService {
      * Get timeline from a given node UUID
      *
      * @param nodeUuid a given node UUID
-     * @return a list of timeline (only one element)
+     * @return a list of {@link TimelineEventInfos}
      */
-    List<StringTimeSeries> getTimeLineResult(UUID nodeUuid);
+    List<TimelineEventInfos> getTimelineResult(UUID nodeUuid);
 
     /**
      * Get the current status of the simulation
@@ -277,7 +278,7 @@ public interface DynamicSimulationService {
 
     /**
      * @param nodeUuid a given node UUID
-     * @return StudyException(DYNAMIC_SIMULATION_RUNNING) if ce node in RUNNING status
+     * @throws StudyException with type DYNAMIC_SIMULATION_RUNNING if this node is in RUNNING status
      */
     void assertDynamicSimulationNotRunning(UUID nodeUuid);
 
@@ -289,15 +290,15 @@ public interface DynamicSimulationService {
     List<MappingInfos> getMappings(UUID studyUuid);
 
     /**
-     * Get list of timeseries metadata
+     * Get list of time-series metadata
      * @param nodeUuid a given node UUID
-     * @return a list of timeseries metadata
+     * @return a list of time-series metadata
      */
     List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid);
 
     /**
      * Get models used in the given mapping
-     * @param mapping
+     * @param mapping name of given mapping
      * @return a list of rich models (i.e. including parameter set with parameters)
      */
     List<ModelInfos> getModels(String mapping);
