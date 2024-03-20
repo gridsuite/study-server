@@ -911,11 +911,12 @@ public class StudyService {
         return actionsService.getContingencyCount(networkuuid, variantId, contingencyListNames);
     }
 
-    public List<LimitViolationInfos> getLimitViolations(UUID studyUuid, UUID nodeUuid, String filters, Sort sort) {
+    public List<LimitViolationInfos> getLimitViolations(UUID studyUuid, UUID nodeUuid, String filters, String globalfilters, Sort sort) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
-
-        return loadflowService.getLimitViolations(nodeUuid, filters, sort);
+        UUID networkuuid = networkStoreService.getNetworkUuid(studyUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
+        return loadflowService.getLimitViolations(nodeUuid, filters, globalfilters, sort, variantId, networkuuid);
     }
 
     public byte[] getSubstationSvg(UUID studyUuid, String substationId, DiagramParameters diagramParameters,

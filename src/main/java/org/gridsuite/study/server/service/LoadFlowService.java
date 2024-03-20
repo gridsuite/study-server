@@ -216,7 +216,7 @@ public class LoadFlowService {
         }
     }
 
-    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid, String filters, Sort sort) {
+    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid, String filters, String globalFilters, Sort sort, String variantId, UUID networkUuid) {
         List<LimitViolationInfos> result = new ArrayList<>();
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
 
@@ -224,6 +224,14 @@ public class LoadFlowService {
             UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations");
             if (filters != null && !filters.isEmpty()) {
                 uriComponentsBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+            }
+            if (globalFilters != null && !globalFilters.isEmpty()) {
+                uriComponentsBuilder.queryParam("globalFilters", URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
+                //TODO: delete it when merging filter library
+                uriComponentsBuilder.queryParam("networkUuid", networkUuid);
+                if (variantId != null && !variantId.isBlank()) {
+                    uriComponentsBuilder.queryParam("variantId", variantId);
+                }
             }
             if (sort != null) {
                 sort.forEach(order -> uriComponentsBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection()));
