@@ -117,10 +117,6 @@ public class StudyService {
 
     private final ObjectMapper objectMapper;
 
-    public enum ComputationUsingLoadFlow {
-        LOAD_FLOW, SECURITY_ANALYSIS, SENSITIVITY_ANALYSIS, NON_EVACUATED_ENERGY_ANALYSIS
-    }
-
     public enum ReportNameMatchingType {
         EXACT_MATCHING, ENDS_WITH
     }
