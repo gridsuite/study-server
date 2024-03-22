@@ -858,7 +858,10 @@ public class StudyTest {
     public void testDeleteStudyWithError() throws Exception {
         UUID studyUuid = createStudy("userId", CASE_UUID);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
-        studyEntity.setVoltageInitParametersUuid(UUID.randomUUID()); // does not have default params
+        studyEntity.setLoadFlowParametersUuid(null);
+        studyEntity.setSecurityAnalysisParametersUuid(null);
+        studyEntity.setVoltageInitParametersUuid(null);
+        studyEntity.setSensitivityAnalysisParametersUuid(null);
         studyRepository.save(studyEntity);
 
         doAnswer(invocation -> {
@@ -871,13 +874,9 @@ public class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(6, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(2, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getVoltageInitParametersUuid())));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getLoadFlowParametersUuid())));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSecurityAnalysisParametersUuid())));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSensitivityAnalysisParametersUuid())));
     }
 
     @Test
@@ -1345,7 +1344,7 @@ public class StudyTest {
         assertEquals(study.getNonEvacuatedEnergyProvider(), defaultNonEvacuatedEnergyProvider);
     }
 
-    public void testDuplicateStudy(UUID study1Uuid) throws Exception {
+    private void testDuplicateStudy(UUID study1Uuid) throws Exception {
         String userId = "userId";
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
@@ -1409,10 +1408,12 @@ public class StudyTest {
     public void testDuplicateStudyWithParametersUuid() throws Exception {
         UUID study1Uuid = createStudy("userId", CASE_UUID);
         StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
-        studyEntity.setVoltageInitParametersUuid(UUID.randomUUID()); // does not have default params
+        studyEntity.setLoadFlowParametersUuid(UUID.randomUUID());
+        studyEntity.setSecurityAnalysisParametersUuid(UUID.randomUUID());
+        studyEntity.setVoltageInitParametersUuid(UUID.randomUUID());
+        studyEntity.setSensitivityAnalysisParametersUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
         testDuplicateStudy(study1Uuid);
-
     }
 
     @Test
@@ -1424,6 +1425,28 @@ public class StudyTest {
         studyEntity.setSensitivityAnalysisParametersUuid(null);
         studyRepository.save(studyEntity);
         testDuplicateStudy(study1Uuid);
+    }
+
+    @Test
+    public void testDuplicateStudyWithErrorDuringCaseDuplication() throws Exception {
+        UUID studyUuid = createStudy("userId", CASE_UUID);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
+        studyRepository.save(studyEntity);
+
+        doAnswer(invocation -> {
+            throw new RuntimeException();
+        }).when(caseService).duplicateCase(any(), any());
+
+        mockMvc.perform(post(STUDIES_URL)
+                        .param("duplicateFrom", studyUuid.toString())
+                        .param("studyUuid", DUPLICATED_STUDY_UUID)
+                        .param(CASE_FORMAT, "XIIDM")
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+
+        assertNull(studyRepository.findById(UUID.fromString(DUPLICATED_STUDY_UUID)).orElse(null));
     }
 
     private StudyEntity duplicateStudy(UUID studyUuid, String userId, String caseFormat) throws Exception {
