@@ -915,8 +915,7 @@ public class StudyService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         UUID networkuuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-        return loadflowService.getLimitViolations(nodeUuid, filters, globalfilters, sort, variantId, networkuuid);
+        return loadflowService.getLimitViolations(nodeUuid, filters, globalfilters, sort, networkuuid);
     }
 
     public byte[] getSubstationSvg(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
