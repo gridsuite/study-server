@@ -23,8 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -103,5 +102,11 @@ public class StudyInfosServiceTests {
         studyInfosService.deleteByUuid(studyInfos21.getId());
         studyInfosService.deleteByUuid(studyInfos22.getId());
         assertEquals(0, Iterables.size(studyInfosService.findAll()));
+    }
+
+    @Test
+    public void searchStudyInfosWithoutQuery() {
+        studyInfosService.search("");
+        assertThrows(NullPointerException.class, () -> studyInfosService.search(null));
     }
 }
