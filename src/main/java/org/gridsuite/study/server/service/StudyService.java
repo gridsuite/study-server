@@ -340,7 +340,7 @@ public class StudyService {
         return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getCaseUuid();
     }
 
-    public List<CreatedStudyBasicInfos> searchStudies(String query) {
+    public List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
         return studyInfosService.search(query);
     }
 
@@ -352,8 +352,8 @@ public class StudyService {
         return nodeUuidToSearchIn;
     }
 
-    public List<EquipmentInfos> searchEquipments(UUID studyUuid, UUID nodeUuid, String userInput,
-                                                 EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
+    public List<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
+                                                 @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
                                                  boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
