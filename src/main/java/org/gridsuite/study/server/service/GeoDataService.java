@@ -27,14 +27,14 @@ import static org.gridsuite.study.server.service.NetworkMapService.QUERY_PARAM_L
 @Service
 public class GeoDataService {
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     private String geoDataServerBaseUri;
 
     @Autowired
-    public GeoDataService(RemoteServicesProperties remoteServicesProperties) {
+    public GeoDataService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         this.geoDataServerBaseUri = remoteServicesProperties.getServiceUri("geo-data-server");
+        this.restTemplate = restTemplate;
     }
 
     public String getLinesGraphics(UUID networkUuid, String variantId, List<String> linesIds) {

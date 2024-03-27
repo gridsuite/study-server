@@ -36,14 +36,14 @@ public class NetworkMapService {
 
     static final String QUERY_PARAM_LINE_ID = "lineId";
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     private String networkMapServerBaseUri;
 
     @Autowired
-    public NetworkMapService(RemoteServicesProperties remoteServicesProperties) {
+    public NetworkMapService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         this.networkMapServerBaseUri = remoteServicesProperties.getServiceUri("network-map-server");
+        this.restTemplate = restTemplate;
     }
 
     public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, String infoType, double dcPowerFactor) {
