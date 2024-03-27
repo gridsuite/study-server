@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import com.powsybl.commons.extensions.Extension;
 import com.powsybl.iidm.network.Identifiable;
 import com.powsybl.iidm.network.NetworkListener;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -52,4 +53,28 @@ public class NetworkVariantsListener implements NetworkListener {
         equipmentInfosService.deleteVariants(networkUuid, List.of(variantId));
     }
 
+    @Override
+    public void onExtensionAfterRemoval(Identifiable<?> identifiable, String s) {
+        // Implement the method here
+    }
+
+    @Override
+    public void onExtensionCreation(Extension<?> extension) {
+        // Implement the method here
+    }
+
+    @Override
+    public void onUpdate(Identifiable<?> identifiable, String s, String s1, Object o, Object o1) {
+        // Implement the method here
+    }
+
+    @Override
+    public void onExtensionBeforeRemoval(Extension<?> extension) {
+        // Implement the method here
+    }
+
+    @Override
+    public void onExtensionUpdate(Extension<?> extension, String s, Object o, Object o1) {
+        // Implement the method here
+    }
 }
