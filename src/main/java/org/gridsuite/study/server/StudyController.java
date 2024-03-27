@@ -503,7 +503,7 @@ public class StudyController {
         return StringUtils.isEmpty(elementInfos) ? ResponseEntity.noContent().build() : ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(elementInfos);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-level-equipments/{voltageLevelId}")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels/{voltageLevelId}/equipments")
     @Operation(summary = "Get voltage level equipments")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Voltage level equipments")})
     public ResponseEntity<String> getVoltageLevelEquipments(
