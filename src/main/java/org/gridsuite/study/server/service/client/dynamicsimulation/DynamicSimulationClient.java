@@ -26,11 +26,11 @@ public interface DynamicSimulationClient extends RestClient {
     String DYNAMIC_SIMULATION_END_POINT_RESULT = "results";
     String DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT = "supervision/results-count";
 
-    UUID run(String provider, String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters);
+    UUID run(String provider, String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters, String userId);
 
     UUID getTimeSeriesResult(UUID resultUuid);
 
-    UUID getTimeLineResult(UUID resultUuid);
+    UUID getTimelineResult(UUID resultUuid);
 
     DynamicSimulationStatus getStatus(UUID resultUuid);
 

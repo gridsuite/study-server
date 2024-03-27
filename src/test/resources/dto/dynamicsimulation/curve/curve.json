@@ -1,13 +1,16 @@
 [
   {
+    "equipmentType": "GENERATOR",
     "equipmentId": "_GEN____1_SM",
     "variableId": "generator_omegaPu"
   },
   {
+    "equipmentType": "GENERATOR",
     "equipmentId": "_GEN____2_SM",
     "variableId": "generator_PGen"
   },
   {
+    "equipmentType": "LOAD",
     "equipmentId": "_LOAD___2_EC",
     "variableId": "load_alpha"
   }

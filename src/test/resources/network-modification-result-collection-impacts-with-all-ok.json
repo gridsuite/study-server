@@ -1,0 +1,19 @@
+{
+    "applicationStatus": "ALL_OK",
+    "lastGroupApplicationStatus": "ALL_OK",
+    "networkImpacts": [
+      {
+        "type": "COLLECTION",
+        "elementType": "LINE"
+      },
+      {
+        "type": "COLLECTION",
+        "elementType": "LOAD"
+      },
+      {
+        "type": "COLLECTION",
+        "elementType": "GENERATOR"
+      }
+    ],
+    "impactedSubstationsIds": []
+  }

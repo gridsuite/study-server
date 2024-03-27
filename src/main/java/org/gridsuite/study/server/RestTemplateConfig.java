@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.powsybl.contingency.json.ContingencyJsonModule;
@@ -18,6 +19,7 @@ import com.powsybl.shortcircuit.json.ShortCircuitAnalysisJsonModule;
 import com.powsybl.timeseries.json.TimeSeriesJsonModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -28,7 +30,7 @@ public class RestTemplateConfig {
 
     @Bean
     public RestTemplate restTemplate() {
-        final RestTemplate restTemplate = new RestTemplate();
+        final RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());
 
         //find and replace Jackson message converter with our own
         for (int i = 0; i < restTemplate.getMessageConverters().size(); i++) {
@@ -48,8 +50,10 @@ public class RestTemplateConfig {
     }
 
     private ObjectMapper createObjectMapper() {
-        var objectMapper = Jackson2ObjectMapperBuilder.json().build();
-        objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        var objectMapper = Jackson2ObjectMapperBuilder.json()
+                .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .featuresToEnable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
+                .build();
         objectMapper.registerModule(new ContingencyJsonModule());
         objectMapper.registerModule(new LoadFlowResultJsonModule());
         objectMapper.registerModule(new LoadFlowParametersJsonModule());
@@ -57,7 +61,6 @@ public class RestTemplateConfig {
         objectMapper.registerModule(new ShortCircuitAnalysisJsonModule());
         objectMapper.registerModule(new SensitivityJsonModule());
         objectMapper.registerModule(new TimeSeriesJsonModule());
-
         return objectMapper;
     }
 

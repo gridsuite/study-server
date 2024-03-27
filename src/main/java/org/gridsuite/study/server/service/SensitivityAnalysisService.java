@@ -9,14 +9,14 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData;
-import org.gridsuite.study.server.dto.sensianalysis.*;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
-
-import org.gridsuite.study.server.repository.sensianalysis.*;
-import org.gridsuite.study.server.repository.EquipmentsContainerEmbeddable;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -28,15 +28,13 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.List;
-import java.util.ArrayList;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisInputData.*;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -46,6 +44,8 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class SensitivityAnalysisService {
 
     static final String RESULT_UUID = "resultUuid";
+    private static final String RESULTS = "results";
+    private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
 
     private String sensitivityAnalysisServerBaseUri;
 
@@ -55,9 +55,6 @@ public class SensitivityAnalysisService {
     private final ObjectMapper objectMapper;
 
     private final NetworkModificationTreeService networkModificationTreeService;
-    private static final double FLOW_FLOW_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE = 0.0;
-    private static final double FLOW_VOLTAGE_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE = 0.0;
-    private static final double ANGLE_FLOW_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE = 0.0;
 
     @Autowired
     SensitivityAnalysisService(RemoteServicesProperties remoteServicesProperties,
@@ -75,8 +72,9 @@ public class SensitivityAnalysisService {
     public UUID runSensitivityAnalysis(UUID nodeUuid, UUID networkUuid,
                                        String variantId,
                                        UUID reportUuid,
-                                       String provider,
-                                       SensitivityAnalysisInputData sensitivityAnalysisParameters) {
+                                       String userId,
+                                       UUID parametersUuid,
+                                       UUID loadFlowParametersUuid) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
@@ -86,9 +84,13 @@ public class SensitivityAnalysisService {
         var uriComponentsBuilder = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
             .queryParam("reportUuid", reportUuid.toString())
-            .queryParam("reporterId", nodeUuid.toString());
-        if (!provider.isEmpty()) {
-            uriComponentsBuilder.queryParam("provider", provider);
+            .queryParam("reporterId", nodeUuid.toString())
+            .queryParam("reportType", StudyService.ReportType.SENSITIVITY_ANALYSIS.reportKey);
+        if (parametersUuid != null) {
+            uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
+        }
+        if (loadFlowParametersUuid != null) {
+            uriComponentsBuilder.queryParam("loadFlowParametersUuid", loadFlowParametersUuid);
         }
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
@@ -98,23 +100,24 @@ public class SensitivityAnalysisService {
             .buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<SensitivityAnalysisInputData> httpEntity = new HttpEntity<>(sensitivityAnalysisParameters, headers);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public String getSensitivityAnalysisResult(UUID nodeUuid, String selector) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuidOpt.isEmpty()) {
             return null;
         }
 
         // initializing from uri string (not from path string) allows build() to escape selector content
         URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
-            .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, "results", resultUuidOpt.get().toString())
+            .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuidOpt.get().toString())
             .queryParam("selector", selector).build().encode().toUri();
         try {
             result = restTemplate.getForObject(uri, String.class);
@@ -128,16 +131,45 @@ public class SensitivityAnalysisService {
         return result;
     }
 
+    public byte[] exportSensitivityResultsAsCsv(UUID nodeUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        if (resultUuidOpt.isEmpty()) {
+            throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
+        }
+
+        // initializing from uri string (not from path string) allows build() to escape selector content
+        URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
+                .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuidOpt.get().toString(), "csv")
+                .build()
+                .encode()
+                .toUri();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<SensitivityAnalysisCsvFileInfos> httpEntity = new HttpEntity<>(sensitivityAnalysisCsvFileInfos, headers);
+        try {
+            return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class).getBody();
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
+            } else {
+                throw handleHttpError(e, SENSITIVITY_ANALYSIS_ERROR);
+            }
+        }
+
+    }
+
     public String getSensitivityResultsFilterOptions(UUID nodeUuid, String selector) {
         String options;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuidOpt.isEmpty()) {
             return null;
         }
 
         // initializing from uri string (not from path string) allows build() to escape selector content
         URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
-                .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, "results", resultUuidOpt.get().toString(), "filter-options")
+                .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuidOpt.get().toString(), "filter-options")
                 .queryParam("selector", selector).build().encode().toUri();
         try {
             options = restTemplate.getForObject(uri, String.class);
@@ -153,7 +185,7 @@ public class SensitivityAnalysisService {
 
     public String getSensitivityAnalysisStatus(UUID nodeUuid) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
 
         if (resultUuidOpt.isEmpty()) {
             return null;
@@ -176,7 +208,7 @@ public class SensitivityAnalysisService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuidOpt.isEmpty()) {
             return;
         }
@@ -235,145 +267,141 @@ public class SensitivityAnalysisService {
         }
     }
 
-    public static SensitivityAnalysisParametersEntity toEntity(SensitivityAnalysisParametersInfos parameters) {
+    public UUID getSensitivityAnalysisParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {
+        if (studyEntity.getSensitivityAnalysisParametersUuid() == null) {
+            // not supposed to happen because we create it as the study creation
+            studyEntity.setSensitivityAnalysisParametersUuid(createDefaultSensitivityAnalysisParameters());
+        }
+        return studyEntity.getSensitivityAnalysisParametersUuid();
+    }
+
+    public String getSensitivityAnalysisParameters(UUID parametersUuid) {
+
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
+            .buildAndExpand(parametersUuid)
+            .toUriString();
+        try {
+            return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SENSITIVITY_ANALYSIS_PARAMETERS_NOT_FOUND);
+            }
+            throw handleHttpError(e, GET_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED);
+        }
+    }
+
+    public UUID createDefaultSensitivityAnalysisParameters() {
+
+        var path = UriComponentsBuilder
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/default")
+            .buildAndExpand()
+            .toUriString();
+
+        try {
+            return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, null, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED);
+        }
+    }
+
+    public UUID createSensitivityAnalysisParameters(String parameters) {
+
         Objects.requireNonNull(parameters);
-        List<SensitivityFactorWithDistribTypeEntity> sensitivityInjectionsSet = new ArrayList<>();
 
-        if (parameters.getSensitivityInjectionsSet() != null) {
-            for (SensitivityInjectionsSet sensitivityInjectionSet : parameters.getSensitivityInjectionsSet()) {
-                SensitivityFactorWithDistribTypeEntity entity = new SensitivityFactorWithDistribTypeEntity();
-                entity.setDistributionType(sensitivityInjectionSet.getDistributionType());
-                entity.setMonitoredBranch(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityInjectionSet.getMonitoredBranches()));
-                entity.setInjections(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityInjectionSet.getInjections()));
-                entity.setContingencies(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityInjectionSet.getContingencies()));
-                entity.setActivated(sensitivityInjectionSet.isActivated());
-                sensitivityInjectionsSet.add(entity);
-            }
+        var path = UriComponentsBuilder
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters")
+            .buildAndExpand()
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+
+        try {
+            return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, httpEntity, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED);
         }
-        List<SensitivityFactorForInjectionEntity> sensitivityInjections = new ArrayList<>();
-
-        if (parameters.getSensitivityInjection() != null) {
-            for (SensitivityAnalysisInputData.SensitivityInjection sensitivityInjection : parameters.getSensitivityInjection()) {
-                SensitivityFactorForInjectionEntity entity = new SensitivityFactorForInjectionEntity();
-                entity.setMonitoredBranch(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityInjection.getMonitoredBranches()));
-                entity.setInjections(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityInjection.getInjections()));
-                entity.setContingencies(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityInjection.getContingencies()));
-                entity.setActivated(sensitivityInjection.isActivated());
-                sensitivityInjections.add(entity);
-            }
-        }
-        List<SensitivityFactorWithSensiTypeForHvdcEntity> sensitivityHvdcs = new ArrayList<>();
-
-        if (parameters.getSensitivityHVDC() != null) {
-            for (SensitivityAnalysisInputData.SensitivityHVDC sensitivityHvdc : parameters.getSensitivityHVDC()) {
-                SensitivityFactorWithSensiTypeForHvdcEntity entity = new SensitivityFactorWithSensiTypeForHvdcEntity();
-                entity.setMonitoredBranch(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityHvdc.getMonitoredBranches()));
-                entity.setInjections(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityHvdc.getHvdcs()));
-                entity.setSensitivityType(sensitivityHvdc.getSensitivityType());
-                entity.setContingencies(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityHvdc.getContingencies()));
-                entity.setActivated(sensitivityHvdc.isActivated());
-                sensitivityHvdcs.add(entity);
-            }
-        }
-        List<SensitivityFactorWithSensiTypeForPstEntity> sensitivityPsts = new ArrayList<>();
-
-        if (parameters.getSensitivityPST() != null) {
-            for (SensitivityAnalysisInputData.SensitivityPST sensitivityPst : parameters.getSensitivityPST()) {
-                SensitivityFactorWithSensiTypeForPstEntity entity = new SensitivityFactorWithSensiTypeForPstEntity();
-                entity.setSensitivityType(sensitivityPst.getSensitivityType());
-                entity.setMonitoredBranch(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityPst.getMonitoredBranches()));
-                entity.setInjections(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityPst.getPsts()));
-                entity.setContingencies(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityPst.getContingencies()));
-                entity.setActivated(sensitivityPst.isActivated());
-                sensitivityPsts.add(entity);
-            }
-        }
-
-        List<SensitivityFactorForNodeEntity> sensitivityNodes = new ArrayList<>();
-
-        if (parameters.getSensitivityNodes() != null) {
-            for (SensitivityAnalysisInputData.SensitivityNodes sensitivityNode : parameters.getSensitivityNodes()) {
-                SensitivityFactorForNodeEntity entity = new SensitivityFactorForNodeEntity();
-                entity.setMonitoredBranch(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityNode.getMonitoredVoltageLevels()));
-                entity.setInjections(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityNode.getEquipmentsInVoltageRegulation()));
-                entity.setContingencies(EquipmentsContainerEmbeddable.toEmbeddableContainerEquipments(sensitivityNode.getContingencies()));
-                entity.setActivated(sensitivityNode.isActivated());
-                sensitivityNodes.add(entity);
-            }
-        }
-
-        return new SensitivityAnalysisParametersEntity(null, parameters.getFlowFlowSensitivityValueThreshold(),
-                parameters.getAngleFlowSensitivityValueThreshold(),
-                parameters.getFlowVoltageSensitivityValueThreshold(),
-                sensitivityInjectionsSet,
-                sensitivityInjections,
-                sensitivityHvdcs,
-                sensitivityPsts,
-                sensitivityNodes
-                );
     }
 
-    public static SensitivityAnalysisParametersInfos fromEntity(SensitivityAnalysisParametersEntity entity) {
-        Objects.requireNonNull(entity);
+    public UUID duplicateSensitivityAnalysisParameters(UUID sourceParametersUuid) {
 
-        List<SensitivityInjectionsSet> sensitivityInjectionsSet = new ArrayList<>();
-        entity.getSensitivityInjectionsSet().stream().map(sensitivityInjectionSet -> new SensitivityInjectionsSet(
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityInjectionSet.getMonitoredBranch()),
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityInjectionSet.getInjections()),
-                sensitivityInjectionSet.getDistributionType(),
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityInjectionSet.getContingencies()),
-                sensitivityInjectionSet.isActivated()
-        )).forEach(sensitivityInjectionsSet::add);
+        Objects.requireNonNull(sourceParametersUuid);
 
-        List<SensitivityAnalysisInputData.SensitivityInjection> sensitivityInjections = new ArrayList<>();
-        entity.getSensitivityInjections().stream().map(sensitivityInjection -> new SensitivityInjection(
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityInjection.getMonitoredBranch()),
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityInjection.getInjections()),
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityInjection.getContingencies()),
-                sensitivityInjection.isActivated()
-        )).forEach(sensitivityInjections::add);
+        var path = UriComponentsBuilder
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
+            .buildAndExpand(sourceParametersUuid)
+            .toUriString();
 
-        List<SensitivityAnalysisInputData.SensitivityHVDC> sensitivityHvdcs = new ArrayList<>();
-        entity.getSensitivityHvdc().stream().map(sensitivityHvdc -> new SensitivityHVDC(
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityHvdc.getMonitoredBranch()),
-                sensitivityHvdc.getSensitivityType(),
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityHvdc.getInjections()),
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityHvdc.getContingencies()),
-                sensitivityHvdc.isActivated()
-        )).forEach(sensitivityHvdcs::add);
-
-        List<SensitivityAnalysisInputData.SensitivityPST> sensitivityPsts = new ArrayList<>();
-        entity.getSensitivityPST().stream().map(sensitivityPst -> new SensitivityPST(
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityPst.getMonitoredBranch()),
-                sensitivityPst.getSensitivityType(),
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityPst.getInjections()),
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityPst.getContingencies()),
-                sensitivityPst.isActivated()
-        )).forEach(sensitivityPsts::add);
-
-        List<SensitivityAnalysisInputData.SensitivityNodes> sensitivityNodes = new ArrayList<>();
-        entity.getSensitivityNodes().stream().map(sensitivityNode -> new SensitivityNodes(
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityNode.getMonitoredBranch()),
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityNode.getInjections()),
-                EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(sensitivityNode.getContingencies()),
-                sensitivityNode.isActivated()
-        )).forEach(sensitivityNodes::add);
-
-        return new SensitivityAnalysisParametersInfos(entity.getFlowFlowSensitivityValueThreshold(), entity.getAngleFlowSensitivityValueThreshold(),
-                entity.getFlowVoltageSensitivityValueThreshold(), sensitivityInjectionsSet, sensitivityInjections, sensitivityHvdcs,
-                sensitivityPsts, sensitivityNodes);
+        try {
+            return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, null, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED);
+        }
     }
 
-    public static SensitivityAnalysisParametersInfos getDefaultSensitivityAnalysisParametersValues() {
-        return SensitivityAnalysisParametersInfos.builder()
-                .flowFlowSensitivityValueThreshold(FLOW_FLOW_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE)
-                .angleFlowSensitivityValueThreshold(ANGLE_FLOW_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE)
-                .flowVoltageSensitivityValueThreshold(FLOW_VOLTAGE_SENSITIVITY_VALUE_THRESHOLD_DEFAULT_VALUE)
-                .sensitivityInjectionsSet(List.of())
-                .sensitivityInjection(List.of())
-                .sensitivityHVDC(List.of())
-                .sensitivityPST(List.of())
-                .sensitivityNodes(List.of())
-                .build();
+    public void updateSensitivityAnalysisParameters(UUID parametersUuid, String parameters) {
+
+        Objects.requireNonNull(parameters);
+
+        var path = UriComponentsBuilder
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
+            .buildAndExpand(parametersUuid)
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+
+        try {
+            restTemplate.put(sensitivityAnalysisServerBaseUri + path, httpEntity);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED);
+        }
+    }
+
+    public void deleteSensitivityAnalysisParameters(UUID uuid) {
+
+        Objects.requireNonNull(uuid);
+
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
+            .buildAndExpand(uuid)
+            .toUriString();
+
+        try {
+            restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, DELETE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED);
+        }
+
+    }
+
+    public String getSensitivityAnalysisDefaultProvider() {
+        String path = UriComponentsBuilder
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/default-provider")
+                .buildAndExpand()
+                .toUriString();
+
+        try {
+            return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, GET_SENSITIVITY_ANALYSIS_DEFAULT_PROVIDER_FAILED);
+        }
+    }
+
+    public Long getSensitivityAnalysisFactorsCount(UUID networkUuid, SensitivityFactorsIdsByGroup factorsIds, Boolean isInjectionsSet) {
+        var uriComponentsBuilder = UriComponentsBuilder
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/factors-count")
+                .queryParam("isInjectionsSet", isInjectionsSet);
+
+        factorsIds.getIds().forEach((key, value) -> uriComponentsBuilder.queryParam(String.format("ids[%s]", key), value));
+
+        var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
+
+        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.GET, null, Long.class).getBody();
     }
 }

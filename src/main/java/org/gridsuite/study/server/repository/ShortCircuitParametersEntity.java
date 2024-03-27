@@ -6,10 +6,13 @@
  */
 package org.gridsuite.study.server.repository;
 
+import com.powsybl.shortcircuit.InitialVoltageProfileMode;
 import com.powsybl.shortcircuit.StudyType;
 import lombok.*;
 
 import jakarta.persistence.*;
+import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
+
 import java.util.UUID;
 
 /**
@@ -24,8 +27,8 @@ import java.util.UUID;
 @Table(name = "shortCircuitParameters")
 public class ShortCircuitParametersEntity {
 
-    public ShortCircuitParametersEntity(boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult, boolean withFeederResult, StudyType studyType, double minVoltageDropProportionalThreshold) {
-        this(null, withLimitViolations, withVoltageResult, withFortescueResult, withFeederResult, studyType, minVoltageDropProportionalThreshold);
+    public ShortCircuitParametersEntity(boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult, boolean withFeederResult, StudyType studyType, double minVoltageDropProportionalThreshold, boolean withLoads, boolean withShuntCompensators, boolean withVscConverterStations, boolean withNeutralPosition, InitialVoltageProfileMode initialVoltageProfileMode, ShortCircuitPredefinedConfiguration predefinedParameters) {
+        this(null, withLimitViolations, withVoltageResult, withFortescueResult, withFeederResult, studyType, minVoltageDropProportionalThreshold, predefinedParameters, withLoads, withShuntCompensators, withVscConverterStations, withNeutralPosition, initialVoltageProfileMode);
     }
 
     @Id
@@ -51,4 +54,24 @@ public class ShortCircuitParametersEntity {
 
     @Column(name = "minVoltageDropProportionalThreshold")
     private double minVoltageDropProportionalThreshold;
+
+    @Column(name = "predefinedParameters")
+    @Enumerated(EnumType.STRING)
+    private ShortCircuitPredefinedConfiguration predefinedParameters;
+
+    @Column(name = "withLoads", columnDefinition = "boolean default false")
+    private boolean withLoads;
+
+    @Column(name = "withShuntCompensators", columnDefinition = "boolean default false")
+    private boolean withShuntCompensators;
+
+    @Column(name = "withVscConverterStations", columnDefinition = "boolean default true")
+    private boolean withVscConverterStations;
+
+    @Column(name = "withNeutralPosition", columnDefinition = "boolean default true")
+    private boolean withNeutralPosition;
+
+    @Column(name = "initialVoltageProfileMode")
+    @Enumerated(EnumType.STRING)
+    private InitialVoltageProfileMode initialVoltageProfileMode;
 }

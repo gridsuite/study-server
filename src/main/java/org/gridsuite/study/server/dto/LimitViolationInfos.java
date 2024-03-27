@@ -28,7 +28,11 @@ public class LimitViolationInfos {
 
     private String limitName;
 
-    private Integer acceptableDuration;
+    private Integer actualOverloadDuration;
+
+    private Integer upComingOverloadDuration;
+
+    private Double overload;
 
     private Double value;
 

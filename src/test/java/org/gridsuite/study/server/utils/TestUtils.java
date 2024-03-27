@@ -11,21 +11,26 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.google.common.io.ByteStreams;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.loadflow.LoadFlowParameters;
 import okhttp3.mockwebserver.MockWebServer;
-
+import okio.Buffer;
+import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.repository.*;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
+import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.junit.platform.commons.util.StringUtils;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -68,59 +73,48 @@ public final class TestUtils {
         }).collect(Collectors.toSet());
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider,
-                                               LoadFlowParametersEntity loadFlowParametersEntity,
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat,
+                                               UUID loadFlowParametersUuid,
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
                                                UUID voltageInitParametersUuid,
-                                               SecurityAnalysisParametersEntity securityAnalysisParametersEntity,
-                                               SensitivityAnalysisParametersEntity sensitivityParametersEntity
-    ) {
+                                               UUID securityAnalysisParametersUuid,
+                                               UUID sensitivityParametersUuid,
+                                               NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .networkId("netId")
             .networkUuid(networkUuid)
-            .loadFlowProvider(loadflowProvider)
-            .loadFlowParameters(loadFlowParametersEntity)
+            .loadFlowParametersUuid(loadFlowParametersUuid)
             .shortCircuitParameters(shortCircuitParametersEntity)
             .voltageInitParametersUuid(voltageInitParametersUuid)
-            .securityAnalysisParameters(securityAnalysisParametersEntity)
-            .sensitivityAnalysisParameters(sensitivityParametersEntity)
+            .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
+            .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
+            .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
             .build();
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider,
-                                               LoadFlowParametersEntity loadFlowParametersEntity,
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat,
+                                               UUID loadFlowParametersUuid,
                                                ShortCircuitParametersEntity shortCircuitParametersEntity,
-                                               SecurityAnalysisParametersEntity securityAnalysisParametersEntity,
-                                               SensitivityAnalysisParametersEntity sensitivityParametersEntity) {
+                                               UUID securityAnalysisParametersUuid,
+                                               UUID sensitivityParametersUuid,
+                                               NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
                 .networkId("netId")
                 .networkUuid(networkUuid)
-                .loadFlowProvider(loadflowProvider)
-                .loadFlowParameters(loadFlowParametersEntity)
+                .loadFlowParametersUuid(loadFlowParametersUuid)
                 .shortCircuitParameters(shortCircuitParametersEntity)
-                .securityAnalysisParameters(securityAnalysisParametersEntity)
-                .sensitivityAnalysisParameters(sensitivityParametersEntity)
+                .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
+                .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
+                .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
                 .build();
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, String loadFlowProvider) {
-        LoadFlowParametersEntity loadFlowParametersEntity = LoadFlowParametersEntity.builder()
-            .voltageInitMode(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES)
-            .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
-            .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
-            .readSlackBus(true)
-            .distributedSlack(true)
-            .dcUseTransformerRatio(true)
-            .hvdcAcEmulation(true)
-            .dcPowerFactor(0.9)
-            .build();
-        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat) {
+        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .caseName(caseName)
             .networkId("netId")
             .networkUuid(networkUuid)
-            .loadFlowProvider(loadFlowProvider)
-            .loadFlowParameters(loadFlowParametersEntity)
             .shortCircuitParameters(defaultShortCircuitParametersEntity)
             .build();
     }
@@ -135,6 +129,7 @@ public final class TestUtils {
             .loadFlowResultUuid(UUID.randomUUID())
             .securityAnalysisResultUuid(UUID.randomUUID())
             .sensitivityAnalysisResultUuid(UUID.randomUUID())
+            .nonEvacuatedEnergyResultUuid(UUID.randomUUID())
             .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT))
             .children(Collections.emptyList()).build();
     }
@@ -168,12 +163,18 @@ public final class TestUtils {
             wireMockServer.checkForUnmatchedRequests(); // requests no matched ? (it returns an exception if a request was not matched by wireMock, but does not complain if it was not verified by 'verify')
             assertEquals(0, wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl())).size()); // requests no verified ?
         } finally {
-            wireMockServer.shutdown();
+            wireMockServer.stop();
         }
     }
 
     public static String resourceToString(String resource) throws IOException {
         String content = new String(ByteStreams.toByteArray(TestUtils.class.getResourceAsStream(resource)), StandardCharsets.UTF_8);
         return StringUtils.replaceWhitespaceCharacters(content, "");
+    }
+
+    public static Buffer getBinaryAsBuffer(byte[] binary) {
+        Buffer buf = new Buffer();
+        buf.write(binary);
+        return buf;
     }
 }

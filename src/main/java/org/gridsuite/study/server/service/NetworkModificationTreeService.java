@@ -20,7 +20,6 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
-import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -32,6 +31,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
+import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
+import static org.gridsuite.study.server.dto.ComputationType.NON_EVACUATED_ENERGY_ANALYSIS;
+import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
+import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
+import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT;
+import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_BUS;
+import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -102,7 +109,11 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
-        return duplicateNode(nodeToCopyUuid, anchorNodeUuid, insertMode);
+        NodeEntity anchorNode = nodesRepository.findById(anchorNodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        NodeEntity parent = insertMode == InsertMode.BEFORE ? anchorNode.getParentNode() : anchorNode;
+        UUID newNodeUUID = self.duplicateNode(nodeToCopyUuid, anchorNodeUuid, insertMode);
+        notificationService.emitNodeInserted(anchorNode.getStudy().getId(), parent.getIdNode(), newNodeUUID, insertMode, anchorNodeUuid);
+        return newNodeUUID;
     }
 
     @Transactional
@@ -148,6 +159,7 @@ public class NetworkModificationTreeService {
                 null,
                 null,
                 null,
+                null,
                 NodeBuildStatus.from(BuildStatus.NOT_BUILT).toEntity()
         );
         UUID studyUuid = anchorNodeEntity.getStudy().getId();
@@ -179,8 +191,22 @@ public class NetworkModificationTreeService {
         if (nodeToMoveUuid.equals(anchorNodeUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
-        UUID studyUuid = moveNode(nodeToMoveUuid, anchorNodeUuid, insertMode);
-        notificationService.emitNodeMoved(studyUuid, anchorNodeUuid, nodeToMoveUuid, insertMode);
+        NodeEntity anchorNode = nodesRepository.findById(anchorNodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        NodeEntity parent;
+        if (insertMode == InsertMode.BEFORE) {
+            if (anchorNode.getType() == NodeType.ROOT) {
+                throw new StudyException(NOT_ALLOWED);
+            }
+            parent = anchorNode.getParentNode();
+            if (parent.getIdNode().equals(nodeToMoveUuid)) {
+                // If anchor's previous parent is the node to move, we use anchor's grandparent.
+                parent = parent.getParentNode();
+            }
+        } else {
+            parent = anchorNode;
+        }
+        UUID studyUuid = self.moveNode(nodeToMoveUuid, anchorNodeUuid, insertMode);
+        notificationService.emitNodeMoved(studyUuid, parent.getIdNode(), nodeToMoveUuid, insertMode, anchorNodeUuid);
     }
 
     @Transactional
@@ -289,37 +315,42 @@ public class NetworkModificationTreeService {
                 deleteNodeInfos.addVariantId(variantId);
             }
 
-            UUID loadFlowResultUuid = repositories.get(nodeToDelete.getType()).getLoadFlowResultUuid(id);
+            UUID loadFlowResultUuid = repositories.get(nodeToDelete.getType()).getComputationResultUuid(id, LOAD_FLOW);
             if (loadFlowResultUuid != null) {
                 deleteNodeInfos.addLoadFlowResultUuid(loadFlowResultUuid);
             }
 
-            UUID securityAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getSecurityAnalysisResultUuid(id);
+            UUID securityAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getComputationResultUuid(id, SECURITY_ANALYSIS);
             if (securityAnalysisResultUuid != null) {
                 deleteNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
             }
 
-            UUID sensitivityAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getSensitivityAnalysisResultUuid(id);
+            UUID sensitivityAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getComputationResultUuid(id, SENSITIVITY_ANALYSIS);
             if (sensitivityAnalysisResultUuid != null) {
                 deleteNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
             }
 
-            UUID shortCircuitAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getShortCircuitAnalysisResultUuid(id);
+            UUID nonEvacuatedEnergyResultUuid = repositories.get(nodeToDelete.getType()).getComputationResultUuid(id, NON_EVACUATED_ENERGY_ANALYSIS);
+            if (nonEvacuatedEnergyResultUuid != null) {
+                deleteNodeInfos.addNonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid);
+            }
+
+            UUID shortCircuitAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getComputationResultUuid(id, SHORT_CIRCUIT);
             if (shortCircuitAnalysisResultUuid != null) {
                 deleteNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
             }
 
-            UUID oneBusShortCircuitAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getOneBusShortCircuitAnalysisResultUuid(id);
+            UUID oneBusShortCircuitAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getComputationResultUuid(id, SHORT_CIRCUIT_ONE_BUS);
             if (oneBusShortCircuitAnalysisResultUuid != null) {
                 deleteNodeInfos.addOneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid);
             }
 
-            UUID voltageInitResultUuid = repositories.get(nodeToDelete.getType()).getVoltageInitResultUuid(id);
+            UUID voltageInitResultUuid = repositories.get(nodeToDelete.getType()).getComputationResultUuid(id, VOLTAGE_INITIALIZATION);
             if (voltageInitResultUuid != null) {
                 deleteNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
             }
 
-            UUID dynamicSimulationResultUuid = repositories.get(nodeToDelete.getType()).getDynamicSimulationResultUuid(id);
+            UUID dynamicSimulationResultUuid = repositories.get(nodeToDelete.getType()).getComputationResultUuid(id, DYNAMIC_SIMULATION);
             if (dynamicSimulationResultUuid != null) {
                 deleteNodeInfos.addDynamicSimulationResultUuid(dynamicSimulationResultUuid);
             }
@@ -424,6 +455,7 @@ public class NetworkModificationTreeService {
                 model.setLoadFlowResultUuid(null);
                 model.setSecurityAnalysisResultUuid(null);
                 model.setSensitivityAnalysisResultUuid(null);
+                model.setNonEvacuatedEnergyResultUuid(null);
                 model.setShortCircuitAnalysisResultUuid(null);
                 model.setOneBusShortCircuitAnalysisResultUuid(null);
                 model.setVoltageInitResultUuid(null);
@@ -556,10 +588,14 @@ public class NetworkModificationTreeService {
         return networkModificationService.getModifications(getModificationGroupUuid(nodeUuid), onlyStashed, onlyMetadata);
     }
 
-    // Return json string because modification dtos are not available here
     @Transactional(readOnly = true)
-    public String getNetworkModifications(@NonNull UUID nodeUuid) {
-        return getNetworkModifications(nodeUuid, false, true);
+    public Integer getNetworkModificationsCount(@NonNull UUID nodeUuid, boolean stashed) {
+        return networkModificationService.getModificationsCount(self.getModificationGroupUuid(nodeUuid), stashed);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasModifications(@NonNull UUID nodeUuid, boolean stashed) {
+        return self.getNetworkModificationsCount(nodeUuid, stashed) > 0;
     }
 
     @Transactional
@@ -593,21 +629,23 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void restoreNode(UUID studyId, UUID nodeId, UUID anchorNodeId) {
-        NodeEntity nodeToRestore = nodesRepository.findById(nodeId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
-        NodeEntity anchorNode = nodesRepository.findById(anchorNodeId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
-        NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeToRestore.getIdNode()).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
-        if (self.isNodeNameExists(studyId, modificationNodeToRestore.getName())) {
-            String newName = getSuffixedNodeName(studyId, modificationNodeToRestore.getName());
-            modificationNodeToRestore.setName(newName);
-            networkModificationNodeInfoRepository.save(modificationNodeToRestore);
+    public void restoreNode(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId) {
+        for (UUID nodeId : nodeIds) {
+            NodeEntity nodeToRestore = nodesRepository.findById(nodeId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+            NodeEntity anchorNode = nodesRepository.findById(anchorNodeId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+            NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeToRestore.getIdNode()).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+            if (self.isNodeNameExists(studyId, modificationNodeToRestore.getName())) {
+                String newName = getSuffixedNodeName(studyId, modificationNodeToRestore.getName());
+                modificationNodeToRestore.setName(newName);
+                networkModificationNodeInfoRepository.save(modificationNodeToRestore);
+            }
+            nodeToRestore.setParentNode(anchorNode);
+            nodeToRestore.setStashed(false);
+            nodeToRestore.setStashDate(null);
+            nodesRepository.save(nodeToRestore);
+            notificationService.emitNodeInserted(studyId, anchorNodeId, nodeId, InsertMode.AFTER, anchorNodeId);
+            self.restoreNodeChildren(studyId, nodeId);
         }
-        nodeToRestore.setParentNode(anchorNode);
-        nodeToRestore.setStashed(false);
-        nodeToRestore.setStashDate(null);
-        nodesRepository.save(nodeToRestore);
-        notificationService.emitNodeInserted(studyId, anchorNodeId, nodeId, InsertMode.AFTER, anchorNodeId);
-        self.restoreNodeChildren(studyId, nodeId);
     }
 
     @Transactional
@@ -632,80 +670,21 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid));
-    }
-
-    @Transactional
-    public void updateOneBusShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateOneBusShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid));
-    }
-
-    @Transactional
-    public void updateLoadFlowResultUuid(UUID nodeUuid, UUID loadFlowResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowResultUuid(nodeUuid, loadFlowResultUuid));
-    }
-
-    @Transactional
-    public void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateVoltageInitResultUuid(nodeUuid, voltageInitResultUuid));
-    }
-
-    @Transactional
-    public void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid));
-    }
-
-    @Transactional
-    public void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateSensitivityAnalysisResultUuid(nodeUuid, sensitivityAnalysisResultUuid));
-    }
-
-    @Transactional
-    public void updateDynamicSimulationResultUuid(UUID nodeUuid, UUID dynamicSimulationResultUuid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateDynamicSimulationResultUuid(nodeUuid, dynamicSimulationResultUuid));
+    public void updateComputationResultUuid(UUID nodeUuid, UUID computationResultUuid, ComputationType computationType) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateComputationResultUuid(nodeUuid, computationResultUuid, computationType));
     }
 
     @Transactional(readOnly = true)
-    public Optional<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSecurityAnalysisResultUuid(nodeUuid));
+    public Optional<UUID> getComputationResultUuid(UUID nodeUuid, ComputationType computationType) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getComputationResultUuid(nodeUuid, computationType));
     }
 
     @Transactional(readOnly = true)
-    public Optional<UUID> getSensitivityAnalysisResultUuid(UUID nodeUuid) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSensitivityAnalysisResultUuid(nodeUuid));
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<UUID> getShortCircuitAnalysisResultUuid(UUID nodeUuid, ShortcircuitAnalysisType type) {
-        if (ShortcircuitAnalysisType.ONE_BUS.equals(type)) {
-            return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getOneBusShortCircuitAnalysisResultUuid(nodeUuid));
-        } else {
-            return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getShortCircuitAnalysisResultUuid(nodeUuid));
-        }
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<UUID> getLoadFlowResultUuid(UUID nodeUuid) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowResultUuid(nodeUuid));
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<UUID> getVoltageInitResultUuid(UUID nodeUuid) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getVoltageInitResultUuid(nodeUuid));
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<UUID> getDynamicSimulationResultUuid(UUID nodeUuid) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getDynamicSimulationResultUuid(nodeUuid));
-    }
-
-    @Transactional(readOnly = true)
-    public List<UUID> getStudySecurityAnalysisResultUuids(UUID studyUuid) {
+    public List<UUID> getComputationResultUuids(UUID studyUuid, ComputationType computationType) {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.forEach(n -> {
-            UUID uuid = repositories.get(n.getType()).getSecurityAnalysisResultUuid(n.getIdNode());
+            UUID uuid = repositories.get(n.getType()).getComputationResultUuid(n.getIdNode(), computationType);
             if (uuid != null) {
                 uuids.add(uuid);
             }
@@ -714,22 +693,9 @@ public class NetworkModificationTreeService {
     }
 
     private void getSecurityAnalysisResultUuids(UUID nodeUuid, List<UUID> uuids) {
-        nodesRepository.findById(nodeUuid).flatMap(n -> Optional.ofNullable(repositories.get(n.getType()).getSecurityAnalysisResultUuid(nodeUuid))).ifPresent(uuids::add);
+        nodesRepository.findById(nodeUuid).flatMap(n -> Optional.ofNullable(repositories.get(n.getType()).getComputationResultUuid(nodeUuid, SECURITY_ANALYSIS))).ifPresent(uuids::add);
         nodesRepository.findAllByParentNodeIdNode(nodeUuid)
             .forEach(child -> getSecurityAnalysisResultUuids(child.getIdNode(), uuids));
-    }
-
-    @Transactional(readOnly = true)
-    public List<UUID> getLoadFlowResultUuids(UUID studyUuid) {
-        List<UUID> uuids = new ArrayList<>();
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.forEach(n -> {
-            UUID uuid = repositories.get(n.getType()).getLoadFlowResultUuid(n.getIdNode());
-            if (uuid != null) {
-                uuids.add(uuid);
-            }
-        });
-        return uuids;
     }
 
     @Transactional(readOnly = true)
@@ -740,42 +706,21 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public List<UUID> getStudySensitivityAnalysisResultUuids(UUID studyUuid) {
+    public List<UUID> getShortCircuitResultUuids(UUID studyUuid) {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.forEach(n -> {
-            UUID uuid = repositories.get(n.getType()).getSensitivityAnalysisResultUuid(n.getIdNode());
-            if (uuid != null) {
-                uuids.add(uuid);
+            // we need to check one bus and all bus
+            UUID uuidOneBus = repositories.get(n.getType()).getComputationResultUuid(n.getIdNode(), SHORT_CIRCUIT_ONE_BUS);
+            UUID uuidAllBus = repositories.get(n.getType()).getComputationResultUuid(n.getIdNode(), SHORT_CIRCUIT);
+            if (uuidOneBus != null) {
+                uuids.add(uuidOneBus);
+            }
+            if (uuidAllBus != null) {
+                uuids.add(uuidAllBus);
             }
         });
         return uuids;
-    }
-
-    @Transactional(readOnly = true)
-    public List<UUID> getStudyDynamicSimulationResultUuids(UUID studyUuid) {
-        List<UUID> resultUuids = new ArrayList<>();
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.forEach(n -> {
-            UUID resultUuid = repositories.get(n.getType()).getDynamicSimulationResultUuid(n.getIdNode());
-            if (resultUuid != null) {
-                resultUuids.add(resultUuid);
-            }
-        });
-        return resultUuids;
-    }
-
-    @Transactional(readOnly = true)
-    public List<UUID> getStudyVoltageInitResultUuids(UUID studyUuid) {
-        List<UUID> resultUuids = new ArrayList<>();
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.forEach(n -> {
-            UUID resultUuid = repositories.get(n.getType()).getVoltageInitResultUuid(n.getIdNode());
-            if (resultUuid != null) {
-                resultUuids.add(resultUuid);
-            }
-        });
-        return resultUuids;
     }
 
     private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {
@@ -813,54 +758,61 @@ public class NetworkModificationTreeService {
         return buildInfos;
     }
 
-    private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus) {
-
+    private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
+                                         boolean deleteVoltageInitResults) {
         if (!invalidateOnlyChildrenBuildStatus) {
             // we want to delete associated report and variant in this case
             invalidateNodeInfos.addReportUuid(repositories.get(node.getType()).getReportUuid(node.getIdNode()));
             invalidateNodeInfos.addVariantId(repositories.get(node.getType()).getVariantId(node.getIdNode()));
         }
 
-        UUID loadFlowResultUuid = repositories.get(node.getType()).getLoadFlowResultUuid(node.getIdNode());
+        UUID loadFlowResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), LOAD_FLOW);
         if (loadFlowResultUuid != null) {
             invalidateNodeInfos.addLoadFlowResultUuid(loadFlowResultUuid);
         }
 
-        UUID securityAnalysisResultUuid = repositories.get(node.getType()).getSecurityAnalysisResultUuid(node.getIdNode());
+        UUID securityAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SECURITY_ANALYSIS);
         if (securityAnalysisResultUuid != null) {
             invalidateNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
         }
 
-        UUID sensitivityAnalysisResultUuid = repositories.get(node.getType()).getSensitivityAnalysisResultUuid(node.getIdNode());
+        UUID sensitivityAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SENSITIVITY_ANALYSIS);
         if (sensitivityAnalysisResultUuid != null) {
             invalidateNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
         }
 
-        UUID shortCircuitAnalysisResultUuid = repositories.get(node.getType()).getShortCircuitAnalysisResultUuid(node.getIdNode());
+        UUID nonEvacuatedEnergyResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), NON_EVACUATED_ENERGY_ANALYSIS);
+        if (nonEvacuatedEnergyResultUuid != null) {
+            invalidateNodeInfos.addNonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid);
+        }
+
+        UUID shortCircuitAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SHORT_CIRCUIT);
         if (shortCircuitAnalysisResultUuid != null) {
             invalidateNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
         }
 
-        UUID oneBusShortCircuitAnalysisResultUuid = repositories.get(node.getType()).getOneBusShortCircuitAnalysisResultUuid(node.getIdNode());
+        UUID oneBusShortCircuitAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SHORT_CIRCUIT_ONE_BUS);
         if (oneBusShortCircuitAnalysisResultUuid != null) {
             invalidateNodeInfos.addOneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid);
         }
 
-        UUID voltageInitResultUuid = repositories.get(node.getType()).getVoltageInitResultUuid(node.getIdNode());
-        if (voltageInitResultUuid != null) {
-            invalidateNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
+        if (deleteVoltageInitResults) {
+            UUID voltageInitResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), VOLTAGE_INITIALIZATION);
+            if (voltageInitResultUuid != null) {
+                invalidateNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
+            }
         }
     }
 
     @Transactional
-    public void invalidateBuild(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
+    public void invalidateBuild(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos, boolean deleteVoltageInitResults) {
         final List<UUID> changedNodes = new ArrayList<>();
         changedNodes.add(nodeUuid);
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
-            invalidateNodeProper(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes);
-            invalidateChildrenBuildStatus(n, changedNodes, invalidateNodeInfos);
+            invalidateNodeProper(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
+            invalidateChildrenBuildStatus(n, changedNodes, invalidateNodeInfos, deleteVoltageInitResults);
         });
 
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
@@ -868,42 +820,46 @@ public class NetworkModificationTreeService {
 
     @Transactional
     // method used when moving a node to invalidate it without impacting other nodes
-    public void invalidateBuildOfNodeOnly(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
+    public void invalidateBuildOfNodeOnly(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos, boolean deleteVoltageInitResults) {
         final List<UUID> changedNodes = new ArrayList<>();
         changedNodes.add(nodeUuid);
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(n ->
-            invalidateNodeProper(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes)
+            invalidateNodeProper(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults)
         );
 
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }
 
-    private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes, InvalidateNodeInfos invalidateNodeInfos) {
+    private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes, InvalidateNodeInfos invalidateNodeInfos,
+                                               boolean deleteVoltageInitResults) {
         nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
             .forEach(child -> {
-                invalidateNodeProper(child, invalidateNodeInfos, false, changedNodes);
-                invalidateChildrenBuildStatus(child, changedNodes, invalidateNodeInfos);
+                invalidateNodeProper(child, invalidateNodeInfos, false, changedNodes, deleteVoltageInitResults);
+                invalidateChildrenBuildStatus(child, changedNodes, invalidateNodeInfos, deleteVoltageInitResults);
             });
     }
 
-    private void invalidateNodeProper(NodeEntity child, InvalidateNodeInfos invalidateNodeInfos,
-        boolean invalidateOnlyChildrenBuildStatus, List<UUID> changedNodes) {
+    private void invalidateNodeProper(NodeEntity child, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
+                                      List<UUID> changedNodes, boolean deleteVoltageInitResults) {
         UUID childUuid = child.getIdNode();
         // No need to invalidate a node with a status different of "BUILT"
         AbstractNodeRepositoryProxy<?, ?, ?> nodeRepository = repositories.get(child.getType());
         if (nodeRepository.getNodeBuildStatus(child.getIdNode()).isBuilt()) {
-            fillInvalidateNodeInfos(child, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
+            fillInvalidateNodeInfos(child, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, deleteVoltageInitResults);
             if (!invalidateOnlyChildrenBuildStatus) {
                 nodeRepository.invalidateNodeBuildStatus(childUuid, changedNodes);
             }
-            nodeRepository.updateLoadFlowResultUuid(childUuid, null);
-            nodeRepository.updateSecurityAnalysisResultUuid(childUuid, null);
-            nodeRepository.updateSensitivityAnalysisResultUuid(childUuid, null);
-            nodeRepository.updateShortCircuitAnalysisResultUuid(childUuid, null);
-            nodeRepository.updateOneBusShortCircuitAnalysisResultUuid(childUuid, null);
-            nodeRepository.updateVoltageInitResultUuid(childUuid, null);
+            nodeRepository.updateComputationResultUuid(childUuid, null, LOAD_FLOW);
+            nodeRepository.updateComputationResultUuid(childUuid, null, SECURITY_ANALYSIS);
+            nodeRepository.updateComputationResultUuid(childUuid, null, SENSITIVITY_ANALYSIS);
+            nodeRepository.updateComputationResultUuid(childUuid, null, NON_EVACUATED_ENERGY_ANALYSIS);
+            nodeRepository.updateComputationResultUuid(childUuid, null, SHORT_CIRCUIT);
+            nodeRepository.updateComputationResultUuid(childUuid, null, SHORT_CIRCUIT_ONE_BUS);
+            if (deleteVoltageInitResults) {
+                nodeRepository.updateComputationResultUuid(childUuid, null, VOLTAGE_INITIALIZATION);
+            }
         }
     }
 

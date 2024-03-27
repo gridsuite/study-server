@@ -17,6 +17,7 @@ import org.gridsuite.study.server.dto.BasicStudyInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.CaseService;
+import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkConversionService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.utils.SendInput;
@@ -91,10 +92,12 @@ public class StudyServiceTest {
     private static final long TIMEOUT = 1000;
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
+    private static final String CASE_FORMAT_PARAM = "caseFormat";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
     private static final String USER_ID_HEADER = "userId";
     private static final String HEADER_UPDATE_TYPE = "updateType";
+    private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
 
     @Autowired
     private StudyRepository studyRepository;
@@ -104,6 +107,9 @@ public class StudyServiceTest {
 
     @MockBean
     private NetworkStoreService networkStoreService;
+
+    @MockBean
+    private LoadFlowService loadFlowService;
 
     @Before
     public void setup() throws IOException {
@@ -148,6 +154,7 @@ public class StudyServiceTest {
 
         mockMvc.perform(head("/v1/studies/{studyUuid}/network", studyUuid)
                 .header(USER_ID_HEADER, userId))
+
             .andExpect(status().isNoContent());
     }
 
@@ -267,7 +274,11 @@ public class StudyServiceTest {
 
         UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(caseUuid.toString());
 
-        MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid).header("userId", userId))
+        when(loadFlowService.createDefaultLoadFlowParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
+
+        MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
+                        .header("userId", userId)
+                        .param(CASE_FORMAT_PARAM, "UCTE"))
             .andExpect(status().isOk())
             .andReturn();
         String resultAsString = result.getResponse().getContentAsString();

@@ -52,6 +52,9 @@ public class NotificationService {
     public static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT = "sensitivityAnalysisResult";
     public static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS = "sensitivityAnalysis_status";
     public static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED = "sensitivityAnalysis_failed";
+    public static final String UPDATE_TYPE_NON_EVACUATED_ENERGY_RESULT = "nonEvacuatedEnergyResult";
+    public static final String UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS = "nonEvacuatedEnergy_status";
+    public static final String UPDATE_TYPE_NON_EVACUATED_ENERGY_FAILED = "nonEvacuatedEnergy_failed";
     public static final String UPDATE_TYPE_SHORT_CIRCUIT_RESULT = "shortCircuitAnalysisResult";
     public static final String UPDATE_TYPE_SHORT_CIRCUIT_STATUS = "shortCircuitAnalysis_status";
     public static final String UPDATE_TYPE_SHORT_CIRCUIT_FAILED = "shortCircuitAnalysis_failed";
@@ -211,13 +214,14 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitNodeMoved(UUID studyUuid, UUID parentNode, UUID nodeMoved, InsertMode insertMode) {
+    public void emitNodeMoved(UUID studyUuid, UUID parentNode, UUID nodeMoved, InsertMode insertMode, UUID referenceNodeUuid) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_UPDATE_TYPE, NODE_MOVED)
                 .setHeader(HEADER_PARENT_NODE, parentNode)
                 .setHeader(HEADER_MOVED_NODE, nodeMoved)
                 .setHeader(HEADER_INSERT_MODE, insertMode.name())
+                .setHeader(HEADER_REFERENCE_NODE_UUID, referenceNodeUuid)
                 .build()
         );
     }

@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import lombok.NonNull;
 
 import java.util.List;
 import java.util.Map;
@@ -129,19 +130,12 @@ public class WireMockUtils {
         verifyGetRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + infoTypePath + DELIMITER + equipmentId, Map.of());
     }
 
-    public UUID stubNetworkModificationGet() {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + "/.*/network-modifications"))
-            .withQueryParam("errorOnGroupNotFound", WireMock.equalTo("false"))
-            .withQueryParam("onlyStashed", WireMock.equalTo("false"))
-            .willReturn(WireMock.ok())
-        ).getId();
-    }
-
-    public UUID stubNetworkModificationGet(String groupUuid, String result) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications"))
-            .withQueryParam("errorOnGroupNotFound", WireMock.equalTo("false"))
-            .withQueryParam(QUERY_PARAM_ONLY_STASHED, WireMock.equalTo("false"))
-            .willReturn(WireMock.ok().withBody(result))
+    public UUID stubNetworkModificationCountGet(String groupUuid, Integer expectedCount) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications-count"))
+            .withQueryParam(QUERY_PARAM_STASHED, WireMock.equalTo("false"))
+            .willReturn(WireMock.ok()
+                .withHeader("Content-Type", "application/json; charset=utf-8")
+                .withBody(String.valueOf(expectedCount)))
         ).getId();
     }
 
@@ -205,8 +199,8 @@ public class WireMockUtils {
         ).getId();
     }
 
-    public void verifyNetworkModificationsGet(UUID stubId, String groupUuid) {
-        verifyGetRequest(stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications", Map.of("errorOnGroupNotFound", WireMock.equalTo("false")));
+    public void verifyNetworkModificationCountsGet(UUID stubId, String groupUuid) {
+        verifyGetRequest(stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications-count", Map.of(QUERY_PARAM_STASHED, WireMock.equalTo("false")));
     }
 
     public void verifyNetworkModificationPost(UUID stubId, String requestBody, String networkUuid) {
@@ -359,15 +353,69 @@ public class WireMockUtils {
         verifyPutRequest(stubUuid, "/v1/cases/" + caseUuid + "/disableExpiration", false, Map.of(), null);
     }
 
-    public UUID stubActuatorHealthGet(String jsonResponse) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/actuator/health"))
-                .willReturn(WireMock.ok().withBody(jsonResponse))
+    public void verifyActuatorHealth(@NonNull final String serviceName, final UUID stubUuid, final int nbServer) {
+        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/" + serviceName + "/actuator/health"));
+        wireMock.verify(nbServer, requestBuilder);
+        removeRequestForStub(stubUuid, nbServer);
+    }
+
+    public UUID stubCountriesGet(String networkUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/countries"))
+                .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
 
-    public void verifyActuatorHealth(UUID stubUuid, int nbServer) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/actuator/health"));
-        wireMock.verify(nbServer, requestBuilder);
-        removeRequestForStub(stubUuid, nbServer);
+    public UUID stubCountriesGetNotFoundError(String networkUuid) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/countries"))
+                .willReturn(WireMock.notFound().withBody("Network not found"))
+        ).getId();
+    }
+
+    public UUID stubCountriesGetError(String networkUuid) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/countries"))
+                .willReturn(WireMock.serverError().withBody("Internal Server Error"))
+        ).getId();
+    }
+
+    public void verifyCountriesGet(UUID stubUuid, String networkUuid) {
+        verifyGetRequest(stubUuid, "/v1/networks/" + networkUuid + "/countries", Map.of());
+    }
+
+    public UUID stubFilterEvaluate(String networkUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate"))
+                .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
+                .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
+    public UUID stubFilterEvaluateNotFoundError(String networkUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate"))
+                .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
+                .willReturn(WireMock.notFound().withBody("Network not found"))
+        ).getId();
+    }
+
+    public UUID stubFilterEvaluateError(String networkUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate"))
+                .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
+                .willReturn(WireMock.serverError().withBody("Internal Server Error"))
+        ).getId();
+    }
+
+    public void verifyFilterEvaluate(UUID stubUuid, String networkUuid) {
+        verifyPostRequest(stubUuid, "/v1/filters/evaluate",
+                Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid)));
+    }
+
+    public UUID stubFilterExport(String networkUuid, String filterUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/filters/" + filterUuid + "/export"))
+                .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
+                .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
+    public void verifyFilterExport(UUID stubUuid, String filterUuid, String networkUuid) {
+        verifyGetRequest(stubUuid, "/v1/filters/" + filterUuid + "/export",
+                Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid)));
     }
 }

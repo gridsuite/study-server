@@ -7,16 +7,15 @@
 
 package org.gridsuite.study.server.service.client.dynamicsimulation.impl;
 
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
-import org.gridsuite.study.server.service.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -27,6 +26,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_NOT_FOUND;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 
 /**
@@ -42,7 +42,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     @Override
-    public UUID run(String provider, String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters) {
+    public UUID run(String provider, String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters, String userId) {
         Objects.requireNonNull(networkUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
 
@@ -59,8 +59,13 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         var uriComponent = uriComponentsBuilder
                 .buildAndExpand(networkUuid);
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
         // call dynamic-simulation REST API
-        return getRestTemplate().postForObject(uriComponent.toUriString(), parameters, UUID.class);
+        HttpEntity<DynamicSimulationParametersInfos> httpEntity = new HttpEntity<>(parameters, headers);
+        return getRestTemplate().postForObject(uriComponent.toUriString(), httpEntity, UUID.class);
     }
 
     @Override
@@ -85,7 +90,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     @Override
-    public UUID getTimeLineResult(UUID resultUuid) {
+    public UUID getTimelineResult(UUID resultUuid) {
         Objects.requireNonNull(resultUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 

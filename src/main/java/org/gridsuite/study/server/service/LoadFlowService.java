@@ -9,16 +9,15 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.iidm.network.Country;
-import com.powsybl.loadflow.LoadFlowParameters;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
-import org.gridsuite.study.server.repository.LoadFlowSpecificParameterEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -28,12 +27,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -47,6 +41,8 @@ public class LoadFlowService {
 
     static final String RESULT_UUID = "resultUuid";
     static final String RESULTS_UUIDS = "resultsUuids";
+    private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
+
     private String loadFlowServerBaseUri;
 
     NotificationService notificationService;
@@ -60,10 +56,10 @@ public class LoadFlowService {
 
     @Autowired
     public LoadFlowService(RemoteServicesProperties remoteServicesProperties,
-            NetworkModificationTreeService networkModificationTreeService,
-            NetworkService networkStoreService, ObjectMapper objectMapper,
-            NotificationService notificationService,
-            RestTemplate restTemplate) {
+                           NetworkModificationTreeService networkModificationTreeService,
+                           NetworkService networkStoreService, ObjectMapper objectMapper,
+                           NotificationService notificationService,
+                           RestTemplate restTemplate) {
         this.loadFlowServerBaseUri = remoteServicesProperties.getServiceUri("loadflow-server");
         this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -72,7 +68,7 @@ public class LoadFlowService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, LoadFlowParametersInfos loadflowParameters, String provider, String userId, Float limitReduction) {
+    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID parametersUuid, String userId, Float limitReduction) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
         UUID reportUuid = getReportUuid(nodeUuid);
@@ -87,10 +83,11 @@ public class LoadFlowService {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
-                .queryParam("reportUuid", reportUuid.toString())
-                .queryParam("reporterId", nodeUuid.toString());
-        if (!provider.isEmpty()) {
-            uriComponentsBuilder.queryParam("provider", provider);
+                .queryParam(QUERY_PARAM_REPORT_UUID, reportUuid.toString())
+                .queryParam(QUERY_PARAM_REPORTER_ID, nodeUuid.toString())
+                .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.LOADFLOW.reportKey);
+        if (parametersUuid != null) {
+            uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
         }
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
@@ -104,9 +101,7 @@ public class LoadFlowService {
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<LoadFlowParametersInfos> httpEntity = new HttpEntity<>(loadflowParameters, headers);
-
-        return restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
     }
 
     public void deleteLoadFlowResult(UUID uuid) {
@@ -115,15 +110,6 @@ public class LoadFlowService {
                 .toUriString();
 
         restTemplate.delete(loadFlowServerBaseUri + path);
-    }
-
-    public void deleteLoadFlowResults(List<UUID> uuids) {
-        if (!uuids.isEmpty()) {
-            String path = UriComponentsBuilder
-                    .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results")
-                    .queryParam(RESULTS_UUIDS, uuids).build().toUriString();
-            restTemplate.delete(loadFlowServerBaseUri + path, Void.class);
-        }
     }
 
     public void deleteLoadFlowResults() {
@@ -143,16 +129,23 @@ public class LoadFlowService {
         return restTemplate.getForObject(loadFlowServerBaseUri + path, Integer.class);
     }
 
-    public String getLoadFlowResultOrStatus(UUID nodeUuid, String suffix) {
+    public String getLoadFlowResultOrStatus(UUID nodeUuid, String filters, Sort sort, String suffix) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getLoadFlowResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
 
         if (resultUuidOpt.isEmpty()) {
             return null;
         }
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}" + suffix)
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}" + suffix);
+        if (!StringUtils.isEmpty(filters)) {
+            uriComponentsBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+        }
+        if (sort != null) {
+            sort.forEach(order -> uriComponentsBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection()));
+        }
+        String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+
         try {
             result = restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
@@ -164,19 +157,19 @@ public class LoadFlowService {
         return result;
     }
 
-    public String getLoadFlowResult(UUID nodeUuid) {
-        return getLoadFlowResultOrStatus(nodeUuid, "");
+    public String getLoadFlowResult(UUID nodeUuid, String filters, Sort sort) {
+        return getLoadFlowResultOrStatus(nodeUuid, filters, sort, "");
     }
 
     public String getLoadFlowStatus(UUID nodeUuid) {
-        return getLoadFlowResultOrStatus(nodeUuid, "/status");
+        return getLoadFlowResultOrStatus(nodeUuid, null, null, "/status");
     }
 
     public void stopLoadFlow(UUID studyUuid, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getLoadFlowResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
         if (resultUuidOpt.isEmpty()) {
             return;
         }
@@ -212,48 +205,6 @@ public class LoadFlowService {
         return networkModificationTreeService.getReportUuid(nodeUuid);
     }
 
-    public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters, List<LoadFlowSpecificParameterInfos> allLoadFlowSpecificParameters) {
-        Objects.requireNonNull(parameters);
-        return new LoadFlowParametersEntity(parameters.getVoltageInitMode(),
-                parameters.isTransformerVoltageControlOn(),
-                parameters.isUseReactiveLimits(),
-                parameters.isPhaseShifterRegulationOn(),
-                parameters.isTwtSplitShuntAdmittance(),
-                parameters.isShuntCompensatorVoltageControlOn(),
-                parameters.isReadSlackBus(),
-                parameters.isWriteSlackBus(),
-                parameters.isDc(),
-                parameters.isDistributedSlack(),
-                parameters.getBalanceType(),
-                parameters.isDcUseTransformerRatio(),
-                parameters.getCountriesToBalance().stream().map(Country::toString).collect(Collectors.toSet()),
-                parameters.getConnectedComponentMode(),
-                parameters.isHvdcAcEmulation(),
-                parameters.getDcPowerFactor(),
-                LoadFlowSpecificParameterEntity.toLoadFlowSpecificParameters(allLoadFlowSpecificParameters));
-    }
-
-    public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
-        Objects.requireNonNull(entity);
-        return LoadFlowParameters.load()
-                .setVoltageInitMode(entity.getVoltageInitMode())
-                .setTransformerVoltageControlOn(entity.isTransformerVoltageControlOn())
-                .setUseReactiveLimits(entity.isUseReactiveLimits())
-                .setPhaseShifterRegulationOn(entity.isPhaseShifterRegulationOn())
-                .setTwtSplitShuntAdmittance(entity.isTwtSplitShuntAdmittance())
-                .setShuntCompensatorVoltageControlOn(entity.isShuntCompensatorVoltageControlOn())
-                .setReadSlackBus(entity.isReadSlackBus())
-                .setWriteSlackBus(entity.isWriteSlackBus())
-                .setDc(entity.isDc())
-                .setDistributedSlack(entity.isDistributedSlack())
-                .setBalanceType(entity.getBalanceType())
-                .setDcUseTransformerRatio(entity.isDcUseTransformerRatio())
-                .setCountriesToBalance(entity.getCountriesToBalance().stream().map(Country::valueOf).collect(Collectors.toSet()))
-                .setConnectedComponentMode(entity.getConnectedComponentMode())
-                .setHvdcAcEmulation(entity.isHvdcAcEmulation())
-                .setDcPowerFactor(entity.getDcPowerFactor());
-    }
-
     public void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
     }
@@ -265,15 +216,22 @@ public class LoadFlowService {
         }
     }
 
-    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid) {
+    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid, String filters, Sort sort) {
         List<LimitViolationInfos> result = new ArrayList<>();
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getLoadFlowResultUuid(nodeUuid);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
 
         if (resultUuidOpt.isPresent()) {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations")
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations");
+            if (filters != null && !filters.isEmpty()) {
+                uriComponentsBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+            }
+            if (sort != null) {
+                sort.forEach(order -> uriComponentsBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection()));
+            }
+            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
             try {
-                var responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() { });
+                ResponseEntity<List<LimitViolationInfos>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() {
+                });
                 result = responseEntity.getBody();
             } catch (HttpStatusCodeException e) {
                 if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
@@ -283,5 +241,142 @@ public class LoadFlowService {
             }
         }
         return result;
+    }
+
+    public LoadFlowParametersInfos getLoadFlowParameters(UUID parametersUuid) {
+
+        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
+            .buildAndExpand(parametersUuid).toUriString();
+        try {
+            return restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowParametersInfos.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(LOADFLOW_PARAMETERS_NOT_FOUND);
+            }
+            throw handleHttpError(e, GET_LOADFLOW_PARAMETERS_FAILED);
+        }
+    }
+
+    public UUID createLoadFlowParameters(String parameters) {
+
+        Objects.requireNonNull(parameters);
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters")
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+
+        try {
+            return restTemplate.postForObject(loadFlowServerBaseUri + path, httpEntity, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_LOADFLOW_PARAMETERS_FAILED);
+        }
+    }
+
+    public UUID duplicateLoadFlowParameters(UUID sourceParametersUuid) {
+
+        Objects.requireNonNull(sourceParametersUuid);
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
+                .buildAndExpand(sourceParametersUuid).toUriString();
+
+        try {
+            return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_LOADFLOW_PARAMETERS_FAILED);
+        }
+    }
+
+    public void updateLoadFlowParameters(UUID parametersUuid, String parameters) {
+
+        Objects.requireNonNull(parameters);
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
+                .buildAndExpand(parametersUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+
+        try {
+            restTemplate.put(loadFlowServerBaseUri + path, httpEntity);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_LOADFLOW_PARAMETERS_FAILED);
+        }
+    }
+
+    public void deleteLoadFlowParameters(UUID uuid) {
+        Objects.requireNonNull(uuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
+                .buildAndExpand(uuid)
+                .toUriString();
+
+        try {
+            restTemplate.delete(loadFlowServerBaseUri + path);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, DELETE_LOADFLOW_PARAMETERS_FAILED);
+        }
+    }
+
+    public void updateLoadFlowProvider(UUID parameterUuid, String provider) {
+        Objects.requireNonNull(provider);
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI + "/provider")
+                .buildAndExpand(parameterUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(provider, headers);
+
+        try {
+            restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PATCH, httpEntity, Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_LOADFLOW_PROVIDER_FAILED);
+        }
+    }
+
+    public String getLoadFlowDefaultProvider() {
+        String path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/default-provider")
+                .buildAndExpand()
+                .toUriString();
+
+        try {
+            return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, GET_LOADFLOW_DEFAULT_PROVIDER_FAILED);
+        }
+    }
+
+    public UUID createDefaultLoadFlowParameters() {
+
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/default")
+                .buildAndExpand()
+                .toUriString();
+
+        try {
+            return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_LOADFLOW_PARAMETERS_FAILED);
+        }
+    }
+
+    public UUID getLoadFlowParametersOrDefaultsUuid(StudyEntity studyEntity) {
+        if (studyEntity.getLoadFlowParametersUuid() == null) {
+            studyEntity.setLoadFlowParametersUuid(createDefaultLoadFlowParameters());
+        }
+        return studyEntity.getLoadFlowParametersUuid();
     }
 }

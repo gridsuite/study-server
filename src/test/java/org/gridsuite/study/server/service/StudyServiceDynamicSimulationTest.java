@@ -9,15 +9,19 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.timeseries.*;
+import com.powsybl.timeseries.DoubleTimeSeries;
+import com.powsybl.timeseries.IrregularTimeSeriesIndex;
+import com.powsybl.timeseries.TimeSeries;
+import com.powsybl.timeseries.TimeSeriesIndex;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -30,8 +34,9 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.*;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
-import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
@@ -104,9 +109,9 @@ public class StudyServiceDynamicSimulationTest {
 
         // setup NetworkModificationTreeService mock
         // suppose always having an existing result in a previous run
-        given(networkModificationTreeService.getDynamicSimulationResultUuid(any(UUID.class))).willReturn(Optional.of(RESULT_UUID));
+        given(networkModificationTreeService.getComputationResultUuid(any(UUID.class), eq(DYNAMIC_SIMULATION))).willReturn(Optional.of(RESULT_UUID));
         given(networkModificationTreeService.getVariantId(any(UUID.class))).willReturn(VARIANT_1_ID);
-        willDoNothing().given(networkModificationTreeService).updateDynamicSimulationResultUuid(NODE_UUID, RESULT_UUID);
+        willDoNothing().given(networkModificationTreeService).updateComputationResultUuid(NODE_UUID, RESULT_UUID, DYNAMIC_SIMULATION);
 
         // setup NotificationService mock
         willDoNothing().given(notificationService).emitStudyChanged(STUDY_UUID, NODE_UUID, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
@@ -115,7 +120,7 @@ public class StudyServiceDynamicSimulationTest {
     @Test
     public void testRunDynamicSimulation() {
         // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(eq(""), anyString(), eq(NETWORK_UUID), anyString(), any())).willReturn(RESULT_UUID);
+        given(dynamicSimulationService.runDynamicSimulation(eq(""), anyString(), eq(NETWORK_UUID), anyString(), any(), any())).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
         given(loadFlowService.getLoadFlowStatus(NODE_UUID)).willReturn(LoadFlowStatus.CONVERGED.name());
 
@@ -126,10 +131,10 @@ public class StudyServiceDynamicSimulationTest {
         parameters.setMapping(MAPPING_NAME_01);
 
         // call method to be tested
-        UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, parameters);
+        UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, parameters, "testUserId");
 
         // check result
-        assertEquals(RESULT_UUID_STRING, resultUuid.toString());
+        assertThat(resultUuid).hasToString(RESULT_UUID_STRING);
     }
 
     @Test
@@ -151,30 +156,28 @@ public class StudyServiceDynamicSimulationTest {
         String timeSeriesExpectedJson = TimeSeries.toJson(timeSeries);
         getLogger().info("Time series expected in Json = " + timeSeriesExpectedJson);
         getLogger().info("Time series result in Json = " + timeSeriesResultJson);
-        assertEquals(objectMapper.readTree(timeSeriesExpectedJson), objectMapper.readTree(timeSeriesResultJson));
+        assertThat(objectMapper.readTree(timeSeriesResultJson)).isEqualTo(objectMapper.readTree(timeSeriesExpectedJson));
     }
 
     @Test
-    public void testGetDynamicSimulationTimeLine() throws JsonProcessingException {
+    public void testGetDynamicSimulationTimeLine() {
         // setup
         // timeline
-        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        StringTimeSeries timeLine = TimeSeries.createString("TimeLine", index,
-                "CLA_2_5 - CLA : order to change topology",
-                "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
-                "CLA_2_5 - CLA : order to change topology",
-                "CLA_2_4 - CLA : arming by over-current constraint");
+        List<TimelineEventInfos> timelineEventInfosList = List.of(
+                new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
+                new TimelineEventInfos(102479, "_BUS____2-BUS____5-1_AC", "LINE : opening both sides"),
+                new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
+                new TimelineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
+        );
 
-        given(dynamicSimulationService.getTimeLineResult(NODE_UUID)).willReturn(Arrays.asList(timeLine));
+        given(dynamicSimulationService.getTimelineResult(NODE_UUID)).willReturn(timelineEventInfosList);
 
         // call method to be tested
-        String timeLineResultJson = TimeSeries.toJson(studyService.getDynamicSimulationTimeLine(NODE_UUID));
+        List<TimelineEventInfos> timelineEventInfosListResult = studyService.getDynamicSimulationTimeline(NODE_UUID);
 
         // --- check result --- //
-        String timeLineExpectedJson = TimeSeries.toJson(Arrays.asList(timeLine));
-        getLogger().info("Time line expected in Json = " + timeLineExpectedJson);
-        getLogger().info("Time line result in Json = " + timeLineResultJson);
-        assertEquals(objectMapper.readTree(timeLineExpectedJson), objectMapper.readTree(timeLineResultJson));
+        // must contain 4 timeline events
+        assertThat(timelineEventInfosListResult).hasSize(4);
     }
 
     @Test
@@ -188,7 +191,7 @@ public class StudyServiceDynamicSimulationTest {
         // --- check result --- //
         getLogger().info("Status expected = " + DynamicSimulationStatus.CONVERGED.name());
         getLogger().info("Status result = " + status);
-        assertEquals(DynamicSimulationStatus.CONVERGED, status);
+        assertThat(status).isEqualTo(DynamicSimulationStatus.CONVERGED);
     }
 
     @Test
@@ -203,6 +206,6 @@ public class StudyServiceDynamicSimulationTest {
         // must return 2 mappings
         getLogger().info("Mapping infos expected in Json = " + objectMapper.writeValueAsString(MAPPINGS));
         getLogger().info("Mapping infos result in Json = " + objectMapper.writeValueAsString(mappingInfos));
-        assertEquals(MAPPINGS.size(), mappingInfos.size());
+        assertThat(mappingInfos).hasSameSizeAs(MAPPINGS);
     }
 }

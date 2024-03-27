@@ -6,7 +6,15 @@ spring:
 
   cloud:
     function:
-      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeDsResult;consumeDsStopped;consumeDsFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed;consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed
+      definition: "consumeSaResult;consumeSaStopped;consumeSaFailed;\
+      consumeDsResult;consumeDsStopped;consumeDsFailed;\
+      consumeBuildResult;consumeBuildStopped;consumeBuildFailed;\
+      consumeCaseImportSucceeded;consumeCaseImportFailed;\
+      consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;\
+      consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;\
+      consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;\
+      consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed;\
+      consumeNonEvacuatedEnergyResult;consumeNonEvacuatedEnergyStopped;consumeNonEvacuatedEnergyFailed"
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -58,6 +66,15 @@ spring:
         consumeSensitivityAnalysisFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.failed
           group: studySensitivityAnalysisFailedGroup
+        consumeNonEvacuatedEnergyResult-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.result
+          group: studyNonEvacuatedEnergyResultGroup
+        consumeNonEvacuatedEnergyStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.stopped
+          group: studyNonEvacuatedEnergyStoppedGroup
+        consumeNonEvacuatedEnergyFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.failed
+          group: studyNonEvacuatedEnergyFailedGroup
         consumeShortCircuitAnalysisResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.result
           group: studyShortCircuitAnalysisResultGroup
@@ -93,15 +110,7 @@ powsybl-ws:
   database:
     name: study
 
-
-# default values for loadflow providers "Hades2" or "OpenLoadFlow"
-loadflow:
-  default-provider: OpenLoadFlow
-
-security-analysis:
-  default-provider: OpenLoadFlow
-
-sensitivity-analysis:
+non-evacuated-energy:
   default-provider: OpenLoadFlow
 
 dynamic-simulation:
@@ -151,3 +160,6 @@ gridsuite:
     -
       name: voltage-init-server
       base-uri: http://voltage-init-server/
+    -
+      name: filter-server
+      base-uri: http://filter-server/

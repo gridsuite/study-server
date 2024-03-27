@@ -7,13 +7,17 @@
 package org.gridsuite.study.server.utils;
 
 import com.powsybl.iidm.network.IdentifiableType;
+
+import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
+import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
+import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact;
+import org.gridsuite.study.server.dto.impacts.CollectionElementImpact;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
-import org.gridsuite.study.server.dto.modification.SimpleElementImpact;
-import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -23,27 +27,28 @@ public final class ImpactUtils {
     private ImpactUtils() {
     }
 
-    public static Optional<NetworkModificationResult> createModificationResultWithElementImpact(SimpleImpactType impactType, IdentifiableType elementType, String elementId, Set<String> substationIds) {
+    public static Optional<NetworkModificationResult> createModificationResultWithElementImpact(SimpleImpactType type, IdentifiableType elementType, String elementId, Set<String> substationIds) {
         return Optional.of(NetworkModificationResult.builder()
-            .networkImpacts(List.of(createElementImpact(impactType, elementType, elementId, substationIds)))
+            .networkImpacts(createSubstationImpacts(substationIds))
             .build());
     }
 
-    public static Optional<NetworkModificationResult> createModificationResultWithElementImpact(SimpleElementImpact impact) {
-        return Optional.of(NetworkModificationResult.builder()
-            .networkImpacts(List.of(impact))
-            .build());
+    public static List<AbstractBaseImpact> createSubstationImpacts(Set<String> substationIds) {
+        return substationIds.stream().map(id -> createElementImpact(SimpleImpactType.MODIFICATION, IdentifiableType.SUBSTATION, id, Set.of(id)))
+                                    .collect(Collectors.toList());
     }
 
-    public static SimpleElementImpact createCreationImpactType(IdentifiableType elementType, String elementId, Set<String> substationIds) {
-        return createElementImpact(SimpleImpactType.CREATION, elementType, elementId, substationIds);
-    }
-
-    public static SimpleElementImpact createElementImpact(SimpleImpactType impactType, IdentifiableType elementType, String elementId, Set<String> substationIds) {
+    public static SimpleElementImpact createElementImpact(SimpleImpactType type, IdentifiableType elementType, String elementId, Set<String> substationIds) {
         return SimpleElementImpact.builder()
-            .impactType(impactType)
+            .simpleImpactType(type)
             .elementType(elementType)
             .elementId(elementId)
             .substationIds(substationIds).build();
+    }
+
+    public static CollectionElementImpact createCollectionElementImpact(IdentifiableType elementType) {
+        return CollectionElementImpact.builder()
+            .elementType(elementType)
+            .build();
     }
 }
