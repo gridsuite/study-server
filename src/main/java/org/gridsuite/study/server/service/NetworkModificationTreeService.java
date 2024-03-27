@@ -69,10 +69,10 @@ public class NetworkModificationTreeService {
     ) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
+        this.networkModificationService = networkModificationService;
+        this.notificationService = notificationService;
         repositories.put(NodeType.ROOT, new RootNodeInfoRepositoryProxy(rootNodeInfoRepository));
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
-        this.notificationService = notificationService;
-        this.networkModificationService = networkModificationService;
         this.self = networkModificationTreeService;
     }
 
@@ -678,6 +678,19 @@ public class NetworkModificationTreeService {
                 uuids.add(uuid);
             }
         });
+        return uuids;
+    }
+
+    private void getSecurityAnalysisResultUuids(UUID nodeUuid, List<UUID> uuids) {
+        nodesRepository.findById(nodeUuid).flatMap(n -> Optional.ofNullable(repositories.get(n.getType()).getComputationResultUuid(nodeUuid, SECURITY_ANALYSIS))).ifPresent(uuids::add);
+        nodesRepository.findAllByParentNodeIdNode(nodeUuid)
+            .forEach(child -> getSecurityAnalysisResultUuids(child.getIdNode(), uuids));
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getSecurityAnalysisResultUuidsFromNode(UUID nodeUuid) {
+        List<UUID> uuids = new ArrayList<>();
+        getSecurityAnalysisResultUuids(nodeUuid, uuids);
         return uuids;
     }
 
