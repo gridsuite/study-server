@@ -24,7 +24,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper = false)
+@EqualsAndHashCode(callSuper = true)
 public class RootNode extends AbstractNode {
     UUID studyId;
 
