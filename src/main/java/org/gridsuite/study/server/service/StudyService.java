@@ -117,10 +117,6 @@ public class StudyService {
 
     private final ObjectMapper objectMapper;
 
-    public enum ComputationUsingLoadFlow {
-        LOAD_FLOW, SECURITY_ANALYSIS, SENSITIVITY_ANALYSIS, NON_EVACUATED_ENERGY_ANALYSIS
-    }
-
     public enum ReportNameMatchingType {
         EXACT_MATCHING, ENDS_WITH
     }
@@ -436,8 +432,7 @@ public class StudyService {
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
                         studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid())),
-                        studyServerExecutionService.runAsync(deleteStudyInfos.getCaseUuid() != null ? () -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()) : () -> {
-                        })
+                        studyServerExecutionService.runAsync(() -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()))
                 );
 
                 executeInParallel.get();
@@ -445,11 +440,10 @@ public class StudyService {
                     LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                 }
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
         } catch (Exception e) {
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-            LOGGER.error(e.toString(), e);
             throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
         }
     }
@@ -1257,11 +1251,10 @@ public class StudyService {
         );
         try {
             executeInParallel.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new StudyException(INVALIDATE_BUILD_FAILED, e.getMessage());
         } catch (Exception e) {
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-            LOGGER.error(e.toString(), e);
             throw new StudyException(INVALIDATE_BUILD_FAILED, e.getMessage());
         }
 
@@ -1384,17 +1377,18 @@ public class StudyService {
 
             try {
                 executeInParallel.get();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
             } catch (Exception e) {
-                if (e instanceof InterruptedException) {
-                    Thread.currentThread().interrupt();
-                }
-                LOGGER.error(e.toString(), e);
                 throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
             }
 
             if (startTime.get() != null) {
-                LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
-                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
+                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                }
             }
 
             if (invalidateChildrenBuild) {
