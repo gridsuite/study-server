@@ -42,18 +42,18 @@ public class ReportService {
 
     private String reportServerBaseUri;
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     @Autowired
-    public ReportService(
-                         ObjectMapper objectMapper,
-                         RemoteServicesProperties remoteServicesProperties) {
+    public ReportService(ObjectMapper objectMapper,
+                         RemoteServicesProperties remoteServicesProperties,
+                         RestTemplate restTemplate) {
         this.reportServerBaseUri = remoteServicesProperties.getServiceUri("report-server");
         ReporterModelJsonModule reporterModelJsonModule = new ReporterModelJsonModule();
         reporterModelJsonModule.setSerializers(null); // FIXME: remove when dicos will be used on the front side
         objectMapper.registerModule(reporterModelJsonModule);
         objectMapper.setInjectableValues(new InjectableValues.Std().addValue(ReporterModelDeserializer.DICTIONARY_VALUE_ID, null)); //FIXME : remove with powsyble core
+        this.restTemplate = restTemplate;
     }
 
     public void setReportServerBaseUri(String reportServerBaseUri) {

@@ -50,7 +50,9 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
         // call dynamic-mapping REST API
         try {
             var responseEntity = getRestTemplate().exchange(uriBuilder.toUriString(), HttpMethod.GET, null, new ParameterizedTypeReference<List<MappingInfos>>() { });
-            logger.debug(MessageFormat.format("dynamic-mapping REST API called succesfully {0}", uriBuilder.toUriString()));
+            if (logger.isDebugEnabled()) {
+                logger.debug(MessageFormat.format("dynamic-mapping REST API called succesfully {0}", uriBuilder.toUriString()));
+            }
             return responseEntity.getBody();
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
@@ -75,7 +77,9 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
         // call dynamic-mapping REST API
         try {
             var responseEntity = getRestTemplate().exchange(uriComponent.toUriString(), HttpMethod.GET, null, new ParameterizedTypeReference<List<ModelInfos>>() { });
-            logger.debug(MessageFormat.format("dynamic-mapping REST API called succesfully {0}", uriComponent.toUriString()));
+            if (logger.isDebugEnabled()) {
+                logger.debug(MessageFormat.format("dynamic-mapping REST API called succesfully {0}", uriComponent.toUriString()));
+            }
             return responseEntity.getBody();
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
