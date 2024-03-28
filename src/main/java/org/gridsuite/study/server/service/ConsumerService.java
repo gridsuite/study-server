@@ -33,6 +33,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -321,21 +322,13 @@ public class ConsumerService {
     }
 
     public void consumeCalculationResult(Message<String> msg, ComputationType computationType) {
-        UUID resultUuid = null;
-        String resultId = msg.getHeaders().get(RESULT_UUID, String.class);
-        if (resultId != null) {
-            resultUuid = UUID.fromString(resultId);
-        }
-        String receiver = msg.getHeaders().get(HEADER_RECEIVER, String.class);
-        if (!Strings.isBlank(receiver)) {
-            NodeReceiver receiverObj;
-            try {
-                receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
+        Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
+            .map(UUID::fromString)
+            .ifPresent(resultUuid -> getNodeReceiver(msg).ifPresent(receiverObj -> {
                 LOGGER.info("{} result '{}' available for node '{}'",
-                        computationType.getLabel(),
-                        resultUuid,
-                        receiverObj.getNodeUuid());
+                    computationType.getLabel(),
+                    resultUuid,
+                    receiverObj.getNodeUuid());
 
                 // update DB
                 networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, computationType);
@@ -344,10 +337,25 @@ public class ConsumerService {
                 // send notifications
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateStatusType());
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateResultType());
-            } catch (JsonProcessingException e) {
-                LOGGER.error(e.toString());
-            }
+            }));
+    }
+
+    Optional<NodeReceiver> getNodeReceiver(Message<String> msg) {
+        String receiver = msg.getHeaders().get(HEADER_RECEIVER, String.class);
+        if (Strings.isBlank(receiver)) {
+            return Optional.empty();
         }
+        try {
+            return Optional.of(objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class));
+        } catch (JsonProcessingException e) {
+            LOGGER.error(e.toString());
+            return Optional.empty();
+        }
+    }
+
+    Optional<UUID> getStudyUuid(Message<String> msg) {
+        Optional<NodeReceiver> receiverObj = getNodeReceiver(msg);
+        return receiverObj.map(r -> networkModificationTreeService.getStudyUuidForNodeId(r.getNodeUuid()));
     }
 
     @Bean
@@ -452,11 +460,6 @@ public class ConsumerService {
                 consumeCalculationFailed(message, SHORT_CIRCUIT);
             }
         };
-    }
-
-    @Bean
-    public Consumer<Message<String>> consumeVoltageInitResult() {
-        return message -> consumeCalculationResult(message, VOLTAGE_INITIALIZATION);
     }
 
     @Bean
