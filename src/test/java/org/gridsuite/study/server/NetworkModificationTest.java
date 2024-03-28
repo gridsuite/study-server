@@ -2434,29 +2434,16 @@ public class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubId, bodyJson, NETWORK_UUID_STRING, VARIANT_ID);
 
-        var requests = TestUtils.getRequestsDone(21, server);
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + LOADFLOW_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + LOADFLOW_RESULT_UUID + "/status")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/status")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/status")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID + "/status")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status")));
+        var requests = TestUtils.getRequestsDone(21, server); // 3 x 7 computations
+        List.of(LOADFLOW_RESULT_UUID, SECURITY_ANALYSIS_RESULT_UUID, SENSITIVITY_ANALYSIS_RESULT_UUID, SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID,
+                SHORTCIRCUIT_ANALYSIS_RESULT_UUID, ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID, VOLTAGE_INIT_RESULT_UUID).forEach(uuid -> {
+                    assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid)));
+                    assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid + "/status")));
+                });
         // requests for computation sub-report deletion
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?reportTypeFilter=LoadFlow")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?reportTypeFilter=SecurityAnalysis")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?reportTypeFilter=SensitivityAnalysis")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?reportTypeFilter=NonEvacuatedEnergyAnalysis")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?reportTypeFilter=AllBusesShortCircuitAnalysis")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?reportTypeFilter=OneBusShortCircuitAnalysis")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?reportTypeFilter=VoltageInit")));
+        List.of("LoadFlow", "SecurityAnalysis", "SensitivityAnalysis", "NonEvacuatedEnergyAnalysis", "AllBusesShortCircuitAnalysis", "OneBusShortCircuitAnalysis", "VoltageInit").forEach(reportType -> {
+            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?errorOnReportNotFound=false&reportTypeFilter=" + reportType)));
+        });
     }
 
     @SneakyThrows

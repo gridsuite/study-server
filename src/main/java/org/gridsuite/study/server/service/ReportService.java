@@ -101,24 +101,18 @@ public class ReportService {
     }
 
     public void deleteReport(@NonNull UUID reportUuid) {
-        var path = UriComponentsBuilder.fromPath("{reportUuid}")
-            .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false)
-            .buildAndExpand(reportUuid)
-            .toUriString();
-        restTemplate.delete(this.getReportsServerURI() + path);
+        deleteReportByType(reportUuid, null);
     }
 
     public void deleteReportByType(UUID reportUuid, StudyService.ReportType reportType) {
         Objects.requireNonNull(reportUuid);
-        Objects.requireNonNull(reportType);
-
-        var path = UriComponentsBuilder.fromPath("{reportUuid}")
-                .queryParam(QUERY_PARAM_REPORT_TYPE_FILTER, reportType.reportKey)
-                .buildAndExpand(reportUuid)
-                .toUriString();
-        var headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
+        var uriBuilder = UriComponentsBuilder.fromPath("{reportUuid}")
+                .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false);
+        if (reportType != null) {
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_TYPE_FILTER, reportType.reportKey);
+        }
+        var path = uriBuilder.buildAndExpand(reportUuid).toUriString();
+        restTemplate.delete(this.getReportsServerURI() + path);
     }
 
     public void deleteTreeReports(@NonNull Map<UUID, String> treeReportsKeys) {
