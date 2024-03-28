@@ -13,6 +13,7 @@ import com.powsybl.commons.PowsyblException;
 import com.powsybl.timeseries.*;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelVariableDefinitionInfos;
@@ -23,6 +24,7 @@ import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesMetadataRest;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
@@ -82,35 +84,25 @@ public class DynamicSimulationServiceTest {
 
     private static final String VARIANT_1_ID = "variant_1";
 
-    private static final String STUDY_UUID_STRING = "00000000-0000-0000-0000-000000000000";
-    private static final UUID STUDY_UUID = UUID.fromString(STUDY_UUID_STRING);
+    private static final UUID STUDY_UUID = UUID.randomUUID();
 
     // converged node
-    private static final String NETWORK_UUID_STRING = "11111111-0000-0000-0000-000000000000";
-    public static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
-
-    private static final String NODE_UUID_STRING = "22222222-0000-0000-0000-000000000000";
-    public static final UUID NODE_UUID = UUID.fromString(NODE_UUID_STRING);
-
-    public static final String RESULT_UUID_STRING = "99999999-0000-0000-0000-000000000000";
-    public static final UUID RESULT_UUID = UUID.fromString(RESULT_UUID_STRING);
-
-    public static final String TIME_SERIES_UUID_STRING = "77777777-0000-0000-0000-000000000000";
-    public static final UUID TIME_SERIES_UUID = UUID.fromString(TIME_SERIES_UUID_STRING);
-
-    public static final String TIME_LINE_UUID_STRING = "88888888-0000-0000-0000-000000000000";
-    public static final UUID TIME_LINE_UUID = UUID.fromString(TIME_LINE_UUID_STRING);
+    public static final UUID NETWORK_UUID = UUID.randomUUID();
+    public static final UUID NODE_UUID = UUID.randomUUID();
+    public static final UUID RESULT_UUID = UUID.randomUUID();
+    public static final UUID TIME_SERIES_UUID = UUID.randomUUID();
+    public static final UUID TIME_LINE_UUID = UUID.randomUUID();
 
     // running node
-    private static final String NODE_UUID_RUNNING_STRING = "22222222-1111-0000-0000-000000000000";
-    public static final UUID NODE_UUID_RUNNING = UUID.fromString(NODE_UUID_RUNNING_STRING);
-
-    public static final String RESULT_UUID_RUNNING_STRING = "99999999-1111-0000-0000-000000000000";
-    public static final UUID RESULT_UUID_RUNNING = UUID.fromString(RESULT_UUID_RUNNING_STRING);
+    public static final UUID NODE_UUID_RUNNING = UUID.randomUUID();
+    public static final UUID RESULT_UUID_RUNNING = UUID.randomUUID();
 
     public static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
     public static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
-    public static final String TIME_LINE_NAME = "TimeLine";
+    public static final String TIMELINE_NAME = "Timeline";
+
+    public static final UUID REPORT_UUID = UUID.randomUUID();
+    public static final String REPORT_ID = NODE_UUID.toString();
 
     @MockBean
     private DynamicMappingClient dynamicMappingClient;
@@ -123,6 +115,9 @@ public class DynamicSimulationServiceTest {
 
     @MockBean
     private NetworkModificationTreeService networkModificationTreeService;
+
+    @MockBean
+    private NetworkService networkService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -138,14 +133,18 @@ public class DynamicSimulationServiceTest {
 
     @Test
     public void testRunDynamicSimulation() {
+        given(networkService.getNetworkUuid(STUDY_UUID)).willReturn(NETWORK_UUID);
+        given(networkModificationTreeService.getVariantId(NODE_UUID)).willReturn(VARIANT_1_ID);
+        given(networkModificationTreeService.getReportUuid(NODE_UUID)).willReturn(REPORT_UUID);
+
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.run(eq(""), eq(""), eq(NETWORK_UUID), eq(VARIANT_1_ID), any(), any())).willReturn(RESULT_UUID);
+        given(dynamicSimulationClient.run(eq(""), any(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(new ReportInfos(REPORT_UUID, REPORT_ID)), any(), any())).willReturn(RESULT_UUID);
 
         // call method to be tested
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", "", NETWORK_UUID, VARIANT_1_ID, null, "testUserId");
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", STUDY_UUID, NODE_UUID, null, "testUserId");
 
         // check result
-        assertThat(resultUuid).hasToString(RESULT_UUID_STRING);
+        assertThat(resultUuid).isEqualTo(RESULT_UUID);
     }
 
     @Test
@@ -202,7 +201,7 @@ public class DynamicSimulationServiceTest {
         // setup timeSeriesClient mock
         // create a bad type timeseries
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        List<TimeSeries> timeSeries = List.of(TimeSeries.createString(TIME_LINE_NAME, index,
+        List<TimeSeries> timeSeries = List.of(TimeSeries.createString(TIMELINE_NAME, index,
                 "CLA_2_5 - CLA : order to change topology",
                 "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
                 "CLA_2_5 - CLA : order to change topology",

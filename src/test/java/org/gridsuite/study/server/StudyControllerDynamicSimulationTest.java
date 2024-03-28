@@ -132,28 +132,15 @@ public class StudyControllerDynamicSimulationTest {
 
     private static final String VARIANT_ID = "variant_1";
 
-    private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
-    private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
-
-    private static final String STUDY_UUID_STRING = "00000000-0000-0000-0000-000000000000";
-    private static final UUID STUDY_UUID = UUID.fromString(STUDY_UUID_STRING);
-
-    private static final String NETWORK_UUID_STRING = "11111111-0000-0000-0000-000000000000";
-    private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
-
-    private static final String NODE_UUID_STRING = "22222222-1111-0000-0000-000000000000";
-    public static final UUID NODE_UUID = UUID.fromString(NODE_UUID_STRING);
-
-    private static final String NODE_NOT_DONE_UUID_STRING = "22222222-2222-0000-0000-000000000000";
-    private static final UUID NODE_NOT_DONE_UUID = UUID.fromString(NODE_NOT_DONE_UUID_STRING);
-
-    private static final String NODE_NOT_RUN_UUID_STRING = "22222222-3333-0000-0000-000000000000";
-    private static final UUID NODE_NOT_RUN_UUID = UUID.fromString(NODE_NOT_RUN_UUID_STRING);
+    private static final UUID CASE_UUID = UUID.randomUUID();
+    private static final UUID STUDY_UUID = UUID.randomUUID();
+    private static final UUID NETWORK_UUID = UUID.randomUUID();
+    public static final UUID NODE_UUID = UUID.randomUUID();
+    private static final UUID NODE_NOT_DONE_UUID = UUID.randomUUID();
+    private static final UUID NODE_NOT_RUN_UUID = UUID.randomUUID();
+    private static final UUID RESULT_UUID = UUID.randomUUID();
 
     private static final String PARAMETERS = String.format("{\"startTime\": %d, \"stopTime\": %d}", START_TIME, STOP_TIME);
-
-    private static final String RESULT_UUID_STRING = "99999999-0000-0000-0000-000000000000";
-    private static final UUID RESULT_UUID = UUID.fromString(RESULT_UUID_STRING);
 
     public static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
     public static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
@@ -277,7 +264,7 @@ public class StudyControllerDynamicSimulationTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), any(), eq(NETWORK_UUID), any(), any(), any());
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), any(), any());
 
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
@@ -303,7 +290,7 @@ public class StudyControllerDynamicSimulationTest {
         String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid)),
                 StandardCharsets.UTF_8);
         input.send(MessageBuilder.withPayload("")
-                .setHeader("resultUuid", RESULT_UUID_STRING)
+                .setHeader("resultUuid", RESULT_UUID.toString())
                 .setHeader("receiver", receiver)
                 .build(), dsFailedDestination
         );
@@ -344,7 +331,7 @@ public class StudyControllerDynamicSimulationTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), any(), eq(NETWORK_UUID), any(), any(), any());
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), any(), any());
 
         MvcResult result;
         // --- call endpoint to be tested --- //
@@ -371,7 +358,7 @@ public class StudyControllerDynamicSimulationTest {
         String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid)),
                 StandardCharsets.UTF_8);
         input.send(MessageBuilder.withPayload("")
-                .setHeader("resultUuid", RESULT_UUID_STRING)
+                .setHeader("resultUuid", RESULT_UUID.toString())
                 .setHeader("receiver", receiver)
                 .build(), dsResultDestination
         );
@@ -420,7 +407,7 @@ public class StudyControllerDynamicSimulationTest {
 
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), any(), eq(NETWORK_UUID), any(), any(), any());
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), any(), any());
 
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
@@ -446,7 +433,7 @@ public class StudyControllerDynamicSimulationTest {
         String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid)),
                 StandardCharsets.UTF_8);
         input.send(MessageBuilder.withPayload("")
-                .setHeader("resultUuid", RESULT_UUID_STRING)
+                .setHeader("resultUuid", RESULT_UUID.toString())
                 .setHeader("receiver", receiver)
                 .build(), dsStoppedDestination
         );
