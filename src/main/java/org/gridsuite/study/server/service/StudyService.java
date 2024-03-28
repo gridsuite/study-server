@@ -30,6 +30,8 @@ import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
+import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
+import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -41,6 +43,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -891,7 +894,7 @@ public class StudyService {
 
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, SECURITY_ANALYSIS);
         prevResultUuidOpt.ifPresent(securityAnalysisService::deleteSaResult);
-       
+
         var runSecurityAnalysisParametersInfos = new RunSecurityAnalysisParametersInfos(study.getSecurityAnalysisParametersUuid(), study.getLoadFlowParametersUuid(), contingencyListNames);
         UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, variantId, runSecurityAnalysisParametersInfos,
                 new ReportInfos(reportUuid, nodeUuid.toString()), receiver, userId);
@@ -990,7 +993,7 @@ public class StudyService {
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, null, null, null, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
                 loadFlowParametersUuid, null, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, securityAnalysisParametersUuid,
-                null, sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED);
+                null, sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED, new StudyVoltageInitParametersEntity());
         return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
     }
 
@@ -1068,8 +1071,7 @@ public class StudyService {
         });
     }
 
-    public void createOrUpdateVoltageInitParameters(UUID studyUuid, String parameters) {
-        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+    public void createOrUpdateVoltageInitParameters(StudyEntity studyEntity, VoltageInitParametersInfos parameters) {
         UUID voltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
         if (voltageInitParametersUuid == null) {
             voltageInitParametersUuid = voltageInitService.createVoltageInitParameters(parameters);
@@ -1077,7 +1079,7 @@ public class StudyService {
         } else {
             voltageInitService.updateVoltageInitParameters(voltageInitParametersUuid, parameters);
         }
-        invalidateVoltageInitStatusOnAllNodes(studyUuid);
+        invalidateVoltageInitStatusOnAllNodes(studyEntity.getId());
     }
 
     public void createOrUpdateSecurityAnalysisParameters(UUID studyUuid, StudyEntity studyEntity, String parameters) {
@@ -1698,19 +1700,28 @@ public class StudyService {
     }
 
     @Transactional
-    public void setVoltageInitParameters(UUID studyUuid, String parameters, String userId) {
-        createOrUpdateVoltageInitParameters(studyUuid, parameters);
+    public void setVoltageInitParameters(UUID studyUuid, StudyVoltageInitParameters parameters, String userId) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        var voltageInitParameters = studyEntity.getVoltageInitParameters();
+        if (voltageInitParameters == null) {
+            var newVoltageInitParameters = new StudyVoltageInitParametersEntity(parameters.isApplyModifications());
+            studyEntity.setVoltageInitParameters(newVoltageInitParameters);
+        } else {
+            voltageInitParameters.setApplyModifications(parameters.isApplyModifications());
+        }
+        createOrUpdateVoltageInitParameters(studyEntity, parameters.getComputationParameters());
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public String getVoltageInitParameters(UUID studyUuid) {
+    public StudyVoltageInitParameters getVoltageInitParameters(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID voltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
-        if (voltageInitParametersUuid == null) {
-            return "{}";
-        }
-        return voltageInitService.getVoltageInitParameters(studyEntity.getVoltageInitParametersUuid());
+        VoltageInitParametersInfos computationParameters = voltageInitService.getVoltageInitParameters(studyEntity.getVoltageInitParametersUuid());
+        return new StudyVoltageInitParameters(
+            computationParameters,
+            Optional.ofNullable(studyEntity.getVoltageInitParameters()).map(StudyVoltageInitParametersEntity::shouldApplyModifications).orElse(true)
+        );
+
     }
 
     // --- Dynamic Simulation service methods BEGIN --- //

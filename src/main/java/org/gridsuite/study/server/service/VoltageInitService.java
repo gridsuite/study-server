@@ -15,6 +15,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
+import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -125,23 +126,20 @@ public class VoltageInitService {
         return result;
     }
 
-    public String getVoltageInitParameters(UUID parametersUuid) {
-        String parameters;
-
+    public VoltageInitParametersInfos getVoltageInitParameters(UUID parametersUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters/{parametersUuid}")
             .buildAndExpand(parametersUuid).toUriString();
         try {
-            parameters = restTemplate.getForObject(voltageInitServerBaseUri + path, String.class);
+            return restTemplate.getForObject(voltageInitServerBaseUri + path, VoltageInitParametersInfos.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(VOLTAGE_INIT_PARAMETERS_NOT_FOUND);
             }
             throw e;
         }
-        return parameters;
     }
 
-    public UUID createVoltageInitParameters(String parameters) {
+    public UUID createVoltageInitParameters(VoltageInitParametersInfos parameters) {
 
         Objects.requireNonNull(parameters);
 
@@ -153,7 +151,7 @@ public class VoltageInitService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+        HttpEntity<VoltageInitParametersInfos> httpEntity = new HttpEntity<>(parameters, headers);
 
         UUID parametersUuid;
 
@@ -166,7 +164,7 @@ public class VoltageInitService {
         return parametersUuid;
     }
 
-    public void updateVoltageInitParameters(UUID parametersUuid, String parameters) {
+    public void updateVoltageInitParameters(UUID parametersUuid, VoltageInitParametersInfos parameters) {
 
         Objects.requireNonNull(parameters);
 
@@ -178,7 +176,7 @@ public class VoltageInitService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+        HttpEntity<VoltageInitParametersInfos> httpEntity = new HttpEntity<>(parameters, headers);
 
         try {
             restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.PUT, httpEntity, UUID.class);
