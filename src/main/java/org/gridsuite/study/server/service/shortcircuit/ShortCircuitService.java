@@ -21,7 +21,6 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ShortCircuitParametersInfos;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.dto.ShortCircuitStatus;
-import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
@@ -62,25 +61,24 @@ public class ShortCircuitService {
 
     private String shortCircuitServerBaseUri;
 
-    @Autowired
-    NotificationService notificationService;
-
     private final NetworkService networkStoreService;
 
     NetworkModificationTreeService networkModificationTreeService;
 
     private final ObjectMapper objectMapper;
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     @Autowired
     public ShortCircuitService(RemoteServicesProperties remoteServicesProperties,
                                NetworkModificationTreeService networkModificationTreeService,
-                               NetworkService networkStoreService, ObjectMapper objectMapper) {
+                               NetworkService networkStoreService,
+                               RestTemplate restTemplate,
+                               ObjectMapper objectMapper) {
         this.shortCircuitServerBaseUri = remoteServicesProperties.getServiceUri("shortcircuit-server");
         this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
     }
 
@@ -126,10 +124,7 @@ public class ShortCircuitService {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid,
                 type == ShortcircuitAnalysisType.ALL_BUSES ? ComputationType.SHORT_CIRCUIT : ComputationType.SHORT_CIRCUIT_ONE_BUS);
 
-        if (resultUuidOpt.isEmpty()) {
-            return null;
-        }
-        return UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results" + "/{resultUuid}").buildAndExpand(resultUuidOpt.get()).toUriString();
+        return resultUuidOpt.map(uuid -> UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results" + "/{resultUuid}").buildAndExpand(uuid).toUriString()).orElse(null);
     }
 
     private String getShortCircuitAnalysisResultsPageResourcePath(UUID nodeUuid, ShortcircuitAnalysisType type) {
