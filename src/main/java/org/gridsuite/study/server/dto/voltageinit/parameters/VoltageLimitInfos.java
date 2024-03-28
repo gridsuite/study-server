@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.dto.voltageinit.parameters;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,6 +18,7 @@ import java.util.List;
  * @author Ayoub LABIDI <ayoub.labidi at rte-france.com>
  */
 @NoArgsConstructor
+@EqualsAndHashCode
 @Getter
 @Setter
 public class VoltageLimitInfos {

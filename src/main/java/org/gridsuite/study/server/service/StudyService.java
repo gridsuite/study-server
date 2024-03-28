@@ -1070,6 +1070,10 @@ public class StudyService {
             voltageInitParametersUuid = voltageInitService.createVoltageInitParameters(parameters);
             studyEntity.setVoltageInitParametersUuid(voltageInitParametersUuid);
         } else {
+            VoltageInitParametersInfos oldParameters = voltageInitService.getVoltageInitParameters(voltageInitParametersUuid);
+            if (parameters.equals(oldParameters)) {
+                return;
+            }
             voltageInitService.updateVoltageInitParameters(voltageInitParametersUuid, parameters);
         }
         invalidateVoltageInitStatusOnAllNodes(studyEntity.getId());

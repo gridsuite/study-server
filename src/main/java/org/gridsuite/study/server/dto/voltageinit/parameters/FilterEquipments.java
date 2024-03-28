@@ -15,6 +15,7 @@ import java.util.UUID;
  * @author Ayoub LABIDI <ayoub.labidi at rte-france.com>
  */
 @NoArgsConstructor
+@EqualsAndHashCode
 @Getter
 @Setter
 public class FilterEquipments {
