@@ -1238,7 +1238,7 @@ public class StudyService {
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                 studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getReportTypes().forEach(p -> reportService.deleteReportByType(p.getFirst(), p.getSecond()))),
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getReportTypesPerReport().forEach((reportId, reportTypes) -> reportTypes.forEach(t -> reportService.deleteReportByType(reportId, t)))),
                 studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
                 studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
                 studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
