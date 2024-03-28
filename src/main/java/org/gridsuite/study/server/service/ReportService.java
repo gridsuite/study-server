@@ -26,6 +26,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -100,10 +101,17 @@ public class ReportService {
     }
 
     public void deleteReport(@NonNull UUID reportUuid) {
-        var path = UriComponentsBuilder.fromPath("{reportUuid}")
-            .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false)
-            .buildAndExpand(reportUuid)
-            .toUriString();
+        deleteReportByType(reportUuid, null);
+    }
+
+    public void deleteReportByType(UUID reportUuid, StudyService.ReportType reportType) {
+        Objects.requireNonNull(reportUuid);
+        var uriBuilder = UriComponentsBuilder.fromPath("{reportUuid}")
+                .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false);
+        if (reportType != null) {
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_TYPE_FILTER, reportType.reportKey);
+        }
+        var path = uriBuilder.buildAndExpand(reportUuid).toUriString();
         restTemplate.delete(this.getReportsServerURI() + path);
     }
 
