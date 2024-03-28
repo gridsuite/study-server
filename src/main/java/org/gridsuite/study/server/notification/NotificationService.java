@@ -12,7 +12,6 @@ import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
@@ -105,8 +104,11 @@ public class NotificationService {
 
     private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
 
-    @Autowired
-    private StreamBridge updatePublisher;
+    private final StreamBridge updatePublisher;
+
+    public NotificationService(StreamBridge updatePublisher) {
+        this.updatePublisher = updatePublisher;
+    }
 
     private void sendUpdateMessage(Message<?> message) {
         MESSAGE_OUTPUT_LOGGER.debug(MESSAGE_LOG, message);

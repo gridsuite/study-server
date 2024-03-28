@@ -4,6 +4,8 @@
  */
 package org.gridsuite.study.server;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,9 +20,14 @@ import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
  */
 @ControllerAdvice
 public class RestResponseEntityExceptionHandler {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RestResponseEntityExceptionHandler.class);
+    private static final String MESSAGE = "Caught in handler";
 
     @ExceptionHandler(StudyException.class)
     protected ResponseEntity<Object> handleStudyException(StudyException exception) {
+        if (LOGGER.isErrorEnabled()) {
+            LOGGER.error(MESSAGE, exception);
+        }
         StudyException.Type type = exception.getType();
         return switch (type) {
             case ELEMENT_NOT_FOUND,
@@ -106,6 +113,9 @@ public class RestResponseEntityExceptionHandler {
 
     @ExceptionHandler(ServerWebInputException.class)
     protected ResponseEntity<Object> handleServerWebInputException(ServerWebInputException exception) {
+        if (LOGGER.isErrorEnabled()) {
+            LOGGER.error(MESSAGE, exception);
+        }
         Throwable cause = exception.getCause();
         if (cause instanceof TypeMismatchException && cause.getCause() != null && cause.getCause() != cause) {
             cause = cause.getCause();
@@ -115,6 +125,9 @@ public class RestResponseEntityExceptionHandler {
 
     @ExceptionHandler(TypeMismatchException.class)
     protected ResponseEntity<Object> handleTypeMismatchException(TypeMismatchException exception) {
+        if (LOGGER.isErrorEnabled()) {
+            LOGGER.error(MESSAGE, exception);
+        }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getCause().getMessage());
     }
 }

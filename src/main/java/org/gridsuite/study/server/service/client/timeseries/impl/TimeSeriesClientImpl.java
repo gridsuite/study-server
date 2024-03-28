@@ -71,8 +71,6 @@ public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeri
                 .buildAndExpand(groupUuid);
 
         // call time-series Rest API
-        var timeSeriesGroupMetadata = getRestTemplate().getForObject(uriComponents.toUriString(), TimeSeriesGroupRest.class);
-
-        return timeSeriesGroupMetadata;
+        return getRestTemplate().getForObject(uriComponents.toUriString(), TimeSeriesGroupRest.class);
     }
 }
