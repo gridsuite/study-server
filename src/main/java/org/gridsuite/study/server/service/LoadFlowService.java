@@ -42,17 +42,12 @@ public class LoadFlowService {
     static final String RESULT_UUID = "resultUuid";
     static final String RESULTS_UUIDS = "resultsUuids";
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
-
-    private String loadFlowServerBaseUri;
-
-    NotificationService notificationService;
-
     private final NetworkService networkStoreService;
-
-    NetworkModificationTreeService networkModificationTreeService;
     private final ObjectMapper objectMapper;
-
     private final RestTemplate restTemplate;
+    NotificationService notificationService;
+    NetworkModificationTreeService networkModificationTreeService;
+    private String loadFlowServerBaseUri;
 
     @Autowired
     public LoadFlowService(RemoteServicesProperties remoteServicesProperties,
@@ -115,7 +110,7 @@ public class LoadFlowService {
     public void deleteLoadFlowResults() {
         try {
             String path = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results").toUriString();
+                    .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results").toUriString();
             restTemplate.delete(loadFlowServerBaseUri + path, Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
@@ -125,7 +120,7 @@ public class LoadFlowService {
 
     public Integer getLoadFlowResultsCount() {
         String path = UriComponentsBuilder
-            .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/supervision/results-count").toUriString();
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/supervision/results-count").toUriString();
         return restTemplate.getForObject(loadFlowServerBaseUri + path, Integer.class);
     }
 
@@ -216,7 +211,7 @@ public class LoadFlowService {
         }
     }
 
-    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid, String filters, Sort sort) {
+    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid, String filters, String globalFilters, Sort sort, UUID networkUuid) {
         List<LimitViolationInfos> result = new ArrayList<>();
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
 
@@ -224,6 +219,13 @@ public class LoadFlowService {
             UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations");
             if (filters != null && !filters.isEmpty()) {
                 uriComponentsBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+            }
+            if (globalFilters != null && !globalFilters.isEmpty()) {
+                uriComponentsBuilder.queryParam("globalFilters", URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
+                //TODO: delete it when merging filter library
+                if (networkUuid != null) {
+                    uriComponentsBuilder.queryParam("networkUuid", networkUuid);
+                }
             }
             if (sort != null) {
                 sort.forEach(order -> uriComponentsBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection()));
@@ -246,7 +248,7 @@ public class LoadFlowService {
     public LoadFlowParametersInfos getLoadFlowParameters(UUID parametersUuid) {
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
-            .buildAndExpand(parametersUuid).toUriString();
+                .buildAndExpand(parametersUuid).toUriString();
         try {
             return restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowParametersInfos.class);
         } catch (HttpStatusCodeException e) {
