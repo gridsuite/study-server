@@ -130,27 +130,7 @@ public class EquipmentInfosService {
         for (int i = 0; i < s.length(); ++i) {
             char c = s.charAt(i);
             switch (c) {
-                case '+':
-                case '\\':
-                case '-':
-                case '!':
-                case '(':
-                case ')':
-                case ':':
-                case '^':
-                case '[':
-                case ']':
-                case '"':
-                case '{':
-                case '}':
-                case '~':
-                case '*':
-                case '?':
-                case '|':
-                case '&':
-                case '/':
-
-                case ' ': // white space has to be escaped, too
+                case '+', '\\', '-', '!', '(', ')', ':', '^', '[', ']', '"', '{', '}', '~', '*', '?', '|', '&', '/', ' ': // white space has to be escaped, too
                     sb.append('\\');
                     break;
                 default:

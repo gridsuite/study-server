@@ -49,8 +49,7 @@ public class SensitivityAnalysisService {
 
     private String sensitivityAnalysisServerBaseUri;
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     private final ObjectMapper objectMapper;
 
@@ -59,9 +58,11 @@ public class SensitivityAnalysisService {
     @Autowired
     SensitivityAnalysisService(RemoteServicesProperties remoteServicesProperties,
                                NetworkModificationTreeService networkModificationTreeService,
+                               RestTemplate restTemplate,
                                ObjectMapper objectMapper) {
         this.sensitivityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("sensitivity-analysis-server");
         this.networkModificationTreeService = networkModificationTreeService;
+        this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
     }
 

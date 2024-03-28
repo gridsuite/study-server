@@ -43,24 +43,25 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class VoltageInitService {
 
     static final String RESULT_UUID = "resultUuid";
+    static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
+    static final String THE_NODE = "The node ";
 
     private String voltageInitServerBaseUri;
-
-    @Autowired
-    NotificationService notificationService;
 
     NetworkModificationTreeService networkModificationTreeService;
 
     private final ObjectMapper objectMapper;
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     @Autowired
     public VoltageInitService(RemoteServicesProperties remoteServicesProperties,
-                              NetworkModificationTreeService networkModificationTreeService, ObjectMapper objectMapper) {
+                              NetworkModificationTreeService networkModificationTreeService,
+                              RestTemplate restTemplate,
+                              ObjectMapper objectMapper) {
         this.voltageInitServerBaseUri = remoteServicesProperties.getServiceUri("voltage-init-server");
         this.networkModificationTreeService = networkModificationTreeService;
+        this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
     }
 
@@ -127,7 +128,7 @@ public class VoltageInitService {
     }
 
     public VoltageInitParametersInfos getVoltageInitParameters(UUID parametersUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters/{parametersUuid}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid).toUriString();
         try {
             return restTemplate.getForObject(voltageInitServerBaseUri + path, VoltageInitParametersInfos.class);
@@ -169,7 +170,7 @@ public class VoltageInitService {
         Objects.requireNonNull(parameters);
 
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters/{parametersUuid}")
+                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid)
                 .toUriString();
 
@@ -207,7 +208,7 @@ public class VoltageInitService {
     }
 
     public void deleteVoltageInitParameters(UUID parametersUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters/{parametersUuid}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid).toUriString();
 
         restTemplate.delete(voltageInitServerBaseUri + path);
@@ -277,7 +278,7 @@ public class VoltageInitService {
     public UUID getModificationsGroupUuid(UUID nodeUuid) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.VOLTAGE_INITIALIZATION);
         if (resultUuidOpt.isEmpty()) {
-            throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, "The node " + nodeUuid + " has no voltage init results");
+            throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, THE_NODE + nodeUuid + " has no voltage init results");
         }
 
         UUID modificationsGroupUuid;
@@ -287,7 +288,7 @@ public class VoltageInitService {
             modificationsGroupUuid = restTemplate.getForObject(voltageInitServerBaseUri + path, UUID.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(NO_VOLTAGE_INIT_MODIFICATIONS_GROUP_FOR_NODE, "The node " + nodeUuid + " has no voltage init modifications group");
+                throw new StudyException(NO_VOLTAGE_INIT_MODIFICATIONS_GROUP_FOR_NODE, THE_NODE + nodeUuid + " has no voltage init modifications group");
             }
             throw e;
         }
@@ -307,7 +308,7 @@ public class VoltageInitService {
     public void resetModificationsGroupUuid(UUID nodeUuid) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.VOLTAGE_INITIALIZATION);
         if (resultUuidOpt.isEmpty()) {
-            throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, "The node " + nodeUuid + " has no voltage init results");
+            throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, THE_NODE + nodeUuid + " has no voltage init results");
         }
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group-uuid")
             .buildAndExpand(resultUuidOpt.get()).toUriString();
