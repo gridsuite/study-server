@@ -389,6 +389,18 @@ public class LoadFlowTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&limitReduction=0.7")));
 
         // get limit violations
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
+                status().isOk(),
+                content().string(LIMIT_VIOLATIONS_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations")));
+
+        // get limit violations with filters and sort
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations?filters=lineId2&sort=subjectId,ASC", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
+                status().isOk(),
+                content().string(LIMIT_VIOLATIONS_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations\\?filters=lineId2&sort=subjectId,ASC")));
 
         // get limit violations on non existing node
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations", studyNameUserIdUuid, UUID.randomUUID())).andExpectAll(
