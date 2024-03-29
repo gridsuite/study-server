@@ -7,20 +7,19 @@
 package org.gridsuite.study.server.dto.voltageinit.parameters;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.List;
 
 /**
  * @author Ayoub LABIDI <ayoub.labidi at rte-france.com>
  */
-@NoArgsConstructor
 @EqualsAndHashCode
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema(description = "Voltage init parameters")
 public class VoltageInitParametersInfos {
 

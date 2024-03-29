@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.service;
 
-import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
@@ -36,8 +35,7 @@ public class VoltageInitResultConsumer {
         return message -> {
             consumerService.consumeCalculationResult(message, VOLTAGE_INITIALIZATION);
             consumerService.getStudyUuid(message).ifPresent(studyUuid -> {
-                StudyVoltageInitParameters parametersUuid = studyService.getVoltageInitParameters(studyUuid);
-                if (parametersUuid.isApplyModifications()) {
+                if (studyService.shouldApplyModifications(studyUuid)) {
                     consumerService.getNodeReceiver(message).ifPresent(nodeReceiver -> {
                         String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
                         studyService.copyVoltageInitModifications(studyUuid, nodeReceiver.getNodeUuid(), userId);

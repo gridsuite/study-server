@@ -14,10 +14,12 @@ import java.util.UUID;
 /**
  * @author Ayoub LABIDI <ayoub.labidi at rte-france.com>
  */
-@NoArgsConstructor
 @EqualsAndHashCode
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class FilterEquipments {
 
     @Schema(description = "filter id")

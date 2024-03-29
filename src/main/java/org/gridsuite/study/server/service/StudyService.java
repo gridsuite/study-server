@@ -1071,7 +1071,7 @@ public class StudyService {
             studyEntity.setVoltageInitParametersUuid(voltageInitParametersUuid);
         } else {
             VoltageInitParametersInfos oldParameters = voltageInitService.getVoltageInitParameters(voltageInitParametersUuid);
-            if (parameters.equals(oldParameters)) {
+            if (!Objects.isNull(parameters) && parameters.equals(oldParameters)) {
                 return;
             }
             voltageInitService.updateVoltageInitParameters(voltageInitParametersUuid, parameters);
@@ -1713,12 +1713,17 @@ public class StudyService {
 
     public StudyVoltageInitParameters getVoltageInitParameters(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        VoltageInitParametersInfos computationParameters = voltageInitService.getVoltageInitParameters(studyEntity.getVoltageInitParametersUuid());
         return new StudyVoltageInitParameters(
-            computationParameters,
+            Optional.ofNullable(studyEntity.getVoltageInitParametersUuid()).map(voltageInitService::getVoltageInitParameters).orElse(null),
             Optional.ofNullable(studyEntity.getVoltageInitParameters()).map(StudyVoltageInitParametersEntity::shouldApplyModifications).orElse(true)
         );
+    }
 
+    public boolean shouldApplyModifications(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return Optional.ofNullable(studyEntity.getVoltageInitParameters())
+            .map(StudyVoltageInitParametersEntity::shouldApplyModifications)
+            .orElse(true);
     }
 
     // --- Dynamic Simulation service methods BEGIN --- //

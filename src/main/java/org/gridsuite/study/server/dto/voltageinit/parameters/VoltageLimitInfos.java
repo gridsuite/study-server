@@ -7,20 +7,19 @@
 package org.gridsuite.study.server.dto.voltageinit.parameters;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.List;
 
 /**
  * @author Ayoub LABIDI <ayoub.labidi at rte-france.com>
  */
-@NoArgsConstructor
 @EqualsAndHashCode
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class VoltageLimitInfos {
 
     @JsonInclude(JsonInclude.Include.NON_EMPTY)

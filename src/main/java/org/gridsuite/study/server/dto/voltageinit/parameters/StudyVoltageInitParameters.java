@@ -6,18 +6,17 @@
  */
 package org.gridsuite.study.server.dto.voltageinit.parameters;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 /**
  * @author Joris Mancini <joris.mancini_externe at rte-france.com>
  */
-@NoArgsConstructor
-@AllArgsConstructor
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode
 public class StudyVoltageInitParameters {
 
     private VoltageInitParametersInfos computationParameters;
