@@ -116,44 +116,32 @@ public class LoadFlowTest {
     private static String LIMIT_VIOLATIONS_JSON;
 
     private static String LOADFLOW_PARAMETERS_JSON;
-
-    @Autowired
-    private MockMvc mockMvc;
-
-    private MockWebServer server;
-
-    @Autowired
-    private OutputDestination output;
-
-    @Autowired
-    private InputDestination input;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    private ObjectWriter objectWriter;
-
-    @Autowired
-    private NetworkModificationTreeService networkModificationTreeService;
-
-    @Autowired
-    private LoadFlowService loadFlowService;
-
-    @Autowired
-    private StudyRepository studyRepository;
-
-    @Autowired
-    private ReportService reportService;
-
-    @Autowired
-    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
-
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String elementUpdateDestination = "element.update";
     private final String loadflowResultDestination = "loadflow.result";
     private final String loadflowStoppedDestination = "loadflow.stopped";
     private final String loadflowFailedDestination = "loadflow.failed";
+    @Autowired
+    private MockMvc mockMvc;
+    private MockWebServer server;
+    @Autowired
+    private OutputDestination output;
+    @Autowired
+    private InputDestination input;
+    @Autowired
+    private ObjectMapper objectMapper;
+    private ObjectWriter objectWriter;
+    @Autowired
+    private NetworkModificationTreeService networkModificationTreeService;
+    @Autowired
+    private LoadFlowService loadFlowService;
+    @Autowired
+    private StudyRepository studyRepository;
+    @Autowired
+    private ReportService reportService;
+    @Autowired
+    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
     @Before
     public void setup() throws IOException {
@@ -210,10 +198,10 @@ public class LoadFlowTest {
         LIMIT_VIOLATIONS_JSON = objectMapper.writeValueAsString(limitViolations);
 
         LoadFlowParametersInfos loadFlowParametersInfos = LoadFlowParametersInfos.builder()
-            .provider(PROVIDER)
-            .commonParameters(LoadFlowParameters.load())
-            .specificParametersPerProvider(Map.of())
-            .build();
+                .provider(PROVIDER)
+                .commonParameters(LoadFlowParameters.load())
+                .specificParametersPerProvider(Map.of())
+                .build();
         LOADFLOW_PARAMETERS_JSON = objectMapper.writeValueAsString(loadFlowParametersInfos);
 
         final Dispatcher dispatcher = new Dispatcher() {
@@ -242,7 +230,7 @@ public class LoadFlowTest {
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID)) {
                     return new MockResponse().setResponseCode(200).setBody(loadflowResult)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "\\?filters=.*sort=.*")) {
+                } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(loadflowResult)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/status")) {
@@ -250,13 +238,13 @@ public class LoadFlowTest {
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations")) {
                     return new MockResponse().setResponseCode(200).setBody(LIMIT_VIOLATIONS_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations\\?filters=.*sort=.*")) {
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(LIMIT_VIOLATIONS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)) {
                     return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/stop.*")
                         || path.matches("/v1/results/" + LOADFLOW_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? LOADFLOW_OTHER_NODE_RESULT_UUID : LOADFLOW_RESULT_UUID;
@@ -271,11 +259,11 @@ public class LoadFlowTest {
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/treereports")) {
                     return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/supervision/results-count")) {
                     return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8")
-                        .setBody("1");
+                            .addHeader("Content-Type", "application/json; charset=utf-8")
+                            .setBody("1");
                 } else if (path.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)) {
                     if (method.equals("PUT")) {
                         return new MockResponse().setResponseCode(200);
@@ -285,7 +273,7 @@ public class LoadFlowTest {
                     }
                 } else if (path.matches("/v1/parameters")) {
                     return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(LOADFLOW_PARAMETERS_UUID_STRING))
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -379,9 +367,9 @@ public class LoadFlowTest {
 
         //run a loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run?limitReduction=0.7", studyNameUserIdUuid, modificationNode1Uuid)
-                .header("userId", "userId"))
-            .andExpect(status().isOk())
-            .andReturn();
+                        .header("userId", "userId"))
+                .andExpect(status().isOk())
+                .andReturn();
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
@@ -395,16 +383,16 @@ public class LoadFlowTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations")));
 
-        // get limit violations with filters and sort
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations?filters=lineId2&sort=subjectId,ASC", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
+        // get limit violations with filters , globalFilters and sort
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations?filters=lineId2&sort=subjectId,ASC&globalFilters=ss", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(LIMIT_VIOLATIONS_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations\\?filters=lineId2&sort=subjectId,ASC")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations\\?filters=lineId2&globalFilters=ss&networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID_2 + "&sort=subjectId,ASC")));
 
         // get limit violations on non existing node
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations", studyNameUserIdUuid, UUID.randomUUID())).andExpectAll(
-            status().isNotFound());
+                status().isNotFound());
     }
 
     @Test
@@ -418,9 +406,9 @@ public class LoadFlowTest {
 
         //run a loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run?limitReduction=0.7", studyNameUserIdUuid, modificationNode1Uuid)
-                .header("userId", "userId"))
-            .andExpect(status().isOk())
-            .andReturn();
+                        .header("userId", "userId"))
+                .andExpect(status().isOk())
+                .andReturn();
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
@@ -429,7 +417,7 @@ public class LoadFlowTest {
 
         // invalidate status
         mockMvc.perform(put("/v1/studies/{studyUuid}/loadflow/invalidate-status", studyNameUserIdUuid)
-            .header("userId", "userId")).andExpect(status().isOk());
+                .header("userId", "userId")).andExpect(status().isOk());
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)));
     }
@@ -441,21 +429,21 @@ public class LoadFlowTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
-            UUID.randomUUID(), VARIANT_ID, "node 1");
+                UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
-            modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
+                modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
 
         NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid,
-            modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
+                modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
         UUID modificationNode3Uuid = modificationNode3.getId();
 
         //run a loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNode3Uuid)
-                .header("userId", "userId"))
-            .andExpect(status().isOk());
+                        .header("userId", "userId"))
+                .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
@@ -515,18 +503,18 @@ public class LoadFlowTest {
 
     private void testResultCount() throws Exception {
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(LOAD_FLOW))
-                .queryParam("dryRun", String.valueOf(true)))
-            .andExpect(status().isOk());
+                        .queryParam("type", String.valueOf(LOAD_FLOW))
+                        .queryParam("dryRun", String.valueOf(true)))
+                .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
     }
 
     private void testDeleteResults(int expectedInitialResultCount) throws Exception {
         assertEquals(expectedInitialResultCount, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(LOAD_FLOW))
-                .queryParam("dryRun", String.valueOf(false)))
-            .andExpect(status().isOk());
+                        .queryParam("type", String.valueOf(LOAD_FLOW))
+                        .queryParam("dryRun", String.valueOf(false)))
+                .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
