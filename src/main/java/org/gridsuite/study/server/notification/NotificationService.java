@@ -100,6 +100,10 @@ public class NotificationService {
     public static final String SUBTREE_CREATED = "subtreeCreated";
     public static final String MESSAGE_LOG = "Sending message : {}";
 
+    public static final String HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL = "REACTIVE_SLACKS_OVER_THRESHOLD";
+    public static final String HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE = "reactiveSlacksThreshold";
+    public static final String REACTIVE_SLACKS_OVER_THRESHOLD_ALERT = "voltageInit_reactiveSlacksThresholdAlert";
+
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
 
     private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
@@ -343,6 +347,19 @@ public class NotificationService {
                 .setHeader(HEADER_MODIFIED_BY, modifiedBy)
                 .setHeader(HEADER_MODIFICATION_DATE, LocalDateTime.now())
                 .build()
+        );
+    }
+
+    @PostCompletion
+    public void emitVoltageInitReactiveSlacksAlert(UUID studyUuid, UUID nodeUuid, String userId, String alertLabel, Double threshold) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_NODE, nodeUuid)
+            .setHeader(HEADER_UPDATE_TYPE, REACTIVE_SLACKS_OVER_THRESHOLD_ALERT)
+            .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL, alertLabel)
+            .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, threshold)
+            .build()
         );
     }
 }

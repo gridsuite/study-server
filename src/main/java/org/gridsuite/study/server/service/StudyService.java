@@ -2065,4 +2065,13 @@ public class StudyService {
         // will use root node network of the study
         return filterService.exportFilter(networkStoreService.getNetworkUuid(studyUuid), filterUuid);
     }
+
+    public String getVoltageInitResult(UUID studyUuid, UUID nodeUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return voltageInitService.getVoltageInitResultOrStatus(studyEntity.getVoltageInitParametersUuid(), nodeUuid, "");
+    }
+
+    public String getVoltageInitStatus(UUID nodeUuid) {
+        return voltageInitService.getVoltageInitResultOrStatus(null, nodeUuid, "/status");
+    }
 }

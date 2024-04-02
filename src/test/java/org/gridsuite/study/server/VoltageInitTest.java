@@ -69,7 +69,10 @@ import java.util.stream.IntStream;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
+import static org.gridsuite.study.server.notification.NotificationService.REACTIVE_SLACKS_OVER_THRESHOLD_ALERT;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -238,6 +241,8 @@ public class VoltageInitTest {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", VOLTAGE_INIT_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL, HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL)
+                            .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
                             .build(), voltageInitResultDestination);
                     return new MockResponse().setResponseCode(200)
                             .setBody(voltageInitResultUuidStr)
@@ -250,7 +255,8 @@ public class VoltageInitTest {
                     return new MockResponse().setResponseCode(200)
                             .setBody(voltageInitErrorResultUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID)) {
+                } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID) ||
+                           path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "\\?parametersUuid=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(VOLTAGE_INIT_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status")) {
@@ -421,7 +427,7 @@ public class VoltageInitTest {
         TestUtils.assertRequestMatches("PUT", "/v1/results/.*/modifications-group-uuid", server);
 
         // Applying modifications also invalidate all results of the node, so it creates a lot of study update notifications
-        IntStream.range(0, 17).forEach(i -> output.receive(1000, studyUpdateDestination));
+        IntStream.range(0, 18).forEach(i -> output.receive(1000, studyUpdateDestination));
         // It deletes the voltage-init modification and creates a new one on the node
         IntStream.range(0, 2).forEach(i -> output.receive(1000, elementUpdateDestination));
     }
@@ -458,6 +464,8 @@ public class VoltageInitTest {
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
 
+        checkReactiveSlacksAlertMessagesReceived(studyNameUserIdUuid, 10.);
+
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
@@ -466,7 +474,7 @@ public class VoltageInitTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/result", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(VOLTAGE_INIT_RESULT_JSON));
-        TestUtils.assertRequestMatches("GET", "/v1/results/" + VOLTAGE_INIT_RESULT_UUID, server);
+        TestUtils.assertRequestMatches("GET", "/v1/results/" + VOLTAGE_INIT_RESULT_UUID + ".*", server);
 
         // get voltage init status
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/status", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
@@ -533,6 +541,7 @@ public class VoltageInitTest {
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
+        checkReactiveSlacksAlertMessagesReceived(studyNameUserIdUuid, 10.);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
@@ -782,5 +791,13 @@ public class VoltageInitTest {
             .applyModifications(applyModifications)
             .computationParameters(voltageInitParametersInfos)
             .build();
+    }
+
+    private void checkReactiveSlacksAlertMessagesReceived(UUID studyUuid, Double thresholdValue) {
+        Message<byte[]> voltageInitMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, voltageInitMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(REACTIVE_SLACKS_OVER_THRESHOLD_ALERT, voltageInitMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL, voltageInitMessage.getHeaders().get(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL));
+        assertEquals(10., voltageInitMessage.getHeaders().get(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE));
     }
 }
