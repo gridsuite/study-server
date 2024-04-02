@@ -50,8 +50,11 @@ public class InvalidateNodeInfos {
         reportUuids.add(reportUuid);
     }
 
-    public void setReportTypes(UUID reportUuid, List<StudyService.ReportType> reportTypes) {
-        reportTypesPerReport.put(reportUuid, reportTypes);
+    public void addReportTypes(UUID reportUuid, List<StudyService.ReportType> reportTypes) {
+        if (!reportTypes.isEmpty() && !getReportUuids().contains(reportUuid)) {
+            // no need to remove some report parts if we remove the whole report
+            reportTypesPerReport.put(reportUuid, reportTypes);
+        }
     }
 
     public void addVariantId(String variantId) {

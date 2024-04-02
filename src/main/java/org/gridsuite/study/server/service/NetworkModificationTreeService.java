@@ -802,10 +802,7 @@ public class NetworkModificationTreeService {
             }
         }
 
-        if (!reportTypes.isEmpty() && !invalidateNodeInfos.getReportUuids().contains(reportUuid)) {
-            // no need to remove some report parts if we remove the whole report
-            invalidateNodeInfos.setReportTypes(reportUuid, reportTypes);
-        }
+        invalidateNodeInfos.addReportTypes(reportUuid, reportTypes);
     }
 
     @Transactional
