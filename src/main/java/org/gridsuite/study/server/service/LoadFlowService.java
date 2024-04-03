@@ -43,7 +43,7 @@ public class LoadFlowService {
     private final NetworkService networkStoreService;
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
-    NetworkModificationTreeService networkModificationTreeService;
+    private final NetworkModificationTreeService networkModificationTreeService;
     private String loadFlowServerBaseUri;
 
     @Autowired

@@ -905,11 +905,8 @@ public class StudyService {
         return actionsService.getContingencyCount(networkuuid, variantId, contingencyListNames);
     }
 
-    public List<LimitViolationInfos> getLimitViolations(UUID studyUuid, UUID nodeUuid, String filters, String globalFilters, Sort sort) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(nodeUuid);
+    public List<LimitViolationInfos> getLimitViolations(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, String filters, String globalFilters, Sort sort) {
         UUID networkuuid = networkStoreService.getNetworkUuid(studyUuid);
-        Objects.requireNonNull(networkuuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         return loadflowService.getLimitViolations(nodeUuid, filters, globalFilters, sort, networkuuid, variantId);
     }

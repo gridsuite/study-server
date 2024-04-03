@@ -116,12 +116,14 @@ public class LoadFlowTest {
     private static String LIMIT_VIOLATIONS_JSON;
 
     private static String LOADFLOW_PARAMETERS_JSON;
+
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String elementUpdateDestination = "element.update";
     private final String loadflowResultDestination = "loadflow.result";
     private final String loadflowStoppedDestination = "loadflow.stopped";
     private final String loadflowFailedDestination = "loadflow.failed";
+
     @Autowired
     private MockMvc mockMvc;
     private MockWebServer server;
