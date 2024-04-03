@@ -70,4 +70,6 @@ gridsuite:
     -
       name: filter-server
       base-uri: http://localhost:5027
-
+    -
+      name: user-admin-server
+      base-uri: http://localhost:5033
