@@ -13,7 +13,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -40,12 +39,10 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class LoadFlowService {
 
     static final String RESULT_UUID = "resultUuid";
-    static final String RESULTS_UUIDS = "resultsUuids";
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
     private final NetworkService networkStoreService;
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
-    NotificationService notificationService;
     NetworkModificationTreeService networkModificationTreeService;
     private String loadFlowServerBaseUri;
 
@@ -53,13 +50,11 @@ public class LoadFlowService {
     public LoadFlowService(RemoteServicesProperties remoteServicesProperties,
                            NetworkModificationTreeService networkModificationTreeService,
                            NetworkService networkStoreService, ObjectMapper objectMapper,
-                           NotificationService notificationService,
                            RestTemplate restTemplate) {
         this.loadFlowServerBaseUri = remoteServicesProperties.getServiceUri("loadflow-server");
         this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
-        this.notificationService = notificationService;
         this.restTemplate = restTemplate;
     }
 
@@ -217,14 +212,12 @@ public class LoadFlowService {
 
         if (resultUuidOpt.isPresent()) {
             UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations");
-            if (filters != null && !filters.isEmpty()) {
+            if (!StringUtils.isEmpty(filters)) {
                 uriComponentsBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
             }
-            if (globalFilters != null && !globalFilters.isEmpty()) {
+            if (!StringUtils.isEmpty(globalFilters)) {
                 uriComponentsBuilder.queryParam("globalFilters", URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
-                if (networkUuid != null) {
-                    uriComponentsBuilder.queryParam("networkUuid", networkUuid);
-                }
+                uriComponentsBuilder.queryParam("networkUuid", networkUuid);
                 if (!StringUtils.isBlank(variantId)) {
                     uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
                 }
@@ -234,7 +227,7 @@ public class LoadFlowService {
             }
             String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
             try {
-                ResponseEntity<List<LimitViolationInfos>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() {
+                ResponseEntity<List<LimitViolationInfos>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
                 });
                 result = responseEntity.getBody();
             } catch (HttpStatusCodeException e) {
