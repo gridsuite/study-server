@@ -227,6 +227,3 @@ databaseChangeLog:
   - include:
       file: changesets/changelog_20231228T143308Z.xml
       relativeToChangelogFile: true
-  - include:
-      file: changesets/changelog_20240326T132911Z.xml
-      relativeToChangelogFile: true
