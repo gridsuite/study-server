@@ -107,6 +107,24 @@ public class NetworkMapService {
         }
     }
 
+    public String getNominalVoltages(UUID networkUuid, String variantId) {
+        String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/nominal-voltages";
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
+        if (!StringUtils.isBlank(variantId)) {
+            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+
+        try {
+            return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(NETWORK_NOT_FOUND);
+            } else {
+                throw handleHttpError(e, GET_NETWORK_NOMINAL_VOLTAGES_FAILED);
+            }
+        }
+    }
+
     public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds,
             String equipmentPath) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath;
