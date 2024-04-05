@@ -28,6 +28,7 @@ import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileIn
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
+import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -739,7 +740,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set")})
     public ResponseEntity<Void> setVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String voltageInitParameters,
+            @RequestBody(required = false) StudyVoltageInitParameters voltageInitParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setVoltageInitParameters(studyUuid, voltageInitParameters, userId);
         return ResponseEntity.ok().build();
@@ -748,7 +749,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
     @Operation(summary = "Get voltage init parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters")})
-    public ResponseEntity<String> getVoltageInitParameters(
+    public ResponseEntity<StudyVoltageInitParameters> getVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getVoltageInitParameters(studyUuid));
     }
