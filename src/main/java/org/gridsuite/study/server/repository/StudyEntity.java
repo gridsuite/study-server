@@ -11,6 +11,7 @@ import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 
 import jakarta.persistence.*;
@@ -171,6 +172,13 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private StudyIndexationStatus indexationStatus = StudyIndexationStatus.NOT_INDEXED;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "study_voltage_init_parameters_id",
+        foreignKey = @ForeignKey(
+            name = "study_voltage_init_parameters_id_fk"
+        ))
+    private StudyVoltageInitParametersEntity voltageInitParameters;
 
     public ShortCircuitParametersEntity getShortCircuitParameters() {
         if (this.shortCircuitParameters == null) {
