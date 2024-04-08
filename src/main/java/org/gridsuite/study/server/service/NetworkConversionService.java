@@ -16,7 +16,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.StudyException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -40,17 +39,18 @@ public class NetworkConversionService {
 
     private static final String FIRST_VARIANT_ID = "first_variant_id";
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     private String networkConversionServerBaseUri;
 
     private final ObjectMapper objectMapper;
 
     public NetworkConversionService(@Value("${powsybl.services.network-conversion-server.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            RestTemplate restTemplate) {
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;
         this.objectMapper = objectMapper;
+        this.restTemplate = restTemplate;
     }
 
     public void persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters) {

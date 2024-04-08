@@ -26,6 +26,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -41,18 +42,18 @@ public class ReportService {
 
     private String reportServerBaseUri;
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     @Autowired
-    public ReportService(
-                         ObjectMapper objectMapper,
-                         RemoteServicesProperties remoteServicesProperties) {
+    public ReportService(ObjectMapper objectMapper,
+                         RemoteServicesProperties remoteServicesProperties,
+                         RestTemplate restTemplate) {
         this.reportServerBaseUri = remoteServicesProperties.getServiceUri("report-server");
         ReporterModelJsonModule reporterModelJsonModule = new ReporterModelJsonModule();
         reporterModelJsonModule.setSerializers(null); // FIXME: remove when dicos will be used on the front side
         objectMapper.registerModule(reporterModelJsonModule);
         objectMapper.setInjectableValues(new InjectableValues.Std().addValue(ReporterModelDeserializer.DICTIONARY_VALUE_ID, null)); //FIXME : remove with powsyble core
+        this.restTemplate = restTemplate;
     }
 
     public void setReportServerBaseUri(String reportServerBaseUri) {
@@ -100,10 +101,17 @@ public class ReportService {
     }
 
     public void deleteReport(@NonNull UUID reportUuid) {
-        var path = UriComponentsBuilder.fromPath("{reportUuid}")
-            .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false)
-            .buildAndExpand(reportUuid)
-            .toUriString();
+        deleteReportByType(reportUuid, null);
+    }
+
+    public void deleteReportByType(UUID reportUuid, StudyService.ReportType reportType) {
+        Objects.requireNonNull(reportUuid);
+        var uriBuilder = UriComponentsBuilder.fromPath("{reportUuid}")
+                .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false);
+        if (reportType != null) {
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_TYPE_FILTER, reportType.reportKey);
+        }
+        var path = uriBuilder.buildAndExpand(reportUuid).toUriString();
         restTemplate.delete(this.getReportsServerURI() + path);
     }
 

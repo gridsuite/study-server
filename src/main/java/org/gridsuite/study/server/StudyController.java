@@ -28,6 +28,7 @@ import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileIn
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
+import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -655,7 +656,7 @@ public class StudyController {
                                                             "NONE (no fault)") @RequestParam(name = "mode", required = false, defaultValue = "FULL") FaultResultsMode mode,
                                                         @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type,
                                                         @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
-                                                        @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false) boolean paged,
+                                                        @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false, defaultValue = "false") boolean paged,
                                                         Pageable pageable) {
         String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid, mode, type, filters, paged, pageable);
         return result != null ? ResponseEntity.ok().body(result) :
@@ -668,7 +669,7 @@ public class StudyController {
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The short circuit analysis status has not been found")})
     public ResponseEntity<String> getShortCircuitAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                 @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type) {
         String result = shortCircuitService.getShortCircuitAnalysisStatus(nodeUuid, type);
         return result != null ? ResponseEntity.ok().body(result) :
@@ -739,7 +740,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set")})
     public ResponseEntity<Void> setVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String voltageInitParameters,
+            @RequestBody(required = false) StudyVoltageInitParameters voltageInitParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setVoltageInitParameters(studyUuid, voltageInitParameters, userId);
         return ResponseEntity.ok().build();
@@ -748,7 +749,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
     @Operation(summary = "Get voltage init parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters")})
-    public ResponseEntity<String> getVoltageInitParameters(
+    public ResponseEntity<StudyVoltageInitParameters> getVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getVoltageInitParameters(studyUuid));
     }
@@ -834,8 +835,9 @@ public class StudyController {
     public ResponseEntity<List<LimitViolationInfos>> getLimitViolations(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+                                                       @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
                                                        Sort sort) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, filters, sort));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, filters, globalFilters, sort));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
