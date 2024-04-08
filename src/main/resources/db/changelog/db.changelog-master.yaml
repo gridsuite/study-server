@@ -82,7 +82,7 @@ databaseChangeLog:
 
   - include:
       file: changesets/changelog_20220810T144908Z.xml
-      relativeToChangelogFile: true     
+      relativeToChangelogFile: true
 
   - include:
       file: changesets/changelog_20220923T123618Z.xml
@@ -226,4 +226,7 @@ databaseChangeLog:
 
   - include:
       file: changesets/changelog_20231228T143308Z.xml
+      relativeToChangelogFile: true
+  - include:
+      file: changesets/changelog_20240404T091326Z.xml
       relativeToChangelogFile: true
