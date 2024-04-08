@@ -29,6 +29,7 @@ public class VoltageInitResultConsumer {
     private final StudyService studyService;
 
     private final ConsumerService consumerService;
+
     private final NotificationService notificationService;
 
     public VoltageInitResultConsumer(StudyService studyService,
