@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -293,10 +294,7 @@ public class LoadFlowService {
         }
     }
 
-    public void updateLoadFlowParameters(UUID parametersUuid, String parameters) {
-
-        Objects.requireNonNull(parameters);
-
+    public void updateLoadFlowParameters(UUID parametersUuid, @Nullable String parameters) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid)

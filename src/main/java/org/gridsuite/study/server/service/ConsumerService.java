@@ -204,8 +204,7 @@ public class ConsumerService {
                         // we only update network infos sent by network conversion server
                         studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
                     } else {
-                        UserProfileInfos userProfileInfos = getUserProfile(userId);
-                        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userProfileInfos);
+                        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId);
                         studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, loadFlowParametersUuid, ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, createDefaultSecurityAnalysisParameters(), createDefaultSensitivityAnalysisParameters(), importParameters, importReportUuid);
                     }
 
@@ -228,19 +227,21 @@ public class ConsumerService {
         try {
             return userAdminService.getUserProfile(userId);
         } catch (Exception e) {
-            LOGGER.error(e.toString(), e);
+            LOGGER.error(String.format("Could not access to profile for user '%s'", userId), e);
         }
         return null;
     }
 
-    private UUID createDefaultLoadFlowParameters(UserProfileInfos userProfileInfos) {
+    private UUID createDefaultLoadFlowParameters(String userId) {
         // try to access/duplicate the user profile LF parameters
+        UserProfileInfos userProfileInfos = getUserProfile(userId);
         if (userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
             try {
                 return loadFlowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
             } catch (Exception e) {
                 // TODO try to report
-                LOGGER.error(e.toString(), e);
+                LOGGER.error(String.format("Could not duplicate loadflow parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                        userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
             }
         }
 
