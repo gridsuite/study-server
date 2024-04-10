@@ -100,7 +100,7 @@ public class NotificationService {
     public static final String SUBTREE_CREATED = "subtreeCreated";
     public static final String MESSAGE_LOG = "Sending message : {}";
 
-    public static final String HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL = "REACTIVE_SLACKS_OVER_THRESHOLD";
+    public static final String HEADER_REACTIVE_SLACKS_OVER_THRESHOLD = "REACTIVE_SLACKS_OVER_THRESHOLD";
     public static final String HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE = "reactiveSlacksThreshold";
     public static final String REACTIVE_SLACKS_OVER_THRESHOLD_ALERT = "voltageInit_reactiveSlacksThresholdAlert";
 
@@ -351,13 +351,13 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitVoltageInitReactiveSlacksAlert(UUID studyUuid, UUID nodeUuid, String userId, String alertLabel, Double threshold) {
+    public void emitVoltageInitReactiveSlacksAlert(UUID studyUuid, UUID nodeUuid, String userId, Boolean alert, Double threshold) {
         sendUpdateMessage(MessageBuilder.withPayload("")
             .setHeader(HEADER_USER_ID, userId)
             .setHeader(HEADER_STUDY_UUID, studyUuid)
             .setHeader(HEADER_NODE, nodeUuid)
             .setHeader(HEADER_UPDATE_TYPE, REACTIVE_SLACKS_OVER_THRESHOLD_ALERT)
-            .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL, alertLabel)
+            .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, alert)
             .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, threshold)
             .build()
         );

@@ -97,7 +97,7 @@ public class VoltageInitService {
         return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
     }
 
-    public String getVoltageInitResultOrStatus(UUID parametersUuid, UUID nodeUuid, String suffix) {
+    public String getVoltageInitResultOrStatus(UUID nodeUuid, String suffix) {
         String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.VOLTAGE_INITIALIZATION);
 
@@ -106,9 +106,6 @@ public class VoltageInitService {
         }
 
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}" + suffix);
-        if (parametersUuid != null) {
-            uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
-        }
         var path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
 
         try {
@@ -264,7 +261,7 @@ public class VoltageInitService {
     }
 
     public void assertVoltageInitNotRunning(UUID nodeUuid) {
-        String scs = getVoltageInitResultOrStatus(null, nodeUuid, "/status");
+        String scs = getVoltageInitResultOrStatus(nodeUuid, "/status");
         if (VoltageInitStatus.RUNNING.name().equals(scs)) {
             throw new StudyException(VOLTAGE_INIT_RUNNING);
         }
