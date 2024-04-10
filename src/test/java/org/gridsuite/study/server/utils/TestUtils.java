@@ -12,6 +12,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.google.common.io.ByteStreams;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -20,6 +21,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.junit.platform.commons.util.StringUtils;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
@@ -37,6 +39,8 @@ import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -63,6 +67,18 @@ public final class TestUtils {
         }).collect(Collectors.toSet());
     }
 
+    public static void assertRequestMatches(String method, String path, MockWebServer server) throws UncheckedInterruptedException {
+        RecordedRequest recordedRequest;
+        try {
+            recordedRequest = Objects.requireNonNull(server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS));
+        } catch (InterruptedException e) {
+            throw new UncheckedInterruptedException(e);
+        }
+        assertEquals(method, recordedRequest.getMethod());
+        assertNotNull(recordedRequest.getPath());
+        assertTrue(recordedRequest.getPath().matches(path));
+    }
+
     public static Set<String> getRequestsDone(int n, MockWebServer server) throws UncheckedInterruptedException {
         return IntStream.range(0, n).mapToObj(i -> {
             try {
@@ -79,7 +95,8 @@ public final class TestUtils {
                                                UUID voltageInitParametersUuid,
                                                UUID securityAnalysisParametersUuid,
                                                UUID sensitivityParametersUuid,
-                                               NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {
+                                               NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity,
+                                               boolean applyModifications) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .networkId("netId")
             .networkUuid(networkUuid)
@@ -89,6 +106,7 @@ public final class TestUtils {
             .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
             .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
             .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
+            .voltageInitParameters(new StudyVoltageInitParametersEntity(applyModifications))
             .build();
     }
 

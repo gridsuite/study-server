@@ -749,48 +749,60 @@ public class NetworkModificationTreeService {
 
     private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
                                          boolean deleteVoltageInitResults) {
+        UUID reportUuid = repositories.get(node.getType()).getReportUuid(node.getIdNode());
+        List<StudyService.ReportType> reportTypes = new ArrayList<>();
+
         if (!invalidateOnlyChildrenBuildStatus) {
             // we want to delete associated report and variant in this case
-            invalidateNodeInfos.addReportUuid(repositories.get(node.getType()).getReportUuid(node.getIdNode()));
+            invalidateNodeInfos.addReportUuid(reportUuid);
             invalidateNodeInfos.addVariantId(repositories.get(node.getType()).getVariantId(node.getIdNode()));
         }
 
         UUID loadFlowResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), LOAD_FLOW);
         if (loadFlowResultUuid != null) {
             invalidateNodeInfos.addLoadFlowResultUuid(loadFlowResultUuid);
+            reportTypes.add(StudyService.ReportType.LOADFLOW);
         }
 
         UUID securityAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SECURITY_ANALYSIS);
         if (securityAnalysisResultUuid != null) {
             invalidateNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
+            reportTypes.add(StudyService.ReportType.SECURITY_ANALYSIS);
         }
 
         UUID sensitivityAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SENSITIVITY_ANALYSIS);
         if (sensitivityAnalysisResultUuid != null) {
             invalidateNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
+            reportTypes.add(StudyService.ReportType.SENSITIVITY_ANALYSIS);
         }
 
         UUID nonEvacuatedEnergyResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), NON_EVACUATED_ENERGY_ANALYSIS);
         if (nonEvacuatedEnergyResultUuid != null) {
             invalidateNodeInfos.addNonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid);
+            reportTypes.add(StudyService.ReportType.NON_EVACUATED_ENERGY_ANALYSIS);
         }
 
         UUID shortCircuitAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SHORT_CIRCUIT);
         if (shortCircuitAnalysisResultUuid != null) {
             invalidateNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
+            reportTypes.add(StudyService.ReportType.ALL_BUSES_SHORTCIRCUIT_ANALYSIS);
         }
 
         UUID oneBusShortCircuitAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SHORT_CIRCUIT_ONE_BUS);
         if (oneBusShortCircuitAnalysisResultUuid != null) {
             invalidateNodeInfos.addOneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid);
+            reportTypes.add(StudyService.ReportType.ONE_BUS_SHORTCIRCUIT_ANALYSIS);
         }
 
         if (deleteVoltageInitResults) {
             UUID voltageInitResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), VOLTAGE_INITIALIZATION);
             if (voltageInitResultUuid != null) {
                 invalidateNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
+                reportTypes.add(StudyService.ReportType.VOLTAGE_INIT);
             }
         }
+
+        invalidateNodeInfos.addReportTypes(reportUuid, reportTypes);
     }
 
     @Transactional
