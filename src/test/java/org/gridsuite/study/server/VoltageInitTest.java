@@ -241,7 +241,7 @@ public class VoltageInitTest {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", VOLTAGE_INIT_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, "true")
+                            .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE)
                             .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
                             .build(), voltageInitResultDestination);
                     return new MockResponse().setResponseCode(200)
