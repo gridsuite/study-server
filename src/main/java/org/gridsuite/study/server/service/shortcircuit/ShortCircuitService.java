@@ -9,10 +9,8 @@ package org.gridsuite.study.server.service.shortcircuit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.shortcircuit.InitialVoltageProfileMode;
-import com.powsybl.shortcircuit.ShortCircuitParameters;
-import com.powsybl.shortcircuit.StudyType;
-import com.powsybl.shortcircuit.VoltageRange;
+import com.powsybl.security.LimitViolationType;
+import com.powsybl.shortcircuit.*;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
@@ -26,6 +24,7 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.StudyService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -362,6 +361,52 @@ public class ShortCircuitService {
 
             restTemplate.put(shortCircuitServerBaseUri + path, Void.class);
         }
+    }
+
+    public List<LimitViolationType> getLimitTypes(UUID studyUuid, UUID nodeUuid) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+        List<LimitViolationType> result = new ArrayList<>();
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SHORT_CIRCUIT);
+
+        if (resultUuidOpt.isPresent()) {
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/limit-violation-types");
+            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+            try {
+                ResponseEntity<List<LimitViolationType>> responseEntity = restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationType>>() {
+                });
+                result = responseEntity.getBody();
+            } catch (HttpStatusCodeException e) {
+                if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                    throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
+                }
+                throw e;
+            }
+        }
+        return result;
+    }
+
+    public List<Fault.FaultType> getFaultTypes(UUID studyUuid, UUID nodeUuid) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+        List<Fault.FaultType> result = new ArrayList<>();
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SHORT_CIRCUIT);
+
+        if (resultUuidOpt.isPresent()) {
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/fault-types");
+            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+            try {
+                ResponseEntity<List<Fault.FaultType>> responseEntity = restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<Fault.FaultType>>() {
+                });
+                result = responseEntity.getBody();
+            } catch (HttpStatusCodeException e) {
+                if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                    throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
+                }
+                throw e;
+            }
+        }
+        return result;
     }
 
 }

@@ -8,6 +8,9 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.iidm.network.TwoSides;
+import com.powsybl.loadflow.LoadFlowResult;
+import com.powsybl.security.LimitViolationType;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
@@ -16,6 +19,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
@@ -390,5 +394,74 @@ public class SecurityAnalysisService {
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, GET_SECURITY_ANALYSIS_DEFAULT_PROVIDER_FAILED);
         }
+    }
+
+    public List<LimitViolationType> getLimitTypes(UUID studyUuid, UUID nodeUuid) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+        List<LimitViolationType> result = new ArrayList<>();
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
+
+        if (resultUuidOpt.isPresent()) {
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/limit-types");
+            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+            try {
+                ResponseEntity<List<LimitViolationType>> responseEntity = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationType>>() {
+                });
+                result = responseEntity.getBody();
+            } catch (HttpStatusCodeException e) {
+                if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                    throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
+                }
+                throw e;
+            }
+        }
+        return result;
+    }
+
+    public List<TwoSides> getBranchSides(UUID studyUuid, UUID nodeUuid) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+        List<TwoSides> result = new ArrayList<>();
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
+
+        if (resultUuidOpt.isPresent()) {
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/branch-sides");
+            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+            try {
+                ResponseEntity<List<TwoSides>> responseEntity = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<TwoSides>>() {
+                });
+                result = responseEntity.getBody();
+            } catch (HttpStatusCodeException e) {
+                if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                    throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
+                }
+                throw e;
+            }
+        }
+        return result;
+    }
+
+    public List<LoadFlowResult.ComponentResult.Status> getComputationStatus(UUID studyUuid, UUID nodeUuid) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+        List<LoadFlowResult.ComponentResult.Status> result = new ArrayList<>();
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
+
+        if (resultUuidOpt.isPresent()) {
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/computation-status");
+            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+            try {
+                ResponseEntity<List<LoadFlowResult.ComponentResult.Status>> responseEntity = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LoadFlowResult.ComponentResult.Status>>() {
+                });
+                result = responseEntity.getBody();
+            } catch (HttpStatusCodeException e) {
+                if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                    throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
+                }
+                throw e;
+            }
+        }
+        return result;
     }
 }

@@ -8,6 +8,9 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.powsybl.commons.reporter.ReporterModel;
+import com.powsybl.iidm.network.TwoSides;
+import com.powsybl.security.LimitViolationType;
+import com.powsybl.shortcircuit.Fault;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -836,6 +839,70 @@ public class StudyController {
                                                        @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
                                                        Sort sort) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, filters, sort));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/limit-types")
+    @Operation(summary = "Get limit types")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Limit types")})
+    public ResponseEntity<List<LimitViolationType>> getLoadFlowLimitTypes(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                  @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadflowService.getLimitTypes(studyUuid, nodeUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/branch-sides")
+    @Operation(summary = "Get branch sides")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Branch sides")})
+    public ResponseEntity<List<TwoSides>> getLoadFlowBranchSides(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                         @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadflowService.getBranchSides(studyUuid, nodeUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/computation-status")
+    @Operation(summary = "Get computation status")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Computation status")})
+    public ResponseEntity<List<com.powsybl.loadflow.LoadFlowResult.ComponentResult.Status>> getLoadFlowComputationStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadflowService.getComputationStatus(studyUuid, nodeUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/limit-types")
+    @Operation(summary = "Get limit types")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Limit types")})
+    public ResponseEntity<List<LimitViolationType>> getSecurityAnalysisLimitTypes(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                  @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(securityAnalysisService.getLimitTypes(studyUuid, nodeUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/branch-sides")
+    @Operation(summary = "Get branch sides")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Branch sides")})
+    public ResponseEntity<List<TwoSides>> getSecurityAnalysisBranchSides(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                         @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(securityAnalysisService.getBranchSides(studyUuid, nodeUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/computation-status")
+    @Operation(summary = "Get computation status")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Computation status")})
+    public ResponseEntity<List<com.powsybl.loadflow.LoadFlowResult.ComponentResult.Status>> getSecurityAnalysisComputationStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                                                 @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(securityAnalysisService.getComputationStatus(studyUuid, nodeUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/limit-violation-types")
+    @Operation(summary = "Get limit violation types")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Limit violation types")})
+    public ResponseEntity<List<LimitViolationType>> getShortCircuitAnalysisLimitTypes(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                  @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(shortCircuitService.getLimitTypes(studyUuid, nodeUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/fault-types")
+    @Operation(summary = "Get fault types")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Fault types")})
+    public ResponseEntity<List<Fault.FaultType>> getShortCircuitAnalysisFaultTypes(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                   @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(shortCircuitService.getFaultTypes(studyUuid, nodeUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
