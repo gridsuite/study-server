@@ -541,7 +541,7 @@ public class SecurityAnalysisTest {
         Integer integerResponse = Integer.parseInt(resultAsString);
         assertEquals(integerResponse, Integer.valueOf(1));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING + ".*")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/contingency-count\\?networkUuid=" + NETWORK_UUID_STRING + ".*")));
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
