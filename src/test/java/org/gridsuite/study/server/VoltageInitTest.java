@@ -25,6 +25,10 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.voltageinit.parameters.FilterEquipments;
+import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
+import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
+import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageLimitInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
@@ -43,8 +47,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
-import org.skyscreamer.jsonassert.JSONAssert;
-import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +65,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.IntStream;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
@@ -100,9 +103,31 @@ public class VoltageInitTest {
 
     private static final String VOLTAGE_INIT_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
 
-    private static final String VOLTAGE_INIT_PARAMETERS_JSON = "{\"uuid\":\"0c0f1efd-bd22-4a75-83d3-9e530245c7f4\",\"date\":\"2023-08-22T12:43:37.596944+02:00\",\"name\":null,\"voltageLimits\":[{\"priority\":0,\"lowVoltageLimit\":24,\"highVoltageLimit\":552,\"filters\":[{\"containerId\":\"6754396b-3791-4b80-9971-defbf5968fb7\",\"containerName\":\"testfp\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}],\"constantQGenerators\":[{\"containerId\":\"ff915f2f-578c-4d8c-a267-0135a4323462\",\"containerName\":\"testf1\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}],\"variableTwoWindingsTransformers\":[],\"variableShuntCompensators\":[]}]";
+    public static final VoltageInitParametersInfos VOLTAGE_INIT_PARAMETERS_INFOS = VoltageInitParametersInfos.builder()
+        .voltageLimitsDefault(
+            List.of(
+                VoltageLimitInfos.builder()
+                    .priority(0)
+                    .lowVoltageLimit(24.)
+                    .highVoltageLimit(552.)
+                    .filters(List.of(FilterEquipments.builder().filterId(UUID.fromString("6754396b-3791-4b80-9971-defbf5968fb7")).filterName("testfp").build()))
+                    .build()))
+        .constantQGenerators(
+            List.of(
+                FilterEquipments.builder().filterId(UUID.fromString("ff915f2f-578c-4d8c-a267-0135a4323462")).filterName("testf1").build())
+        )
+        .build();
 
-    private static final String VOLTAGE_INIT_EMPTY_PARAMETERS = "{}";
+    public static final VoltageInitParametersInfos VOLTAGE_INIT_PARAMETERS_INFOS_2 = VoltageInitParametersInfos.builder()
+        .voltageLimitsDefault(
+            List.of(
+                VoltageLimitInfos.builder()
+                    .priority(0)
+                    .lowVoltageLimit(24.)
+                    .highVoltageLimit(552.)
+                    .filters(List.of(FilterEquipments.builder().filterId(UUID.fromString("6754396b-3791-4b80-9971-defbf5968fb7")).filterName("testfp").build()))
+                    .build()))
+        .build();
 
     private static final String VOLTAGE_INIT_PARAMETERS_UUID = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
 
@@ -258,7 +283,7 @@ public class VoltageInitTest {
                     if (method.equals("PUT")) {
                         return new MockResponse().setResponseCode(200);
                     } else {
-                        return new MockResponse().setResponseCode(200).setBody(VOLTAGE_INIT_PARAMETERS_JSON)
+                        return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(VOLTAGE_INIT_PARAMETERS_INFOS))
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
                 } else if (path.matches("/v1/parameters/" + WRONG_VOLTAGE_INIT_PARAMETERS_UUID)) {
@@ -291,12 +316,12 @@ public class VoltageInitTest {
         when(networkStoreService.getNetwork(UUID.fromString(NETWORK_UUID_STRING))).thenReturn(network);
     }
 
-    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters) throws Exception {
+    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, StudyVoltageInitParameters parameters) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)
                         .header("userId", "userId")
-                        .contentType(MediaType.ALL)
-                        .content(parameters)).andExpect(
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(parameters))).andExpect(
                 status().isOk());
 
         Message<byte[]> voltageInitStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
@@ -310,32 +335,34 @@ public class VoltageInitTest {
     @Test
     public void testVoltageInitParameters() throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null, false);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         //get initial voltage init parameters
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk()).andReturn();
 
-        JSONAssert.assertEquals(VOLTAGE_INIT_EMPTY_PARAMETERS, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+        assertEquals(createStudyVoltageInitParameters(false), objectMapper.readValue(mvcResult.getResponse().getContentAsString(), StudyVoltageInitParameters.class));
 
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, VOLTAGE_INIT_PARAMETERS_JSON);
+        StudyVoltageInitParameters parameters = createStudyVoltageInitParameters(false, VOLTAGE_INIT_PARAMETERS_INFOS);
+
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, parameters);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters")));
 
         //checking update is registered
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk()).andReturn();
 
-        JSONAssert.assertEquals(VOLTAGE_INIT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+        assertEquals(parameters, objectMapper.readValue(mvcResult.getResponse().getContentAsString(), StudyVoltageInitParameters.class));
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID)));
 
         //update voltage init parameters
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, VOLTAGE_INIT_PARAMETERS_JSON);
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, parameters);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID)));
 
         // insert a study with a wrong voltage init parameters uuid
-        StudyEntity studyEntity2 = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(WRONG_VOLTAGE_INIT_PARAMETERS_UUID));
+        StudyEntity studyEntity2 = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(WRONG_VOLTAGE_INIT_PARAMETERS_UUID), false);
 
         // get voltage init parameters
         mockMvc.perform(get("/v1/studies/{studyUuid}/voltage-init/parameters", studyEntity2.getId())).andExpect(
@@ -346,9 +373,63 @@ public class VoltageInitTest {
     }
 
     @Test
+    public void testUpdatingParametersWithSameComputationParametersDoesNotInvalidate() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID), false);
+        // Just changing applyModifications value but keeping the same computing parameters
+        StudyVoltageInitParameters studyVoltageInitParameters = StudyVoltageInitParameters.builder()
+            .applyModifications(false)
+            .computationParameters(VOLTAGE_INIT_PARAMETERS_INFOS)
+            .build();
+
+        mockMvc.perform(
+            post("/v1/studies/{studyUuid}/voltage-init/parameters", studyEntity.getId())
+                .header("userId", "userId")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(studyVoltageInitParameters))).andExpect(
+            status().isOk());
+
+        TestUtils.assertRequestMatches("GET", "/v1/parameters/.*", server);
+
+        // STUDY_CHANGED event
+        output.receive(1000, studyUpdateDestination);
+    }
+
+    @Test
+    public void testApplyModificationsWhenParameterIsActivated() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(
+            UUID.fromString(NETWORK_UUID_STRING),
+            CASE_UUID,
+            UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID),
+            true);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+            UUID.randomUUID(), VARIANT_ID_2, "node 1");
+        //run a voltage init analysis
+        mockMvc.perform(
+            put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run", studyEntity.getId(), modificationNode1.getId()).header("userId", "userId")
+            )
+            .andExpect(status().isOk());
+
+        // Running the computation
+        TestUtils.assertRequestMatches("POST", "/v1/networks/" + NETWORK_UUID_STRING + "/.*", server);
+        // Fetch results to get modification group UUID
+        TestUtils.assertRequestMatches("GET", "/v1/results/.*", server);
+        // Duplicate modification in the group related to the node
+        TestUtils.assertRequestMatches("PUT", "/v1/groups/.*", server);
+        // Update modification group UUID in the result
+        TestUtils.assertRequestMatches("PUT", "/v1/results/.*/modifications-group-uuid", server);
+
+        // Applying modifications also invalidate all results of the node, so it creates a lot of study update notifications
+        IntStream.range(0, 17).forEach(i -> output.receive(1000, studyUpdateDestination));
+        // It deletes the voltage-init modification and creates a new one on the node
+        IntStream.range(0, 2).forEach(i -> output.receive(1000, elementUpdateDestination));
+    }
+
+    @Test
     public void testVoltageInit() throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID));
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID), false);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -385,8 +466,7 @@ public class VoltageInitTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/result", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(VOLTAGE_INIT_RESULT_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID)));
+        TestUtils.assertRequestMatches("GET", "/v1/results/" + VOLTAGE_INIT_RESULT_UUID, server);
 
         // get voltage init status
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/status", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
@@ -398,11 +478,14 @@ public class VoltageInitTest {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)
                         .header("userId", "userId")
-                        .contentType(MediaType.ALL)
-                        .content(VOLTAGE_INIT_PARAMETERS_JSON)).andExpect(
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createStudyVoltageInitParameters(false, VOLTAGE_INIT_PARAMETERS_INFOS_2)))).andExpect(
                 status().isOk());
 
-        assertTrue(TestUtils.getRequestsDone(2, server).stream().allMatch(r -> r.matches("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID) || r.matches("/v1/results/invalidate-status.*")));
+        TestUtils.assertRequestMatches("GET", "/v1/parameters/.*", server);
+        TestUtils.assertRequestMatches("PUT", "/v1/parameters/.*", server);
+        TestUtils.assertRequestMatches("PUT", "/v1/results/invalidate-status.*", server);
+
         //remove notif about study updating due to parameters changes
         output.receive(1000);
         output.receive(1000);
@@ -432,7 +515,7 @@ public class VoltageInitTest {
 
     @Test
     public void testCopyVoltageInitModifications() throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID));
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID), false);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
@@ -530,7 +613,7 @@ public class VoltageInitTest {
     @SneakyThrows
     public void testNotResetedUuidResultWhenVoltageInitFailed() {
         UUID resultUuid = UUID.randomUUID();
-        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID));
+        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID), false);
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
@@ -599,7 +682,7 @@ public class VoltageInitTest {
     @Test
     public void testNoResult() throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID));
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID), false);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -618,12 +701,12 @@ public class VoltageInitTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/stop", studyNameUserIdUuid, modificationNode1Uuid)).andExpect(status().isOk());
     }
 
-    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID voltageInitParametersUuid) {
+    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID voltageInitParametersUuid, boolean applyModifications) {
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "",
                 UUID.randomUUID(), defaultShortCircuitParametersEntity, voltageInitParametersUuid, null, null,
-                defaultNonEvacuatedEnergyParametersEntity);
+                defaultNonEvacuatedEnergyParametersEntity, applyModifications);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
@@ -686,5 +769,18 @@ public class VoltageInitTest {
         } catch (IOException e) {
             // Ignoring
         }
+    }
+
+    private static StudyVoltageInitParameters createStudyVoltageInitParameters(boolean applyModifications) {
+        return StudyVoltageInitParameters.builder()
+            .applyModifications(applyModifications)
+            .build();
+    }
+
+    private static StudyVoltageInitParameters createStudyVoltageInitParameters(boolean applyModifications, VoltageInitParametersInfos voltageInitParametersInfos) {
+        return StudyVoltageInitParameters.builder()
+            .applyModifications(applyModifications)
+            .computationParameters(voltageInitParametersInfos)
+            .build();
     }
 }
