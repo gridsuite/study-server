@@ -28,6 +28,7 @@ import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileIn
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
+import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -489,6 +490,17 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkCountries(studyUuid, nodeUuid, inUpstreamBuiltParentNode));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/nominal-voltages")
+    @Operation(summary = "Get network nominal voltages")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of nominal voltages")})
+    public ResponseEntity<String> getNetworkNominalVoltages(
+            @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkNominalVoltages(studyUuid, nodeUuid, inUpstreamBuiltParentNode));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}")
     @Operation(summary = "Get specific line or 2WT or 3WT description")
     @ApiResponses(value = {
@@ -739,7 +751,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set")})
     public ResponseEntity<Void> setVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String voltageInitParameters,
+            @RequestBody(required = false) StudyVoltageInitParameters voltageInitParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setVoltageInitParameters(studyUuid, voltageInitParameters, userId);
         return ResponseEntity.ok().build();
@@ -748,7 +760,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
     @Operation(summary = "Get voltage init parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters")})
-    public ResponseEntity<String> getVoltageInitParameters(
+    public ResponseEntity<StudyVoltageInitParameters> getVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getVoltageInitParameters(studyUuid));
     }
@@ -834,8 +846,9 @@ public class StudyController {
     public ResponseEntity<List<LimitViolationInfos>> getLimitViolations(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+                                                       @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
                                                        Sort sort) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, filters, sort));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, filters, globalFilters, sort));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")

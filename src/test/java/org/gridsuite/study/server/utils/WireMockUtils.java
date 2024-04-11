@@ -381,6 +381,28 @@ public class WireMockUtils {
         verifyGetRequest(stubUuid, "/v1/networks/" + networkUuid + "/countries", Map.of());
     }
 
+    public UUID stubNominalVoltagesGet(String networkUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/nominal-voltages"))
+                .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
+    public UUID stubNominalVoltagesGetNotFoundError(String networkUuid) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/nominal-voltages"))
+                .willReturn(WireMock.notFound().withBody("Network not found"))
+        ).getId();
+    }
+
+    public UUID stubNominalVoltagesGetError(String networkUuid) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/nominal-voltages"))
+                .willReturn(WireMock.serverError().withBody("Internal Server Error"))
+        ).getId();
+    }
+
+    public void verifyNominalVoltagesGet(UUID stubUuid, String networkUuid) {
+        verifyGetRequest(stubUuid, "/v1/networks/" + networkUuid + "/nominal-voltages", Map.of());
+    }
+
     public UUID stubFilterEvaluate(String networkUuid, String responseBody) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate"))
                 .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))

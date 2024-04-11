@@ -540,7 +540,7 @@ public class SingleLineDiagramTest {
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "",
                 LOADFLOW_PARAMETERS_UUID, defaultShortCircuitParametersEntity, null, null, null,
-                defaultNonEvacuatedEnergyParametersEntity);
+                defaultNonEvacuatedEnergyParametersEntity, false);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

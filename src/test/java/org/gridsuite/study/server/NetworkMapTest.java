@@ -660,6 +660,62 @@ public class NetworkMapTest {
         wireMockUtils.verifyCountriesGet(stubUuid, NETWORK_UUID_STRING);
     }
 
+    @Test
+    public void testGetNominalVoltages() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+        final String responseBody = """
+                [24.0, 380.0]
+            """;
+        UUID stubUuid = wireMockUtils.stubNominalVoltagesGet(NETWORK_UUID_STRING, responseBody);
+
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/nominal-voltages",
+                        studyNameUserIdUuid, rootNodeUuid))
+                .andExpect(status().isOk())
+                .andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        assertEquals(responseBody, resultAsString);
+
+        wireMockUtils.verifyNominalVoltagesGet(stubUuid, NETWORK_UUID_STRING);
+    }
+
+    @Test
+    public void testGetNominalVoltagesNotFoundError() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+        UUID stubUuid = wireMockUtils.stubNominalVoltagesGetNotFoundError(NETWORK_UUID_STRING);
+
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/nominal-voltages",
+                        studyNameUserIdUuid, rootNodeUuid))
+                .andExpect(status().is5xxServerError())
+                .andReturn();
+
+        wireMockUtils.verifyNominalVoltagesGet(stubUuid, NETWORK_UUID_STRING);
+    }
+
+    @Test
+    public void testGetNominalVoltagesError() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+        UUID stubUuid = wireMockUtils.stubNominalVoltagesGetError(NETWORK_UUID_STRING);
+
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/nominal-voltages",
+                        studyNameUserIdUuid, rootNodeUuid))
+                .andExpect(status().is5xxServerError())
+                .andReturn();
+
+        wireMockUtils.verifyNominalVoltagesGet(stubUuid, NETWORK_UUID_STRING);
+    }
+
     private void cleanDB() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
