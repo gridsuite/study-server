@@ -118,11 +118,10 @@ public class LoadFlowTest {
     private static final String PROVIDER = "LF_PROVIDER";
 
     private static final String LOADFLOW_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+
     private static final String VARIANT_ID = "variant_1";
 
     private static final String VARIANT_ID_2 = "variant_2";
-
-    private static final String VARIANT_ID_3 = "variant_3";
 
     private static final long TIMEOUT = 1000;
 
@@ -220,7 +219,7 @@ public class LoadFlowTest {
                 .commonParameters(LoadFlowParameters.load())
                 .specificParametersPerProvider(Map.of())
                 .build();
-        LOADFLOW_PARAMETERS_JSON = objectMapper.writeValueAsString(loadFlowParametersInfos);
+        LOADFLOW_DEFAULT_PARAMETERS_JSON = objectMapper.writeValueAsString(loadFlowParametersInfos);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows

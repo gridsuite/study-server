@@ -1049,9 +1049,9 @@ public class StudyService {
     }
 
     public void createOrUpdateLoadFlowParameters(StudyEntity studyEntity, String parameters, String userId) {
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
         UUID existingLoadFlowParametersUuid = studyEntity.getLoadFlowParametersUuid();
 
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
         if (parameters == null && userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
             // reset case, with existing profile, having default LF params
             try {

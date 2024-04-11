@@ -240,7 +240,7 @@ public class ConsumerService {
             try {
                 return loadFlowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
             } catch (Exception e) {
-                // TODO try to report
+                // TODO try to report and/or snackbar message ?
                 LOGGER.error(String.format("Could not duplicate loadflow parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
                         userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
             }
