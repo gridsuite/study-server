@@ -30,13 +30,17 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 @Service
 public class UserAdminService {
     private static final String USER_PROFILES_URI = "/profiles?sub={sub}";
-    private final String userAdminServerBaseUri;
     private final RestTemplate restTemplate;
+    private String userAdminServerBaseUri;
 
     @Autowired
     public UserAdminService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         this.userAdminServerBaseUri = remoteServicesProperties.getServiceUri("user-admin-server");
         this.restTemplate = restTemplate;
+    }
+
+    public void setUserAdminServerBaseUri(String serverBaseUri) {
+        this.userAdminServerBaseUri = serverBaseUri;
     }
 
     public UserProfileInfos getUserProfile(String sub) {

@@ -1053,7 +1053,7 @@ public class StudyService {
                 removeLoadFlowParameters(existingLoadFlowParametersUuid);
                 return;
             } catch (Exception e) {
-                // TODO try to report + snackbar message ?
+                // TODO try to report and/or snackbar message ?
                 LOGGER.error(String.format("Could not duplicate loadflow parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
                         userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
                 // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
