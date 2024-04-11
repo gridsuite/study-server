@@ -13,7 +13,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -41,31 +40,22 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class LoadFlowService {
 
     static final String RESULT_UUID = "resultUuid";
-    static final String RESULTS_UUIDS = "resultsUuids";
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
-
-    private String loadFlowServerBaseUri;
-
-    NotificationService notificationService;
-
     private final NetworkService networkStoreService;
-
-    NetworkModificationTreeService networkModificationTreeService;
     private final ObjectMapper objectMapper;
-
     private final RestTemplate restTemplate;
+    private final NetworkModificationTreeService networkModificationTreeService;
+    private String loadFlowServerBaseUri;
 
     @Autowired
     public LoadFlowService(RemoteServicesProperties remoteServicesProperties,
                            NetworkModificationTreeService networkModificationTreeService,
                            NetworkService networkStoreService, ObjectMapper objectMapper,
-                           NotificationService notificationService,
                            RestTemplate restTemplate) {
         this.loadFlowServerBaseUri = remoteServicesProperties.getServiceUri("loadflow-server");
         this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
-        this.notificationService = notificationService;
         this.restTemplate = restTemplate;
     }
 
@@ -116,7 +106,7 @@ public class LoadFlowService {
     public void deleteLoadFlowResults() {
         try {
             String path = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results").toUriString();
+                    .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results").toUriString();
             restTemplate.delete(loadFlowServerBaseUri + path, Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
@@ -126,7 +116,7 @@ public class LoadFlowService {
 
     public Integer getLoadFlowResultsCount() {
         String path = UriComponentsBuilder
-            .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/supervision/results-count").toUriString();
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/supervision/results-count").toUriString();
         return restTemplate.getForObject(loadFlowServerBaseUri + path, Integer.class);
     }
 
@@ -217,21 +207,28 @@ public class LoadFlowService {
         }
     }
 
-    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid, String filters, Sort sort) {
+    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid, String filters, String globalFilters, Sort sort, UUID networkUuid, String variantId) {
         List<LimitViolationInfos> result = new ArrayList<>();
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
 
         if (resultUuidOpt.isPresent()) {
             UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations");
-            if (filters != null && !filters.isEmpty()) {
+            if (!StringUtils.isEmpty(filters)) {
                 uriComponentsBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+            }
+            if (!StringUtils.isEmpty(globalFilters)) {
+                uriComponentsBuilder.queryParam("globalFilters", URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
+                uriComponentsBuilder.queryParam("networkUuid", networkUuid);
+                if (!StringUtils.isBlank(variantId)) {
+                    uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+                }
             }
             if (sort != null) {
                 sort.forEach(order -> uriComponentsBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection()));
             }
             String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
             try {
-                ResponseEntity<List<LimitViolationInfos>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() {
+                ResponseEntity<List<LimitViolationInfos>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
                 });
                 result = responseEntity.getBody();
             } catch (HttpStatusCodeException e) {
@@ -247,7 +244,7 @@ public class LoadFlowService {
     public LoadFlowParametersInfos getLoadFlowParameters(UUID parametersUuid) {
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
-            .buildAndExpand(parametersUuid).toUriString();
+                .buildAndExpand(parametersUuid).toUriString();
         try {
             return restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowParametersInfos.class);
         } catch (HttpStatusCodeException e) {
