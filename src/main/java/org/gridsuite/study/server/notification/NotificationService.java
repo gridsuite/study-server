@@ -6,12 +6,15 @@
  */
 package org.gridsuite.study.server.notification;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
@@ -19,6 +22,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -27,6 +31,8 @@ import java.util.UUID;
  */
 @Service
 public class NotificationService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(NotificationService.class);
 
     public static final String HEADER_ERROR = "error";
     public static final String HEADER_NODE = "node";
@@ -102,7 +108,8 @@ public class NotificationService {
 
     public static final String HEADER_REACTIVE_SLACKS_OVER_THRESHOLD = "REACTIVE_SLACKS_OVER_THRESHOLD";
     public static final String HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE = "reactiveSlacksThreshold";
-    public static final String REACTIVE_SLACKS_OVER_THRESHOLD_ALERT = "voltageInit_reactiveSlacksThresholdAlert";
+
+    public static final String STUDY_ALERT = "STUDY_ALERT";
 
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
 
@@ -110,8 +117,21 @@ public class NotificationService {
 
     private final StreamBridge updatePublisher;
 
-    public NotificationService(StreamBridge updatePublisher) {
+    @Autowired
+    private final ObjectMapper objectMapper;
+
+    public enum AlertLevel {
+        ERROR,
+        WARNING,
+        INFO
+    }
+
+    public record StudyAlert(AlertLevel alertLevel, String messageId, Map<String, String> attributes) { }
+
+    public NotificationService(StreamBridge updatePublisher,
+                               ObjectMapper objectMapper) {
         this.updatePublisher = updatePublisher;
+        this.objectMapper = objectMapper;
     }
 
     private void sendUpdateMessage(Message<?> message) {
@@ -183,10 +203,14 @@ public class NotificationService {
 
     @PostCompletion
     public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, NetworkImpactsInfos networkImpactsInfos) {
-        sendUpdateMessage(MessageBuilder.withPayload(networkImpactsInfos).setHeader(HEADER_STUDY_UUID, studyUuid)
+        try {
+            sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(networkImpactsInfos)).setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .build());
+        } catch (JsonProcessingException e) {
+            LOGGER.error(e.toString(), e);
+        }
     }
 
     @PostCompletion
@@ -351,15 +375,17 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitVoltageInitReactiveSlacksAlert(UUID studyUuid, UUID nodeUuid, String userId, Boolean alert, Double threshold) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-            .setHeader(HEADER_USER_ID, userId)
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_NODE, nodeUuid)
-            .setHeader(HEADER_UPDATE_TYPE, REACTIVE_SLACKS_OVER_THRESHOLD_ALERT)
-            .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, alert)
-            .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, threshold)
-            .build()
-        );
+    public void emitStudyAlert(UUID studyUuid, UUID nodeUuid, String userId, StudyAlert studyAlert) {
+        try {
+            sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(studyAlert))
+                .setHeader(HEADER_USER_ID, userId)
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_NODE, nodeUuid)
+                .setHeader(HEADER_UPDATE_TYPE, STUDY_ALERT)
+                .build()
+            );
+        } catch (JsonProcessingException e) {
+            LOGGER.error(e.toString(), e);
+        }
     }
 }

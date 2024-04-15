@@ -72,7 +72,7 @@ import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZAT
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_REACTIVE_SLACKS_OVER_THRESHOLD;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
-import static org.gridsuite.study.server.notification.NotificationService.REACTIVE_SLACKS_OVER_THRESHOLD_ALERT;
+import static org.gridsuite.study.server.notification.NotificationService.STUDY_ALERT;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -792,11 +792,14 @@ public class VoltageInitTest {
             .build();
     }
 
-    private void checkReactiveSlacksAlertMessagesReceived(UUID studyUuid, Double thresholdValue) {
+    private void checkReactiveSlacksAlertMessagesReceived(UUID studyUuid, Double thresholdValue) throws Exception {
         Message<byte[]> voltageInitMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, voltageInitMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(REACTIVE_SLACKS_OVER_THRESHOLD_ALERT, voltageInitMessage.getHeaders().get(HEADER_UPDATE_TYPE));
-        assertEquals(Boolean.TRUE, voltageInitMessage.getHeaders().get(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD));
-        assertEquals(10., voltageInitMessage.getHeaders().get(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE));
+        assertEquals(STUDY_ALERT, voltageInitMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertNotNull(voltageInitMessage.getPayload());
+        NotificationService.StudyAlert alert = objectMapper.readValue(new String(voltageInitMessage.getPayload()), NotificationService.StudyAlert.class);
+        assertEquals(NotificationService.AlertLevel.WARNING, alert.alertLevel());
+        assertEquals("REACTIVE_SLACKS_OVER_THRESHOLD", alert.messageId());
+        assertEquals(Map.of("threshold", thresholdValue.toString()), alert.attributes());
     }
 }

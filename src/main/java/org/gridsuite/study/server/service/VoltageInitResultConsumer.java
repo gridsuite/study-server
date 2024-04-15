@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -45,7 +46,7 @@ public class VoltageInitResultConsumer {
             if (Boolean.TRUE.equals(alert)) {
                 String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
                 Double alertThreshold = msg.getHeaders().get(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, Double.class);
-                notificationService.emitVoltageInitReactiveSlacksAlert(studyUuid, nodeReceiver.getNodeUuid(), userId, alert, alertThreshold);
+                notificationService.emitStudyAlert(studyUuid, nodeReceiver.getNodeUuid(), userId, new NotificationService.StudyAlert(NotificationService.AlertLevel.WARNING, "REACTIVE_SLACKS_OVER_THRESHOLD", Map.of("threshold", alertThreshold.toString())));
             }
         });
     }
