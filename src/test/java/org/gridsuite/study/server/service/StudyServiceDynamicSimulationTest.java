@@ -154,7 +154,7 @@ public class StudyServiceDynamicSimulationTest {
     }
 
     @Test
-    public void testGetDynamicSimulationTimeLine() {
+    public void testGetDynamicSimulationTimeline() {
         // setup
         // timeline
         List<TimelineEventInfos> timelineEventInfosList = List.of(

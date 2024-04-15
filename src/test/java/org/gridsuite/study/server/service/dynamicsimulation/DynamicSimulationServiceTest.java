@@ -91,7 +91,7 @@ public class DynamicSimulationServiceTest {
     public static final UUID NODE_UUID = UUID.randomUUID();
     public static final UUID RESULT_UUID = UUID.randomUUID();
     public static final UUID TIME_SERIES_UUID = UUID.randomUUID();
-    public static final UUID TIME_LINE_UUID = UUID.randomUUID();
+    public static final UUID TIMELINE_UUID = UUID.randomUUID();
 
     // running node
     public static final UUID NODE_UUID_RUNNING = UUID.randomUUID();
@@ -102,7 +102,7 @@ public class DynamicSimulationServiceTest {
     public static final String TIMELINE_NAME = "Timeline";
 
     public static final UUID REPORT_UUID = UUID.randomUUID();
-    public static final String REPORT_ID = NODE_UUID.toString();
+    public static final String REPORTER_ID = NODE_UUID.toString();
 
     @MockBean
     private DynamicMappingClient dynamicMappingClient;
@@ -138,7 +138,7 @@ public class DynamicSimulationServiceTest {
         given(networkModificationTreeService.getReportUuid(NODE_UUID)).willReturn(REPORT_UUID);
 
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.run(eq(""), any(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(new ReportInfos(REPORT_UUID, REPORT_ID)), any(), any())).willReturn(RESULT_UUID);
+        given(dynamicSimulationClient.run(eq(""), any(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(new ReportInfos(REPORT_UUID, REPORTER_ID)), any(), any())).willReturn(RESULT_UUID);
 
         // call method to be tested
         UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", STUDY_UUID, NODE_UUID, null, "testUserId");
@@ -215,7 +215,7 @@ public class DynamicSimulationServiceTest {
     @Test
     public void testGetTimelineResult() {
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.getTimelineResult(RESULT_UUID)).willReturn(TIME_LINE_UUID);
+        given(dynamicSimulationClient.getTimelineResult(RESULT_UUID)).willReturn(TIMELINE_UUID);
 
         // setup timeSeriesClient mock
         // timeline
@@ -237,7 +237,7 @@ public class DynamicSimulationServiceTest {
         }).toArray(String[]::new);
         List<TimeSeries> timelineSeries = List.of(TimeSeries.createString("timeline", new IrregularTimeSeriesIndex(timelineIndexes), timelineValues));
 
-        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timelineSeries);
+        given(timeSeriesClient.getTimeSeriesGroup(TIMELINE_UUID, null)).willReturn(timelineSeries);
 
         // call method to be tested
         List<TimelineEventInfos> timelineResult = dynamicSimulationService.getTimelineResult(NODE_UUID);
@@ -250,14 +250,14 @@ public class DynamicSimulationServiceTest {
     @Test
     public void testGetTimelineResultGivenBadType() throws JsonProcessingException {
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.getTimelineResult(RESULT_UUID)).willReturn(TIME_LINE_UUID);
+        given(dynamicSimulationClient.getTimelineResult(RESULT_UUID)).willReturn(TIMELINE_UUID);
 
         // setup timeSeriesClient mock
         // --- create a bad type series --- //
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
         List<TimeSeries> timelines = List.of(TimeSeries.createDouble(TIME_SERIES_NAME_1, index, 333.847331, 333.847321, 333.847300, 333.847259));
 
-        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timelines);
+        given(timeSeriesClient.getTimeSeriesGroup(TIMELINE_UUID, null)).willReturn(timelines);
 
         // call method to be tested
         assertThatExceptionOfType(StudyException.class).isThrownBy(() ->
@@ -285,7 +285,7 @@ public class DynamicSimulationServiceTest {
         }).toArray(String[]::new);
         timelines = List.of(TimeSeries.createString("timeline", new IrregularTimeSeriesIndex(timelineIndexes), timelineValues));
 
-        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timelines);
+        given(timeSeriesClient.getTimeSeriesGroup(TIMELINE_UUID, null)).willReturn(timelines);
 
         // call method to be tested
         assertThatExceptionOfType(StudyException.class).isThrownBy(() ->

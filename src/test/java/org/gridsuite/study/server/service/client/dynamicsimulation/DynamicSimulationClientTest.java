@@ -47,7 +47,7 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
     public static final UUID RESULT_NOT_FOUND_UUID = UUID.randomUUID();
 
     public static final UUID REPORT_UUID = UUID.randomUUID();
-    public static final UUID REPORT_ID = UUID.randomUUID();
+    public static final UUID REPORTER_ID = UUID.randomUUID();
 
     private DynamicSimulationClient dynamicSimulationClient;
 
@@ -86,7 +86,7 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
                         .withHeader("Content-Type", "application/json; charset=utf-8")
                 ));
 
-        UUID resultUuid = dynamicSimulationClient.run("", "", NETWORK_UUID, VARIANT_1_ID, new ReportInfos(REPORT_UUID, REPORT_ID.toString()), parameters, "testUserId");
+        UUID resultUuid = dynamicSimulationClient.run("", "", NETWORK_UUID, VARIANT_1_ID, new ReportInfos(REPORT_UUID, REPORTER_ID.toString()), parameters, "testUserId");
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);
@@ -122,7 +122,7 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
     }
 
     @Test
-    public void testGetTimeLineResult() throws JsonProcessingException {
+    public void testGetTimelineResult() throws JsonProcessingException {
 
         // configure mock server response for test get timeline result - uuid results/{resultUuid}/timeline
         String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
@@ -139,7 +139,7 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
     }
 
     @Test(expected = StudyException.class)
-    public void testGetTimeLineResultGivenBadUuid() {
+    public void testGetTimelineResultGivenBadUuid() {
 
         // configure mock server response
         String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);

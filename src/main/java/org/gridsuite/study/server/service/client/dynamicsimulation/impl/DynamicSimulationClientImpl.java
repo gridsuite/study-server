@@ -59,8 +59,8 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         uriComponentsBuilder
                 .queryParam("mappingName", parameters.getMapping())
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
-                .queryParam(QUERY_PARAM_REPORT_UUID, reportInfos.getReportUuid())
-                .queryParam(QUERY_PARAM_REPORTER_ID, reportInfos.getReporterId())
+                .queryParam(QUERY_PARAM_REPORT_UUID, reportInfos.reportUuid())
+                .queryParam(QUERY_PARAM_REPORTER_ID, reportInfos.reporterId())
                 .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.DYNAMIC_SIMULATION.reportKey);
         var uriComponent = uriComponentsBuilder
                 .buildAndExpand(networkUuid);

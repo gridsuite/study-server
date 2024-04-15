@@ -75,19 +75,11 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         this.networkModificationTreeService = networkModificationTreeService;
     }
 
-    private String getVariantId(UUID nodeUuid) {
-        return networkModificationTreeService.getVariantId(nodeUuid);
-    }
-
-    private UUID getReportUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getReportUuid(nodeUuid);
-    }
-
     @Override
     public UUID runDynamicSimulation(String provider, UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters, String userId) {
         UUID networkUuid = networkService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
-        UUID reportUuid = getReportUuid(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
+        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
         // create receiver for getting back the notification in rabbitmq
         String receiver;

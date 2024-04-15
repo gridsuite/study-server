@@ -7,22 +7,17 @@
 package org.gridsuite.study.server.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
 
 import java.util.UUID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-@AllArgsConstructor
-@Getter
-@EqualsAndHashCode
 @Schema(description = "Report infos")
-public class ReportInfos {
-    private UUID reportUuid;
+public record ReportInfos(
+    UUID reportUuid,
+    String reporterId
+) {
 
-    private String reporterId;
 }
 
