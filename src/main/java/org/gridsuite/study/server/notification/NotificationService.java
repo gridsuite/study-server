@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
+import org.gridsuite.study.server.notification.dto.StudyAlert;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +23,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -106,9 +106,6 @@ public class NotificationService {
     public static final String SUBTREE_CREATED = "subtreeCreated";
     public static final String MESSAGE_LOG = "Sending message : {}";
 
-    public static final String HEADER_REACTIVE_SLACKS_OVER_THRESHOLD = "REACTIVE_SLACKS_OVER_THRESHOLD";
-    public static final String HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE = "reactiveSlacksThreshold";
-
     public static final String STUDY_ALERT = "STUDY_ALERT";
 
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
@@ -119,14 +116,6 @@ public class NotificationService {
 
     @Autowired
     private final ObjectMapper objectMapper;
-
-    public enum AlertLevel {
-        ERROR,
-        WARNING,
-        INFO
-    }
-
-    public record StudyAlert(AlertLevel alertLevel, String messageId, Map<String, String> attributes) { }
 
     public NotificationService(StreamBridge updatePublisher,
                                ObjectMapper objectMapper) {
@@ -209,7 +198,7 @@ public class NotificationService {
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .build());
         } catch (JsonProcessingException e) {
-            LOGGER.error(e.toString(), e);
+            LOGGER.error("Unable to notify on study update", e);
         }
     }
 
@@ -385,7 +374,7 @@ public class NotificationService {
                 .build()
             );
         } catch (JsonProcessingException e) {
-            LOGGER.error(e.toString(), e);
+            LOGGER.error("Unable to notify on study update", e);
         }
     }
 }

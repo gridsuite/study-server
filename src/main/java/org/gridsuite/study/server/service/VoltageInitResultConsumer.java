@@ -7,6 +7,8 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.notification.dto.AlertLevel;
+import org.gridsuite.study.server.notification.dto.StudyAlert;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
@@ -17,8 +19,6 @@ import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_REACTIVE_SLACKS_OVER_THRESHOLD;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE;
 
 /**
  * @author Joris Mancini <joris.mancini_externe at rte-france.com>
@@ -31,6 +31,9 @@ public class VoltageInitResultConsumer {
     private final ConsumerService consumerService;
 
     private final NotificationService notificationService;
+
+    public static final String HEADER_REACTIVE_SLACKS_OVER_THRESHOLD = "REACTIVE_SLACKS_OVER_THRESHOLD";
+    public static final String HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE = "reactiveSlacksThreshold";
 
     public VoltageInitResultConsumer(StudyService studyService,
                                      ConsumerService consumerService,
@@ -46,7 +49,7 @@ public class VoltageInitResultConsumer {
             if (Boolean.TRUE.equals(alert)) {
                 String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
                 Double alertThreshold = msg.getHeaders().get(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, Double.class);
-                notificationService.emitStudyAlert(studyUuid, nodeReceiver.getNodeUuid(), userId, new NotificationService.StudyAlert(NotificationService.AlertLevel.WARNING, "REACTIVE_SLACKS_OVER_THRESHOLD", Map.of("threshold", alertThreshold.toString())));
+                notificationService.emitStudyAlert(studyUuid, nodeReceiver.getNodeUuid(), userId, new StudyAlert(AlertLevel.WARNING, "REACTIVE_SLACKS_OVER_THRESHOLD", Map.of("threshold", alertThreshold.toString())));
             }
         });
     }

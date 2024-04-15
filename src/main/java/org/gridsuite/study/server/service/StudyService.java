@@ -2070,12 +2070,4 @@ public class StudyService {
         // will use root node network of the study
         return filterService.exportFilter(networkStoreService.getNetworkUuid(studyUuid), filterUuid);
     }
-
-    public String getVoltageInitResult(UUID nodeUuid) {
-        return voltageInitService.getVoltageInitResultOrStatus(nodeUuid, "");
-    }
-
-    public String getVoltageInitStatus(UUID nodeUuid) {
-        return voltageInitService.getVoltageInitResultOrStatus(nodeUuid, "/status");
-    }
 }

@@ -31,6 +31,8 @@ import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParamete
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageLimitInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.notification.dto.AlertLevel;
+import org.gridsuite.study.server.notification.dto.StudyAlert;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -69,10 +71,10 @@ import java.util.stream.IntStream;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_REACTIVE_SLACKS_OVER_THRESHOLD;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.study.server.notification.NotificationService.STUDY_ALERT;
+import static org.gridsuite.study.server.service.VoltageInitResultConsumer.HEADER_REACTIVE_SLACKS_OVER_THRESHOLD;
+import static org.gridsuite.study.server.service.VoltageInitResultConsumer.HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -797,8 +799,8 @@ public class VoltageInitTest {
         assertEquals(studyUuid, voltageInitMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(STUDY_ALERT, voltageInitMessage.getHeaders().get(HEADER_UPDATE_TYPE));
         assertNotNull(voltageInitMessage.getPayload());
-        NotificationService.StudyAlert alert = objectMapper.readValue(new String(voltageInitMessage.getPayload()), NotificationService.StudyAlert.class);
-        assertEquals(NotificationService.AlertLevel.WARNING, alert.alertLevel());
+        StudyAlert alert = objectMapper.readValue(new String(voltageInitMessage.getPayload()), StudyAlert.class);
+        assertEquals(AlertLevel.WARNING, alert.alertLevel());
         assertEquals("REACTIVE_SLACKS_OVER_THRESHOLD", alert.messageId());
         assertEquals(Map.of("threshold", thresholdValue.toString()), alert.attributes());
     }
