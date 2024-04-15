@@ -166,6 +166,16 @@ public class StudyTest {
     private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
     private static final String CASE_FORMAT = "caseFormat";
+    private static final String NO_PARAMS_IN_PROFILE_USER_ID = "noParamInProfileUser";
+    private static final String USER_PROFILE_NO_PARAMS_JSON = "[{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}]";
+    private static final String INVALID_PARAMS_IN_PROFILE_USER_ID = "invalidParamInProfileUser";
+    private static final String PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING = "f09f5282-8e34-48b5-b66e-7ef9f3f36c4f";
+    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "[{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"loadFlowParameterId\":\"" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}]";
+    private static final String VALID_PARAMS_IN_PROFILE_USER_ID = "validParamInProfileUser";
+    private static final String PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING = "1cec4a7b-ab7e-4d78-9dd7-ce73c5ef11d9";
+    private static final String USER_PROFILE_VALID_PARAMS_JSON = "[{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}]";
+    private static final String PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
+    private static final String DUPLICATED_PARAMS_JSON = "\"" + PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
 
     private static final String DEFAULT_PROVIDER = "defaultProvider";
 
@@ -192,6 +202,9 @@ public class StudyTest {
 
     @Autowired
     private ReportService reportService;
+
+    @Autowired
+    private UserAdminService userAdminService;
 
     @Autowired
     private SensitivityAnalysisService sensitivityAnalysisService;
@@ -331,6 +344,7 @@ public class StudyTest {
         networkConversionService.setNetworkConversionServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
+        userAdminService.setUserAdminServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         voltageInitService.setVoltageInitServerBaseUri(baseUrl);
         loadflowService.setLoadFlowServerBaseUri(baseUrl);
@@ -464,13 +478,29 @@ public class StudyTest {
                 } else if (path.matches("/v1/parameters/default") && POST.equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.matches("/v1/parameters/.*") && POST.equals(request.getMethod())) {
-                    return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
+                    if (path.matches("/v1/parameters/" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING)) {
+                        return new MockResponse().setResponseCode(404); // params duplication request KO
+                    } else if (path.matches("/v1/parameters/" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING)) {
+                        return new MockResponse().setResponseCode(200).setBody(DUPLICATED_PARAMS_JSON) // params duplication request OK
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    } else {
+                        return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
+                    }
                 } else if (path.matches("/v1/parameters/.*") && DELETE.equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/parameters/.*/provider")) {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/default-provider")) {
                     return new MockResponse().setResponseCode(200).setBody(DEFAULT_PROVIDER);
+                } else if (path.matches("/v1/profiles\\?sub=" + NO_PARAMS_IN_PROFILE_USER_ID)) {
+                    return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_NO_PARAMS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/profiles\\?sub=" + INVALID_PARAMS_IN_PROFILE_USER_ID)) {
+                    return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_INVALID_PARAMS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/profiles\\?sub=" + VALID_PARAMS_IN_PROFILE_USER_ID)) {
+                    return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_VALID_PARAMS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
 
                 switch (path) {
@@ -996,6 +1026,10 @@ public class StudyTest {
     }
 
     private UUID createStudy(String userId, UUID caseUuid) throws Exception {
+        return createStudy(userId, caseUuid, null, false);
+    }
+
+    private UUID createStudy(String userId, UUID caseUuid, String parameterDuplicatedUuid, boolean parameterDuplicationSuccess) throws Exception {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                         .header("userId", userId)
                         .param(CASE_FORMAT, "UCTE"))
@@ -1008,11 +1042,19 @@ public class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(6, server);
+        int nbRequest = 7;
+        if (parameterDuplicatedUuid != null && !parameterDuplicationSuccess) {
+            nbRequest++;
+        }
+        var requests = TestUtils.getRequestsDone(nbRequest, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*" + "&caseFormat=UCTE")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", caseUuid)));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/profiles?sub=" + userId)));
+        if (parameterDuplicatedUuid != null) {
+            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + parameterDuplicatedUuid))); // post duplicate
+        }
 
         return studyUuid;
     }
@@ -1031,7 +1073,7 @@ public class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(6, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(7, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/exists", caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/disableExpiration", caseUuid))));
@@ -1057,13 +1099,14 @@ public class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(7, server);
+        var requests = TestUtils.getRequestsDone(8, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
         assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=true", caseUuid)));
         // note : it's a new case UUID
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CLONED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CLONED_CASE_UUID_STRING)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/profiles?sub=" + userId)));
 
         return studyUuid;
     }
@@ -1251,11 +1294,12 @@ public class StudyTest {
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(6, server);
+        var requests = TestUtils.getRequestsDone(7, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains("/v1/parameters/default"));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/profiles?sub=userId")));
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
@@ -1342,6 +1386,21 @@ public class StudyTest {
         createStudy("userId", CASE_UUID);
         StudyEntity study = studyRepository.findAll().get(0);
         assertEquals(study.getNonEvacuatedEnergyProvider(), defaultNonEvacuatedEnergyProvider);
+    }
+
+    @Test
+    public void testCreateStudyWithDefaultLoadflowUserHasNoParamsInProfile() throws Exception {
+        createStudy(NO_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, null, false);
+    }
+
+    @Test
+    public void testCreateStudyWithDefaultLoadflowUserHasInvalidParamsInProfile() throws Exception {
+        createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING, false);
+    }
+
+    @Test
+    public void testCreateStudyWithDefaultLoadflowUserHasValidParamsInProfile() throws Exception {
+        createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING, true);
     }
 
     private void testDuplicateStudy(UUID study1Uuid) throws Exception {

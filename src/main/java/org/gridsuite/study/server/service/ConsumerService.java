@@ -205,8 +205,11 @@ public class ConsumerService {
                         // we only update network infos sent by network conversion server
                         studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
                     } else {
-                        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId);
-                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, loadFlowParametersUuid, ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, createDefaultSecurityAnalysisParameters(), createDefaultSensitivityAnalysisParameters(), importParameters, importReportUuid);
+                        UserProfileInfos userProfileInfos = getUserProfile(userId);
+                        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId, userProfileInfos);
+                        UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters();
+                        UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters();
+                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, loadFlowParametersUuid, ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters, importReportUuid);
                     }
 
                     caseService.disableCaseExpiration(caseUuid);
@@ -233,19 +236,17 @@ public class ConsumerService {
         return null;
     }
 
-    private UUID createDefaultLoadFlowParameters(String userId) {
-        // try to access/duplicate the user profile LF parameters
-        UserProfileInfos userProfileInfos = getUserProfile(userId);
+    private UUID createDefaultLoadFlowParameters(String userId, UserProfileInfos userProfileInfos) {
         if (userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
+            // try to access/duplicate the user profile LF parameters
             try {
                 return loadFlowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
             } catch (Exception e) {
-                // TODO try to report and/or snackbar message ?
+                // TODO try to report a log in Root subreporter ?
                 LOGGER.error(String.format("Could not duplicate loadflow parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                        userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
+                    userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
             }
         }
-
         // no profile, or no/bad LF parameters in profile => use default values
         try {
             return loadFlowService.createDefaultLoadFlowParameters();
