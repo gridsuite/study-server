@@ -783,9 +783,9 @@ public class StudyService {
     }
 
     @Transactional
-    public void setLoadFlowParameters(UUID studyUuid, String parameters, String userId) {
+    public boolean setLoadFlowParameters(UUID studyUuid, String parameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        createOrUpdateLoadFlowParameters(studyEntity, parameters, userId);
+        boolean userProfileIssue = createOrUpdateLoadFlowParameters(studyEntity, parameters, userId);
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
@@ -797,6 +797,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
+        return userProfileIssue;
     }
 
     public String getDefaultLoadflowProvider() {
@@ -1048,7 +1049,8 @@ public class StudyService {
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
     }
 
-    public void createOrUpdateLoadFlowParameters(StudyEntity studyEntity, String parameters, String userId) {
+    public boolean createOrUpdateLoadFlowParameters(StudyEntity studyEntity, String parameters, String userId) {
+        boolean userProfileIssue = false;
         UUID existingLoadFlowParametersUuid = studyEntity.getLoadFlowParametersUuid();
 
         UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
@@ -1058,9 +1060,9 @@ public class StudyService {
                 UUID loadFlowParametersFromProfileUuid = loadflowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
                 studyEntity.setLoadFlowParametersUuid(loadFlowParametersFromProfileUuid);
                 removeLoadFlowParameters(existingLoadFlowParametersUuid);
-                return;
+                return userProfileIssue;
             } catch (Exception e) {
-                // TODO try sent an event for snackbar message ?
+                userProfileIssue = true;
                 LOGGER.error(String.format("Could not duplicate loadflow parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
                         userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
                 // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
@@ -1073,6 +1075,7 @@ public class StudyService {
         } else {
             loadflowService.updateLoadFlowParameters(existingLoadFlowParametersUuid, parameters);
         }
+        return userProfileIssue;
     }
 
     private void removeLoadFlowParameters(@Nullable UUID lfParametersUuid) {
