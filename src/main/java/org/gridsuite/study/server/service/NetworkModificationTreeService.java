@@ -535,6 +535,7 @@ public class NetworkModificationTreeService {
         int counter = 1;
         List<String> studyNodeNames = networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid)
                 .stream()
+                .filter(s -> !s.getNode().isStashed())
                 .map(AbstractNodeInfoEntity::getName)
                 .toList();
 
