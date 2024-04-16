@@ -6,9 +6,12 @@
  */
 package org.gridsuite.study.server.notification;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
+import org.gridsuite.study.server.notification.dto.StudyAlert;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +30,8 @@ import java.util.UUID;
  */
 @Service
 public class NotificationService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(NotificationService.class);
 
     public static final String HEADER_ERROR = "error";
     public static final String HEADER_NODE = "node";
@@ -100,14 +105,20 @@ public class NotificationService {
     public static final String SUBTREE_CREATED = "subtreeCreated";
     public static final String MESSAGE_LOG = "Sending message : {}";
 
+    public static final String STUDY_ALERT = "STUDY_ALERT";
+
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
 
     private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
 
     private final StreamBridge updatePublisher;
 
-    public NotificationService(StreamBridge updatePublisher) {
+    private final ObjectMapper objectMapper;
+
+    public NotificationService(StreamBridge updatePublisher,
+                               ObjectMapper objectMapper) {
         this.updatePublisher = updatePublisher;
+        this.objectMapper = objectMapper;
     }
 
     private void sendUpdateMessage(Message<?> message) {
@@ -179,10 +190,14 @@ public class NotificationService {
 
     @PostCompletion
     public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, NetworkImpactsInfos networkImpactsInfos) {
-        sendUpdateMessage(MessageBuilder.withPayload(networkImpactsInfos).setHeader(HEADER_STUDY_UUID, studyUuid)
+        try {
+            sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(networkImpactsInfos)).setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .build());
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Unable to notify on study update", e);
+        }
     }
 
     @PostCompletion
@@ -354,5 +369,20 @@ public class NotificationService {
                 .setHeader(HEADER_MODIFICATION_DATE, LocalDateTime.now())
                 .build()
         );
+    }
+
+    @PostCompletion
+    public void emitStudyAlert(UUID studyUuid, UUID nodeUuid, String userId, StudyAlert studyAlert) {
+        try {
+            sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(studyAlert))
+                .setHeader(HEADER_USER_ID, userId)
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_NODE, nodeUuid)
+                .setHeader(HEADER_UPDATE_TYPE, STUDY_ALERT)
+                .build()
+            );
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Unable to notify on study alert", e);
+        }
     }
 }
