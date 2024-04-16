@@ -15,7 +15,6 @@ import org.gridsuite.study.server.notification.dto.StudyAlert;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
@@ -114,7 +113,6 @@ public class NotificationService {
 
     private final StreamBridge updatePublisher;
 
-    @Autowired
     private final ObjectMapper objectMapper;
 
     public NotificationService(StreamBridge updatePublisher,
@@ -384,7 +382,7 @@ public class NotificationService {
                 .build()
             );
         } catch (JsonProcessingException e) {
-            LOGGER.error("Unable to notify on study update", e);
+            LOGGER.error("Unable to notify on study alert", e);
         }
     }
 }

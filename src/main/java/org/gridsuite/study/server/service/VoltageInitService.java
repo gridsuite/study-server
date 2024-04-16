@@ -97,7 +97,7 @@ public class VoltageInitService {
         return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
     }
 
-    private String getVoltageInitResultOrStatus(UUID nodeUuid, String suffix) {
+    public String getVoltageInitResultOrStatus(UUID nodeUuid, String suffix) {
         String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.VOLTAGE_INITIALIZATION);
 
@@ -306,13 +306,5 @@ public class VoltageInitService {
             .buildAndExpand(resultUuidOpt.get()).toUriString();
 
         restTemplate.put(voltageInitServerBaseUri + path, Void.class);
-    }
-
-    public String getVoltageInitResult(UUID nodeUuid) {
-        return getVoltageInitResultOrStatus(nodeUuid, "");
-    }
-
-    public String getVoltageInitStatus(UUID nodeUuid) {
-        return getVoltageInitResultOrStatus(nodeUuid, "/status");
     }
 }
