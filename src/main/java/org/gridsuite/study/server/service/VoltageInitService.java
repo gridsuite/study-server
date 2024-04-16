@@ -97,15 +97,7 @@ public class VoltageInitService {
         return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
     }
 
-    public String getVoltageInitResult(UUID nodeUuid) {
-        return getVoltageInitResultOrStatus(nodeUuid, "");
-    }
-
-    public String getVoltageInitStatus(UUID nodeUuid) {
-        return getVoltageInitResultOrStatus(nodeUuid, "/status");
-    }
-
-    public String getVoltageInitResultOrStatus(UUID nodeUuid, String suffix) {
+    private String getVoltageInitResultOrStatus(UUID nodeUuid, String suffix) {
         String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.VOLTAGE_INITIALIZATION);
 
@@ -114,7 +106,8 @@ public class VoltageInitService {
         }
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}" + suffix)
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
+            .buildAndExpand(resultUuidOpt.get()).toUriString();
+
         try {
             result = restTemplate.getForObject(voltageInitServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
@@ -124,6 +117,14 @@ public class VoltageInitService {
             throw e;
         }
         return result;
+    }
+
+    public String getVoltageInitResult(UUID nodeUuid) {
+        return getVoltageInitResultOrStatus(nodeUuid, "");
+    }
+
+    public String getVoltageInitStatus(UUID nodeUuid) {
+        return getVoltageInitResultOrStatus(nodeUuid, "/status");
     }
 
     public VoltageInitParametersInfos getVoltageInitParameters(UUID parametersUuid) {

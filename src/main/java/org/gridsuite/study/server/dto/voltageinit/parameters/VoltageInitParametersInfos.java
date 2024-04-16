@@ -32,4 +32,6 @@ public class VoltageInitParametersInfos {
     List<FilterEquipments> variableTwoWindingsTransformers;
 
     List<FilterEquipments> variableShuntCompensators;
+
+    double reactiveSlacksThreshold;
 }
