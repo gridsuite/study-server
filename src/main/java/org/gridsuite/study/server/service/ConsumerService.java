@@ -153,7 +153,7 @@ public class ConsumerService {
 
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_FAILED);
+                    notificationService.emitNodeBuildFailed(studyUuid, receiverObj.getNodeUuid(), message.getHeaders().get(HEADER_MESSAGE, String.class));
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }

@@ -259,6 +259,16 @@ public class NotificationService {
     }
 
     @PostCompletion
+    public void emitNodeBuildFailed(UUID studyUuid, UUID nodeUuid, String errorMessage) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_NODE, nodeUuid)
+                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_BUILD_FAILED)
+                .setHeader(HEADER_ERROR, errorMessage)
+                .build());
+    }
+
+    @PostCompletion
     public void emitSubtreeMoved(UUID studyUuid, UUID parentNodeSubtreeMoved, UUID referenceNodeUuid) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
