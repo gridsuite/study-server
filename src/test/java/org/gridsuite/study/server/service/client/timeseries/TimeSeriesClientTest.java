@@ -44,12 +44,12 @@ import static org.gridsuite.study.server.service.client.timeseries.TimeSeriesCli
 public class TimeSeriesClientTest extends AbstractRestClientTest {
 
     public static final String TIME_SERIES_GROUP_UUID = "33333333-0000-0000-0000-000000000000";
-    public static final String TIME_LINE_GROUP_UUID = "44444444-0000-0000-0000-000000000000";
+    public static final String TIMELINE_GROUP_UUID = "44444444-0000-0000-0000-000000000000";
 
     public static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
     public static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
     public static final String TIME_SERIES_NAME_UNKNOWN = "TIME_SERIES_NAME_UNKNOWN";
-    public static final String TIME_LINE_NAME = "TimeLine";
+    public static final String TIMELINE_NAME = "Timeline";
 
     private final Map<String, List<TimeSeries>> database = new HashMap<>();
 
@@ -141,14 +141,14 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
 
         // timeline
         index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        StringTimeSeries timeline = TimeSeries.createString(TIME_LINE_NAME, index,
+        StringTimeSeries timeline = TimeSeries.createString(TIMELINE_NAME, index,
                 "CLA_2_5 - CLA : order to change topology",
                 "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
                 "CLA_2_5 - CLA : order to change topology",
                 "CLA_2_4 - CLA : arming by over-current constraint");
 
         database.put(TIME_SERIES_GROUP_UUID, timeSeries);
-        database.put(TIME_LINE_GROUP_UUID, new ArrayList<>(Arrays.asList(timeline)));
+        database.put(TIMELINE_GROUP_UUID, new ArrayList<>(Arrays.asList(timeline)));
 
         // group metadata for timeseries
         timeSeriesGroupMetadata.setId(UUID.fromString(TIME_SERIES_GROUP_UUID));
@@ -162,7 +162,7 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
     @Test
     public void testGetTimeSeriesGroup() throws JsonProcessingException {
         List<TimeSeries> timeSeries = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_SERIES_GROUP_UUID), null);
-        List<TimeSeries> timelines = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_LINE_GROUP_UUID), null);
+        List<TimeSeries> timelines = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIMELINE_GROUP_UUID), null);
 
         // --- check result --- //
         // check time series
@@ -181,7 +181,7 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
         getLogger().info("Timeline size = " + timelines.size());
         assertThat(timelines).hasSize(1);
         // content must be the same
-        String expectedTimelinesJson = TimeSeries.toJson(database.get(TIME_LINE_GROUP_UUID));
+        String expectedTimelinesJson = TimeSeries.toJson(database.get(TIMELINE_GROUP_UUID));
         getLogger().info("expectedTimelinesJson = " + expectedTimelinesJson);
         String resultTimelinesJson = TimeSeries.toJson(timelines);
         getLogger().info("resultTimelinesJson = " + resultTimelinesJson);
@@ -192,7 +192,7 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
     public void testGetTimeSeriesGroupGivenTimeSeriesNames() throws JsonProcessingException {
         List<TimeSeries> timeSeries = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_SERIES_GROUP_UUID), List.of(TIME_SERIES_NAME_1));
         List<TimeSeries> timeSeriesNameUnknown = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_SERIES_GROUP_UUID), List.of(TIME_SERIES_NAME_UNKNOWN));
-        List<TimeSeries> timelines = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_LINE_GROUP_UUID), List.of(TIME_LINE_NAME));
+        List<TimeSeries> timelines = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIMELINE_GROUP_UUID), List.of(TIMELINE_NAME));
 
         // --- check result --- //
         // check time series
@@ -216,7 +216,7 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
         getLogger().info("Timeline size = " + timelines.size());
         assertThat(timelines).hasSize(1);
         // content must be the same
-        String expectedTimelinesJson = TimeSeries.toJson(database.get(TIME_LINE_GROUP_UUID).stream().filter(series -> series.getMetadata().getName().equals(TIME_LINE_NAME)).collect(Collectors.toList()));
+        String expectedTimelinesJson = TimeSeries.toJson(database.get(TIMELINE_GROUP_UUID).stream().filter(series -> series.getMetadata().getName().equals(TIMELINE_NAME)).collect(Collectors.toList()));
         getLogger().info("expectedTimelinesJson = " + expectedTimelinesJson);
         String resultTimelinesJson = TimeSeries.toJson(timelines);
         getLogger().info("resultTimelinesJson = " + resultTimelinesJson);

@@ -31,6 +31,8 @@ import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParamete
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageLimitInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.notification.dto.AlertLevel;
+import org.gridsuite.study.server.notification.dto.StudyAlert;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -69,10 +71,10 @@ import java.util.stream.IntStream;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
-import static org.gridsuite.study.server.notification.NotificationService.REACTIVE_SLACKS_OVER_THRESHOLD_ALERT;
+import static org.gridsuite.study.server.notification.NotificationService.STUDY_ALERT;
+import static org.gridsuite.study.server.service.VoltageInitResultConsumer.HEADER_REACTIVE_SLACKS_OVER_THRESHOLD;
+import static org.gridsuite.study.server.service.VoltageInitResultConsumer.HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -241,7 +243,7 @@ public class VoltageInitTest {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", VOLTAGE_INIT_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL, HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL)
+                            .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE)
                             .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
                             .build(), voltageInitResultDestination);
                     return new MockResponse().setResponseCode(200)
@@ -255,8 +257,7 @@ public class VoltageInitTest {
                     return new MockResponse().setResponseCode(200)
                             .setBody(voltageInitErrorResultUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID) ||
-                           path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "\\?parametersUuid=.*")) {
+                } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID)) {
                     return new MockResponse().setResponseCode(200).setBody(VOLTAGE_INIT_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status")) {
@@ -474,7 +475,7 @@ public class VoltageInitTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/result", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(VOLTAGE_INIT_RESULT_JSON));
-        TestUtils.assertRequestMatches("GET", "/v1/results/" + VOLTAGE_INIT_RESULT_UUID + ".*", server);
+        TestUtils.assertRequestMatches("GET", "/v1/results/" + VOLTAGE_INIT_RESULT_UUID, server);
 
         // get voltage init status
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/status", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
@@ -793,11 +794,14 @@ public class VoltageInitTest {
             .build();
     }
 
-    private void checkReactiveSlacksAlertMessagesReceived(UUID studyUuid, Double thresholdValue) {
+    private void checkReactiveSlacksAlertMessagesReceived(UUID studyUuid, Double thresholdValue) throws Exception {
         Message<byte[]> voltageInitMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, voltageInitMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(REACTIVE_SLACKS_OVER_THRESHOLD_ALERT, voltageInitMessage.getHeaders().get(HEADER_UPDATE_TYPE));
-        assertEquals(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL, voltageInitMessage.getHeaders().get(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL));
-        assertEquals(10., voltageInitMessage.getHeaders().get(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE));
+        assertEquals(STUDY_ALERT, voltageInitMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertNotNull(voltageInitMessage.getPayload());
+        StudyAlert alert = objectMapper.readValue(new String(voltageInitMessage.getPayload()), StudyAlert.class);
+        assertEquals(AlertLevel.WARNING, alert.alertLevel());
+        assertEquals("REACTIVE_SLACKS_OVER_THRESHOLD", alert.messageId());
+        assertEquals(Map.of("threshold", thresholdValue.toString()), alert.attributes());
     }
 }

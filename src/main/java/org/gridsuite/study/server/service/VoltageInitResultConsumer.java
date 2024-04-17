@@ -6,19 +6,19 @@
  */
 package org.gridsuite.study.server.service;
 
-import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.notification.dto.AlertLevel;
+import org.gridsuite.study.server.notification.dto.StudyAlert;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE;
 
 /**
  * @author Joris Mancini <joris.mancini_externe at rte-france.com>
@@ -29,7 +29,11 @@ public class VoltageInitResultConsumer {
     private final StudyService studyService;
 
     private final ConsumerService consumerService;
+
     private final NotificationService notificationService;
+
+    public static final String HEADER_REACTIVE_SLACKS_OVER_THRESHOLD = "REACTIVE_SLACKS_OVER_THRESHOLD";
+    public static final String HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE = "reactiveSlacksThreshold";
 
     public VoltageInitResultConsumer(StudyService studyService,
                                      ConsumerService consumerService,
@@ -41,11 +45,11 @@ public class VoltageInitResultConsumer {
 
     private void checkReactiveSlacksOverThreshold(Message<String> msg, UUID studyUuid) {
         consumerService.getNodeReceiver(msg).ifPresent(nodeReceiver -> {
-            String alertLabel = msg.getHeaders().get(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD_LABEL, String.class);
-            if (!StringUtils.isBlank(alertLabel)) {
+            Boolean alert = msg.getHeaders().get(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.class);
+            if (Boolean.TRUE.equals(alert)) {
                 String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
                 Double alertThreshold = msg.getHeaders().get(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, Double.class);
-                notificationService.emitVoltageInitReactiveSlacksAlert(studyUuid, nodeReceiver.getNodeUuid(), userId, alertLabel, alertThreshold);
+                notificationService.emitStudyAlert(studyUuid, nodeReceiver.getNodeUuid(), userId, new StudyAlert(AlertLevel.WARNING, HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Map.of("threshold", alertThreshold.toString())));
             }
         });
     }

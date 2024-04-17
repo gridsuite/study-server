@@ -174,7 +174,10 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private StudyIndexationStatus indexationStatus = StudyIndexationStatus.NOT_INDEXED;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "study_voltage_init_parameters_id")
+    @JoinColumn(name = "study_voltage_init_parameters_id",
+        foreignKey = @ForeignKey(
+            name = "study_voltage_init_parameters_id_fk"
+        ))
     private StudyVoltageInitParametersEntity voltageInitParameters;
 
     public ShortCircuitParametersEntity getShortCircuitParameters() {

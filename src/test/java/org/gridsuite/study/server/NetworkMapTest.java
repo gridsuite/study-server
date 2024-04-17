@@ -170,10 +170,7 @@ public class NetworkMapTest {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/busbar-sections":
                         return new MockResponse().setResponseCode(200).setBody(busbarSectionsDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels-equipments":
-                        return new MockResponse().setResponseCode(200).setBody(VOLTAGE_LEVELS_EQUIPMENTS_JSON)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-level-equipments/" + VL_ID_1:
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VL_ID_1 + "/equipments":
                         return new MockResponse().setResponseCode(200).setBody(VOLTAGE_LEVEL_EQUIPMENTS_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING:
@@ -359,13 +356,13 @@ public class NetworkMapTest {
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the voltage levels and its equipments
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-level-equipments/{voltageLevelId}",
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels/{voltageLevelId}/equipments",
                 studyNameUserIdUuid, rootNodeUuid, VL_ID_1)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/voltage-level-equipments/%s", NETWORK_UUID_STRING, VL_ID_1)));
+                .contains(String.format("/v1/networks/%s/voltage-levels/%s/equipments", NETWORK_UUID_STRING, VL_ID_1)));
     }
 
     @Test
@@ -661,6 +658,62 @@ public class NetworkMapTest {
                 .andReturn();
 
         wireMockUtils.verifyCountriesGet(stubUuid, NETWORK_UUID_STRING);
+    }
+
+    @Test
+    public void testGetNominalVoltages() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+        final String responseBody = """
+                [24.0, 380.0]
+            """;
+        UUID stubUuid = wireMockUtils.stubNominalVoltagesGet(NETWORK_UUID_STRING, responseBody);
+
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/nominal-voltages",
+                        studyNameUserIdUuid, rootNodeUuid))
+                .andExpect(status().isOk())
+                .andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        assertEquals(responseBody, resultAsString);
+
+        wireMockUtils.verifyNominalVoltagesGet(stubUuid, NETWORK_UUID_STRING);
+    }
+
+    @Test
+    public void testGetNominalVoltagesNotFoundError() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+        UUID stubUuid = wireMockUtils.stubNominalVoltagesGetNotFoundError(NETWORK_UUID_STRING);
+
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/nominal-voltages",
+                        studyNameUserIdUuid, rootNodeUuid))
+                .andExpect(status().is5xxServerError())
+                .andReturn();
+
+        wireMockUtils.verifyNominalVoltagesGet(stubUuid, NETWORK_UUID_STRING);
+    }
+
+    @Test
+    public void testGetNominalVoltagesError() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+        UUID stubUuid = wireMockUtils.stubNominalVoltagesGetError(NETWORK_UUID_STRING);
+
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/nominal-voltages",
+                        studyNameUserIdUuid, rootNodeUuid))
+                .andExpect(status().is5xxServerError())
+                .andReturn();
+
+        wireMockUtils.verifyNominalVoltagesGet(stubUuid, NETWORK_UUID_STRING);
     }
 
     private void cleanDB() {
