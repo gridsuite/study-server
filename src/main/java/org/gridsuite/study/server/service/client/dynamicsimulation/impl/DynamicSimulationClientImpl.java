@@ -9,8 +9,10 @@ package org.gridsuite.study.server.service.client.dynamicsimulation.impl;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
@@ -42,20 +45,23 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     @Override
-    public UUID run(String provider, String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters, String userId) {
+    public UUID run(String provider, String receiver, UUID networkUuid, String variantId, ReportInfos reportInfos, DynamicSimulationParametersInfos parameters, String userId) {
         Objects.requireNonNull(networkUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{networkUuid}/run");
         if (variantId != null && !variantId.isBlank()) {
-            uriComponentsBuilder.queryParam("variantId", variantId);
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         if (provider != null && !provider.isBlank()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
         uriComponentsBuilder
                 .queryParam("mappingName", parameters.getMapping())
-                .queryParam("receiver", receiver);
+                .queryParam(QUERY_PARAM_RECEIVER, receiver)
+                .queryParam(QUERY_PARAM_REPORT_UUID, reportInfos.reportUuid())
+                .queryParam(QUERY_PARAM_REPORTER_ID, reportInfos.reporterId())
+                .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.DYNAMIC_SIMULATION.reportKey);
         var uriComponent = uriComponentsBuilder
                 .buildAndExpand(networkUuid);
 
