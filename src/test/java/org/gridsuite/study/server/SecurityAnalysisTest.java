@@ -548,6 +548,14 @@ public class SecurityAnalysisTest {
         assertEquals(expectedResponse, integerResponse);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/contingency-lists/count\\?ids=" + CONTINGENCY_LIST_NAME + "&networkUuid=" + NETWORK_UUID_STRING + ".*")));
+
+        // get contingency count with no list
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count",
+                        studyUuid, nodeUuid, CONTINGENCY_LIST_NAME))
+                .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        integerResponse = Integer.parseInt(resultAsString);
+        assertEquals(0, integerResponse.intValue());
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
