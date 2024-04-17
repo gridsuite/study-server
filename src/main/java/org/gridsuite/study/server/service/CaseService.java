@@ -76,8 +76,7 @@ public class CaseService {
     }
 
     public UUID duplicateCase(UUID caseUuid, Boolean withExpiration) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases")
-                .queryParam("duplicateFrom", caseUuid)
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/duplicate")
                 .queryParam("withExpiration", withExpiration)
                 .buildAndExpand(caseUuid)
                 .toUriString();

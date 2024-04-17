@@ -303,18 +303,19 @@ public class StudyService {
         persistentStoreWithNotificationOnError(caseUuid, studyUuid, userId, importReportUuid, caseFormat, importParametersToUse);
     }
 
-    public BasicStudyInfos duplicateStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
+    public UUID duplicateStudy(UUID sourceStudyUuid, String userId) {
         Objects.requireNonNull(sourceStudyUuid);
 
         StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElse(null);
         if (sourceStudy == null) {
             return null;
         }
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+        UUID newStudyId = UUID.randomUUID();
+        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, newStudyId));
 
         studyServerExecutionService.runAsync(() -> self.duplicateStudyAsync(basicStudyInfos, sourceStudyUuid, userId));
 
-        return basicStudyInfos;
+        return newStudyId;
     }
 
     @Transactional
