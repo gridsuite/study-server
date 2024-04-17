@@ -34,4 +34,6 @@ public class VoltageInitParametersInfos {
     List<FilterEquipments> variableShuntCompensators;
 
     double reactiveSlacksThreshold;
+
+    boolean updateBusVoltage;
 }
