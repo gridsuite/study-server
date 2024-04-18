@@ -220,15 +220,15 @@ public interface DynamicSimulationService {
     }
 
     /**
-     * Run a dynamic simulation from a given network UUID and some configured parameters
+     * Run a dynamic simulation from a given study, node UUID and some configured parameters
      * @param provider name of the dynamic simulation provider, e.g. DynaWaltz
-     * @param receiver receiver
-     * @param networkUuid network uuid
-     * @param variantId variant id
+     * @param studyUuid study uuid
+     * @param nodeUuid node uuid
      * @param parameters parameters of dynamic simulation
+     * @param userId id of user
      * @return the UUID of the dynamic simulation
      */
-    UUID runDynamicSimulation(String provider, String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters, String userId);
+    UUID runDynamicSimulation(String provider, UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters, String userId);
 
     /**
      * Get a list of curves from a given node UUID
