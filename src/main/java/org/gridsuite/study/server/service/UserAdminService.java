@@ -44,7 +44,7 @@ public class UserAdminService {
     }
 
     public UserProfileInfos getUserProfile(String sub) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + USER_PROFILES_URI)
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USER_PROFILES_URI)
             .buildAndExpand(sub).toUriString();
         try {
             List<UserProfileInfos> response = restTemplate.exchange(userAdminServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<UserProfileInfos>>() { }).getBody();
