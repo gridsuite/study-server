@@ -115,6 +115,8 @@ public class LoadFlowTest {
 
     private static String LIMIT_VIOLATIONS_JSON;
 
+    private static String COMPUTING_STATUS_JSON;
+
     private static String LOADFLOW_PARAMETERS_JSON;
 
     //output destinations
@@ -198,6 +200,7 @@ public class LoadFlowTest {
                         .limitType(LimitViolationType.HIGH_VOLTAGE)
                         .build());
         LIMIT_VIOLATIONS_JSON = objectMapper.writeValueAsString(limitViolations);
+        COMPUTING_STATUS_JSON = objectMapper.writeValueAsString(List.of("CONVERGED", "FAILED"));
 
         LoadFlowParametersInfos loadFlowParametersInfos = LoadFlowParametersInfos.builder()
                 .provider(PROVIDER)
@@ -243,6 +246,9 @@ public class LoadFlowTest {
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(LIMIT_VIOLATIONS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/computation-status")) {
+                    return new MockResponse().setResponseCode(200).setBody(COMPUTING_STATUS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)) {
                     return new MockResponse().setResponseCode(200)
@@ -377,6 +383,13 @@ public class LoadFlowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&limitReduction=0.7")));
+
+        // get computing status
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow?filterEnum=computation-status", studyNameUserIdUuid, modificationNode1Uuid))
+                .andExpectAll(status().isOk(),
+                        content().string(COMPUTING_STATUS_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/computation-status")));
 
         // get limit violations
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
