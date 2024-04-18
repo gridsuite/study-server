@@ -31,6 +31,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -399,63 +400,18 @@ public class SecurityAnalysisService {
         }
     }
 
-    public List<LimitViolationType> getLimitTypes(UUID studyUuid, UUID nodeUuid) {
+    public List<String> getSecurityAnalysisFilterEnumValues(UUID studyUuid, UUID nodeUuid, String filterEnum) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
-        List<LimitViolationType> result = new ArrayList<>();
+        Objects.requireNonNull(filterEnum);
+        List<String> result = new ArrayList<>();
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
 
         if (resultUuidOpt.isPresent()) {
-            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/limit-types");
-            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/{filterEnum}");
+            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get(), filterEnum).toUriString();
             try {
-                ResponseEntity<List<LimitViolationType>> responseEntity = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationType>>() {
-                });
-                result = responseEntity.getBody();
-            } catch (HttpStatusCodeException e) {
-                if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                    throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
-                }
-                throw e;
-            }
-        }
-        return result;
-    }
-
-    public List<TwoSides> getBranchSides(UUID studyUuid, UUID nodeUuid) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(nodeUuid);
-        List<TwoSides> result = new ArrayList<>();
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
-
-        if (resultUuidOpt.isPresent()) {
-            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/branch-sides");
-            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
-            try {
-                ResponseEntity<List<TwoSides>> responseEntity = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<TwoSides>>() {
-                });
-                result = responseEntity.getBody();
-            } catch (HttpStatusCodeException e) {
-                if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                    throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
-                }
-                throw e;
-            }
-        }
-        return result;
-    }
-
-    public List<LoadFlowResult.ComponentResult.Status> getComputationStatus(UUID studyUuid, UUID nodeUuid) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(nodeUuid);
-        List<LoadFlowResult.ComponentResult.Status> result = new ArrayList<>();
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
-
-        if (resultUuidOpt.isPresent()) {
-            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/computation-status");
-            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
-            try {
-                ResponseEntity<List<LoadFlowResult.ComponentResult.Status>> responseEntity = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LoadFlowResult.ComponentResult.Status>>() {
+                ResponseEntity<List<String>> responseEntity = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
                 });
                 result = responseEntity.getBody();
             } catch (HttpStatusCodeException e) {

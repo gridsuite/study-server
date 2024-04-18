@@ -363,17 +363,18 @@ public class ShortCircuitService {
         }
     }
 
-    public List<LimitViolationType> getLimitTypes(UUID studyUuid, UUID nodeUuid) {
+    public List<String> getShortCircuitFilterEnumValues(UUID studyUuid, UUID nodeUuid, String filterEnum) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
-        List<LimitViolationType> result = new ArrayList<>();
+        Objects.requireNonNull(filterEnum);
+        List<String> result = new ArrayList<>();
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SHORT_CIRCUIT);
 
         if (resultUuidOpt.isPresent()) {
-            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/limit-violation-types");
-            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/{filterEnum}");
+            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get(), filterEnum).toUriString();
             try {
-                ResponseEntity<List<LimitViolationType>> responseEntity = restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationType>>() {
+                ResponseEntity<List<String>> responseEntity = restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
                 });
                 result = responseEntity.getBody();
             } catch (HttpStatusCodeException e) {
@@ -385,28 +386,4 @@ public class ShortCircuitService {
         }
         return result;
     }
-
-    public List<Fault.FaultType> getFaultTypes(UUID studyUuid, UUID nodeUuid) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(nodeUuid);
-        List<Fault.FaultType> result = new ArrayList<>();
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SHORT_CIRCUIT);
-
-        if (resultUuidOpt.isPresent()) {
-            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/fault-types");
-            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
-            try {
-                ResponseEntity<List<Fault.FaultType>> responseEntity = restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<Fault.FaultType>>() {
-                });
-                result = responseEntity.getBody();
-            } catch (HttpStatusCodeException e) {
-                if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                    throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
-                }
-                throw e;
-            }
-        }
-        return result;
-    }
-
 }
