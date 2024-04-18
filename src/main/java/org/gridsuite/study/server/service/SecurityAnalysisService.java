@@ -31,7 +31,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -148,8 +151,8 @@ public class SecurityAnalysisService {
     public UUID runSecurityAnalysis(UUID networkUuid, String variantId, RunSecurityAnalysisParametersInfos parametersInfos, ReportInfos reportInfos, String receiver, String userId) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
-                .queryParam("reportUuid", reportInfos.getReportUuid().toString())
-                .queryParam("reporterId", reportInfos.getReporterId())
+                .queryParam("reportUuid", reportInfos.reportUuid().toString())
+                .queryParam("reporterId", reportInfos.reporterId())
                 .queryParam("reportType", StudyService.ReportType.SECURITY_ANALYSIS.reportKey);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
