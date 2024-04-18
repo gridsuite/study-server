@@ -55,6 +55,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -101,6 +102,7 @@ public class StudyService {
     private final NetworkService networkStoreService;
     private final NetworkModificationService networkModificationService;
     private final ReportService reportService;
+    private final UserAdminService userAdminService;
     private final StudyInfosService studyInfosService;
     private final EquipmentInfosService equipmentInfosService;
     private final LoadFlowService loadflowService;
@@ -154,6 +156,7 @@ public class StudyService {
             NetworkService networkStoreService,
             NetworkModificationService networkModificationService,
             ReportService reportService,
+            UserAdminService userAdminService,
             StudyInfosService studyInfosService,
             EquipmentInfosService equipmentInfosService,
             NetworkModificationTreeService networkModificationTreeService,
@@ -183,6 +186,7 @@ public class StudyService {
         this.networkStoreService = networkStoreService;
         this.networkModificationService = networkModificationService;
         this.reportService = reportService;
+        this.userAdminService = userAdminService;
         this.studyInfosService = studyInfosService;
         this.equipmentInfosService = equipmentInfosService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -780,9 +784,9 @@ public class StudyService {
     }
 
     @Transactional
-    public void setLoadFlowParameters(UUID studyUuid, String parameters, String userId) {
+    public boolean setLoadFlowParameters(UUID studyUuid, String parameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        createOrUpdateLoadFlowParameters(studyEntity, parameters);
+        boolean userProfileIssue = createOrUpdateLoadFlowParameters(studyEntity, parameters, userId);
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
@@ -794,6 +798,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
+        return userProfileIssue;
     }
 
     public String getDefaultLoadflowProvider() {
@@ -1045,13 +1050,42 @@ public class StudyService {
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
     }
 
-    public void createOrUpdateLoadFlowParameters(StudyEntity studyEntity, String parameters) {
-        UUID loadFlowParametersUuid = studyEntity.getLoadFlowParametersUuid();
-        if (loadFlowParametersUuid == null) {
-            loadFlowParametersUuid = loadflowService.createLoadFlowParameters(parameters);
-            studyEntity.setLoadFlowParametersUuid(loadFlowParametersUuid);
+    public boolean createOrUpdateLoadFlowParameters(StudyEntity studyEntity, String parameters, String userId) {
+        boolean userProfileIssue = false;
+        UUID existingLoadFlowParametersUuid = studyEntity.getLoadFlowParametersUuid();
+
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
+        if (parameters == null && userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
+            // reset case, with existing profile, having default LF params
+            try {
+                UUID loadFlowParametersFromProfileUuid = loadflowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
+                studyEntity.setLoadFlowParametersUuid(loadFlowParametersFromProfileUuid);
+                removeLoadFlowParameters(existingLoadFlowParametersUuid);
+                return userProfileIssue;
+            } catch (Exception e) {
+                userProfileIssue = true;
+                LOGGER.error(String.format("Could not duplicate loadflow parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                        userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
+                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
+            }
+        }
+
+        if (existingLoadFlowParametersUuid == null) {
+            existingLoadFlowParametersUuid = loadflowService.createLoadFlowParameters(parameters);
+            studyEntity.setLoadFlowParametersUuid(existingLoadFlowParametersUuid);
         } else {
-            loadflowService.updateLoadFlowParameters(loadFlowParametersUuid, parameters);
+            loadflowService.updateLoadFlowParameters(existingLoadFlowParametersUuid, parameters);
+        }
+        return userProfileIssue;
+    }
+
+    private void removeLoadFlowParameters(@Nullable UUID lfParametersUuid) {
+        if (lfParametersUuid != null) {
+            try {
+                loadflowService.deleteLoadFlowParameters(lfParametersUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove loadflow Parameters with uuid:" + lfParametersUuid, e);
+            }
         }
     }
 
