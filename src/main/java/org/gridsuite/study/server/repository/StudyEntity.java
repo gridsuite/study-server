@@ -141,7 +141,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     /**
      * @deprecated to remove when the data is migrated into the sensitivity-analysis-server
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated(forRemoval = true, since = "1.4.0")
     @Getter(AccessLevel.PROTECTED)
     @Setter(AccessLevel.PROTECTED)
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
