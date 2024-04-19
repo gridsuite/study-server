@@ -836,10 +836,7 @@ public class StudyController {
     public ResponseEntity<Integer> getContingencyCount(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames) {
-        if (CollectionUtils.isEmpty(contingencyListNames)) {
-            return ResponseEntity.ok().body(0);
-        }
-        return ResponseEntity.ok().body(studyService.getContingencyCount(studyUuid, contingencyListNames, nodeUuid));
+        return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListNames) ? 0 : studyService.getContingencyCount(studyUuid, contingencyListNames, nodeUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations")

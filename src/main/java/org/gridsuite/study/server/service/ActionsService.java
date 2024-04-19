@@ -48,8 +48,7 @@ public class ActionsService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder.toUriString();
-        return restTemplate.exchange(actionsServerBaseUri + path, HttpMethod.GET, null, Integer.class).getBody();
+        return restTemplate.exchange(actionsServerBaseUri + uriComponentsBuilder.toUriString(), HttpMethod.GET, null, Integer.class).getBody();
     }
 
     public void setActionsServerBaseUri(String actionsServerBaseUri) {
