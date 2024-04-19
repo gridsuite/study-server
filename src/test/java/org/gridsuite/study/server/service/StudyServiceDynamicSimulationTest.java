@@ -37,7 +37,8 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
 
@@ -65,17 +66,10 @@ public class StudyServiceDynamicSimulationTest {
 
     private static final double STOP_TIME = 500.0;
 
-    private static final String STUDY_UUID_STRING = "00000000-0000-0000-0000-000000000000";
-    private static final UUID STUDY_UUID = UUID.fromString(STUDY_UUID_STRING);
-
-    private static final String NETWORK_UUID_STRING = "11111111-0000-0000-0000-000000000000";
-    private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
-
-    private static final String NODE_UUID_STRING = "22222222-0000-0000-0000-000000000000";
-    private static final UUID NODE_UUID = UUID.fromString(NODE_UUID_STRING);
-
-    private static final String RESULT_UUID_STRING = "99999999-0000-0000-0000-000000000000";
-    private static final UUID RESULT_UUID = UUID.fromString(RESULT_UUID_STRING);
+    private static final UUID STUDY_UUID = UUID.randomUUID();
+    private static final UUID NETWORK_UUID = UUID.randomUUID();
+    private static final UUID NODE_UUID = UUID.randomUUID();
+    private static final UUID RESULT_UUID = UUID.randomUUID();
 
     @MockBean
     NetworkService networkService;
@@ -120,7 +114,7 @@ public class StudyServiceDynamicSimulationTest {
     @Test
     public void testRunDynamicSimulation() {
         // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(eq(""), anyString(), eq(NETWORK_UUID), anyString(), any(), any())).willReturn(RESULT_UUID);
+        given(dynamicSimulationService.runDynamicSimulation(eq(""), eq(STUDY_UUID), eq(NODE_UUID), any(), any())).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
         given(loadFlowService.getLoadFlowStatus(NODE_UUID)).willReturn(LoadFlowStatus.CONVERGED.name());
 
@@ -134,7 +128,7 @@ public class StudyServiceDynamicSimulationTest {
         UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, parameters, "testUserId");
 
         // check result
-        assertThat(resultUuid).hasToString(RESULT_UUID_STRING);
+        assertThat(resultUuid).isEqualTo(RESULT_UUID);
     }
 
     @Test
@@ -160,7 +154,7 @@ public class StudyServiceDynamicSimulationTest {
     }
 
     @Test
-    public void testGetDynamicSimulationTimeLine() {
+    public void testGetDynamicSimulationTimeline() {
         // setup
         // timeline
         List<TimelineEventInfos> timelineEventInfosList = List.of(
