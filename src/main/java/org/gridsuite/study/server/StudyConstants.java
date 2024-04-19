@@ -22,6 +22,7 @@ public final class StudyConstants {
     public static final String NETWORK_STORE_API_VERSION = "v1";
     public static final String NETWORK_MODIFICATION_API_VERSION = "v1";
     public static final String LOADFLOW_API_VERSION = "v1";
+    public static final String USER_ADMIN_API_VERSION = "v1";
     public static final String SECURITY_ANALYSIS_API_VERSION = "v1";
     public static final String DYNAMIC_SIMULATION_API_VERSION = "v1";
     public static final String SENSITIVITY_ANALYSIS_API_VERSION = "v1";

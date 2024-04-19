@@ -855,13 +855,13 @@ public class StudyController {
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
     @Operation(summary = "set loadflow parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set"),
+                           @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
     public ResponseEntity<Void> setLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) String lfParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setLoadFlowParameters(studyUuid, lfParameter, userId);
-        return ResponseEntity.ok().build();
+        return studyService.setLoadFlowParameters(studyUuid, lfParameter, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/loadflow/parameters")
