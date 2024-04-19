@@ -69,11 +69,11 @@ public class NetworkMapService {
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        if (!StringUtils.isBlank(operation)) {
-            builder = builder.queryParam(QUERY_PARAM_OPERATION, operation);
-        }
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
+        if (!StringUtils.isBlank(operation)) {
+            builder = builder.queryParam(QUERY_PARAM_ADDITIONAL_PARAMS + "[" + QUERY_PARAM_OPERATION + "]", operation);
+        }
         builder = builder.queryParam(QUERY_PARAM_ADDITIONAL_PARAMS + "[" + QUERY_PARAM_DC_POWERFACTOR + "]", dcPowerFactor);
 
         try {
