@@ -8,9 +8,6 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.iidm.network.TwoSides;
-import com.powsybl.loadflow.LoadFlowResult;
-import com.powsybl.security.LimitViolationType;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;

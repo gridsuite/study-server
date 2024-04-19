@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service.shortcircuit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.security.LimitViolationType;
 import com.powsybl.shortcircuit.*;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;

@@ -8,9 +8,6 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.iidm.network.TwoSides;
-import com.powsybl.security.LimitViolationType;
-import com.powsybl.shortcircuit.Fault;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
