@@ -190,10 +190,9 @@ public class VoltageInitService {
 
         Objects.requireNonNull(sourceParametersUuid);
 
-        var path = UriComponentsBuilder
-                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters")
-                .queryParam("duplicateFrom", sourceParametersUuid)
-                .buildAndExpand()
+        String path = UriComponentsBuilder
+                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
+                .buildAndExpand(sourceParametersUuid)
                 .toUriString();
 
         UUID parametersUuid;

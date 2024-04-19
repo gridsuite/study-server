@@ -541,8 +541,8 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody("false")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     // duplicate case
-                    case "/v1/cases?duplicateFrom=" + CASE_UUID_STRING + "&withExpiration=true":
-                    case "/v1/cases?duplicateFrom=" + CASE_UUID_STRING + "&withExpiration=false":
+                    case "/v1/cases/" + CASE_UUID_STRING + "/duplicate?withExpiration=true":
+                    case "/v1/cases/" + CASE_UUID_STRING + "/duplicate?withExpiration=false":
                         return new MockResponse().setResponseCode(200).setBody(clonedCaseUuidAsString)
                                 .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                     // delete case
@@ -1059,7 +1059,7 @@ public class StudyTest {
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(7, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
-        assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=true", caseUuid)));
+        assertTrue(requests.contains(String.format("/v1/cases/%s/duplicate?withExpiration=true", caseUuid)));
         // note : it's a new case UUID
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CLONED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CLONED_CASE_UUID_STRING)));
@@ -1399,7 +1399,7 @@ public class StudyTest {
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
 
         //Test duplication from a non existing source study
-        mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={sourceStudyUuid}&studyUuid={studyUuid}", UUID.randomUUID(), DUPLICATED_STUDY_UUID)
+        mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", UUID.randomUUID())
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
     }
@@ -1437,27 +1437,25 @@ public class StudyTest {
             throw new RuntimeException();
         }).when(caseService).duplicateCase(any(), any());
 
-        mockMvc.perform(post(STUDIES_URL)
-                        .param("duplicateFrom", studyUuid.toString())
-                        .param("studyUuid", DUPLICATED_STUDY_UUID)
+        String response = mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", studyUuid)
                         .param(CASE_FORMAT, "XIIDM")
                         .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
+        ObjectMapper mapper = new ObjectMapper();
+        String duplicatedStudyUuid = mapper.readValue(response, String.class);
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
-        assertNull(studyRepository.findById(UUID.fromString(DUPLICATED_STUDY_UUID)).orElse(null));
+        assertNull(studyRepository.findById(UUID.fromString(duplicatedStudyUuid)).orElse(null));
     }
 
     private StudyEntity duplicateStudy(UUID studyUuid, String userId, String caseFormat) throws Exception {
         UUID stubUuid = wireMockUtils.stubDuplicateModificationGroup();
-        mockMvc.perform(post(STUDIES_URL)
-                        .param("duplicateFrom", studyUuid.toString())
-                        .param("studyUuid", DUPLICATED_STUDY_UUID)
-                        .param(CASE_FORMAT, caseFormat)
+        String response = mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", studyUuid)
                         .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().isOk());
-
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        ObjectMapper mapper = new ObjectMapper();
+        String newUuid = mapper.readValue(response, String.class);
         StudyEntity sourceStudy = studyRepository.findById(studyUuid).orElseThrow();
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
@@ -1465,18 +1463,18 @@ public class StudyTest {
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(DUPLICATED_STUDY_UUID, indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
+        assertEquals(newUuid, indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageOnGoing.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(StudyIndexationStatus.INDEXING_ONGOING.name(), indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_INDEXATION_STATUS));
         Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(DUPLICATED_STUDY_UUID, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
+        assertEquals(newUuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(StudyIndexationStatus.INDEXED.name(), indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_INDEXATION_STATUS));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
-        StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString(DUPLICATED_STUDY_UUID)).orElse(null);
+        StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString(newUuid)).orElse(null);
         assertNotNull(duplicatedStudy);
-        RootNode duplicatedRootNode = networkModificationTreeService.getStudyTree(UUID.fromString(DUPLICATED_STUDY_UUID));
+        RootNode duplicatedRootNode = networkModificationTreeService.getStudyTree(UUID.fromString(newUuid));
         assertNotNull(duplicatedRootNode);
 
         //Check tree node has been duplicated
@@ -1525,9 +1523,9 @@ public class StudyTest {
         }
         requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + duplicatedStudy.getNetworkUuid() + "/reindex-all")).count());
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases/.*/duplicate\\?withExpiration=false")).count());
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
-            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getVoltageInitParametersUuid())).count());
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters/" + sourceStudy.getVoltageInitParametersUuid())).count());
         }
         if (sourceStudy.getLoadFlowParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters/" + sourceStudy.getLoadFlowParametersUuid())).count());
