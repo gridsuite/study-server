@@ -53,8 +53,7 @@ import java.beans.PropertyEditorSupport;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-import static org.gridsuite.study.server.StudyConstants.CASE_FORMAT;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.StudyConstants.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -458,9 +457,10 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationsIds", required = false) List<String> substationsIds,
             @Parameter(description = "Element type") @RequestParam(name = "elementType") String elementType,
-            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
-            InfoTypesParameters infoTypesParameters) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, substationsIds, elementType, infoTypesParameters.getInfoType(), inUpstreamBuiltParentNode));
+            @Parameter(description = "Info type") @RequestParam(name = "infoType") String infoType,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, substationsIds, elementType, infoType, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}")
@@ -471,9 +471,14 @@ public class StudyController {
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Element id") @PathVariable("elementId") String elementId,
             @Parameter(description = "Element type") @RequestParam(name = "elementType") String elementType,
+            @Parameter(description = "Info type") @RequestParam(name = "infoType") String infoType,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
             InfoTypesParameters infoTypesParameters) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementInfos(studyUuid, nodeUuid, elementType, elementId, infoTypesParameters, inUpstreamBuiltParentNode));
+        String operation = null;
+        if (infoTypesParameters.getAdditionalParams() != null) {
+            operation = infoTypesParameters.getAdditionalParams().getOrDefault(QUERY_PARAM_OPERATION, null);
+        }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementInfos(studyUuid, nodeUuid, elementType, infoType, elementId, operation, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/countries")

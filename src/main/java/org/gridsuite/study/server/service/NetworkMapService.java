@@ -25,7 +25,9 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -57,25 +59,34 @@ public class NetworkMapService {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
-        builder = builder.queryParam(QUERY_PARAM_ADDITIONAL_PARAMS + "[" + QUERY_PARAM_INFO_TYPE + "]", infoType);
-        builder = builder.queryParam(QUERY_PARAM_ADDITIONAL_PARAMS + "[" + QUERY_PARAM_DC_POWERFACTOR + "]", dcPowerFactor);
+        builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
 
+        InfoTypesParameters infoTypesParameters = InfoTypesParameters.builder()
+                .additionalParams(Map.of(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor)))
+                .build();
+        queryParamInfoTypeParameters(infoTypesParameters, builder);
         String url = builder.buildAndExpand(networkUuid).toUriString();
         return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
     }
 
-    public String getElementInfos(UUID networkUuid, String variantId, String elementType, InfoTypesParameters infoTypesParameters, double dcPowerFactor, String elementId) {
+    public String getElementInfos(UUID networkUuid, String variantId, String elementType, String infoType, String operation, double dcPowerFactor, String elementId) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements/{elementId}";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
-        builder = builder.queryParam(QUERY_PARAM_ADDITIONAL_PARAMS + "[" + QUERY_PARAM_INFO_TYPE + "]", infoTypesParameters.getInfoType());
-        if (!StringUtils.isBlank(infoTypesParameters.getOperation())) {
-            builder = builder.queryParam(QUERY_PARAM_ADDITIONAL_PARAMS + "[" + QUERY_PARAM_OPERATION + "]", infoTypesParameters.getOperation());
+        builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
+        Map<String, String> additionalParams = new HashMap<>();
+        if (operation != null) {
+            additionalParams.put(QUERY_PARAM_OPERATION, operation);
         }
-        builder = builder.queryParam(QUERY_PARAM_ADDITIONAL_PARAMS + "[" + QUERY_PARAM_DC_POWERFACTOR + "]", dcPowerFactor);
+
+        additionalParams.put(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor));
+        InfoTypesParameters infoTypesParameters = InfoTypesParameters.builder()
+                .additionalParams(additionalParams)
+                .build();
+        queryParamInfoTypeParameters(infoTypesParameters, builder);
 
         try {
             return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid, elementId);
@@ -88,6 +99,10 @@ public class NetworkMapService {
             }
             throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
         }
+    }
+
+    private void queryParamInfoTypeParameters(InfoTypesParameters infoTypesParameters, UriComponentsBuilder builder) {
+        infoTypesParameters.getAdditionalParams().forEach((key, value) -> builder.queryParam(String.format("additionalParams[%s]", key), value));
     }
 
     public String getCountries(UUID networkUuid, String variantId) {

@@ -1,24 +1,14 @@
 package org.gridsuite.study.server.dto;
 
+import lombok.Builder;
 import lombok.Data;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Map;
 
 @Data
+@Builder
 public class InfoTypesParameters {
-    Map<String, String> additionalParams;
-
-    public String getOperation() {
-        if (additionalParams == null) {
-            return null;
-        }
-        return additionalParams.getOrDefault("operation", null);
-    }
-
-    public String getInfoType() {
-        if (additionalParams == null) {
-            return null;
-        }
-        return additionalParams.getOrDefault("infoType", null);
-    }
+    @Value("#{${additionalParams: {}}}")
+    private Map<String, String> additionalParams;
 }

@@ -618,12 +618,12 @@ public class StudyService {
                 substationsIds, elementType, infoType, loadFlowParameters.getDcPowerFactor());
     }
 
-    public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, String elementType, String elementId, InfoTypesParameters infoTypesParameters, boolean inUpstreamBuiltParentNode) {
+    public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, String elementType, String infoType, String elementId, String operation, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
         return networkMapService.getElementInfos(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
-                elementType, infoTypesParameters, loadFlowParameters.getDcPowerFactor(), elementId);
+                elementType, infoType, operation, loadFlowParameters.getDcPowerFactor(), elementId);
     }
 
     public String getNetworkCountries(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode) {
