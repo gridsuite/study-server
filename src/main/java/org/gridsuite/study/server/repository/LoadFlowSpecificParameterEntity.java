@@ -19,14 +19,15 @@ import java.util.stream.Collectors;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
+ * @deprecated to remove when the data is migrated into the loadflow-server
  */
-
+@Deprecated(forRemoval = true, since = "1.3.0")
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Entity
 @Table(name = "loadFlowSpecificParameters")
-public class LoadFlowSpecificParameterEntity {
+class LoadFlowSpecificParameterEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id", nullable = false)

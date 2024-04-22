@@ -19,8 +19,9 @@ import java.util.UUID;
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  * @author Jacques Borsenberger <Jacques.Borsenberger at rte-france.com>
+ * @deprecated to remove when the data is migrated into the loadflow-server
  */
-
+@Deprecated(forRemoval = true, since = "1.3.0")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,7 +29,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "loadFlowParameters")
-public class LoadFlowParametersEntity {
+class LoadFlowParametersEntity {
 
     public LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode voltageInitMode,
                                     boolean transformerVoltageControlOn, boolean useReactiveLimits,
