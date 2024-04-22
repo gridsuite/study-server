@@ -14,6 +14,8 @@ import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -22,6 +24,7 @@ import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
@@ -30,6 +33,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 
+import java.io.UncheckedIOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -51,23 +57,40 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     private final DynamicSimulationClient dynamicSimulationClient;
 
+    private final NetworkService networkService;
+
     private final NetworkModificationTreeService networkModificationTreeService;
 
     public DynamicSimulationServiceImpl(ObjectMapper objectMapper,
                                         DynamicMappingClient dynamicMappingClient,
                                         TimeSeriesClient timeSeriesClient,
                                         DynamicSimulationClient dynamicSimulationClient,
+                                        NetworkService networkService,
                                         NetworkModificationTreeService networkModificationTreeService) {
         this.objectMapper = objectMapper;
         this.dynamicMappingClient = dynamicMappingClient;
         this.timeSeriesClient = timeSeriesClient;
         this.dynamicSimulationClient = dynamicSimulationClient;
+        this.networkService = networkService;
         this.networkModificationTreeService = networkModificationTreeService;
     }
 
     @Override
-    public UUID runDynamicSimulation(String provider, String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters, String userId) {
-        return dynamicSimulationClient.run(provider, receiver, networkUuid, variantId, parameters, userId);
+    public UUID runDynamicSimulation(String provider, UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters, String userId) {
+        UUID networkUuid = networkService.getNetworkUuid(studyUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
+        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
+
+        // create receiver for getting back the notification in rabbitmq
+        String receiver;
+        try {
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
+                    StandardCharsets.UTF_8);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+
+        return dynamicSimulationClient.run(provider, receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid.toString()), parameters, userId);
     }
 
     @Override

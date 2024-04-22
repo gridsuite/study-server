@@ -14,7 +14,9 @@ import java.util.UUID;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
+ * @deprecated to remove when the data is migrated into the sensitivity-analysis-server
  */
+@Deprecated(forRemoval = true, since = "1.4.0")
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
