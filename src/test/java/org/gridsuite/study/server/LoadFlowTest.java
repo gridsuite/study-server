@@ -293,8 +293,7 @@ public class LoadFlowTest {
                     return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(LOADFLOW_PARAMETERS_UUID_STRING))
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/users/" + NO_PROFILE_USER_ID + "/profile")) {
-                    return new MockResponse().setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse().setResponseCode(404);
                 } else if (path.matches("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
                     return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_NO_PARAMS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
