@@ -14,4 +14,11 @@ public class InfoTypesParameters {
         }
         return additionalParams.getOrDefault("operation", null);
     }
+
+    public String getInfoType() {
+        if (additionalParams == null) {
+            return null;
+        }
+        return additionalParams.getOrDefault("infoType", null);
+    }
 }

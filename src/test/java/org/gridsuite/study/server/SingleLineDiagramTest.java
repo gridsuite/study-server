@@ -589,8 +589,8 @@ public class SingleLineDiagramTest {
         UUID stubUuid = wireMockUtils.stubNetworkElementsInfosGet(NETWORK_UUID_STRING, elementType, infoType, responseBody);
         MockHttpServletRequestBuilder mockHttpServletRequestBuilder = get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
                 .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
-                .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
-                .queryParam(QUERY_PARAM_DC_POWERFACTOR, Double.toString(LoadFlowParameters.DEFAULT_DC_POWER_FACTOR));
+                .queryParam(QUERY_PARAM_ADDITIONAL_PARAMS + "[" + QUERY_PARAM_INFO_TYPE + "]", infoType)
+                .queryParam(QUERY_PARAM_ADDITIONAL_PARAMS + "[" + QUERY_PARAM_DC_POWERFACTOR + "]", Double.toString(LoadFlowParameters.DEFAULT_DC_POWER_FACTOR));
         if (!substationsIds.isEmpty()) {
             mockHttpServletRequestBuilder.queryParam(QUERY_PARAM_SUBSTATIONS_IDS, substationsIds.stream().toArray(String[]::new));
         }
