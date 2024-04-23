@@ -15,6 +15,8 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.Optional;
+
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.GET_USER_PROFILE_FAILED;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
@@ -38,12 +40,15 @@ public class UserAdminService {
         this.userAdminServerBaseUri = serverBaseUri;
     }
 
-    public UserProfileInfos getUserProfile(String sub) {
+    public Optional<UserProfileInfos> getUserProfile(String sub) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_PROFILE_URI)
             .buildAndExpand(sub).toUriString();
         try {
-            return restTemplate.getForObject(userAdminServerBaseUri + path, UserProfileInfos.class);
+            return Optional.of(restTemplate.getForObject(userAdminServerBaseUri + path, UserProfileInfos.class));
         } catch (HttpStatusCodeException e) {
+            if (e.getStatusCode().value() == 404) {
+                return Optional.empty(); // a user may not have a profile
+            }
             throw handleHttpError(e, GET_USER_PROFILE_FAILED);
         }
     }
