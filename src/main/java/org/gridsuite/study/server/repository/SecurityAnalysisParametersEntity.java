@@ -13,8 +13,9 @@ import java.util.UUID;
 
 /**
  * @author AJELLAL Ali <ali.ajellal@rte-france.com>
+ * @deprecated to remove when the data is migrated into the security-analysis-server
  */
-
+@Deprecated(forRemoval = true, since = "1.3.0")
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -22,7 +23,7 @@ import java.util.UUID;
 @Entity
 @Builder
 @Table(name = "securityAnalysisParameters")
-public class SecurityAnalysisParametersEntity {
+class SecurityAnalysisParametersEntity {
     public SecurityAnalysisParametersEntity(double lowVoltageAbsoluteThreshold, double lowVoltageProportionalThreshold, double highVoltageAbsoluteThreshold, double highVoltageProportionalThreshold, double flowProportionalThreshold) {
         this(null, lowVoltageAbsoluteThreshold, lowVoltageProportionalThreshold, highVoltageAbsoluteThreshold, highVoltageProportionalThreshold, flowProportionalThreshold);
     }
