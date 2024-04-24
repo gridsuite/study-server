@@ -11,11 +11,9 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import com.powsybl.contingency.Contingency;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -32,6 +30,7 @@ public class ActionsService {
     private final RestTemplate restTemplate;
 
     private static final String NETWORK_UUID = "networkUuid";
+    private static final String CONTINGENCY_LIST_IDS = "ids";
 
     private String actionsServerBaseUri;
 
@@ -42,21 +41,14 @@ public class ActionsService {
     }
 
     public Integer getContingencyCount(UUID networkUuid, String variantId, List<String> contingencyListNames) {
-        return contingencyListNames.stream().map(contingencyListName -> {
-            var uriComponentsBuilder = UriComponentsBuilder
-                    .fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/{contingencyListName}/export")
-                    .queryParam(NETWORK_UUID, networkUuid);
-            if (!StringUtils.isBlank(variantId)) {
-                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-            }
-            var path = uriComponentsBuilder.buildAndExpand(contingencyListName).toUriString();
-
-            List<Contingency> contingencies = restTemplate.exchange(actionsServerBaseUri + path, HttpMethod.GET, null,
-                    new ParameterizedTypeReference<List<Contingency>>() {
-                    }).getBody();
-
-            return contingencies == null ? 0 : contingencies.size();
-        }).reduce(0, Integer::sum);
+        var uriComponentsBuilder = UriComponentsBuilder
+                .fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/count")
+                .queryParam(CONTINGENCY_LIST_IDS, contingencyListNames)
+                .queryParam(NETWORK_UUID, networkUuid);
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        return restTemplate.exchange(actionsServerBaseUri + uriComponentsBuilder.toUriString(), HttpMethod.GET, null, Integer.class).getBody();
     }
 
     public void setActionsServerBaseUri(String actionsServerBaseUri) {

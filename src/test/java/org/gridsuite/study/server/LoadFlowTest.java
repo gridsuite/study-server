@@ -109,10 +109,9 @@ public class LoadFlowTest {
     private static final String NO_PARAMS_IN_PROFILE_USER_ID = "noParamInProfileUser";
     private static final String VALID_PARAMS_IN_PROFILE_USER_ID = "validParamInProfileUser";
     private static final String INVALID_PARAMS_IN_PROFILE_USER_ID = "invalidParamInProfileUser";
-    private static final String USER_PROFILE_EMPTY_JSON = "[]";
-    private static final String USER_PROFILE_NO_PARAMS_JSON = "[{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}]";
-    private static final String USER_PROFILE_VALID_PARAMS_JSON = "[{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}]";
-    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "[{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"loadFlowParameterId\":\"" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}]";
+    private static final String USER_PROFILE_NO_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}";
+    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
+    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"loadFlowParameterId\":\"" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
     private static final String DUPLICATED_PARAMS_JSON = "\"" + PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
 
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString(LOADFLOW_PARAMETERS_UUID_STRING);
@@ -301,16 +300,15 @@ public class LoadFlowTest {
                 } else if (path.matches("/v1/parameters")) {
                     return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(LOADFLOW_PARAMETERS_UUID_STRING))
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/profiles\\?sub=" + NO_PROFILE_USER_ID)) {
-                    return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_EMPTY_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/profiles\\?sub=" + NO_PARAMS_IN_PROFILE_USER_ID)) {
+                } else if (path.matches("/v1/users/" + NO_PROFILE_USER_ID + "/profile")) {
+                    return new MockResponse().setResponseCode(404);
+                } else if (path.matches("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
                     return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_NO_PARAMS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/profiles\\?sub=" + VALID_PARAMS_IN_PROFILE_USER_ID)) {
+                } else if (path.matches("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
                     return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_VALID_PARAMS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/profiles\\?sub=" + INVALID_PARAMS_IN_PROFILE_USER_ID)) {
+                } else if (path.matches("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
                     return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_INVALID_PARAMS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/parameters/" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING) && method.equals("POST")) {
@@ -629,7 +627,7 @@ public class LoadFlowTest {
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PROFILE_USER_ID, HttpStatus.OK);
 
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/profiles?sub=" + NO_PROFILE_USER_ID)));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PROFILE_USER_ID + "/profile")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING))); // update existing with dft
     }
 
@@ -640,7 +638,7 @@ public class LoadFlowTest {
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/profiles?sub=" + NO_PARAMS_IN_PROFILE_USER_ID)));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING))); // update existing with dft
     }
 
@@ -651,7 +649,7 @@ public class LoadFlowTest {
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
 
         var requests = TestUtils.getRequestsDone(3, server);
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/profiles?sub=" + INVALID_PARAMS_IN_PROFILE_USER_ID)));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING))); // update existing with dft
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING))); // post duplicate ko
     }
@@ -663,7 +661,7 @@ public class LoadFlowTest {
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         var requests = TestUtils.getRequestsDone(3, server);
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/profiles?sub=" + VALID_PARAMS_IN_PROFILE_USER_ID)));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING))); // delete existing
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
     }

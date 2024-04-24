@@ -167,13 +167,13 @@ public class StudyTest {
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
     private static final String CASE_FORMAT = "caseFormat";
     private static final String NO_PARAMS_IN_PROFILE_USER_ID = "noParamInProfileUser";
-    private static final String USER_PROFILE_NO_PARAMS_JSON = "[{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}]";
+    private static final String USER_PROFILE_NO_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}";
     private static final String INVALID_PARAMS_IN_PROFILE_USER_ID = "invalidParamInProfileUser";
     private static final String PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING = "f09f5282-8e34-48b5-b66e-7ef9f3f36c4f";
-    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "[{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"loadFlowParameterId\":\"" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}]";
+    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"loadFlowParameterId\":\"" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
     private static final String VALID_PARAMS_IN_PROFILE_USER_ID = "validParamInProfileUser";
     private static final String PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING = "1cec4a7b-ab7e-4d78-9dd7-ce73c5ef11d9";
-    private static final String USER_PROFILE_VALID_PARAMS_JSON = "[{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}]";
+    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
     private static final String PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
     private static final String DUPLICATED_PARAMS_JSON = "\"" + PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
 
@@ -492,13 +492,13 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/default-provider")) {
                     return new MockResponse().setResponseCode(200).setBody(DEFAULT_PROVIDER);
-                } else if (path.matches("/v1/profiles\\?sub=" + NO_PARAMS_IN_PROFILE_USER_ID)) {
+                } else if (path.matches("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
                     return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_NO_PARAMS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/profiles\\?sub=" + INVALID_PARAMS_IN_PROFILE_USER_ID)) {
+                } else if (path.matches("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
                     return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_INVALID_PARAMS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/profiles\\?sub=" + VALID_PARAMS_IN_PROFILE_USER_ID)) {
+                } else if (path.matches("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
                     return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_VALID_PARAMS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
@@ -1051,7 +1051,7 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*" + "&caseFormat=UCTE")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", caseUuid)));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/profiles?sub=" + userId)));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + userId + "/profile")));
         if (parameterDuplicatedUuid != null) {
             assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + parameterDuplicatedUuid))); // post duplicate
         }
@@ -1106,7 +1106,7 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CLONED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CLONED_CASE_UUID_STRING)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/profiles?sub=" + userId)));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + userId + "/profile")));
 
         return studyUuid;
     }
@@ -1299,7 +1299,7 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains("/v1/parameters/default"));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/profiles?sub=userId")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/userId/profile")));
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {

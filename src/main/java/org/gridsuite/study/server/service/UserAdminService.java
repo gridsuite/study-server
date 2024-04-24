@@ -10,15 +10,12 @@ package org.gridsuite.study.server.service;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.List;
+import java.util.Optional;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.GET_USER_PROFILE_FAILED;
@@ -29,7 +26,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  */
 @Service
 public class UserAdminService {
-    private static final String USER_PROFILES_URI = "/profiles?sub={sub}";
+    private static final String USERS_PROFILE_URI = "/users/{sub}/profile";
     private final RestTemplate restTemplate;
     private String userAdminServerBaseUri;
 
@@ -43,13 +40,15 @@ public class UserAdminService {
         this.userAdminServerBaseUri = serverBaseUri;
     }
 
-    public UserProfileInfos getUserProfile(String sub) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USER_PROFILES_URI)
+    public Optional<UserProfileInfos> getUserProfile(String sub) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_PROFILE_URI)
             .buildAndExpand(sub).toUriString();
         try {
-            List<UserProfileInfos> response = restTemplate.exchange(userAdminServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<UserProfileInfos>>() { }).getBody();
-            return CollectionUtils.isEmpty(response) ? null : response.get(0);
+            return Optional.of(restTemplate.getForObject(userAdminServerBaseUri + path, UserProfileInfos.class));
         } catch (HttpStatusCodeException e) {
+            if (e.getStatusCode().value() == 404) {
+                return Optional.empty(); // a user may not have a profile
+            }
             throw handleHttpError(e, GET_USER_PROFILE_FAILED);
         }
     }
