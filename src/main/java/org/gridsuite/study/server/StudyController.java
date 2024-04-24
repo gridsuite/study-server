@@ -851,31 +851,14 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, filters, globalFilters, sort));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}")
     @Operation(summary = "Get filter values")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Filter values")})
-    public ResponseEntity<List<String>> getLoadFlowFilterEnumValues(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                                                                        @Parameter(description = "Filter") @RequestParam(name = "filterEnum") String filterEnum) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadflowService.getLoadFlowFilterEnumValues(studyUuid, nodeUuid, filterEnum));
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis")
-    @Operation(summary = "Get filter values")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Filter values")})
-    public ResponseEntity<List<String>> getSecurityAnalysisComputationStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                                                                                 @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                                                                                 @Parameter(description = "Filter") @RequestParam(name = "filterEnum") String filterEnum) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(securityAnalysisService.getSecurityAnalysisFilterEnumValues(studyUuid, nodeUuid, filterEnum));
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit")
-    @Operation(summary = "Get filter values")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Filter values")})
-    public ResponseEntity<List<String>> getShortCircuitFilterEnumValues(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                                   @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                                   @Parameter(description = "Filter") @RequestParam(name = "filterEnum") String filterEnum) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(shortCircuitService.getShortCircuitFilterEnumValues(studyUuid, nodeUuid, filterEnum));
+    public ResponseEntity<List<String>> getFilterEnumValues(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                    @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                    @Parameter(description = "Computing Type") @RequestParam(name = "computingType") ComputationType computingType,
+                                                                    @Parameter(description = "Filter Values") @RequestParam(name = "filterEnum") String filterEnum) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getFilterEnumValues(studyUuid, nodeUuid, computingType, filterEnum));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")

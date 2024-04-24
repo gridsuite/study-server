@@ -504,7 +504,8 @@ public class SecurityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
 
         // get limit types
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis?filterEnum=limit-types", studyUuid, nodeUuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}?computingType={computingType}&filterEnum={filterEnum}",
+                        studyUuid, nodeUuid, SECURITY_ANALYSIS, "limit-types"))
                 .andExpectAll(status().isOk(),
                         content().string(LIMIT_TYPE_JSON));
 

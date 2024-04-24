@@ -22,6 +22,7 @@ import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.common.AbstractGenericComputingTypeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Pageable;
@@ -47,7 +48,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 @Service
-public class ShortCircuitService {
+public class ShortCircuitService extends AbstractGenericComputingTypeService {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -384,5 +385,9 @@ public class ShortCircuitService {
             }
         }
         return result;
+    }
+
+    public List<String> getFilterEnumValues(String filterEnum, UUID resultUuidOpt) {
+        return getFilterEnumValues(filterEnum, resultUuidOpt, SHORT_CIRCUIT_API_VERSION, shortCircuitServerBaseUri, SHORT_CIRCUIT_ANALYSIS_NOT_FOUND, restTemplate);
     }
 }

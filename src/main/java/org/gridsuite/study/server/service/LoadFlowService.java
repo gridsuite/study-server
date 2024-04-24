@@ -14,6 +14,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.common.AbstractGenericComputingTypeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Sort;
@@ -37,7 +38,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @Service
-public class LoadFlowService {
+public class LoadFlowService extends AbstractGenericComputingTypeService {
 
     static final String RESULT_UUID = "resultUuid";
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
@@ -241,30 +242,6 @@ public class LoadFlowService {
         return result;
     }
 
-    public List<String> getLoadFlowFilterEnumValues(UUID studyUuid, UUID nodeUuid, String filterEnum) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(nodeUuid);
-        Objects.requireNonNull(filterEnum);
-        List<String> result = new ArrayList<>();
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
-
-        if (resultUuidOpt.isPresent()) {
-            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/{filterEnum}");
-            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get(), filterEnum).toUriString();
-            try {
-                ResponseEntity<List<String>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
-                });
-                result = responseEntity.getBody();
-            } catch (HttpStatusCodeException e) {
-                if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                    throw new StudyException(LOADFLOW_NOT_FOUND);
-                }
-                throw e;
-            }
-        }
-        return result;
-    }
-
     public LoadFlowParametersInfos getLoadFlowParameters(UUID parametersUuid) {
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
@@ -397,5 +374,9 @@ public class LoadFlowService {
             studyEntity.setLoadFlowParametersUuid(createDefaultLoadFlowParameters());
         }
         return studyEntity.getLoadFlowParametersUuid();
+    }
+
+    public List<String> getFilterEnumValues(String filterEnum, UUID resultUuidOpt) {
+        return getFilterEnumValues(filterEnum, resultUuidOpt, LOADFLOW_API_VERSION, loadFlowServerBaseUri, LOADFLOW_NOT_FOUND, restTemplate);
     }
 }

@@ -14,6 +14,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.common.AbstractGenericComputingTypeService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -42,7 +43,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @Service
-public class SecurityAnalysisService {
+public class SecurityAnalysisService extends AbstractGenericComputingTypeService {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -419,5 +420,9 @@ public class SecurityAnalysisService {
             }
         }
         return result;
+    }
+
+    public List<String> getFilterEnumValues(String filterEnum, UUID resultUuidOpt) {
+        return getFilterEnumValues(filterEnum, resultUuidOpt, SECURITY_ANALYSIS_API_VERSION, securityAnalysisServerBaseUri, SECURITY_ANALYSIS_NOT_FOUND, restTemplate);
     }
 }

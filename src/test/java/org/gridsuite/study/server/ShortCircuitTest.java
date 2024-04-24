@@ -484,7 +484,8 @@ public class ShortCircuitTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
         // get fault types
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit?filterEnum=fault-types", studyNameUserIdUuid, modificationNode1Uuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}?computingType={computingType}&filterEnum={filterEnum}",
+                        studyNameUserIdUuid, modificationNode1Uuid, ComputationType.SHORT_CIRCUIT, "fault-types"))
                 .andExpectAll(status().isOk());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault-types")));

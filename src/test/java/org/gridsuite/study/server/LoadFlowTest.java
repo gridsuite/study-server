@@ -20,10 +20,7 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.gridsuite.study.server.dto.LimitViolationInfos;
-import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
-import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -423,7 +420,8 @@ public class LoadFlowTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&limitReduction=0.7")));
 
         // get computing status
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow?filterEnum=computation-status", studyNameUserIdUuid, modificationNode1Uuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}?computingType={computingType}&filterEnum={filterEnum}",
+                        studyNameUserIdUuid, modificationNode1Uuid, LOAD_FLOW, "computation-status"))
                 .andExpectAll(status().isOk(),
                         content().string(COMPUTING_STATUS_JSON));
 
