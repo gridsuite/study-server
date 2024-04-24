@@ -571,8 +571,8 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody("false")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     // duplicate case
-                    case "/v1/cases/" + CASE_UUID_STRING + "/duplicate?withExpiration=true":
-                    case "/v1/cases/" + CASE_UUID_STRING + "/duplicate?withExpiration=false":
+                    case "/v1/cases?duplicateFrom=" + CASE_UUID_STRING + "&withExpiration=true":
+                    case "/v1/cases?duplicateFrom=" + CASE_UUID_STRING + "&withExpiration=false":
                         return new MockResponse().setResponseCode(200).setBody(clonedCaseUuidAsString)
                                 .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                     // delete case
@@ -1101,7 +1101,7 @@ public class StudyTest {
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(8, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
-        assertTrue(requests.contains(String.format("/v1/cases/%s/duplicate?withExpiration=true", caseUuid)));
+        assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=%s", caseUuid, true)));
         // note : it's a new case UUID
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CLONED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CLONED_CASE_UUID_STRING)));
@@ -1458,7 +1458,7 @@ public class StudyTest {
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
 
         //Test duplication from a non existing source study
-        mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", UUID.randomUUID())
+        mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", UUID.randomUUID())
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
     }
@@ -1496,7 +1496,7 @@ public class StudyTest {
             throw new RuntimeException();
         }).when(caseService).duplicateCase(any(), any());
 
-        String response = mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", studyUuid)
+        String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
                         .param(CASE_FORMAT, "XIIDM")
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
@@ -1510,7 +1510,7 @@ public class StudyTest {
 
     private StudyEntity duplicateStudy(UUID studyUuid, String userId, String caseFormat) throws Exception {
         UUID stubUuid = wireMockUtils.stubDuplicateModificationGroup();
-        String response = mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", studyUuid)
+        String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         ObjectMapper mapper = new ObjectMapper();
@@ -1582,7 +1582,7 @@ public class StudyTest {
         }
         requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + duplicatedStudy.getNetworkUuid() + "/reindex-all")).count());
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases/.*/duplicate\\?withExpiration=false")).count());
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters/" + sourceStudy.getVoltageInitParametersUuid())).count());
         }
