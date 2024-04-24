@@ -229,7 +229,7 @@ public class ConsumerService {
 
     private UserProfileInfos getUserProfile(String userId) {
         try {
-            return userAdminService.getUserProfile(userId);
+            return userAdminService.getUserProfile(userId).orElse(null);
         } catch (Exception e) {
             LOGGER.error(String.format("Could not access to profile for user '%s'", userId), e);
         }

@@ -13,11 +13,13 @@ import lombok.Setter;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
+ * @deprecated to remove when the data is migrated into the sensitivity-analysis-server
  */
+@Deprecated(forRemoval = true, since = "1.4.0")
 @AllArgsConstructor
 @Getter
 @Setter
 @Entity
 @Table(name = "sensitivityFactorForInjectionEntity")
-public class SensitivityFactorForInjectionEntity extends AbstractSensitivityFactorEntity {
+class SensitivityFactorForInjectionEntity extends AbstractSensitivityFactorEntity {
 }
