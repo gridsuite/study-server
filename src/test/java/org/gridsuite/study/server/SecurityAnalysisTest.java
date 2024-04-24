@@ -66,6 +66,7 @@ import java.util.*;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
+import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.utils.TestUtils.getBinaryAsBuffer;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -211,10 +212,8 @@ public class SecurityAnalysisTest {
                         .build(), saResultDestination);
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                         .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
-                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/limit-types")) {
-                    return new MockResponse().setResponseCode(200).setBody(LIMIT_TYPE_JSON)
-                            .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
-                } else if (("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/limit-types").equals(path)) {
+                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/limit-types")
+                        || ("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/limit-types").equals(path)) {
                     return new MockResponse().setResponseCode(200).setBody(LIMIT_TYPE_JSON)
                             .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n-result\\?page=.*size=.*filters=.*sort=.*")) {
@@ -502,6 +501,12 @@ public class SecurityAnalysisTest {
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
+
+        // get limit types empty list
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
+                        studyUuid, nodeUuid, LOAD_FLOW, "limit-types"))
+                .andExpectAll(status().isOk(),
+                        content().string("[]"));
 
         // get limit types
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
