@@ -14,10 +14,9 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.common.AbstractGenericComputingTypeService;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
@@ -29,7 +28,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -43,7 +41,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @Service
-public class SecurityAnalysisService extends AbstractGenericComputingTypeService {
+public class SecurityAnalysisService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -398,31 +396,7 @@ public class SecurityAnalysisService extends AbstractGenericComputingTypeService
         }
     }
 
-    public List<String> getSecurityAnalysisFilterEnumValues(UUID studyUuid, UUID nodeUuid, String filterEnum) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(nodeUuid);
-        Objects.requireNonNull(filterEnum);
-        List<String> result = new ArrayList<>();
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
-
-        if (resultUuidOpt.isPresent()) {
-            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/{filterEnum}");
-            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get(), filterEnum).toUriString();
-            try {
-                ResponseEntity<List<String>> responseEntity = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
-                });
-                result = responseEntity.getBody();
-            } catch (HttpStatusCodeException e) {
-                if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                    throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
-                }
-                throw e;
-            }
-        }
-        return result;
-    }
-
-    public List<String> getFilterEnumValues(String filterEnum, UUID resultUuidOpt) {
-        return getFilterEnumValues(filterEnum, resultUuidOpt, SECURITY_ANALYSIS_API_VERSION, securityAnalysisServerBaseUri, SECURITY_ANALYSIS_NOT_FOUND, restTemplate);
+    public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
+        return getEnumValues(enumName, resultUuidOpt, SECURITY_ANALYSIS_API_VERSION, securityAnalysisServerBaseUri, SECURITY_ANALYSIS_NOT_FOUND, restTemplate);
     }
 }

@@ -14,16 +14,16 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 
-public abstract class AbstractGenericComputingTypeService {
+public abstract class AbstractComputationService {
 
-    public List<String> getFilterEnumValues(String filterEnum, UUID resultUuidOpt, String apiVersion,
-                                            String computingTypeBaseUri, StudyException.Type type, RestTemplate restTemplate) {
+    public abstract List<String> getEnumValues(String enumName, UUID resultUuidOpt);
+
+    public List<String> getEnumValues(String enumName, UUID resultUuidOpt, String apiVersion, String computingTypeBaseUri, StudyException.Type type, RestTemplate restTemplate) {
         List<String> result;
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + apiVersion + "/results/{resultUuid}/{filterEnum}");
-        String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt, filterEnum).toUriString();
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + apiVersion + "/results/{resultUuid}/{enumName}");
+        String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt, enumName).toUriString();
         try {
-            ResponseEntity<List<String>> responseEntity = restTemplate.exchange(computingTypeBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
-            });
+            ResponseEntity<List<String>> responseEntity = restTemplate.exchange(computingTypeBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() { });
             result = responseEntity.getBody();
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {

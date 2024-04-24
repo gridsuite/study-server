@@ -9,22 +9,20 @@ package org.gridsuite.study.server.service.shortcircuit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.shortcircuit.*;
+import com.powsybl.shortcircuit.InitialVoltageProfileMode;
+import com.powsybl.shortcircuit.ShortCircuitParameters;
+import com.powsybl.shortcircuit.StudyType;
+import com.powsybl.shortcircuit.VoltageRange;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ShortCircuitParametersInfos;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
-import org.gridsuite.study.server.dto.ShortCircuitStatus;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.StudyService;
-import org.gridsuite.study.server.service.common.AbstractGenericComputingTypeService;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -36,7 +34,10 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -48,7 +49,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 @Service
-public class ShortCircuitService extends AbstractGenericComputingTypeService {
+public class ShortCircuitService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -363,31 +364,7 @@ public class ShortCircuitService extends AbstractGenericComputingTypeService {
         }
     }
 
-    public List<String> getShortCircuitFilterEnumValues(UUID studyUuid, UUID nodeUuid, String filterEnum) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(nodeUuid);
-        Objects.requireNonNull(filterEnum);
-        List<String> result = new ArrayList<>();
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SHORT_CIRCUIT);
-
-        if (resultUuidOpt.isPresent()) {
-            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/{filterEnum}");
-            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get(), filterEnum).toUriString();
-            try {
-                ResponseEntity<List<String>> responseEntity = restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
-                });
-                result = responseEntity.getBody();
-            } catch (HttpStatusCodeException e) {
-                if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                    throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
-                }
-                throw e;
-            }
-        }
-        return result;
-    }
-
-    public List<String> getFilterEnumValues(String filterEnum, UUID resultUuidOpt) {
-        return getFilterEnumValues(filterEnum, resultUuidOpt, SHORT_CIRCUIT_API_VERSION, shortCircuitServerBaseUri, SHORT_CIRCUIT_ANALYSIS_NOT_FOUND, restTemplate);
+    public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
+        return getEnumValues(enumName, resultUuidOpt, SHORT_CIRCUIT_API_VERSION, shortCircuitServerBaseUri, SHORT_CIRCUIT_ANALYSIS_NOT_FOUND, restTemplate);
     }
 }

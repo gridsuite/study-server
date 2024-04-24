@@ -14,7 +14,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.common.AbstractGenericComputingTypeService;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Sort;
@@ -38,7 +38,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @Service
-public class LoadFlowService extends AbstractGenericComputingTypeService {
+public class LoadFlowService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
@@ -376,7 +376,7 @@ public class LoadFlowService extends AbstractGenericComputingTypeService {
         return studyEntity.getLoadFlowParametersUuid();
     }
 
-    public List<String> getFilterEnumValues(String filterEnum, UUID resultUuidOpt) {
-        return getFilterEnumValues(filterEnum, resultUuidOpt, LOADFLOW_API_VERSION, loadFlowServerBaseUri, LOADFLOW_NOT_FOUND, restTemplate);
+    public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
+        return getEnumValues(enumName, resultUuidOpt, LOADFLOW_API_VERSION, loadFlowServerBaseUri, LOADFLOW_NOT_FOUND, restTemplate);
     }
 }
