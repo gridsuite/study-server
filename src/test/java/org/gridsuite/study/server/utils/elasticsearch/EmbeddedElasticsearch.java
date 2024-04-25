@@ -41,6 +41,7 @@ public class EmbeddedElasticsearch {
         envMap.put("xpack.security.enabled", Boolean.FALSE.toString());
         envMap.put("ingest.geoip.downloader.enabled", Boolean.FALSE.toString());
         envMap.put("ES_JAVA_OPTS", "-Xms128m -Xmx128m");
+        envMap.put("action.auto_create_index", "false");
         elasticsearchContainer.start();
 
         System.setProperty("spring.data.elasticsearch.embedded", Boolean.toString(true));
