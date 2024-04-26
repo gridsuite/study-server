@@ -130,8 +130,6 @@ public class LoadFlowTest {
 
     private static String COMPUTING_STATUS_JSON;
 
-    private static String LOADFLOW_PARAMETERS_JSON;
-
     private static String LOADFLOW_DEFAULT_PARAMETERS_JSON;
 
     //output destinations

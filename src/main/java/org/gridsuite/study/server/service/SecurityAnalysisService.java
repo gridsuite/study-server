@@ -396,7 +396,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         }
     }
 
-    public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
-        return getEnumValues(enumName, resultUuidOpt, SECURITY_ANALYSIS_API_VERSION, securityAnalysisServerBaseUri, SECURITY_ANALYSIS_NOT_FOUND, restTemplate);
+    public List<String> getEnumValues(String enumName, UUID resultUuid) {
+        return getEnumValues(enumName, resultUuid, SECURITY_ANALYSIS_API_VERSION, securityAnalysisServerBaseUri, SECURITY_ANALYSIS_NOT_FOUND, restTemplate);
     }
 }

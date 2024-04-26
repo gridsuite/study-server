@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.security.LimitViolationType;
 import com.powsybl.security.SecurityAnalysisParameters;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
@@ -194,7 +195,7 @@ public class SecurityAnalysisTest {
             .specificParametersPerProvider(Map.of())
             .build();
         String loadFlowParameters = objectMapper.writeValueAsString(loadFlowParametersInfos);
-        LIMIT_TYPE_JSON = objectMapper.writeValueAsString(List.of("CURRENT", "HIGH_VOLTAGE"));
+        LIMIT_TYPE_JSON = objectMapper.writeValueAsString(List.of(LimitViolationType.CURRENT.name(), LimitViolationType.HIGH_VOLTAGE.name()));
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows

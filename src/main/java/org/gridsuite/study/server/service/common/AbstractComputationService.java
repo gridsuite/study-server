@@ -18,10 +18,10 @@ public abstract class AbstractComputationService {
 
     public abstract List<String> getEnumValues(String enumName, UUID resultUuidOpt);
 
-    public List<String> getEnumValues(String enumName, UUID resultUuidOpt, String apiVersion, String computingTypeBaseUri, StudyException.Type type, RestTemplate restTemplate) {
+    public List<String> getEnumValues(String enumName, UUID resultUuid, String apiVersion, String computingTypeBaseUri, StudyException.Type type, RestTemplate restTemplate) {
         List<String> result;
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + apiVersion + "/results/{resultUuid}/{enumName}");
-        String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt, enumName).toUriString();
+        String path = uriComponentsBuilder.buildAndExpand(resultUuid, enumName).toUriString();
         try {
             ResponseEntity<List<String>> responseEntity = restTemplate.exchange(computingTypeBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() { });
             result = responseEntity.getBody();
