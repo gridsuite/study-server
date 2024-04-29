@@ -315,12 +315,11 @@ public class StudyService {
         if (sourceStudy == null) {
             return null;
         }
-        UUID newStudyId = UUID.randomUUID();
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, newStudyId));
+        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, null));
 
         studyServerExecutionService.runAsync(() -> self.duplicateStudyAsync(basicStudyInfos, sourceStudyUuid, userId));
 
-        return newStudyId;
+        return basicStudyInfos.getId();
     }
 
     @Transactional
