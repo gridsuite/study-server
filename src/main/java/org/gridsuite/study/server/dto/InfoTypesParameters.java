@@ -8,5 +8,5 @@ import java.util.Map;
 @Data
 @Builder
 public class InfoTypesParameters {
-    private Map<String, String> additionalParams;
+    private Map<String, String> optionalParameters;
 }

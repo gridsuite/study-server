@@ -62,7 +62,7 @@ public class NetworkMapService {
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
 
         InfoTypesParameters infoTypesParameters = InfoTypesParameters.builder()
-                .additionalParams(Map.of(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor)))
+                .optionalParameters(Map.of(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor)))
                 .build();
         queryParamInfoTypeParameters(infoTypesParameters, builder);
         String url = builder.buildAndExpand(networkUuid).toUriString();
@@ -77,14 +77,14 @@ public class NetworkMapService {
         }
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
-        Map<String, String> additionalParams = new HashMap<>();
+        Map<String, String> optionalParams = new HashMap<>();
         if (operation != null) {
-            additionalParams.put(QUERY_PARAM_OPERATION, operation);
+            optionalParams.put(QUERY_PARAM_OPERATION, operation);
         }
 
-        additionalParams.put(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor));
+        optionalParams.put(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor));
         InfoTypesParameters infoTypesParameters = InfoTypesParameters.builder()
-                .additionalParams(additionalParams)
+                .optionalParameters(optionalParams)
                 .build();
         queryParamInfoTypeParameters(infoTypesParameters, builder);
 
@@ -102,7 +102,7 @@ public class NetworkMapService {
     }
 
     private void queryParamInfoTypeParameters(InfoTypesParameters infoTypesParameters, UriComponentsBuilder builder) {
-        infoTypesParameters.getAdditionalParams().forEach((key, value) -> builder.queryParam(String.format("additionalParams[%s]", key), value));
+        infoTypesParameters.getOptionalParameters().forEach((key, value) -> builder.queryParam(String.format(QUERY_FORMAT_OPTIONAL_PARAMS, key), value));
     }
 
     public String getCountries(UUID networkUuid, String variantId) {

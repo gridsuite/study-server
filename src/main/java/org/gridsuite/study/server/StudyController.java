@@ -475,8 +475,8 @@ public class StudyController {
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
             InfoTypesParameters infoTypesParameters) {
         String operation = null;
-        if (infoTypesParameters.getAdditionalParams() != null) {
-            operation = infoTypesParameters.getAdditionalParams().getOrDefault(QUERY_PARAM_OPERATION, null);
+        if (infoTypesParameters.getOptionalParameters() != null) {
+            operation = infoTypesParameters.getOptionalParameters().getOrDefault(QUERY_PARAM_OPERATION, null);
         }
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementInfos(studyUuid, nodeUuid, elementType, infoType, elementId, operation, inUpstreamBuiltParentNode));
     }

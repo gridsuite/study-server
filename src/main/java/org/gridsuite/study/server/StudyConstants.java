@@ -45,8 +45,8 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_ELEMENT_TYPE = "elementType";
     public static final String QUERY_PARAM_INFO_TYPE = "infoType";
     public static final String QUERY_PARAM_OPERATION = "operation";
-    public static final String QUERY_PARAM_ADDITIONAL_PARAMS = "additionalParams";
-    public static final String QUERY_FORMAT_ADDITIONAL_PARAMS = QUERY_PARAM_ADDITIONAL_PARAMS + "[%s]";
+    public static final String QUERY_PARAM_OPTIONAL_PARAMS = "optionalParameters";
+    public static final String QUERY_FORMAT_OPTIONAL_PARAMS = QUERY_PARAM_OPTIONAL_PARAMS + "[%s]";
     public static final String QUERY_PARAM_SUBSTATIONS_IDS = "substationsIds";
     public static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
     public static final String QUERY_PARAM_DC_POWERFACTOR = "dcPowerFactor";
