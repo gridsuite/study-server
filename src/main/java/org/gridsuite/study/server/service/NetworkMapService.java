@@ -15,7 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
-import org.gridsuite.study.server.dto.InfoTypesParameters;
+import org.gridsuite.study.server.dto.InfoTypeParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -32,6 +32,8 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR;
+import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_OPERATION;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
@@ -61,10 +63,10 @@ public class NetworkMapService {
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
 
-        InfoTypesParameters infoTypesParameters = InfoTypesParameters.builder()
+        InfoTypeParameters infoTypeParameters = InfoTypeParameters.builder()
                 .optionalParameters(Map.of(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor)))
                 .build();
-        queryParamInfoTypeParameters(infoTypesParameters, builder);
+        queryParamInfoTypeParameters(infoTypeParameters, builder);
         String url = builder.buildAndExpand(networkUuid).toUriString();
         return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
     }
@@ -83,10 +85,10 @@ public class NetworkMapService {
         }
 
         optionalParams.put(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor));
-        InfoTypesParameters infoTypesParameters = InfoTypesParameters.builder()
+        InfoTypeParameters infoTypeParameters = InfoTypeParameters.builder()
                 .optionalParameters(optionalParams)
                 .build();
-        queryParamInfoTypeParameters(infoTypesParameters, builder);
+        queryParamInfoTypeParameters(infoTypeParameters, builder);
 
         try {
             return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid, elementId);
@@ -101,7 +103,7 @@ public class NetworkMapService {
         }
     }
 
-    private void queryParamInfoTypeParameters(InfoTypesParameters infoTypesParameters, UriComponentsBuilder builder) {
+    private void queryParamInfoTypeParameters(InfoTypeParameters infoTypesParameters, UriComponentsBuilder builder) {
         infoTypesParameters.getOptionalParameters().forEach((key, value) -> builder.queryParam(String.format(QUERY_FORMAT_OPTIONAL_PARAMS, key), value));
     }
 
