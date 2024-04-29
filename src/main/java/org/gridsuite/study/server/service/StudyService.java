@@ -1044,6 +1044,23 @@ public class StudyService {
         networkModificationTreeService.updateComputationResultUuid(nodeUuid, computationResultUuid, computationType);
     }
 
+    public List<String> getResultEnumValues(UUID studyUuid, UUID nodeUuid, ComputationType computationType, String enumName) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+        Objects.requireNonNull(enumName);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, computationType);
+        if (resultUuidOpt.isPresent()) {
+            return switch (computationType) {
+                case LOAD_FLOW -> loadflowService.getEnumValues(enumName, resultUuidOpt.get());
+                case SECURITY_ANALYSIS -> securityAnalysisService.getEnumValues(enumName, resultUuidOpt.get());
+                case SHORT_CIRCUIT -> shortCircuitService.getEnumValues(enumName, resultUuidOpt.get());
+                default -> throw new StudyException(NOT_ALLOWED);
+            };
+        } else {
+            return new ArrayList<>();
+        }
+    }
+
     private StudyCreationRequestEntity insertStudyCreationRequestEntity(UUID studyUuid) {
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(
                 studyUuid == null ? UUID.randomUUID() : studyUuid);
