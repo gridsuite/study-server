@@ -129,7 +129,7 @@ public class StudyService {
 
     public enum ReportType {
         NETWORK_MODIFICATION("NetworkModification"),
-        LOADFLOW("LoadFlow"),
+        LOAD_FLOW("LoadFlow"),
         SECURITY_ANALYSIS("SecurityAnalysis"),
         ALL_BUSES_SHORTCIRCUIT_ANALYSIS("AllBusesShortCircuitAnalysis"),
         ONE_BUS_SHORTCIRCUIT_ANALYSIS("OneBusShortCircuitAnalysis"),

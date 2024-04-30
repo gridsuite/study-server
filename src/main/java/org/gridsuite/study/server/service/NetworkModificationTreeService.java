@@ -762,7 +762,7 @@ public class NetworkModificationTreeService {
         UUID loadFlowResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), LOAD_FLOW);
         if (loadFlowResultUuid != null) {
             invalidateNodeInfos.addLoadFlowResultUuid(loadFlowResultUuid);
-            reportTypes.add(StudyService.ReportType.LOADFLOW);
+            reportTypes.add(StudyService.ReportType.LOAD_FLOW);
         }
 
         UUID securityAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SECURITY_ANALYSIS);
