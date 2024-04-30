@@ -799,7 +799,7 @@ public class NetworkModificationTreeService {
             UUID voltageInitResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), VOLTAGE_INITIALIZATION);
             if (voltageInitResultUuid != null) {
                 invalidateNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
-                reportTypes.add(StudyService.ReportType.VOLTAGE_INIT);
+                reportTypes.add(StudyService.ReportType.VOLTAGE_INITIALIZATION);
             }
         }
 

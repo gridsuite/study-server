@@ -225,7 +225,7 @@ public class SupervisionService {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull();
         if (!nodes.isEmpty()) {
             nodes.forEach(node -> node.setVoltageInitResultUuid(null));
-            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.VOLTAGE_INIT.reportKey, nodes));
+            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.VOLTAGE_INITIALIZATION.reportKey, nodes));
         }
         voltageInitService.deleteVoltageInitResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.VOLTAGE_INITIALIZATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));

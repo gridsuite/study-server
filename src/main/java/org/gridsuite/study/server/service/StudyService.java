@@ -136,7 +136,7 @@ public class StudyService {
         SENSITIVITY_ANALYSIS("SensitivityAnalysis"),
         DYNAMIC_SIMULATION("DynamicSimulation"),
         NON_EVACUATED_ENERGY_ANALYSIS("NonEvacuatedEnergyAnalysis"),
-        VOLTAGE_INIT("VoltageInit");
+        VOLTAGE_INITIALIZATION("VoltageInit");
 
         public final String reportKey;
 
