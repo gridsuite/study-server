@@ -131,7 +131,7 @@ public class StudyService {
         NETWORK_MODIFICATION("NetworkModification"),
         LOAD_FLOW("LoadFlow"),
         SECURITY_ANALYSIS("SecurityAnalysis"),
-        ALL_BUSES_SHORTCIRCUIT_ANALYSIS("AllBusesShortCircuitAnalysis"),
+        SHORT_CIRCUIT("AllBusesShortCircuitAnalysis"),
         ONE_BUS_SHORTCIRCUIT_ANALYSIS("OneBusShortCircuitAnalysis"),
         SENSITIVITY_ANALYSIS("SensitivityAnalysis"),
         DYNAMIC_SIMULATION("DynamicSimulation"),

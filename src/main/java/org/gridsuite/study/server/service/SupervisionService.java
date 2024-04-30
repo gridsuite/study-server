@@ -202,7 +202,7 @@ public class SupervisionService {
         List<NetworkModificationNodeInfoEntity> allBusesNodes = networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
         if (!allBusesNodes.isEmpty()) {
             allBusesNodes.forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
-            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.ALL_BUSES_SHORTCIRCUIT_ANALYSIS.reportKey, allBusesNodes));
+            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.SHORT_CIRCUIT.reportKey, allBusesNodes));
         }
         List<NetworkModificationNodeInfoEntity> oneBusNodes = networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull();
         if (!oneBusNodes.isEmpty()) {

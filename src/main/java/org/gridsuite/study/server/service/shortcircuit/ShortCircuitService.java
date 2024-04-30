@@ -99,7 +99,7 @@ public class ShortCircuitService extends AbstractComputationService {
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam("reportUuid", reportUuid.toString())
                 .queryParam("reporterId", nodeUuid.toString())
-                .queryParam("reportType", StringUtils.isBlank(busId) ? StudyService.ReportType.ALL_BUSES_SHORTCIRCUIT_ANALYSIS.reportKey :
+                .queryParam("reportType", StringUtils.isBlank(busId) ? StudyService.ReportType.SHORT_CIRCUIT.reportKey :
                         StudyService.ReportType.ONE_BUS_SHORTCIRCUIT_ANALYSIS.reportKey);
 
         if (!StringUtils.isBlank(busId)) {
