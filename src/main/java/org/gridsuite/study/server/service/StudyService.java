@@ -132,7 +132,7 @@ public class StudyService {
         LOAD_FLOW("LoadFlow"),
         SECURITY_ANALYSIS("SecurityAnalysis"),
         SHORT_CIRCUIT("AllBusesShortCircuitAnalysis"),
-        ONE_BUS_SHORTCIRCUIT_ANALYSIS("OneBusShortCircuitAnalysis"),
+        SHORT_CIRCUIT_ONE_BUS("OneBusShortCircuitAnalysis"),
         SENSITIVITY_ANALYSIS("SensitivityAnalysis"),
         DYNAMIC_SIMULATION("DynamicSimulation"),
         NON_EVACUATED_ENERGY_ANALYSIS("NonEvacuatedEnergyAnalysis"),
@@ -1726,14 +1726,14 @@ public class StudyService {
     }
 
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String userId, String busId) {
-        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, SHORT_CIRCUIT_ONE_BUS);
+        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SHORT_CIRCUIT_ONE_BUS);
         prevResultUuidOpt.ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
 
         ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
         shortCircuitParameters.setWithFortescueResult(true);
         UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId, shortCircuitParameters, userId);
 
-        updateComputationResultUuid(nodeUuid, result, SHORT_CIRCUIT_ONE_BUS);
+        updateComputationResultUuid(nodeUuid, result, ComputationType.SHORT_CIRCUIT_ONE_BUS);
 
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         return result;

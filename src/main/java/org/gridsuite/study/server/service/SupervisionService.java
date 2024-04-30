@@ -207,7 +207,7 @@ public class SupervisionService {
         List<NetworkModificationNodeInfoEntity> oneBusNodes = networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull();
         if (!oneBusNodes.isEmpty()) {
             oneBusNodes.forEach(node -> node.setOneBusShortCircuitAnalysisResultUuid(null));
-            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.ONE_BUS_SHORTCIRCUIT_ANALYSIS.reportKey, oneBusNodes));
+            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.SHORT_CIRCUIT_ONE_BUS.reportKey, oneBusNodes));
         }
         // Then delete all results (1-bus and all-buses), cause short-circuit-server cannot make the difference
         shortCircuitService.deleteShortCircuitAnalysisResults();

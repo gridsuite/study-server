@@ -792,7 +792,7 @@ public class NetworkModificationTreeService {
         UUID oneBusShortCircuitAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SHORT_CIRCUIT_ONE_BUS);
         if (oneBusShortCircuitAnalysisResultUuid != null) {
             invalidateNodeInfos.addOneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid);
-            reportTypes.add(StudyService.ReportType.ONE_BUS_SHORTCIRCUIT_ANALYSIS);
+            reportTypes.add(StudyService.ReportType.SHORT_CIRCUIT_ONE_BUS);
         }
 
         if (deleteVoltageInitResults) {
