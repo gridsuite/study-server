@@ -847,6 +847,16 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, filters, globalFilters, sort));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/computation/result/enum-values")
+    @Operation(summary = "Get Enum values")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Enum values")})
+    public ResponseEntity<List<String>> getResultEnumValues(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                    @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                    @Parameter(description = "Computing Type") @RequestParam(name = "computingType") ComputationType computingType,
+                                                                    @Parameter(description = "Enum name") @RequestParam(name = "enumName") String enumName) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getResultEnumValues(studyUuid, nodeUuid, computingType, enumName));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
     @Operation(summary = "set loadflow parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set"),
