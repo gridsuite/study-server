@@ -71,6 +71,7 @@ public final class StudyConstants {
     public static final String HEADER_USER_ID = "userId";
     public static final String QUERY_PARAM_ONLY_STASHED = "onlyStashed";
     public static final String QUERY_PARAM_STASHED = "stashed";
+    public static final String PATH_PARAM_PARAMETERS = "parameters";
 
     public enum SldDisplayMode {
         FEEDER_POSITION,

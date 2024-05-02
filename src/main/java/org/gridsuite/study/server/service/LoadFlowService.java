@@ -282,7 +282,8 @@ public class LoadFlowService extends AbstractComputationService {
         Objects.requireNonNull(sourceParametersUuid);
 
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
+                .queryParam("duplicateFrom", sourceParametersUuid)
                 .buildAndExpand(sourceParametersUuid).toUriString();
 
         try {
