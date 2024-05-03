@@ -106,6 +106,7 @@ public class StudyException extends RuntimeException {
         STUDY_CHECK_INDEXATION_FAILED,
         NOT_IMPLEMENTED,
         EVALUATE_FILTER_FAILED,
+        GET_USER_PROFILE_FAILED,
     }
 
     private final Type type;

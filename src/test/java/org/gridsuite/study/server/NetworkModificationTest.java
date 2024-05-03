@@ -202,6 +202,8 @@ public class NetworkModificationTest {
     private UUID buildErrorStubId;
     private UUID groupStubId;
 
+    private final String errorMessage = "nullPointerException: unexpected null somewhere";
+
     @Before
     public void setup() throws IOException {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
@@ -237,7 +239,7 @@ public class NetworkModificationTest {
             .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", DEFAULT_BUILD_RESULT, "destination", "build.result"))
             .willReturn(WireMock.ok()));
         buildFailedStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_2_STRING + "/build"))
-            .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.failed"))
+            .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.failed", "message", errorMessage))
             .willReturn(WireMock.ok())).getId();
         buildErrorStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_3_STRING + "/build"))
             .willReturn(WireMock.serverError())).getId();
@@ -2607,6 +2609,7 @@ public class NetworkModificationTest {
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_FAILED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(errorMessage, buildStatusMessage.getHeaders().get(NotificationService.HEADER_ERROR));
 
         wireMockUtils.verifyPostRequest(buildFailedStubId, "/v1/networks/" + NETWORK_UUID_2_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
 

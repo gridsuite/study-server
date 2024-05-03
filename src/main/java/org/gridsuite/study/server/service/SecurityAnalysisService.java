@@ -14,6 +14,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
@@ -27,7 +28,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -37,7 +41,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @Service
-public class SecurityAnalysisService {
+public class SecurityAnalysisService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -144,8 +148,8 @@ public class SecurityAnalysisService {
     public UUID runSecurityAnalysis(UUID networkUuid, String variantId, RunSecurityAnalysisParametersInfos parametersInfos, ReportInfos reportInfos, String receiver, String userId) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
-                .queryParam("reportUuid", reportInfos.getReportUuid().toString())
-                .queryParam("reporterId", reportInfos.getReporterId())
+                .queryParam("reportUuid", reportInfos.reportUuid().toString())
+                .queryParam("reporterId", reportInfos.reporterId())
                 .queryParam("reportType", StudyService.ReportType.SECURITY_ANALYSIS.reportKey);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
@@ -277,8 +281,9 @@ public class SecurityAnalysisService {
     public UUID duplicateSecurityAnalysisParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
 
-        var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{sourceParametersUuid}")
-                .buildAndExpand(sourceParametersUuid).toUriString();
+        var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
+                .queryParam("duplicateFrom", sourceParametersUuid)
+                .buildAndExpand().toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -390,5 +395,9 @@ public class SecurityAnalysisService {
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, GET_SECURITY_ANALYSIS_DEFAULT_PROVIDER_FAILED);
         }
+    }
+
+    public List<String> getEnumValues(String enumName, UUID resultUuid) {
+        return getEnumValues(enumName, resultUuid, SECURITY_ANALYSIS_API_VERSION, securityAnalysisServerBaseUri, SECURITY_ANALYSIS_NOT_FOUND, restTemplate);
     }
 }

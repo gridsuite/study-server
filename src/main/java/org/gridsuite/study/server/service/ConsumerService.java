@@ -64,6 +64,7 @@ public class ConsumerService {
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final CaseService caseService;
     private final LoadFlowService loadFlowService;
+    private final UserAdminService userAdminService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyRepository studyRepository;
 
@@ -74,6 +75,7 @@ public class ConsumerService {
                            SecurityAnalysisService securityAnalysisService,
                            CaseService caseService,
                            LoadFlowService loadFlowService,
+                           UserAdminService userAdminService,
                            NetworkModificationTreeService networkModificationTreeService,
                            SensitivityAnalysisService sensitivityAnalysisService,
                            StudyRepository studyRepository) {
@@ -83,6 +85,7 @@ public class ConsumerService {
         this.securityAnalysisService = securityAnalysisService;
         this.caseService = caseService;
         this.loadFlowService = loadFlowService;
+        this.userAdminService = userAdminService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.studyRepository = studyRepository;
@@ -153,7 +156,7 @@ public class ConsumerService {
 
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_FAILED);
+                    notificationService.emitNodeBuildFailed(studyUuid, receiverObj.getNodeUuid(), message.getHeaders().get(HEADER_MESSAGE, String.class));
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -202,7 +205,11 @@ public class ConsumerService {
                         // we only update network infos sent by network conversion server
                         studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
                     } else {
-                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, createDefaultLoadFlowParameters(), ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, createDefaultSecurityAnalysisParameters(), createDefaultSensitivityAnalysisParameters(), importParameters, importReportUuid);
+                        UserProfileInfos userProfileInfos = getUserProfile(userId);
+                        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId, userProfileInfos);
+                        UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters();
+                        UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters();
+                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, loadFlowParametersUuid, ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters, importReportUuid);
                     }
 
                     caseService.disableCaseExpiration(caseUuid);
@@ -220,7 +227,27 @@ public class ConsumerService {
         };
     }
 
-    private UUID createDefaultLoadFlowParameters() {
+    private UserProfileInfos getUserProfile(String userId) {
+        try {
+            return userAdminService.getUserProfile(userId).orElse(null);
+        } catch (Exception e) {
+            LOGGER.error(String.format("Could not access to profile for user '%s'", userId), e);
+        }
+        return null;
+    }
+
+    private UUID createDefaultLoadFlowParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
+            // try to access/duplicate the user profile LF parameters
+            try {
+                return loadFlowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate loadflow parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad LF parameters in profile => use default values
         try {
             return loadFlowService.createDefaultLoadFlowParameters();
         } catch (Exception e) {

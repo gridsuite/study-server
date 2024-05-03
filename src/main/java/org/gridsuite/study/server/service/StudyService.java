@@ -25,8 +25,8 @@ import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
-import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
+import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
@@ -52,9 +52,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Sort;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -72,6 +73,7 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
+import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_OPERATION;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
@@ -101,6 +103,7 @@ public class StudyService {
     private final NetworkService networkStoreService;
     private final NetworkModificationService networkModificationService;
     private final ReportService reportService;
+    private final UserAdminService userAdminService;
     private final StudyInfosService studyInfosService;
     private final EquipmentInfosService equipmentInfosService;
     private final LoadFlowService loadflowService;
@@ -132,6 +135,7 @@ public class StudyService {
         ALL_BUSES_SHORTCIRCUIT_ANALYSIS("AllBusesShortCircuitAnalysis"),
         ONE_BUS_SHORTCIRCUIT_ANALYSIS("OneBusShortCircuitAnalysis"),
         SENSITIVITY_ANALYSIS("SensitivityAnalysis"),
+        DYNAMIC_SIMULATION("DynamicSimulation"),
         NON_EVACUATED_ENERGY_ANALYSIS("NonEvacuatedEnergyAnalysis"),
         VOLTAGE_INIT("VoltageInit");
 
@@ -153,6 +157,7 @@ public class StudyService {
             NetworkService networkStoreService,
             NetworkModificationService networkModificationService,
             ReportService reportService,
+            UserAdminService userAdminService,
             StudyInfosService studyInfosService,
             EquipmentInfosService equipmentInfosService,
             NetworkModificationTreeService networkModificationTreeService,
@@ -182,6 +187,7 @@ public class StudyService {
         this.networkStoreService = networkStoreService;
         this.networkModificationService = networkModificationService;
         this.reportService = reportService;
+        this.userAdminService = userAdminService;
         this.studyInfosService = studyInfosService;
         this.equipmentInfosService = equipmentInfosService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -303,18 +309,18 @@ public class StudyService {
         persistentStoreWithNotificationOnError(caseUuid, studyUuid, userId, importReportUuid, caseFormat, importParametersToUse);
     }
 
-    public BasicStudyInfos duplicateStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
+    public UUID duplicateStudy(UUID sourceStudyUuid, String userId) {
         Objects.requireNonNull(sourceStudyUuid);
 
         StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElse(null);
         if (sourceStudy == null) {
             return null;
         }
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, null));
 
         studyServerExecutionService.runAsync(() -> self.duplicateStudyAsync(basicStudyInfos, sourceStudyUuid, userId));
 
-        return basicStudyInfos;
+        return basicStudyInfos.getId();
     }
 
     @Transactional
@@ -613,12 +619,12 @@ public class StudyService {
                 substationsIds, elementType, infoType, loadFlowParameters.getDcPowerFactor());
     }
 
-    public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, String elementType, String infoType, String elementId, String operation, boolean inUpstreamBuiltParentNode) {
+    public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, String elementType, InfoTypeParameters infoTypeParameters, String elementId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
         return networkMapService.getElementInfos(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
-                elementType, infoType, operation, loadFlowParameters.getDcPowerFactor(), elementId);
+                elementType, infoTypeParameters.getInfoType(), infoTypeParameters.getOptionalParameters().getOrDefault(QUERY_PARAM_OPERATION, null), loadFlowParameters.getDcPowerFactor(), elementId);
     }
 
     public String getNetworkCountries(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode) {
@@ -779,9 +785,9 @@ public class StudyService {
     }
 
     @Transactional
-    public void setLoadFlowParameters(UUID studyUuid, String parameters, String userId) {
+    public boolean setLoadFlowParameters(UUID studyUuid, String parameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        createOrUpdateLoadFlowParameters(studyEntity, parameters);
+        boolean userProfileIssue = createOrUpdateLoadFlowParameters(studyEntity, parameters, userId);
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
@@ -793,6 +799,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
+        return userProfileIssue;
     }
 
     public String getDefaultLoadflowProvider() {
@@ -1038,19 +1045,65 @@ public class StudyService {
         networkModificationTreeService.updateComputationResultUuid(nodeUuid, computationResultUuid, computationType);
     }
 
+    public List<String> getResultEnumValues(UUID studyUuid, UUID nodeUuid, ComputationType computationType, String enumName) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+        Objects.requireNonNull(enumName);
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, computationType);
+        if (resultUuidOpt.isPresent()) {
+            return switch (computationType) {
+                case LOAD_FLOW -> loadflowService.getEnumValues(enumName, resultUuidOpt.get());
+                case SECURITY_ANALYSIS -> securityAnalysisService.getEnumValues(enumName, resultUuidOpt.get());
+                case SHORT_CIRCUIT -> shortCircuitService.getEnumValues(enumName, resultUuidOpt.get());
+                default -> throw new StudyException(NOT_ALLOWED);
+            };
+        } else {
+            return new ArrayList<>();
+        }
+    }
+
     private StudyCreationRequestEntity insertStudyCreationRequestEntity(UUID studyUuid) {
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(
                 studyUuid == null ? UUID.randomUUID() : studyUuid);
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
     }
 
-    public void createOrUpdateLoadFlowParameters(StudyEntity studyEntity, String parameters) {
-        UUID loadFlowParametersUuid = studyEntity.getLoadFlowParametersUuid();
-        if (loadFlowParametersUuid == null) {
-            loadFlowParametersUuid = loadflowService.createLoadFlowParameters(parameters);
-            studyEntity.setLoadFlowParametersUuid(loadFlowParametersUuid);
+    public boolean createOrUpdateLoadFlowParameters(StudyEntity studyEntity, String parameters, String userId) {
+        boolean userProfileIssue = false;
+        UUID existingLoadFlowParametersUuid = studyEntity.getLoadFlowParametersUuid();
+
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId).orElse(null) : null;
+        if (parameters == null && userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
+            // reset case, with existing profile, having default LF params
+            try {
+                UUID loadFlowParametersFromProfileUuid = loadflowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
+                studyEntity.setLoadFlowParametersUuid(loadFlowParametersFromProfileUuid);
+                removeLoadFlowParameters(existingLoadFlowParametersUuid);
+                return userProfileIssue;
+            } catch (Exception e) {
+                userProfileIssue = true;
+                LOGGER.error(String.format("Could not duplicate loadflow parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                        userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
+                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
+            }
+        }
+
+        if (existingLoadFlowParametersUuid == null) {
+            existingLoadFlowParametersUuid = loadflowService.createLoadFlowParameters(parameters);
+            studyEntity.setLoadFlowParametersUuid(existingLoadFlowParametersUuid);
         } else {
-            loadflowService.updateLoadFlowParameters(loadFlowParametersUuid, parameters);
+            loadflowService.updateLoadFlowParameters(existingLoadFlowParametersUuid, parameters);
+        }
+        return userProfileIssue;
+    }
+
+    private void removeLoadFlowParameters(@Nullable UUID lfParametersUuid) {
+        if (lfParametersUuid != null) {
+            try {
+                loadflowService.deleteLoadFlowParameters(lfParametersUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove loadflow Parameters with uuid:" + lfParametersUuid, e);
+            }
         }
     }
 
@@ -1823,18 +1876,6 @@ public class StudyService {
             throw new StudyException(NOT_ALLOWED, "Load flow must run successfully before running dynamic simulation");
         }
 
-        // create receiver for getting back the notification in rabbitmq
-        String receiver;
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
-                    StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        // get associated network
-        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-
         // clean previous result if exist
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, DYNAMIC_SIMULATION);
         prevResultUuidOpt.ifPresent(dynamicSimulationService::deleteResult);
@@ -1858,7 +1899,7 @@ public class StudyService {
         }
 
         // launch dynamic simulation
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyUuid), receiver, networkUuid, "", mergeParameters, userId);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyUuid), studyUuid, nodeUuid, mergeParameters, userId);
 
         // update result uuid and notification
         updateComputationResultUuid(nodeUuid, resultUuid, DYNAMIC_SIMULATION);

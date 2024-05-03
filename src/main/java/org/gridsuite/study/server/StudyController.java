@@ -53,8 +53,7 @@ import java.beans.PropertyEditorSupport;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-import static org.gridsuite.study.server.StudyConstants.CASE_FORMAT;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.StudyConstants.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -159,16 +158,15 @@ public class StudyController {
         return ResponseEntity.ok().body(createStudy);
     }
 
-    @PostMapping(value = "/studies")
+    @PostMapping(value = "/studies", params = "duplicateFrom")
     @Operation(summary = "create a study from an existing one")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The study was successfully created"),
         @ApiResponse(responseCode = "404", description = "The source study doesn't exist")})
-    public ResponseEntity<BasicStudyInfos> duplicateStudy(@RequestParam("duplicateFrom") UUID sourceStudyUuid,
-                                                          @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
+    public ResponseEntity<UUID> duplicateStudy(@RequestParam("duplicateFrom") UUID studyId,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        BasicStudyInfos createStudy = studyService.duplicateStudy(sourceStudyUuid, studyUuid, userId);
-        return createStudy != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(createStudy) :
+        UUID newStudyId = studyService.duplicateStudy(studyId, userId);
+        return newStudyId != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(newStudyId) :
                 ResponseEntity.notFound().build();
     }
 
@@ -472,11 +470,9 @@ public class StudyController {
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Element id") @PathVariable("elementId") String elementId,
             @Parameter(description = "Element type") @RequestParam(name = "elementType") String elementType,
-            @Parameter(description = "Info type") @RequestParam(name = "infoType") String infoType,
-            @Parameter(description = "Operation") @RequestParam(name = "operation", required = false) String operation,
-            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementInfos(studyUuid, nodeUuid, elementType, infoType, elementId, operation, inUpstreamBuiltParentNode));
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
+            @Parameter(description = "Info type parameters") InfoTypeParameters infoTypeParameters) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementInfos(studyUuid, nodeUuid, elementType, infoTypeParameters, elementId, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/countries")
@@ -740,7 +736,7 @@ public class StudyController {
         @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
         @ApiResponse(responseCode = "404", description = "The voltage init status has not been found")})
     public ResponseEntity<String> getVoltageInitStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String result = voltageInitService.getVoltageInitStatus(nodeUuid);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
@@ -836,8 +832,7 @@ public class StudyController {
     public ResponseEntity<Integer> getContingencyCount(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames) {
-        List<String> nonNullContingencyListNames = contingencyListNames != null ? contingencyListNames : Collections.emptyList();
-        return ResponseEntity.ok().body(studyService.getContingencyCount(studyUuid, nonNullContingencyListNames, nodeUuid));
+        return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListNames) ? 0 : studyService.getContingencyCount(studyUuid, contingencyListNames, nodeUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations")
@@ -851,15 +846,25 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, filters, globalFilters, sort));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/computation/result/enum-values")
+    @Operation(summary = "Get Enum values")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Enum values")})
+    public ResponseEntity<List<String>> getResultEnumValues(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                    @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                    @Parameter(description = "Computing Type") @RequestParam(name = "computingType") ComputationType computingType,
+                                                                    @Parameter(description = "Enum name") @RequestParam(name = "enumName") String enumName) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getResultEnumValues(studyUuid, nodeUuid, computingType, enumName));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
     @Operation(summary = "set loadflow parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set"),
+                           @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
     public ResponseEntity<Void> setLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) String lfParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setLoadFlowParameters(studyUuid, lfParameter, userId);
-        return ResponseEntity.ok().build();
+        return studyService.setLoadFlowParameters(studyUuid, lfParameter, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/loadflow/parameters")

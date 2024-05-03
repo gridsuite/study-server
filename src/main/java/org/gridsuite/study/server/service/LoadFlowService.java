@@ -14,10 +14,12 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -36,7 +38,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @Service
-public class LoadFlowService {
+public class LoadFlowService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
@@ -280,7 +282,8 @@ public class LoadFlowService {
         Objects.requireNonNull(sourceParametersUuid);
 
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
+                .queryParam("duplicateFrom", sourceParametersUuid)
                 .buildAndExpand(sourceParametersUuid).toUriString();
 
         try {
@@ -290,10 +293,7 @@ public class LoadFlowService {
         }
     }
 
-    public void updateLoadFlowParameters(UUID parametersUuid, String parameters) {
-
-        Objects.requireNonNull(parameters);
-
+    public void updateLoadFlowParameters(UUID parametersUuid, @Nullable String parameters) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid)
@@ -375,5 +375,9 @@ public class LoadFlowService {
             studyEntity.setLoadFlowParametersUuid(createDefaultLoadFlowParameters());
         }
         return studyEntity.getLoadFlowParametersUuid();
+    }
+
+    public List<String> getEnumValues(String enumName, UUID resultUuid) {
+        return getEnumValues(enumName, resultUuid, LOADFLOW_API_VERSION, loadFlowServerBaseUri, LOADFLOW_NOT_FOUND, restTemplate);
     }
 }

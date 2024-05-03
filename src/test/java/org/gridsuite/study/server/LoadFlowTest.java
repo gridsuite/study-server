@@ -54,6 +54,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
@@ -100,22 +102,35 @@ public class LoadFlowTest {
 
     private static final String LOADFLOW_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
 
+    private static final String PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING = "f09f5282-8e34-48b5-b66e-7ef9f3f36c4f";
+    private static final String PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING = "1cec4a7b-ab7e-4d78-9dd7-ce73c5ef11d9";
+    private static final String PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
+    private static final String NO_PROFILE_USER_ID = "noProfileUser";
+    private static final String NO_PARAMS_IN_PROFILE_USER_ID = "noParamInProfileUser";
+    private static final String VALID_PARAMS_IN_PROFILE_USER_ID = "validParamInProfileUser";
+    private static final String INVALID_PARAMS_IN_PROFILE_USER_ID = "invalidParamInProfileUser";
+    private static final String USER_PROFILE_NO_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}";
+    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
+    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"loadFlowParameterId\":\"" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
+    private static final String DUPLICATED_PARAMS_JSON = "\"" + PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
+
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString(LOADFLOW_PARAMETERS_UUID_STRING);
 
     private static final String PROVIDER = "LF_PROVIDER";
 
     private static final String LOADFLOW_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+
     private static final String VARIANT_ID = "variant_1";
 
     private static final String VARIANT_ID_2 = "variant_2";
-
-    private static final String VARIANT_ID_3 = "variant_3";
 
     private static final long TIMEOUT = 1000;
 
     private static String LIMIT_VIOLATIONS_JSON;
 
-    private static String LOADFLOW_PARAMETERS_JSON;
+    private static String COMPUTING_STATUS_JSON;
+
+    private static String LOADFLOW_DEFAULT_PARAMETERS_JSON;
 
     //output destinations
     private final String studyUpdateDestination = "study.update";
@@ -141,6 +156,8 @@ public class LoadFlowTest {
     @Autowired
     private StudyRepository studyRepository;
     @Autowired
+    private UserAdminService userAdminService;
+    @Autowired
     private ReportService reportService;
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
@@ -159,6 +176,7 @@ public class LoadFlowTest {
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         loadFlowService.setLoadFlowServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
+        userAdminService.setUserAdminServerBaseUri(baseUrl);
 
         String loadFlowResultUuidStr = objectMapper.writeValueAsString(LOADFLOW_RESULT_UUID);
 
@@ -198,13 +216,14 @@ public class LoadFlowTest {
                         .limitType(LimitViolationType.HIGH_VOLTAGE)
                         .build());
         LIMIT_VIOLATIONS_JSON = objectMapper.writeValueAsString(limitViolations);
+        COMPUTING_STATUS_JSON = objectMapper.writeValueAsString(List.of("CONVERGED", "FAILED"));
 
         LoadFlowParametersInfos loadFlowParametersInfos = LoadFlowParametersInfos.builder()
                 .provider(PROVIDER)
                 .commonParameters(LoadFlowParameters.load())
                 .specificParametersPerProvider(Map.of())
                 .build();
-        LOADFLOW_PARAMETERS_JSON = objectMapper.writeValueAsString(loadFlowParametersInfos);
+        LOADFLOW_DEFAULT_PARAMETERS_JSON = objectMapper.writeValueAsString(loadFlowParametersInfos);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -244,6 +263,11 @@ public class LoadFlowTest {
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(LIMIT_VIOLATIONS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/computation-status")) {
+                    return new MockResponse().setResponseCode(200).setBody(COMPUTING_STATUS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/computation")) {
+                    return new MockResponse().setResponseCode(404);
                 } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)) {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -267,14 +291,32 @@ public class LoadFlowTest {
                             .addHeader("Content-Type", "application/json; charset=utf-8")
                             .setBody("1");
                 } else if (path.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)) {
-                    if (method.equals("PUT")) {
-                        return new MockResponse().setResponseCode(200);
-                    } else {
-                        return new MockResponse().setResponseCode(200).setBody(LOADFLOW_PARAMETERS_JSON)
+                    if (method.equals("GET")) {
+                        return new MockResponse().setResponseCode(200).setBody(LOADFLOW_DEFAULT_PARAMETERS_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+                    } else {
+                        return new MockResponse().setResponseCode(200);
                     }
                 } else if (path.matches("/v1/parameters")) {
                     return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(LOADFLOW_PARAMETERS_UUID_STRING))
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/users/" + NO_PROFILE_USER_ID + "/profile")) {
+                    return new MockResponse().setResponseCode(404);
+                } else if (path.matches("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
+                    return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_NO_PARAMS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
+                    return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_VALID_PARAMS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
+                    return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_INVALID_PARAMS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING) && method.equals("POST")) {
+                    // params duplication request KO
+                    return new MockResponse().setResponseCode(404);
+                } else if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING) && method.equals("POST")) {
+                    // params duplication request OK
+                    return new MockResponse().setResponseCode(200).setBody(DUPLICATED_PARAMS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -377,6 +419,19 @@ public class LoadFlowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&limitReduction=0.7")));
+
+        // get computing status
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
+                        studyNameUserIdUuid, modificationNode1Uuid, LOAD_FLOW, "computation-status"))
+                .andExpectAll(status().isOk(),
+                        content().string(COMPUTING_STATUS_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/computation-status")));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
+                        studyNameUserIdUuid, modificationNode1Uuid, LOAD_FLOW, "computation")).andReturn();
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/computation")));
 
         // get limit violations
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
@@ -546,13 +601,13 @@ public class LoadFlowTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)).andExpect(status().isOk());
     }
 
-    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters) throws Exception {
+    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
-                        .header("userId", "userId")
-                        .contentType(MediaType.ALL)
-                        .content(parameters)).andExpect(
-                status().isOk());
+                    .header("userId", userId)
+                    .contentType(MediaType.ALL)
+                    .content(parameters))
+                .andExpect(status().is(status.value()));
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -571,6 +626,52 @@ public class LoadFlowTest {
     }
 
     @Test
+    public void testResetLoadFlowParametersUserHasNoProfile() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PROFILE_USER_ID, HttpStatus.OK);
+
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING))); // update existing with dft
+    }
+
+    @Test
+    public void testResetLoadFlowParametersUserHasNoParamsInProfile() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING))); // update existing with dft
+    }
+
+    @Test
+    public void testResetLoadFlowParametersUserHasInvalidParamsInProfile() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
+
+        var requests = TestUtils.getRequestsDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING))); // update existing with dft
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING))); // post duplicate ko
+    }
+
+    @Test
+    public void testResetLoadFlowParametersUserHasValidParamsInProfile() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+
+        var requests = TestUtils.getRequestsDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING))); // delete existing
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
+    }
+
+    @Test
     public void testLoadFlowParameters() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
@@ -580,21 +681,15 @@ public class LoadFlowTest {
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk()).andReturn();
 
-        String loadflowParameters = objectMapper.writeValueAsString(LoadFlowParametersInfos.builder()
-                .provider(PROVIDER)
-                .commonParameters(LoadFlowParameters.load())
-                .specificParametersPerProvider(Map.of())
-                .build());
+        JSONAssert.assertEquals(LOADFLOW_DEFAULT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
-        JSONAssert.assertEquals(loadflowParameters, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
-
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, loadflowParameters);
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, "userId", HttpStatus.OK);
 
         //checking update is registered
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk()).andReturn();
 
-        JSONAssert.assertEquals(loadflowParameters, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+        JSONAssert.assertEquals(LOADFLOW_DEFAULT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
         assertTrue(TestUtils.getRequestsDone(3, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
 
@@ -602,13 +697,13 @@ public class LoadFlowTest {
 
         studyNameUserIdUuid = studyEntity2.getId();
 
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, loadflowParameters);
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, "userId", HttpStatus.OK);
 
         //get initial loadFlow parameters
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk()).andReturn();
 
-        JSONAssert.assertEquals(loadflowParameters, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+        JSONAssert.assertEquals(LOADFLOW_DEFAULT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters")));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));

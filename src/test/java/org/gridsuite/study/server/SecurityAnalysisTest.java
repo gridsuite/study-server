@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.security.LimitViolationType;
 import com.powsybl.security.SecurityAnalysisParameters;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
@@ -66,6 +67,7 @@ import java.util.*;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
+import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.utils.TestUtils.getBinaryAsBuffer;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -88,6 +90,7 @@ public class SecurityAnalysisTest {
     private static final String SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID = "22222222-9594-4e55-8ec7-07ea965d24eb";
     private static final String NOT_FOUND_SECURITY_ANALYSIS_UUID = "e3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String CONTINGENCY_LIST_NAME = "ls";
+    private static String LIMIT_TYPE_JSON;
     private static final String SECURITY_ANALYSIS_N_RESULT_JSON = "{\"status\":\"CONVERGED\",\"limitViolationsResult\":{\"limitViolations\":[{\"subjectId\":\"l3\",\"limitType\":\"CURRENT\",\"acceptableDuration\":1200,\"limit\":10.0,\"limitReduction\":1.0,\"value\":11.0,\"side\":\"ONE\"}],\"actionsTaken\":[]},\"networkResult\":{\"branchResults\":[],\"busResults\":[],\"threeWindingsTransformerResults\":[]}}";
     private static final String SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON = "[{\"id\":\"l1\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l1\",\"elementType\":\"BRANCH\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"l2\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l2\",\"elementType\":\"GENERATOR\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"l3\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l3\",\"elementType\":\"BUSBAR_SECTION\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"l4\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l4\",\"elementType\":\"LINE\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"l6\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l6\",\"elementType\":\"HVDC_LINE\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"l7\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l7\",\"elementType\":\"DANGLING_LINE\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"l8\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l8\",\"elementType\":\"SHUNT_COMPENSATOR\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"l9\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l9\",\"elementType\":\"TWO_WINDINGS_TRANSFORMER\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"la\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l0\",\"elementType\":\"THREE_WINDINGS_TRANSFORMER\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"lb\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"la\",\"elementType\":\"STATIC_VAR_COMPENSATOR\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]}]";
     private static final String SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON = "[{\"constraintId\":\"l3\",\"contingencies\":[]},{\"constraintId\":\"vl1\",\"contingencies\":[{\"contingencyId\":\"l1\",\"computationStatus\":\"CONVERGED\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0,\"elements\":[{\"id\":\"l1\",\"elementType\":\"BRANCH\"}]},{\"contingencyId\":\"l2\",\"computationStatus\":\"CONVERGED\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0,\"elements\":[{\"id\":\"l2\",\"elementType\":\"GENERATOR\"}]},{\"contingencyId\":\"l3\",\"computationStatus\":\"CONVERGED\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0,\"elements\":[{\"id\":\"l3\",\"elementType\":\"BUSBAR_SECTION\"}]},{\"contingencyId\":\"l4\",\"computationStatus\":\"CONVERGED\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0,\"elements\":[{\"id\":\"l4\",\"elementType\":\"LINE\"}]},{\"contingencyId\":\"l6\",\"computationStatus\":\"CONVERGED\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0,\"elements\":[{\"id\":\"l6\",\"elementType\":\"HVDC_LINE\"}]},{\"contingencyId\":\"l7\",\"computationStatus\":\"CONVERGED\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0,\"elements\":[{\"id\":\"l7\",\"elementType\":\"DANGLING_LINE\"}]},{\"contingencyId\":\"l8\",\"computationStatus\":\"CONVERGED\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0,\"elements\":[{\"id\":\"l8\",\"elementType\":\"SHUNT_COMPENSATOR\"}]},{\"contingencyId\":\"l9\",\"computationStatus\":\"CONVERGED\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0,\"elements\":[{\"id\":\"l9\",\"elementType\":\"TWO_WINDINGS_TRANSFORMER\"}]},{\"contingencyId\":\"la\",\"computationStatus\":\"CONVERGED\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0,\"elements\":[{\"id\":\"l0\",\"elementType\":\"THREE_WINDINGS_TRANSFORMER\"}]},{\"contingencyId\":\"lb\",\"computationStatus\":\"CONVERGED\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0,\"elements\":[{\"id\":\"la\",\"elementType\":\"STATIC_VAR_COMPENSATOR\"}]}]}]";
@@ -96,6 +99,7 @@ public class SecurityAnalysisTest {
     private static final byte[] SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_CSV_ZIPPED = {0x04, 0x03};
     private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
     private static final String CONTINGENCIES_JSON = "[{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]}]";
+    private static final String CONTINGENCIES_COUNT = "2";
 
     public static final String SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":0.0,\"lowVoltageProportionalThreshold\":0.0,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1}";
     public static final String SECURITY_ANALYSIS_UPDATED_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":90.0,\"lowVoltageProportionalThreshold\":0.6,\"highVoltageAbsoluteThreshold\":90.0,\"highVoltageProportionalThreshold\":0.1,\"flowProportionalThreshold\":0.2}";
@@ -191,6 +195,7 @@ public class SecurityAnalysisTest {
             .specificParametersPerProvider(Map.of())
             .build();
         String loadFlowParameters = objectMapper.writeValueAsString(loadFlowParametersInfos);
+        LIMIT_TYPE_JSON = objectMapper.writeValueAsString(List.of(LimitViolationType.CURRENT.name(), LimitViolationType.HIGH_VOLTAGE.name()));
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -209,6 +214,10 @@ public class SecurityAnalysisTest {
                         .build(), saResultDestination);
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                         .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
+                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/limit-types")
+                        || ("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/limit-types").equals(path)) {
+                    return new MockResponse().setResponseCode(200).setBody(LIMIT_TYPE_JSON)
+                            .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n-result\\?page=.*size=.*filters=.*sort=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_N_RESULT_JSON)
                         .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
@@ -245,6 +254,10 @@ public class SecurityAnalysisTest {
                         || path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(CONTINGENCIES_JSON)
                         .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
+                } else if (path.matches("/v1/contingency-lists/count\\?ids=" + CONTINGENCY_LIST_NAME + "&networkUuid=" + NETWORK_UUID_STRING)
+                        || path.matches("/v1/contingency-lists/count\\?ids=" + CONTINGENCY_LIST_NAME + "&networkUuid=" + NETWORK_UUID_STRING + "&variantId=.*")) {
+                    return new MockResponse().setResponseCode(200).setBody(CONTINGENCIES_COUNT)
+                            .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/n-result\\?page=.*size=.*filters=.*sort=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_N_RESULT_JSON)
                         .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8);
@@ -495,6 +508,20 @@ public class SecurityAnalysisTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
 
+        // get limit types empty list
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
+                        studyUuid, nodeUuid, LOAD_FLOW, "limit-types"))
+                .andExpectAll(status().isOk(),
+                        content().string("[]"));
+
+        // get limit types
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
+                        studyUuid, nodeUuid, SECURITY_ANALYSIS, "limit-types"))
+                .andExpectAll(status().isOk(),
+                        content().string(LIMIT_TYPE_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + resultUuid + "/limit-types")));
+
         // get N security analysis result
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&sort=random_sort", studyUuid, nodeUuid, SecurityAnalysisResultType.N)).andExpectAll(
                 status().isOk(),
@@ -539,9 +566,18 @@ public class SecurityAnalysisTest {
                 .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         Integer integerResponse = Integer.parseInt(resultAsString);
-        assertEquals(integerResponse, Integer.valueOf(1));
+        Integer expectedResponse = Integer.parseInt(CONTINGENCIES_COUNT);
+        assertEquals(expectedResponse, integerResponse);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING + ".*")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/contingency-lists/count\\?ids=" + CONTINGENCY_LIST_NAME + "&networkUuid=" + NETWORK_UUID_STRING + ".*")));
+
+        // get contingency count with no list
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count",
+                        studyUuid, nodeUuid, CONTINGENCY_LIST_NAME))
+                .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        integerResponse = Integer.parseInt(resultAsString);
+        assertEquals(0, integerResponse.intValue());
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
