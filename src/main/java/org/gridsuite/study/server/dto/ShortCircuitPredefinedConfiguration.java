@@ -11,5 +11,6 @@ package org.gridsuite.study.server.dto;
  */
 public enum ShortCircuitPredefinedConfiguration {
     ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP,
-    ICC_MAX_WITH_CEI909
+    ICC_MAX_WITH_CEI909,
+    ICC_MIN_WITH_NOMINAL
 }
