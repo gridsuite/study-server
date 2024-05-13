@@ -287,22 +287,42 @@ public class ShortCircuitTest {
                 content().string(TestUtils.resourceToString("/short-circuit-parameters.json")));
 
         // change some short circuit parameters
-        ShortCircuitParameters shortCircuitParameters = ShortCircuitService.newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, true, true, true, true, InitialVoltageProfileMode.NOMINAL, null);
-        ShortCircuitParametersInfos shortCircuitParametersInfos = new ShortCircuitParametersInfos();
-        shortCircuitParametersInfos.setParameters(shortCircuitParameters);
-        shortCircuitParametersInfos.setPredefinedParameters(ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_CEI909);
+        ShortCircuitParameters shortCircuitParametersWithIccMax = ShortCircuitService.newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, true, true, true, true, InitialVoltageProfileMode.NOMINAL, null);
+        ShortCircuitParametersInfos shortCircuitParametersWithIccMaxInfos = new ShortCircuitParametersInfos();
+        shortCircuitParametersWithIccMaxInfos.setParameters(shortCircuitParametersWithIccMax);
+        shortCircuitParametersWithIccMaxInfos.setPredefinedParameters(ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_CEI909);
 
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)
                         .header(HEADER_USER_ID, "testUserId")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectWriter.writeValueAsString(shortCircuitParametersInfos))).andExpect(
+                        .content(objectWriter.writeValueAsString(shortCircuitParametersWithIccMaxInfos))).andExpect(
                 status().isOk());
 
         //getting set values
         mockMvc.perform(get("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
                 content().string(TestUtils.resourceToString("/short-circuit-updated-parameters.json")));
+
+        // change some short circuit parameters
+        ShortCircuitParameters shortCircuitParametersWithIccMin = ShortCircuitService.newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, false, false, false, true, InitialVoltageProfileMode.NOMINAL, null);
+        ShortCircuitParametersInfos shortCircuitParametersWithIccMinInfos = new ShortCircuitParametersInfos();
+        shortCircuitParametersWithIccMinInfos.setParameters(shortCircuitParametersWithIccMin);
+
+        //change predefined params
+        shortCircuitParametersWithIccMinInfos.setPredefinedParameters(ShortCircuitPredefinedConfiguration.ICC_MIN_WITH_NOMINAL_VOLTAGE_MAP);
+
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)
+                        .header(HEADER_USER_ID, "testUserId")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectWriter.writeValueAsString(shortCircuitParametersWithIccMinInfos))).andExpect(
+                status().isOk());
+
+        //getting set values
+        mockMvc.perform(get("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
+                status().isOk(),
+                content().string(TestUtils.resourceToString("/short-circuit-updated-predefined-parameters.json")));
     }
 
     @Test
@@ -682,7 +702,7 @@ public class ShortCircuitTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
                 status().isNoContent());
 
-        // stop non existing short circuit analysis
+        // stop non-existing short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)).andExpect(status().isOk());
     }
 
