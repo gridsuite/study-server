@@ -762,7 +762,7 @@ public class NetworkModificationTreeService {
         UUID loadFlowResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), LOAD_FLOW);
         if (loadFlowResultUuid != null) {
             invalidateNodeInfos.addLoadFlowResultUuid(loadFlowResultUuid);
-            reportTypes.add(StudyService.ReportType.LOADFLOW);
+            reportTypes.add(StudyService.ReportType.LOAD_FLOW);
         }
 
         UUID securityAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SECURITY_ANALYSIS);
@@ -786,20 +786,20 @@ public class NetworkModificationTreeService {
         UUID shortCircuitAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SHORT_CIRCUIT);
         if (shortCircuitAnalysisResultUuid != null) {
             invalidateNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
-            reportTypes.add(StudyService.ReportType.ALL_BUSES_SHORTCIRCUIT_ANALYSIS);
+            reportTypes.add(StudyService.ReportType.SHORT_CIRCUIT);
         }
 
         UUID oneBusShortCircuitAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SHORT_CIRCUIT_ONE_BUS);
         if (oneBusShortCircuitAnalysisResultUuid != null) {
             invalidateNodeInfos.addOneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid);
-            reportTypes.add(StudyService.ReportType.ONE_BUS_SHORTCIRCUIT_ANALYSIS);
+            reportTypes.add(StudyService.ReportType.SHORT_CIRCUIT_ONE_BUS);
         }
 
         if (deleteVoltageInitResults) {
             UUID voltageInitResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), VOLTAGE_INITIALIZATION);
             if (voltageInitResultUuid != null) {
                 invalidateNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
-                reportTypes.add(StudyService.ReportType.VOLTAGE_INIT);
+                reportTypes.add(StudyService.ReportType.VOLTAGE_INITIALIZATION);
             }
         }
 
