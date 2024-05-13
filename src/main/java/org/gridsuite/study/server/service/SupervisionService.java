@@ -137,7 +137,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         nodes.forEach(node -> node.setLoadFlowResultUuid(null));
-        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.LOADFLOW.reportKey, nodes);
+        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.LOAD_FLOW.reportKey, nodes);
         reportService.deleteTreeReports(subreportToDelete);
         loadFlowService.deleteLoadFlowResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.LOAD_FLOW, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
@@ -202,12 +202,12 @@ public class SupervisionService {
         List<NetworkModificationNodeInfoEntity> allBusesNodes = networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
         if (!allBusesNodes.isEmpty()) {
             allBusesNodes.forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
-            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.ALL_BUSES_SHORTCIRCUIT_ANALYSIS.reportKey, allBusesNodes));
+            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.SHORT_CIRCUIT.reportKey, allBusesNodes));
         }
         List<NetworkModificationNodeInfoEntity> oneBusNodes = networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull();
         if (!oneBusNodes.isEmpty()) {
             oneBusNodes.forEach(node -> node.setOneBusShortCircuitAnalysisResultUuid(null));
-            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.ONE_BUS_SHORTCIRCUIT_ANALYSIS.reportKey, oneBusNodes));
+            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.SHORT_CIRCUIT_ONE_BUS.reportKey, oneBusNodes));
         }
         // Then delete all results (1-bus and all-buses), cause short-circuit-server cannot make the difference
         shortCircuitService.deleteShortCircuitAnalysisResults();
@@ -225,7 +225,7 @@ public class SupervisionService {
         List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull();
         if (!nodes.isEmpty()) {
             nodes.forEach(node -> node.setVoltageInitResultUuid(null));
-            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.VOLTAGE_INIT.reportKey, nodes));
+            reportService.deleteTreeReports(formatSubreportMap(StudyService.ReportType.VOLTAGE_INITIALIZATION.reportKey, nodes));
         }
         voltageInitService.deleteVoltageInitResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.VOLTAGE_INITIALIZATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
