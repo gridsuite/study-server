@@ -159,6 +159,10 @@ public class NotificationService {
     }
 
     public void emitStudyCreationError(UUID studyUuid, String userId, String errorMessage) {
+        if (errorMessage == null || errorMessage.isEmpty()) {
+            // an error message is needed in order for this message to be interpreted later as an error notification
+            errorMessage = "Unknown error";
+        }
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_USER_ID, userId)
