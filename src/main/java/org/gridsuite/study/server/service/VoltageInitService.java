@@ -79,7 +79,7 @@ public class VoltageInitService {
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam("reportUuid", reportUuid.toString())
                 .queryParam("reporterId", nodeUuid.toString())
-                .queryParam("reportType", StudyService.ReportType.VOLTAGE_INIT.reportKey);
+                .queryParam("reportType", StudyService.ReportType.VOLTAGE_INITIALIZATION.reportKey);
 
         if (parametersUuid != null) {
             uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
@@ -190,8 +190,8 @@ public class VoltageInitService {
 
         Objects.requireNonNull(sourceParametersUuid);
 
-        var path = UriComponentsBuilder
-                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters")
+        String path = UriComponentsBuilder
+                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
                 .queryParam("duplicateFrom", sourceParametersUuid)
                 .buildAndExpand()
                 .toUriString();

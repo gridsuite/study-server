@@ -77,7 +77,7 @@ public class LoadFlowService extends AbstractComputationService {
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam(QUERY_PARAM_REPORT_UUID, reportUuid.toString())
                 .queryParam(QUERY_PARAM_REPORTER_ID, nodeUuid.toString())
-                .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.LOADFLOW.reportKey);
+                .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.LOAD_FLOW.reportKey);
         if (parametersUuid != null) {
             uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
         }
@@ -282,7 +282,8 @@ public class LoadFlowService extends AbstractComputationService {
         Objects.requireNonNull(sourceParametersUuid);
 
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
+                .queryParam("duplicateFrom", sourceParametersUuid)
                 .buildAndExpand(sourceParametersUuid).toUriString();
 
         try {

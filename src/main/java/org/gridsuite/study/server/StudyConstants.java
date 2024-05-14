@@ -44,10 +44,10 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_EQUIPMENT_TYPE = "equipmentType";
     public static final String QUERY_PARAM_ELEMENT_TYPE = "elementType";
     public static final String QUERY_PARAM_INFO_TYPE = "infoType";
-    public static final String QUERY_PARAM_OPERATION = "operation";
+    public static final String QUERY_PARAM_OPTIONAL_PARAMS = "optionalParameters";
+    public static final String QUERY_FORMAT_OPTIONAL_PARAMS = QUERY_PARAM_OPTIONAL_PARAMS + "[%s]";
     public static final String QUERY_PARAM_SUBSTATIONS_IDS = "substationsIds";
     public static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
-    public static final String QUERY_PARAM_DC_POWERFACTOR = "dcPowerFactor";
 
     public static final String GROUP_UUID = "groupUuid";
     public static final String REPORT_UUID = "reportUuid";
@@ -71,6 +71,7 @@ public final class StudyConstants {
     public static final String HEADER_USER_ID = "userId";
     public static final String QUERY_PARAM_ONLY_STASHED = "onlyStashed";
     public static final String QUERY_PARAM_STASHED = "stashed";
+    public static final String PATH_PARAM_PARAMETERS = "parameters";
 
     public enum SldDisplayMode {
         FEEDER_POSITION,

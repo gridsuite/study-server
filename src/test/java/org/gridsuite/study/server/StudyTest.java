@@ -474,19 +474,17 @@ public class StudyTest {
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CLONED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS, "UCTE");
                     return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/parameters\\?duplicateFrom=.*") && POST.equals(request.getMethod())) {
-                    return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
-                } else if (path.matches("/v1/parameters/default") && POST.equals(request.getMethod())) {
-                    return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
-                } else if (path.matches("/v1/parameters/.*") && POST.equals(request.getMethod())) {
-                    if (path.matches("/v1/parameters/" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING)) {
+                } else if (path.matches("/v1/parameters.*") && POST.equals(request.getMethod())) {
+                    if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING)) {
                         return new MockResponse().setResponseCode(404); // params duplication request KO
-                    } else if (path.matches("/v1/parameters/" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING)) {
+                    } else if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING)) {
                         return new MockResponse().setResponseCode(200).setBody(DUPLICATED_PARAMS_JSON) // params duplication request OK
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     } else {
                         return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
                     }
+                } else if (path.matches("/v1/parameters/default") && POST.equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.matches("/v1/parameters/.*") && DELETE.equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/parameters/.*/provider")) {
@@ -1054,7 +1052,7 @@ public class StudyTest {
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", caseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + userId + "/profile")));
         if (parameterDuplicatedUuid != null) {
-            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + parameterDuplicatedUuid))); // post duplicate
+            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + parameterDuplicatedUuid))); // post duplicate
         }
 
         return studyUuid;
@@ -1102,7 +1100,7 @@ public class StudyTest {
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(8, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
-        assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=true", caseUuid)));
+        assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=%s", caseUuid, true)));
         // note : it's a new case UUID
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CLONED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CLONED_CASE_UUID_STRING)));
@@ -1459,7 +1457,7 @@ public class StudyTest {
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
 
         //Test duplication from a non existing source study
-        mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={sourceStudyUuid}&studyUuid={studyUuid}", UUID.randomUUID(), DUPLICATED_STUDY_UUID)
+        mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", UUID.randomUUID())
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
     }
@@ -1497,27 +1495,25 @@ public class StudyTest {
             throw new RuntimeException();
         }).when(caseService).duplicateCase(any(), any());
 
-        mockMvc.perform(post(STUDIES_URL)
-                        .param("duplicateFrom", studyUuid.toString())
-                        .param("studyUuid", DUPLICATED_STUDY_UUID)
+        String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
                         .param(CASE_FORMAT, "XIIDM")
                         .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
+        ObjectMapper mapper = new ObjectMapper();
+        String duplicatedStudyUuid = mapper.readValue(response, String.class);
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
-        assertNull(studyRepository.findById(UUID.fromString(DUPLICATED_STUDY_UUID)).orElse(null));
+        assertNull(studyRepository.findById(UUID.fromString(duplicatedStudyUuid)).orElse(null));
     }
 
     private StudyEntity duplicateStudy(UUID studyUuid, String userId, String caseFormat) throws Exception {
         UUID stubUuid = wireMockUtils.stubDuplicateModificationGroup();
-        mockMvc.perform(post(STUDIES_URL)
-                        .param("duplicateFrom", studyUuid.toString())
-                        .param("studyUuid", DUPLICATED_STUDY_UUID)
-                        .param(CASE_FORMAT, caseFormat)
+        String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
                         .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().isOk());
-
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        ObjectMapper mapper = new ObjectMapper();
+        String newUuid = mapper.readValue(response, String.class);
         StudyEntity sourceStudy = studyRepository.findById(studyUuid).orElseThrow();
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
@@ -1525,18 +1521,18 @@ public class StudyTest {
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(DUPLICATED_STUDY_UUID, indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
+        assertEquals(newUuid, indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageOnGoing.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(StudyIndexationStatus.INDEXING_ONGOING.name(), indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_INDEXATION_STATUS));
         Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(DUPLICATED_STUDY_UUID, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
+        assertEquals(newUuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(StudyIndexationStatus.INDEXED.name(), indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_INDEXATION_STATUS));
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
-        StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString(DUPLICATED_STUDY_UUID)).orElse(null);
+        StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString(newUuid)).orElse(null);
         assertNotNull(duplicatedStudy);
-        RootNode duplicatedRootNode = networkModificationTreeService.getStudyTree(UUID.fromString(DUPLICATED_STUDY_UUID));
+        RootNode duplicatedRootNode = networkModificationTreeService.getStudyTree(UUID.fromString(newUuid));
         assertNotNull(duplicatedRootNode);
 
         //Check tree node has been duplicated
@@ -1590,13 +1586,13 @@ public class StudyTest {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getVoltageInitParametersUuid())).count());
         }
         if (sourceStudy.getLoadFlowParametersUuid() != null) {
-            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters/" + sourceStudy.getLoadFlowParametersUuid())).count());
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getLoadFlowParametersUuid())).count());
         }
         if (sourceStudy.getSecurityAnalysisParametersUuid() != null) {
-            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters/" + sourceStudy.getSecurityAnalysisParametersUuid())).count());
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getSecurityAnalysisParametersUuid())).count());
         }
         if (sourceStudy.getSensitivityAnalysisParametersUuid() != null) {
-            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters/" + sourceStudy.getSensitivityAnalysisParametersUuid())).count());
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getSensitivityAnalysisParametersUuid())).count());
         }
         return duplicatedStudy;
     }

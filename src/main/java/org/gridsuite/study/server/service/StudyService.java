@@ -72,6 +72,7 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
+import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_OPERATION;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
@@ -128,14 +129,14 @@ public class StudyService {
 
     public enum ReportType {
         NETWORK_MODIFICATION("NetworkModification"),
-        LOADFLOW("LoadFlow"),
+        LOAD_FLOW("LoadFlow"),
         SECURITY_ANALYSIS("SecurityAnalysis"),
-        ALL_BUSES_SHORTCIRCUIT_ANALYSIS("AllBusesShortCircuitAnalysis"),
-        ONE_BUS_SHORTCIRCUIT_ANALYSIS("OneBusShortCircuitAnalysis"),
+        SHORT_CIRCUIT("AllBusesShortCircuitAnalysis"),
+        SHORT_CIRCUIT_ONE_BUS("OneBusShortCircuitAnalysis"),
         SENSITIVITY_ANALYSIS("SensitivityAnalysis"),
         DYNAMIC_SIMULATION("DynamicSimulation"),
         NON_EVACUATED_ENERGY_ANALYSIS("NonEvacuatedEnergyAnalysis"),
-        VOLTAGE_INIT("VoltageInit");
+        VOLTAGE_INITIALIZATION("VoltageInit");
 
         public final String reportKey;
 
@@ -307,18 +308,18 @@ public class StudyService {
         persistentStoreWithNotificationOnError(caseUuid, studyUuid, userId, importReportUuid, caseFormat, importParametersToUse);
     }
 
-    public BasicStudyInfos duplicateStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
+    public UUID duplicateStudy(UUID sourceStudyUuid, String userId) {
         Objects.requireNonNull(sourceStudyUuid);
 
         StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElse(null);
         if (sourceStudy == null) {
             return null;
         }
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, null));
 
         studyServerExecutionService.runAsync(() -> self.duplicateStudyAsync(basicStudyInfos, sourceStudyUuid, userId));
 
-        return basicStudyInfos;
+        return basicStudyInfos.getId();
     }
 
     @Transactional
@@ -617,12 +618,12 @@ public class StudyService {
                 substationsIds, elementType, infoType, loadFlowParameters.getDcPowerFactor());
     }
 
-    public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, String elementType, String infoType, String elementId, String operation, boolean inUpstreamBuiltParentNode) {
+    public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, String elementType, InfoTypeParameters infoTypeParameters, String elementId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
         return networkMapService.getElementInfos(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
-                elementType, infoType, operation, loadFlowParameters.getDcPowerFactor(), elementId);
+                elementType, infoTypeParameters.getInfoType(), infoTypeParameters.getOptionalParameters().getOrDefault(QUERY_PARAM_OPERATION, null), loadFlowParameters.getDcPowerFactor(), elementId);
     }
 
     public String getNetworkCountries(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode) {
@@ -1736,14 +1737,14 @@ public class StudyService {
     }
 
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String userId, String busId) {
-        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, SHORT_CIRCUIT_ONE_BUS);
+        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SHORT_CIRCUIT_ONE_BUS);
         prevResultUuidOpt.ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
 
         ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
         shortCircuitParameters.setWithFortescueResult(true);
         UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId, shortCircuitParameters, userId);
 
-        updateComputationResultUuid(nodeUuid, result, SHORT_CIRCUIT_ONE_BUS);
+        updateComputationResultUuid(nodeUuid, result, ComputationType.SHORT_CIRCUIT_ONE_BUS);
 
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         return result;
