@@ -11,6 +11,9 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.google.common.io.ByteStreams;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.commons.report.ReportNode;
+import com.powsybl.commons.report.ReportNodeAdder;
+
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
@@ -39,6 +42,7 @@ import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -194,5 +198,17 @@ public final class TestUtils {
         Buffer buf = new Buffer();
         buf.write(binary);
         return buf;
+    }
+
+    public static ReportNode addChildReportNode(ReportNode parent, ReportNode child) {
+        ReportNodeAdder adder = parent.newReportNode();
+        adder.withMessageTemplate(child.getMessageKey(), child.getMessageKey());
+        child.getValues().keySet().forEach(key -> adder.withUntypedValue(key, child.getValue(key).toString()));
+        adder.add();
+        return parent;
+    }
+
+    public static void checkReportNodes(List<ReportNode> reports, List<ReportNode> expectedReports) {
+        reports.forEach(r -> assertThat(r, new MatcherReport(expectedReports.get(reports.indexOf(r)))));
     }
 }
