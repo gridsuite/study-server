@@ -126,11 +126,17 @@ public class LoadFlowTest {
 
     private static final long TIMEOUT = 1000;
 
+    private static final String USER_ID_HEADER = "userId";
+
+    private static final String DEFAULT_PROVIDER = "defaultProvider";
+    private static final String OTHER_PROVIDER = "otherProvider";
+
     private static String LIMIT_VIOLATIONS_JSON;
 
     private static String COMPUTING_STATUS_JSON;
 
     private static String LOADFLOW_DEFAULT_PARAMETERS_JSON;
+    private static String LOADFLOW_PROFILE_PARAMETERS_JSON;
 
     //output destinations
     private final String studyUpdateDestination = "study.update";
@@ -224,6 +230,12 @@ public class LoadFlowTest {
                 .specificParametersPerProvider(Map.of())
                 .build();
         LOADFLOW_DEFAULT_PARAMETERS_JSON = objectMapper.writeValueAsString(loadFlowParametersInfos);
+        LoadFlowParametersInfos profileLoadFlowParametersInfos = LoadFlowParametersInfos.builder()
+                .provider(OTHER_PROVIDER)
+                .commonParameters(LoadFlowParameters.load())
+                .specificParametersPerProvider(Map.of())
+                .build();
+        LOADFLOW_PROFILE_PARAMETERS_JSON = objectMapper.writeValueAsString(profileLoadFlowParametersInfos);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -314,13 +326,21 @@ public class LoadFlowTest {
                 } else if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING) && method.equals("POST")) {
                     // params duplication request KO
                     return new MockResponse().setResponseCode(404);
+                } else if (path.matches("/v1/parameters/" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING) && method.equals("GET")) {
+                    return new MockResponse().setResponseCode(404);
                 } else if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING) && method.equals("POST")) {
                     // params duplication request OK
                     return new MockResponse().setResponseCode(200).setBody(DUPLICATED_PARAMS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/parameters/" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING) && method.equals("GET")) {
+                    // profile params get request OK
+                    return new MockResponse().setResponseCode(200).setBody(LOADFLOW_PROFILE_PARAMETERS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/parameters/" + PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING + "/provider") && method.equals("PATCH")) {
                     // provider update in duplicated params OK
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/default-provider")) {
+                    return new MockResponse().setResponseCode(200).setBody(DEFAULT_PROVIDER);
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -684,6 +704,48 @@ public class LoadFlowTest {
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
+    }
+
+    // the following testGetDefaultProviders tests are related to StudyTest::testGetDefaultProviders but with a user and different profile cases
+    @Test
+    public void testGetDefaultProvidersFromProfile() throws Exception {
+        mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, VALID_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
+                status().isOk(),
+                content().string(OTHER_PROVIDER));
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING))); // GET provider
+    }
+
+    @Test
+    public void testGetDefaultProvidersFromProfileInvalid() throws Exception {
+        mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, INVALID_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
+                status().isOk(),
+                content().string(DEFAULT_PROVIDER));
+        var requests = TestUtils.getRequestsDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING))); // GET provider
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/default-provider"))); // GET fallback default provider
+    }
+
+    @Test
+    public void testGetDefaultProvidersWithoutProfile() throws Exception {
+        mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, NO_PROFILE_USER_ID)).andExpectAll(
+                status().isOk(),
+                content().string(DEFAULT_PROVIDER));
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/default-provider"))); // GET fallback default provider
+    }
+
+    @Test
+    public void testGetDefaultProvidersWithoutParamInProfile() throws Exception {
+        mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, NO_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
+                status().isOk(),
+                content().string(DEFAULT_PROVIDER));
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/default-provider"))); // GET fallback default provider
     }
 
     @Test

@@ -2387,6 +2387,7 @@ public class StudyTest {
 
     @Test
     public void testGetDefaultProviders() throws Exception {
+        // related to LoadFlowTest::testGetDefaultProvidersFromProfile but without a user, so it doesn't use profiles
         mockMvc.perform(get("/v1/loadflow-default-provider")).andExpectAll(
                 status().isOk(),
                 content().string(DEFAULT_PROVIDER));
