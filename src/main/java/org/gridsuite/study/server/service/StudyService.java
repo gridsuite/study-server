@@ -1077,6 +1077,11 @@ public class StudyService {
             // reset case, with existing profile, having default LF params
             try {
                 UUID loadFlowParametersFromProfileUuid = loadflowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
+                if (existingLoadFlowParametersUuid != null) {
+                    //For a reset to defaultValues we need to keep the provider if it exists because it's updated separately
+                    String keptProvider = loadflowService.getLoadFlowParameters(existingLoadFlowParametersUuid).getProvider();
+                    loadflowService.updateLoadFlowProvider(loadFlowParametersFromProfileUuid, keptProvider);
+                }
                 studyEntity.setLoadFlowParametersUuid(loadFlowParametersFromProfileUuid);
                 removeLoadFlowParameters(existingLoadFlowParametersUuid);
                 return userProfileIssue;
