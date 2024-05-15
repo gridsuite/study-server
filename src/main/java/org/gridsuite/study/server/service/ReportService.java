@@ -9,10 +9,8 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.report.ReportNode;
-import com.powsybl.commons.report.ReportNodeAdder;
 import com.powsybl.commons.report.ReportNodeDeserializer;
 import com.powsybl.commons.report.ReportNodeJsonModule;
-import com.powsybl.commons.report.TypedValue;
 import lombok.NonNull;
 import org.apache.poi.util.StringUtil;
 import org.gridsuite.study.server.RemoteServicesProperties;
@@ -33,6 +31,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.utils.StudyUtils.insertReportNode;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -102,17 +101,6 @@ public class ReportService {
             reporters.forEach(reportNode -> insertReportNode(reporter, reportNode));
         }
         return reporter;
-    }
-
-    private void insertReportNode(ReportNode parent, ReportNode child) {
-        ReportNodeAdder adder = parent.newReportNode().withMessageTemplate(child.getMessageKey(), child.getMessageTemplate());
-        for (Map.Entry<String, TypedValue> valueEntry : child.getValues().entrySet()) {
-            adder.withUntypedValue(valueEntry.getKey(), valueEntry.getValue().toString());
-        }
-        ReportNode insertedChild = adder.add();
-        if (child.getChildren() != null) {
-            child.getChildren().forEach(grandChild -> insertReportNode(insertedChild, grandChild));
-        }
     }
 
     public void deleteReport(@NonNull UUID reportUuid) {

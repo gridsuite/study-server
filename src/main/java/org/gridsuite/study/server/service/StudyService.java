@@ -75,6 +75,7 @@ import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_OPERATION;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
+import static org.gridsuite.study.server.utils.StudyUtils.insertReportNode;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -1634,16 +1635,6 @@ public class StudyService {
         }
     }
 
-    private ReportNode createSubReporter(ReportNode parent, ReportNode child) {
-        ReportNodeAdder adder = parent.newReportNode().withMessageTemplate(child.getMessageKey(),
-                child.getMessageTemplate());
-        child.getValues().keySet()
-                .forEach(key -> adder.withUntypedValue(key, child.getValues().get(key).getValue().toString()));
-        adder.add();
-        child.getChildren().forEach(grandChild -> createSubReporter(parent.getChildren().get(parent.getChildren().size() - 1), grandChild));
-        return parent;
-    }
-
     private List<ReportNode> getSubReporters(UUID nodeUuid, UUID reportUuid, String reportNameFilter,
             ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels) {
         ReportNode reporter = reportService.getReport(reportUuid, nodeUuid.toString(), reportNameFilter,
@@ -1656,7 +1647,7 @@ public class StudyService {
         return subReportersByNode.keySet().stream().map(nodeId -> {
             ReportNode newSubReporter = ReportNode.newRootReportNode().withMessageTemplate(nodeId, nodeId)
                     .withUntypedValue("id", reportUuid.toString()).build();
-            subReportersByNode.get(nodeId).forEach(child -> createSubReporter(newSubReporter, child));
+            subReportersByNode.get(nodeId).forEach(child -> insertReportNode(newSubReporter, child));
             return newSubReporter;
         }).collect(Collectors.toList());
     }
