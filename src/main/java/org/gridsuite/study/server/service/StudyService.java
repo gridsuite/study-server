@@ -1354,21 +1354,23 @@ public class StudyService {
     }
 
     @Transactional
-    public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, boolean onlyStashed, String userId) {
+    public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+//        String notificationMessage = onlyStashed ? NotificationService.MODIFICATIONS_STASHING_IN_PROGRESS : NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS;
+//        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, notificationMessage);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
         try {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.deleteModifications(groupId, modificationsUuids, onlyStashed);
+            networkModificationService.deleteModifications(groupId, modificationsUuids);
             if (modificationsUuids != null) {
                 networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
             }
             updateStatuses(studyUuid, nodeUuid, false, false, false);
         } finally {
-            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
+            notificationService.emitEndDeletionEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
@@ -1376,7 +1378,7 @@ public class StudyService {
     @Transactional
     public void stashNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
-        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_STASHING_IN_PROGRESS);
         try {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
@@ -1394,7 +1396,7 @@ public class StudyService {
     @Transactional
     public void restoreNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
-        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_RESTORING_IN_PROGRESS);
         try {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
