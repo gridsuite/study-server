@@ -79,7 +79,7 @@ public class VoltageInitService {
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam("reportUuid", reportUuid.toString())
                 .queryParam("reporterId", nodeUuid.toString())
-                .queryParam("reportType", StudyService.ReportType.VOLTAGE_INIT.reportKey);
+                .queryParam("reportType", StudyService.ReportType.VOLTAGE_INITIALIZATION.reportKey);
 
         if (parametersUuid != null) {
             uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
