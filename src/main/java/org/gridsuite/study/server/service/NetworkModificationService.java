@@ -132,7 +132,6 @@ public class NetworkModificationService {
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
                 .queryParam(UUIDS, modificationsUuids)
                 .queryParam(GROUP_UUID, groupUuid)
-                .queryParam(QUERY_PARAM_ONLY_STASHED, true) //TODO FM delete in network modif server too ?
                 .buildAndExpand()
                 .toUriString();
         try {

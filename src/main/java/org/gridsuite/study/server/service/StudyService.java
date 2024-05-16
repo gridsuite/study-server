@@ -1356,8 +1356,6 @@ public class StudyService {
     @Transactional
     public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
-//        String notificationMessage = onlyStashed ? NotificationService.MODIFICATIONS_STASHING_IN_PROGRESS : NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS;
-//        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, notificationMessage);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
         try {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
