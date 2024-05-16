@@ -104,6 +104,7 @@ public class NotificationService {
     public static final String SUBTREE_MOVED = "subtreeMoved";
     public static final String SUBTREE_CREATED = "subtreeCreated";
     public static final String MESSAGE_LOG = "Sending message : {}";
+    public static final String DEFAULT_ERROR_MESSAGE = "Unknown error";
 
     public static final String STUDY_ALERT = "STUDY_ALERT";
 
@@ -165,8 +166,8 @@ public class NotificationService {
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDIES)
                 // an error message is needed in order for this message to be interpreted later as an error notification
                 .setHeader(HEADER_ERROR, (errorMessage == null || errorMessage.isEmpty()) ?
-                                "Unknown error" :
-                                errorMessage)
+                        DEFAULT_ERROR_MESSAGE :
+                        errorMessage)
                 .build());
     }
 
