@@ -8,7 +8,7 @@ package org.gridsuite.study.server.utils;
 
 import java.util.UUID;
 
-import org.gridsuite.study.server.dto.BasicStudyInfos;
+import org.gridsuite.study.server.dto.elasticsearch.BasicStudyInfos;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 

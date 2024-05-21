@@ -33,6 +33,10 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.elasticsearch.BasicStudyInfos;
+import org.gridsuite.study.server.dto.elasticsearch.CreatedStudyBasicInfos;
+import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
+import org.gridsuite.study.server.dto.elasticsearch.StudyInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -263,6 +267,9 @@ public class StudyTest {
     private final String elementUpdateDestination = "element.update";
 
     private boolean indexed = false;
+
+    @Value("${spring.data.elasticsearch.embedded.port:}")
+    private String expectedEsPort;
 
     private static EquipmentInfos toEquipmentInfos(Line line) {
         return EquipmentInfos.builder()
@@ -2562,7 +2569,7 @@ public class StudyTest {
             .andExpect(status().isOk())
             .andReturn();
 
-        assertEquals("localhost:9200", mvcResult.getResponse().getContentAsString());
+        assertEquals("localhost:" + expectedEsPort, mvcResult.getResponse().getContentAsString());
 
         // Test get indexed equipments index name
         mvcResult = mockMvc.perform(get("/v1/supervision/indexed-equipments-index-name"))

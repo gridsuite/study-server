@@ -11,8 +11,8 @@ import co.elastic.clients.elasticsearch._types.query_dsl.*;
 
 import com.powsybl.iidm.network.VariantManagerConstants;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.dto.EquipmentInfos;
-import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
+import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
+import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
