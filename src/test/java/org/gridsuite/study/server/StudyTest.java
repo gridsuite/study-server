@@ -16,8 +16,8 @@ import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.commons.reporter.ReporterModelJsonModule;
+import com.powsybl.commons.report.ReportNode;
+import com.powsybl.commons.report.ReportNodeJsonModule;
 import com.powsybl.iidm.network.Line;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
@@ -91,9 +91,11 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
+import static org.gridsuite.study.server.notification.NotificationService.DEFAULT_ERROR_MESSAGE;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
+import static org.gridsuite.study.server.utils.TestUtils.addChildReportNode;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -145,8 +147,8 @@ public class StudyTest {
     private static final NetworkInfos NETWORK_INFOS = new NetworkInfos(NETWORK_UUID, "20140116_0830_2D4_UX1_pst");
     private static final NetworkInfos NOT_EXISTING_NETWORK_INFOS = new NetworkInfos(NOT_EXISTING_NETWORK_UUID, "not_existing_network_id");
     private static final UUID REPORT_UUID = UUID.randomUUID();
-    private static final ReporterModel ROOT_REPORT_TEST = new ReporterModel(REPORT_UUID.toString(), REPORT_UUID.toString());
-    private static final ReporterModel REPORT_TEST = new ReporterModel("test", "test");
+    private static final ReportNode ROOT_REPORT_TEST = ReportNode.newRootReportNode().withMessageTemplate(REPORT_UUID.toString(), REPORT_UUID.toString()).build();
+    private static final ReportNode REPORT_TEST = ReportNode.newRootReportNode().withMessageTemplate("test", "test").build();
     private static final String VARIANT_ID = "variant_1";
     public static final String POST = "POST";
     public static final String DELETE = "DELETE";
@@ -157,6 +159,7 @@ public class StudyTest {
     private static final String CASE_3_UUID_STRING = "790769f9-bd31-43be-be46-e50296951e32";
     private static final String CASE_UUID_CAUSING_IMPORT_ERROR = "178719f5-cccc-48be-be46-e92345951e32";
     private static final String CASE_UUID_CAUSING_STUDY_CREATION_ERROR = "278719f5-cccc-48be-be46-e92345951e32";
+    private static final String CASE_UUID_CAUSING_CONVERSION_ERROR = "278719f5-cccc-48be-be46-e92345951e33";
     private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
     private static final String NETWORK_UUID_3_STRING = "22222222-bd31-43be-be46-e50296951e32";
     private static final NetworkInfos NETWORK_INFOS_2 = new NetworkInfos(UUID.fromString(NETWORK_UUID_2_STRING), "file_2.xiidm");
@@ -354,7 +357,7 @@ public class StudyTest {
 
         // FIXME: remove lines when dicos will be used on the front side
         // Override the custom module to restore the standard module in order to have the original serialization used like the report server
-        mapper.registerModule(new ReporterModelJsonModule() {
+        mapper.registerModule(new ReportNodeJsonModule() {
             @Override
             public Object getTypeId() {
                 return getClass().getName() + "override";
@@ -367,7 +370,7 @@ public class StudyTest {
         String networkInfos3AsString = mapper.writeValueAsString(NETWORK_INFOS_3);
         String clonedCaseUuidAsString = mapper.writeValueAsString(CLONED_CASE_UUID);
 
-        ROOT_REPORT_TEST.addSubReporter(REPORT_TEST);
+        addChildReportNode(ROOT_REPORT_TEST, REPORT_TEST);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -453,8 +456,12 @@ public class StudyTest {
                     sendCaseImportFailedMessage(path, STUDY_CREATION_ERROR_MESSAGE);
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_CONVERSION_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
+                    sendCaseImportFailedMessage(path, null); // some conversion errors don't returnany error mesage
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/reports/.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(mapper.writeValueAsString(ROOT_REPORT_TEST.getSubReporters()))
+                    return new MockResponse().setResponseCode(200).setBody(mapper.writeValueAsString(ROOT_REPORT_TEST.getChildren()))
                         .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     // need asynchronous run to get study creation requests
@@ -519,6 +526,9 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_3_UUID_STRING + "/exists":
                     case "/v1/cases/" + CASE_UUID_CAUSING_IMPORT_ERROR + "/exists":
                     case "/v1/cases/" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "/exists":
+                        return new MockResponse().setResponseCode(200).setBody("true")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + CASE_UUID_CAUSING_CONVERSION_ERROR + "/exists":
                         return new MockResponse().setResponseCode(200).setBody("true")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/cases/" + CASE_UUID_STRING + "/infos":
@@ -983,7 +993,7 @@ public class StudyTest {
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?reportType=NETWORK_MODIFICATION", studyUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
-        List<ReporterModel> reporterModel = mapper.readValue(resultAsString, new TypeReference<List<ReporterModel>>() { });
+        List<ReportNode> reporterModel = mapper.readValue(resultAsString, new TypeReference<List<ReportNode>>() { });
 
         assertThat(reporterModel.get(0), new MatcherReport(REPORT_TEST));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
@@ -1167,6 +1177,30 @@ public class StudyTest {
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_CAUSING_IMPORT_ERROR)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_IMPORT_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
+    }
+
+    @Test
+    public void testCreateStudyCreationFailedWithoutErrorMessage() throws Exception {
+        String userId = "userId";
+        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_CONVERSION_ERROR)
+                        .header("userId", userId)
+                        .param(CASE_FORMAT, "XIIDM"))
+                .andExpect(status().isOk());
+
+        // assert that the broker message has been sent a study creation request message
+        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+
+        // checks that the error message has a default value set
+        message = output.receive(TIMEOUT, "study.update");
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(DEFAULT_ERROR_MESSAGE, headers.get(NotificationService.HEADER_ERROR));
+
+        TestUtils.getRequestsDone(2, server);
     }
 
     @Test
