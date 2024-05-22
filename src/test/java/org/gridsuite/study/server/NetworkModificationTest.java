@@ -16,7 +16,7 @@ import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.commons.reporter.ReporterModel;
+import com.powsybl.commons.report.ReportNode;
 import com.powsybl.iidm.network.IdentifiableType;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
@@ -128,7 +128,7 @@ public class NetworkModificationTest {
 
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
 
-    private static final ReporterModel REPORT_TEST = new ReporterModel("test", "test");
+    private static final ReportNode REPORT_TEST = ReportNode.newRootReportNode().withMessageTemplate("test", "test").build();
 
     private static final String TEST_FILE = "testCase.xiidm";
 
