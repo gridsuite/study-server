@@ -2572,33 +2572,33 @@ public class StudyTest {
         assertEquals("localhost:" + expectedEsPort, mvcResult.getResponse().getContentAsString());
 
         // Test get indexed equipments index name
-        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-equipments-index-name"))
+        mvcResult = mockMvc.perform(get("/v1/supervision/equipments/index-name"))
             .andExpect(status().isOk())
             .andReturn();
 
         assertEquals("equipments", mvcResult.getResponse().getContentAsString());
 
-        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-tombstoned-equipments-index-name"))
+        mvcResult = mockMvc.perform(get("/v1/supervision/tombstoned-equipments/index-name"))
             .andExpect(status().isOk())
             .andReturn();
 
         assertEquals("tombstoned-equipments", mvcResult.getResponse().getContentAsString());
 
         // Test get indexed equipments and tombstoned equipments counts
-        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-equipments-count"))
+        mvcResult = mockMvc.perform(get("/v1/supervision/equipments/indexation-count"))
             .andExpect(status().isOk())
             .andReturn();
 
         assertEquals(32, Long.parseLong(mvcResult.getResponse().getContentAsString()));
 
-        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-tombstoned-equipments-count"))
+        mvcResult = mockMvc.perform(get("/v1/supervision/tombstoned-equipments/indexation-count"))
             .andExpect(status().isOk())
             .andReturn();
 
         assertEquals(8, Long.parseLong(mvcResult.getResponse().getContentAsString()));
 
         // Test indexed equipments deletion
-        mvcResult = mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/indexed-equipments", studyUuid))
+        mvcResult = mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/equipments/indexation", studyUuid))
             .andExpect(status().isOk())
             .andReturn();
 

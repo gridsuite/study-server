@@ -8,11 +8,13 @@ package org.gridsuite.study.server.elasticsearch;
 
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
+import lombok.Getter;
 
 import com.powsybl.iidm.network.VariantManagerConstants;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
@@ -72,6 +74,18 @@ public class EquipmentInfosService {
     private final TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository;
 
     private final ElasticsearchOperations elasticsearchOperations;
+
+    @Value(ESConfig.STUDY_INDEX_NAME)
+    @Getter
+    private String studyIndexName;
+
+    @Value(ESConfig.EQUIPMENTS_INDEX_NAME)
+    @Getter
+    private String equipmentsIndexName;
+
+    @Value(ESConfig.TOMBSTONED_EQUIPMENTS_INDEX_NAME)
+    @Getter
+    private String tombstonedEquipmentsIndexName;
 
     public EquipmentInfosService(EquipmentInfosRepository equipmentInfosRepository, TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
         this.equipmentInfosRepository = equipmentInfosRepository;

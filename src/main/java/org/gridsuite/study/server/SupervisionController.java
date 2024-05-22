@@ -16,7 +16,7 @@ import org.gridsuite.study.server.service.SupervisionService;
 import java.util.UUID;
 
 import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.elasticsearch.ESIndex;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,14 +32,14 @@ public class SupervisionController {
 
     private final SupervisionService supervisionService;
 
-    private final ESIndex indexConf;
+    private final EquipmentInfosService equipmentInfosService;
 
     private final ClientConfiguration elasticsearchClientConfiguration;
 
-    public SupervisionController(SupervisionService supervisionService, ClientConfiguration elasticsearchClientConfiguration, ESIndex indexConf) {
+    public SupervisionController(SupervisionService supervisionService, EquipmentInfosService equipmentInfosService, ClientConfiguration elasticsearchClientConfiguration) {
         this.supervisionService = supervisionService;
+        this.equipmentInfosService = equipmentInfosService;
         this.elasticsearchClientConfiguration = elasticsearchClientConfiguration;
-        this.indexConf = indexConf;
     }
 
     @DeleteMapping(value = "/computation/results")
@@ -60,35 +60,35 @@ public class SupervisionController {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(host);
     }
 
-    @GetMapping(value = "/indexed-equipments-index-name")
+    @GetMapping(value = "/equipments/index-name")
     @Operation(summary = "get the indexed equipments index name")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed equipments index name")})
     public ResponseEntity<String> getIndexedEquipmentsIndexName() {
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(indexConf.getEquipmentsIndexName());
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(equipmentInfosService.getEquipmentsIndexName());
     }
 
-    @GetMapping(value = "/indexed-tombstoned-equipments-index-name")
+    @GetMapping(value = "/tombstoned-equipments/index-name")
     @Operation(summary = "get the indexed tombstoned equipments index name")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed tombstoned equipments index name")})
     public ResponseEntity<String> getIndexedTombstonedEquipmentsIndexName() {
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(indexConf.getTombstonedEquipmentsIndexName());
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(equipmentInfosService.getTombstonedEquipmentsIndexName());
     }
 
-    @GetMapping(value = "/indexed-equipments-count")
+    @GetMapping(value = "/equipments/indexation-count")
     @Operation(summary = "get indexed equipments count for all studies")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed equipments count")})
     public ResponseEntity<String> getIndexedEquipmentsCount() {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.getIndexedEquipmentsCount()));
     }
 
-    @GetMapping(value = "/indexed-tombstoned-equipments-count")
+    @GetMapping(value = "/tombstoned-equipments/indexation-count")
     @Operation(summary = "get indexed tombstoned equipments count for all studies")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Tombstoned equipments count")})
     public ResponseEntity<String> getIndexedTombstonedEquipmentsCount() {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.getIndexedTombstonedEquipmentsCount()));
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/indexed-equipments")
+    @DeleteMapping(value = "/studies/{studyUuid}/equipments/indexation")
     @Operation(summary = "delete indexed equipments and tombstoned equipments for the given study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed equipments and tombstoned equipments for the given study have been deleted")})
     public ResponseEntity<String> deleteStudyIndexedEquipmentsAndTombstoned(@PathVariable("studyUuid") UUID studyUuid) {

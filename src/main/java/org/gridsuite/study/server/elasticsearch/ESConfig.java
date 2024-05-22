@@ -26,6 +26,11 @@ import java.util.Optional;
 @EnableElasticsearchRepositories
 public class ESConfig extends ElasticsearchConfiguration {
 
+    // It's not simple SPEL but this syntax is managed by both ES and Spring
+    public static final String STUDY_INDEX_NAME = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}studies";
+    public static final String EQUIPMENTS_INDEX_NAME = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}equipments";
+    public static final String TOMBSTONED_EQUIPMENTS_INDEX_NAME = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}tombstoned-equipments";
+
     @Value("#{'${spring.data.elasticsearch.embedded:false}' ? 'localhost' : '${spring.data.elasticsearch.host}'}")
     private String esHost;
 

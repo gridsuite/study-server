@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import org.gridsuite.study.server.elasticsearch.ESConfig;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.Document;
 
@@ -25,7 +26,7 @@ import org.springframework.data.elasticsearch.annotations.Document;
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
 @Schema(description = "Basic study attributes after creation succeeded ")
-@Document(indexName = ESIndex.STUDY_INDEX_NAME)
+@Document(indexName = ESConfig.STUDY_INDEX_NAME)
 @TypeAlias(value = "StudyInfos")
 public class CreatedStudyBasicInfos extends BasicStudyInfos {
     String caseFormat;

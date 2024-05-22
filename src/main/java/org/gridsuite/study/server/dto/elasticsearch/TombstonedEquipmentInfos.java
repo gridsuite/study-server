@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import org.gridsuite.study.server.elasticsearch.ESConfig;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Setting;
@@ -24,7 +25,7 @@ import org.springframework.data.elasticsearch.annotations.Setting;
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "Tombstoned equipment infos")
 // Keep indexname in sync with the value in SupervisionController
-@Document(indexName = ESIndex.TOMBSTONED_EQUIPMENTS_INDEX_NAME)
+@Document(indexName = ESConfig.TOMBSTONED_EQUIPMENTS_INDEX_NAME)
 @Setting(settingPath = "elasticsearch_settings.json")
 @TypeAlias(value = "TombstonedEquipmentInfos")
 public class TombstonedEquipmentInfos extends BasicEquipmentInfos {
