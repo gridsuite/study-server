@@ -12,6 +12,7 @@ import org.springframework.lang.NonNull;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -19,9 +20,13 @@ import java.util.UUID;
 public interface TombstonedEquipmentInfosRepository extends ElasticsearchRepository<TombstonedEquipmentInfos, String> {
     List<TombstonedEquipmentInfos> findAllByNetworkUuid(@NonNull UUID networkUuid);
 
+    Stream<TombstonedEquipmentInfos> findByNetworkUuidNotIn(List<UUID> networkUuids);
+
     void deleteAllByNetworkUuid(@NonNull UUID networkUuid);
 
     void deleteAllByNetworkUuidAndVariantId(@NonNull UUID networkUuid, @NonNull String variantId);
 
     long countByNetworkUuid(@NonNull UUID networkUuid);
+
+    long countByNetworkUuidNotIn(List<UUID> networkUuids);
 }
