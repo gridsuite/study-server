@@ -26,7 +26,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.UUID;
 
 /**
@@ -63,7 +63,7 @@ public class NodeEntity {
     @Column(name = "stashed")
     boolean stashed;
 
-    @Column(name = "stash_date")
-    private LocalDateTime stashDate;
+    @Column(name = "stash_date", columnDefinition = "timestamptz")
+    private ZonedDateTime stashDate;
 
 }
