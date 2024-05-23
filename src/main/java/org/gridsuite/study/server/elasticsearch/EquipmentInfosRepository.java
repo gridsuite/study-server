@@ -12,6 +12,7 @@ import org.springframework.lang.NonNull;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -24,4 +25,9 @@ public interface EquipmentInfosRepository extends ElasticsearchRepository<Equipm
     void deleteAllByNetworkUuidAndVariantId(@NonNull UUID networkUuid, @NonNull String variantId);
 
     long countByNetworkUuid(@NonNull UUID networkUuid);
+
+    Stream<EquipmentInfos> findByNetworkUuidNotIn(List<UUID> networkUuids);
+
+    long countByNetworkUuidNotIn(List<UUID> networkUuids);
+
 }

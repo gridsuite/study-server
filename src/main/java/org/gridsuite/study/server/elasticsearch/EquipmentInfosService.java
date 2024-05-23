@@ -13,6 +13,8 @@ import com.powsybl.iidm.network.VariantManagerConstants;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
@@ -24,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.Map.entry;
 
@@ -41,6 +44,8 @@ public class EquipmentInfosService {
     }
 
     private static final int PAGE_MAX_SIZE = 400;
+
+    private static final int DELETE_BATCH_SIZE = 10000;
 
     public static final Map<String, Integer> EQUIPMENT_TYPE_SCORES = Map.ofEntries(
             entry("SUBSTATION", 15),
@@ -73,6 +78,8 @@ public class EquipmentInfosService {
 
     private final ElasticsearchOperations elasticsearchOperations;
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(EquipmentInfosService.class);
+
     public EquipmentInfosService(EquipmentInfosRepository equipmentInfosRepository, TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
         this.equipmentInfosRepository = equipmentInfosRepository;
         this.tombstonedEquipmentInfosRepository = tombstonedEquipmentInfosRepository;
@@ -104,6 +111,74 @@ public class EquipmentInfosService {
 
     public long getEquipmentInfosCount() {
         return equipmentInfosRepository.count();
+    }
+
+    public void deleteAllByNetworkUuidNotIn(List<UUID> networkUuids) {
+        long startTime = System.currentTimeMillis();
+
+        try (Stream<EquipmentInfos> equipmentInfosStream = equipmentInfosRepository.findByNetworkUuidNotIn(networkUuids)) {
+            List<EquipmentInfos> equipmentInfosBatch = new ArrayList<>(DELETE_BATCH_SIZE);
+
+            equipmentInfosStream.parallel().forEach(equipmentInfos -> {
+                synchronized (equipmentInfosBatch) {
+                    equipmentInfosBatch.add(equipmentInfos);
+
+                    if (equipmentInfosBatch.size() >= DELETE_BATCH_SIZE) {
+                        equipmentInfosRepository.deleteAll(equipmentInfosBatch);
+                        equipmentInfosBatch.clear();
+                    }
+                }
+            });
+
+            // delete any remaining equipment infos in the batch
+            synchronized (equipmentInfosBatch) {
+                if (!equipmentInfosBatch.isEmpty()) {
+                    equipmentInfosRepository.deleteAll(equipmentInfosBatch);
+                }
+            }
+        }
+
+        long endTime = System.currentTimeMillis();
+        long executionTime = endTime - startTime;
+        LOGGER.info("Execution time of deleteByNetworkUuidNotIn: {} ms", executionTime);
+    }
+
+    public void deleteAllTombstonedEquipmentsByNetworkUuidNotIn(List<UUID> networkUuids) {
+        long startTime = System.currentTimeMillis();
+
+        try (Stream<TombstonedEquipmentInfos> tombstonedEquipmentInfosStream = tombstonedEquipmentInfosRepository.findByNetworkUuidNotIn(networkUuids)) {
+            List<TombstonedEquipmentInfos> tombstonedEquipmentInfosBatch = new ArrayList<>(DELETE_BATCH_SIZE);
+
+            tombstonedEquipmentInfosStream.parallel().forEach(tombstonedEquipmentInfos -> {
+                synchronized (tombstonedEquipmentInfosBatch) {
+                    tombstonedEquipmentInfosBatch.add(tombstonedEquipmentInfos);
+
+                    if (tombstonedEquipmentInfosBatch.size() >= DELETE_BATCH_SIZE) {
+                        tombstonedEquipmentInfosRepository.deleteAll(tombstonedEquipmentInfosBatch);
+                        tombstonedEquipmentInfosBatch.clear();
+                    }
+                }
+            });
+
+            // delete any remaining tombstoned equipment infos in the batch
+            synchronized (tombstonedEquipmentInfosBatch) {
+                if (!tombstonedEquipmentInfosBatch.isEmpty()) {
+                    tombstonedEquipmentInfosRepository.deleteAll(tombstonedEquipmentInfosBatch);
+                }
+            }
+        }
+
+        long endTime = System.currentTimeMillis();
+        long executionTime = endTime - startTime;
+        LOGGER.info("Execution time of deleteAllTombstonedEquipmentsByNetworkUuidNotIn: {} ms", executionTime);
+    }
+
+    public long getEquipmentInfosCountNotIn(List<UUID> networkUuids) {
+        return equipmentInfosRepository.countByNetworkUuidNotIn(networkUuids);
+    }
+
+    public long getTombstonedEquipmentInfosCountNotIn(List<UUID> networkUuids) {
+        return tombstonedEquipmentInfosRepository.countByNetworkUuidNotIn(networkUuids);
     }
 
     public long getTombstonedEquipmentInfosCount() {

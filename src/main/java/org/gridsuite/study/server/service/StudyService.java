@@ -238,6 +238,24 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
+    public List<UUID> getStudiesNetworkUuids() {
+        return studyRepository.findAll().stream()
+                .map(StudyEntity::getNetworkUuid)
+                .toList();
+    }
+
+    public void deleteAllOrphanIndexedEquipments() {
+        var studiesNetworkUuids = getStudiesNetworkUuids();
+        equipmentInfosService.deleteAllByNetworkUuidNotIn(studiesNetworkUuids);
+        equipmentInfosService.deleteAllTombstonedEquipmentsByNetworkUuidNotIn(studiesNetworkUuids);
+    }
+
+    public Long getAllOrphanIndexedEquipmentsCount() {
+        Long orphanEquipmentsCount = equipmentInfosService.getEquipmentInfosCountNotIn(getStudiesNetworkUuids());
+        Long orphanTombstonedEquipmentsCount = equipmentInfosService.getTombstonedEquipmentInfosCountNotIn(getStudiesNetworkUuids());
+        return orphanEquipmentsCount + orphanTombstonedEquipmentsCount;
+    }
+
     public String getStudyCaseName(UUID studyUuid) {
         Objects.requireNonNull(studyUuid);
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));

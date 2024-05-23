@@ -119,6 +119,21 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudies());
     }
 
+    @GetMapping(value = "/orphan_indexed_equipments_count")
+    @Operation(summary = "Get all orphan indexed equipments count")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The count of orphan indexed equipments")})
+    public ResponseEntity<Long> getOrphanIndexedEquipmentsCount() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllOrphanIndexedEquipmentsCount());
+    }
+
+    @DeleteMapping(value = "/orphan_indexed_equipments")
+    @Operation(summary = "Delete all orphan indexed equipments")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All orphan indexed equipments have been deleted")})
+    public ResponseEntity<Void> deleteOrphanIndexedEquipments() {
+        studyService.deleteAllOrphanIndexedEquipments();
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/case/name")
     @Operation(summary = "Get study case name")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study case name"),
