@@ -23,6 +23,7 @@ import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -113,6 +114,7 @@ public class EquipmentInfosService {
         return equipmentInfosRepository.count();
     }
 
+    @Transactional
     public void deleteAllByNetworkUuidNotIn(List<UUID> networkUuids) {
         long startTime = System.currentTimeMillis();
 
@@ -143,6 +145,7 @@ public class EquipmentInfosService {
         LOGGER.info("Execution time of deleteByNetworkUuidNotIn: {} ms", executionTime);
     }
 
+    @Transactional
     public void deleteAllTombstonedEquipmentsByNetworkUuidNotIn(List<UUID> networkUuids) {
         long startTime = System.currentTimeMillis();
 
