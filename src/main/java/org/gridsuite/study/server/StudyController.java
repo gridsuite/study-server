@@ -1340,8 +1340,10 @@ public class StudyController {
     @GetMapping(value = "/loadflow-default-provider")
     @Operation(summary = "get load flow default provider")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "the load flow default provider has been found"))
-    public ResponseEntity<String> getDefaultLoadflowProvider() {
-        return ResponseEntity.ok().body(studyService.getDefaultLoadflowProvider());
+    public ResponseEntity<String> getDefaultLoadflowProvider(
+        @RequestHeader(name = HEADER_USER_ID, required = false) String userId // not required to allow to query the system default provider without a user
+    ) {
+        return ResponseEntity.ok().body(studyService.getDefaultLoadflowProvider(userId));
     }
 
     @GetMapping(value = "/security-analysis-default-provider")

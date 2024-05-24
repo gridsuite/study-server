@@ -802,7 +802,19 @@ public class StudyService {
         return userProfileIssue;
     }
 
-    public String getDefaultLoadflowProvider() {
+    public String getDefaultLoadflowProvider(String userId) {
+        if (userId != null) {
+            UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId).orElse(null);
+            if (userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
+                try {
+                    return loadflowService.getLoadFlowParameters(userProfileInfos.getLoadFlowParameterId()).getProvider();
+                } catch (Exception e) {
+                    LOGGER.error(String.format("Could not get loadflow parameters with id '%s' from user/profile '%s/%s'. Using default provider",
+                            userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
+                    // in case of read error (ex: wrong/dangling uuid in the profile), move on with default provider below
+                }
+            }
+        }
         return loadflowService.getLoadFlowDefaultProvider();
     }
 
@@ -1077,6 +1089,11 @@ public class StudyService {
             // reset case, with existing profile, having default LF params
             try {
                 UUID loadFlowParametersFromProfileUuid = loadflowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
+                if (existingLoadFlowParametersUuid != null) {
+                    //For a reset to defaultValues we need to keep the provider if it exists because it's updated separately
+                    String keptProvider = loadflowService.getLoadFlowParameters(existingLoadFlowParametersUuid).getProvider();
+                    loadflowService.updateLoadFlowProvider(loadFlowParametersFromProfileUuid, keptProvider);
+                }
                 studyEntity.setLoadFlowParametersUuid(loadFlowParametersFromProfileUuid);
                 removeLoadFlowParameters(existingLoadFlowParametersUuid);
                 return userProfileIssue;

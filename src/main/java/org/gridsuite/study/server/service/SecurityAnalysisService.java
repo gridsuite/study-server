@@ -397,6 +397,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         }
     }
 
+    @Override
     public List<String> getEnumValues(String enumName, UUID resultUuid) {
         return getEnumValues(enumName, resultUuid, SECURITY_ANALYSIS_API_VERSION, securityAnalysisServerBaseUri, SECURITY_ANALYSIS_NOT_FOUND, restTemplate);
     }
