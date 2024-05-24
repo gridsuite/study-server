@@ -8,8 +8,7 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.commons.reporter.TypedValue;
+import com.powsybl.commons.report.*;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
@@ -76,6 +75,7 @@ import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_OPERATION;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
+import static org.gridsuite.study.server.utils.StudyUtils.insertReportNode;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -802,7 +802,19 @@ public class StudyService {
         return userProfileIssue;
     }
 
-    public String getDefaultLoadflowProvider() {
+    public String getDefaultLoadflowProvider(String userId) {
+        if (userId != null) {
+            UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId).orElse(null);
+            if (userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
+                try {
+                    return loadflowService.getLoadFlowParameters(userProfileInfos.getLoadFlowParameterId()).getProvider();
+                } catch (Exception e) {
+                    LOGGER.error(String.format("Could not get loadflow parameters with id '%s' from user/profile '%s/%s'. Using default provider",
+                            userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
+                    // in case of read error (ex: wrong/dangling uuid in the profile), move on with default provider below
+                }
+            }
+        }
         return loadflowService.getLoadFlowDefaultProvider();
     }
 
@@ -1077,6 +1089,11 @@ public class StudyService {
             // reset case, with existing profile, having default LF params
             try {
                 UUID loadFlowParametersFromProfileUuid = loadflowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
+                if (existingLoadFlowParametersUuid != null) {
+                    //For a reset to defaultValues we need to keep the provider if it exists because it's updated separately
+                    String keptProvider = loadflowService.getLoadFlowParameters(existingLoadFlowParametersUuid).getProvider();
+                    loadflowService.updateLoadFlowProvider(loadFlowParametersFromProfileUuid, keptProvider);
+                }
                 studyEntity.setLoadFlowParametersUuid(loadFlowParametersFromProfileUuid);
                 removeLoadFlowParameters(existingLoadFlowParametersUuid);
                 return userProfileIssue;
@@ -1590,12 +1607,12 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public ReporterModel getSubReport(String subReportId, Set<String> severityLevels) {
+    public ReportNode getSubReport(String subReportId, Set<String> severityLevels) {
         return reportService.getSubReport(UUID.fromString(subReportId), severityLevels);
     }
 
     @Transactional(readOnly = true)
-    public List<ReporterModel> getNodeReport(UUID nodeUuid, String reportId, ReportType reportType, Set<String> severityLevels) {
+    public List<ReportNode> getNodeReport(UUID nodeUuid, String reportId, ReportType reportType, Set<String> severityLevels) {
         return getSubReporters(nodeUuid, UUID.fromString(reportId), nodeUuid + "@" + reportType.reportKey, ReportNameMatchingType.EXACT_MATCHING, severityLevels);
     }
 
@@ -1614,45 +1631,46 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReporterModel> getParentNodesReport(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType, Set<String> severityLevels) {
+    public List<ReportNode> getParentNodesReport(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType, Set<String> severityLevels) {
         Pair<String, ReportNameMatchingType> filtersParameters = getFiltersParamaters(nodeUuid, nodeOnlyReport, reportType);
         AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
-        List<ReporterModel> subReporters = getSubReporters(nodeUuid, nodeInfos.getReportUuid(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
+        List<ReportNode> subReporters = getSubReporters(nodeUuid, nodeInfos.getReportUuid(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
         if (subReporters.isEmpty()) {
             return subReporters;
         } else if (nodeOnlyReport) {
             return List.of(subReporters.get(subReporters.size() - 1));
         } else {
-            if (subReporters.get(0).getTaskKey().equals(ROOT_NODE_NAME)) {
+            if (subReporters.get(0).getMessageKey().equals(ROOT_NODE_NAME)) {
                 return subReporters;
             }
-            Optional<UUID> parentUuid = networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporters.get(0).getTaskKey()));
+            Optional<UUID> parentUuid = networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporters.get(0).getMessageKey()));
             if (parentUuid.isEmpty()) {
                 return subReporters;
             }
-            List<ReporterModel> parentReporters = self.getParentNodesReport(parentUuid.get(), false, reportType, severityLevels);
+            List<ReportNode> parentReporters = self.getParentNodesReport(parentUuid.get(), false, reportType, severityLevels);
             return Stream.concat(parentReporters.stream(), subReporters.stream()).collect(Collectors.toList());
         }
     }
 
-    private List<ReporterModel> getSubReporters(UUID nodeUuid, UUID reportUuid, String reportNameFilter, ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels) {
-        ReporterModel reporter = reportService.getReport(reportUuid, nodeUuid.toString(), reportNameFilter, reportNameMatchingType, severityLevels);
-        Map<String, List<ReporterModel>> subReportersByNode = new LinkedHashMap<>();
-        reporter.getSubReporters().forEach(subReporter -> subReportersByNode.putIfAbsent(getNodeIdFromReportKey(subReporter), new ArrayList<>()));
-        reporter.getSubReporters().forEach(subReporter ->
-            subReportersByNode.get(getNodeIdFromReportKey(subReporter)).addAll(subReporter.getSubReporters())
-        );
+    private List<ReportNode> getSubReporters(UUID nodeUuid, UUID reportUuid, String reportNameFilter,
+            ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels) {
+        ReportNode reporter = reportService.getReport(reportUuid, nodeUuid.toString(), reportNameFilter,
+                reportNameMatchingType, severityLevels);
+        Map<String, List<ReportNode>> subReportersByNode = new LinkedHashMap<>();
+        reporter.getChildren().forEach(
+                subReporter -> subReportersByNode.putIfAbsent(getNodeIdFromReportKey(subReporter), new ArrayList<>()));
+        reporter.getChildren().forEach(subReporter -> subReportersByNode.get(getNodeIdFromReportKey(subReporter))
+                .addAll(subReporter.getChildren()));
         return subReportersByNode.keySet().stream().map(nodeId -> {
-            // For a node report, pass the reportId to the Front as taskValues, to allow direct access
-            Map<String, TypedValue> taskValues = Map.of("id", new TypedValue(reportUuid.toString(), "ID"));
-            ReporterModel newSubReporter = new ReporterModel(nodeId, nodeId, taskValues);
-            subReportersByNode.get(nodeId).forEach(newSubReporter::addSubReporter);
+            ReportNode newSubReporter = ReportNode.newRootReportNode().withMessageTemplate(nodeId, nodeId)
+                    .withUntypedValue("id", reportUuid.toString()).build();
+            subReportersByNode.get(nodeId).forEach(child -> insertReportNode(newSubReporter, child));
             return newSubReporter;
         }).collect(Collectors.toList());
     }
 
-    private String getNodeIdFromReportKey(ReporterModel reporter) {
-        return Arrays.stream(reporter.getTaskKey().split("@")).findFirst().orElseThrow();
+    private String getNodeIdFromReportKey(ReportNode reporter) {
+        return Arrays.stream(reporter.getMessageKey().split("@")).findFirst().orElseThrow();
     }
 
     private void updateNode(UUID studyUuid, UUID nodeUuid, Optional<NetworkModificationResult> networkModificationResult) {
