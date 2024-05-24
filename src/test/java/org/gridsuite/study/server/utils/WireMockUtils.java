@@ -13,7 +13,6 @@ import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
-import lombok.NonNull;
 
 import java.util.List;
 import java.util.Map;
@@ -88,15 +87,16 @@ public class WireMockUtils {
                    QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType)));
     }
 
-    public UUID stubNetworkElementsIdsGet(String networkUuid, String elementType, String responseBody) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements-ids"))
-                .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
+    public UUID stubNetworkElementsIdsPost(String networkUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements-ids"))
                 .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
 
-    public void verifyNetworkElementsIdsGet(UUID stubUuid, String networkUuid, String elementType) {
-        verifyGetRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements-ids", Map.of(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType)));
+    public void verifyNetworkElementsIdsPost(UUID stubUuid, String networkUuid, String requestBody) {
+        verifyPostRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements-ids", false,
+                Map.of(),
+                requestBody);
     }
 
     public UUID stubNetworkEquipmentsInfosGet(String networkUuid, String equipmentPath, String responseBody) {
@@ -107,17 +107,6 @@ public class WireMockUtils {
 
     public void verifyNetworkEquipmentsInfosGet(UUID stubUuid, String networkUuid, String equipmentPath) {
         verifyGetRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + equipmentPath, Map.of());
-    }
-
-    public UUID stubNetworkEquipmentsInfosGet(String networkUuid, String infoTypePath, String equipmentType, String responseBody) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + infoTypePath))
-                .withQueryParam(QUERY_PARAM_EQUIPMENT_TYPE, WireMock.equalTo(equipmentType))
-                .willReturn(WireMock.ok().withBody(responseBody))
-        ).getId();
-    }
-
-    public void verifyNetworkEquipmentsInfosGet(UUID stubUuid, String networkUuid, String infoTypePath, String equipmentType) {
-        verifyGetRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + infoTypePath, Map.of(QUERY_PARAM_EQUIPMENT_TYPE, WireMock.equalTo(equipmentType)));
     }
 
     public UUID stubNetworkEquipmentInfosGet(String networkUuid, String infoTypePath, String equipmentId, String responseBody) {
@@ -351,12 +340,6 @@ public class WireMockUtils {
 
     public void verifyDisableCaseExpiration(UUID stubUuid, String caseUuid) {
         verifyPutRequest(stubUuid, "/v1/cases/" + caseUuid + "/disableExpiration", false, Map.of(), null);
-    }
-
-    public void verifyActuatorHealth(@NonNull final String serviceName, final UUID stubUuid, final int nbServer) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/" + serviceName + "/actuator/health"));
-        wireMock.verify(nbServer, requestBuilder);
-        removeRequestForStub(stubUuid, nbServer);
     }
 
     public UUID stubCountriesGet(String networkUuid, String responseBody) {
