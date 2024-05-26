@@ -377,6 +377,7 @@ public class LoadFlowService extends AbstractComputationService {
         return studyEntity.getLoadFlowParametersUuid();
     }
 
+    @Override
     public List<String> getEnumValues(String enumName, UUID resultUuid) {
         return getEnumValues(enumName, resultUuid, LOADFLOW_API_VERSION, loadFlowServerBaseUri, LOADFLOW_NOT_FOUND, restTemplate);
     }

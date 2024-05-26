@@ -18,8 +18,11 @@ import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.InfoTypeParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.HttpEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -158,20 +161,19 @@ public class NetworkMapService {
         return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
     }
 
-    public String getElementsIds(UUID networkUuid, String variantId, List<String> substationsIds, String elementType) {
+    public String getElementsIds(UUID networkUuid, String variantId, String equipmentInfos) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements-ids";
 
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromPath(path);
-        if (substationsIds != null) {
-            builder = builder.queryParam(QUERY_PARAM_SUBSTATIONS_IDS, substationsIds);
-        }
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         String url = builder.buildAndExpand(networkUuid).toUriString();
-        return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(equipmentInfos, headers);
+        return restTemplate.postForObject(networkMapServerBaseUri + url, httpEntity, String.class);
     }
 
     public String getEquipmentMapData(UUID networkUuid, String variantId, String equipmentPath, String equipmentId) {

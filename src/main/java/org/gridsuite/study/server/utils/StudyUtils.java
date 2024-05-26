@@ -10,6 +10,12 @@ package org.gridsuite.study.server.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.commons.report.ReportNode;
+import com.powsybl.commons.report.ReportNodeAdder;
+import com.powsybl.commons.report.TypedValue;
+
+import java.util.Map;
+
 import org.gridsuite.study.server.StudyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +63,17 @@ public final class StudyUtils {
         builder.queryParam("page", pageable.getPageNumber()).queryParam("size", pageable.getPageSize());
         for (Sort.Order order : pageable.getSort()) {
             builder.queryParam("sort", order.getProperty() + "," + order.getDirection());
+        }
+    }
+
+    public static void insertReportNode(ReportNode parent, ReportNode child) {
+        ReportNodeAdder adder = parent.newReportNode().withMessageTemplate(child.getMessageKey(), child.getMessageTemplate());
+        for (Map.Entry<String, TypedValue> valueEntry : child.getValues().entrySet()) {
+            adder.withUntypedValue(valueEntry.getKey(), valueEntry.getValue().toString());
+        }
+        ReportNode insertedChild = adder.add();
+        if (child.getChildren() != null) {
+            child.getChildren().forEach(grandChild -> insertReportNode(insertedChild, grandChild));
         }
     }
 }
