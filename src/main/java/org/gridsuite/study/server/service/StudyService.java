@@ -244,16 +244,8 @@ public class StudyService {
                 .toList();
     }
 
-    public void deleteAllOrphanIndexedEquipments() {
-        var studiesNetworkUuids = getStudiesNetworkUuids();
-        equipmentInfosService.deleteAllByNetworkUuidNotIn(studiesNetworkUuids);
-        equipmentInfosService.deleteAllTombstonedEquipmentsByNetworkUuidNotIn(studiesNetworkUuids);
-    }
-
-    public Long getAllOrphanIndexedEquipmentsCount() {
-        Long orphanEquipmentsCount = equipmentInfosService.getEquipmentInfosCountNotIn(getStudiesNetworkUuids());
-        Long orphanTombstonedEquipmentsCount = equipmentInfosService.getTombstonedEquipmentInfosCountNotIn(getStudiesNetworkUuids());
-        return orphanEquipmentsCount + orphanTombstonedEquipmentsCount;
+    public List<UUID> getAllOrphanIndexedEquipmentsNetworkUuids() {
+        return equipmentInfosService.getOrphanEquipmentInfosNetworkUuids(getStudiesNetworkUuids());
     }
 
     public String getStudyCaseName(UUID studyUuid) {

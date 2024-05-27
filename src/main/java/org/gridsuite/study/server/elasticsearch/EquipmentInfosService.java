@@ -7,20 +7,22 @@
 package org.gridsuite.study.server.elasticsearch;
 
 import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.aggregations.*;
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 
 import com.powsybl.iidm.network.VariantManagerConstants;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.elasticsearch.client.elc.NativeQuery;
-import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
-import org.springframework.data.elasticsearch.client.elc.Queries;
+import org.springframework.data.elasticsearch.client.elc.*;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,7 +48,7 @@ public class EquipmentInfosService {
 
     private static final int PAGE_MAX_SIZE = 400;
 
-    private static final int DELETE_BATCH_SIZE = 10000;
+    private static final int AGGREGATION_BATCH_SIZE = 1000;
 
     public static final Map<String, Integer> EQUIPMENT_TYPE_SCORES = Map.ofEntries(
             entry("SUBSTATION", 15),
@@ -114,74 +116,81 @@ public class EquipmentInfosService {
         return equipmentInfosRepository.count();
     }
 
-    @Transactional
-    public void deleteAllByNetworkUuidNotIn(List<UUID> networkUuids) {
-        long startTime = System.currentTimeMillis();
+    private CompositeAggregation buildCompositeAggregation(String field, Map<String, FieldValue> afterKey) {
+        List<Map<String, CompositeAggregationSource>> sources = List.of(
+                Map.of(field, CompositeAggregationSource.of(s -> s.terms(t -> t.field(field + ".keyword")))
+                )
+        );
 
-        try (Stream<EquipmentInfos> equipmentInfosStream = equipmentInfosRepository.findByNetworkUuidNotIn(networkUuids)) {
-            List<EquipmentInfos> equipmentInfosBatch = new ArrayList<>(DELETE_BATCH_SIZE);
+        CompositeAggregation.Builder compositeAggregationBuilder = new CompositeAggregation.Builder()
+                .size(AGGREGATION_BATCH_SIZE)
+                .sources(sources);
 
-            equipmentInfosStream.parallel().forEach(equipmentInfos -> {
-                synchronized (equipmentInfosBatch) {
-                    equipmentInfosBatch.add(equipmentInfos);
+        if (afterKey != null) {
+            compositeAggregationBuilder.after(afterKey);
+        }
 
-                    if (equipmentInfosBatch.size() >= DELETE_BATCH_SIZE) {
-                        equipmentInfosRepository.deleteAll(equipmentInfosBatch);
-                        equipmentInfosBatch.clear();
+        return compositeAggregationBuilder.build();
+    }
+
+    private NativeQuery buildNativeQuery(String compositeName, CompositeAggregation compositeAggregation) {
+        Aggregation aggregation = Aggregation.of(a -> a.composite(compositeAggregation));
+
+        return new NativeQueryBuilder()
+                .withAggregation(compositeName, aggregation)
+                .build();
+    }
+
+    private Pair<List<Map<String, FieldValue>>, Map<String, FieldValue>> processSearchResults(SearchHits<EquipmentInfos> searchHits, String compositeName) {
+        ElasticsearchAggregations aggregations = (ElasticsearchAggregations) searchHits.getAggregations();
+
+        List<Map<String, FieldValue>> results = new ArrayList<>();
+        if (aggregations != null) {
+            Map<String, ElasticsearchAggregation> aggregationList = aggregations.aggregationsAsMap();
+            if (!aggregationList.isEmpty()) {
+                Aggregate aggregate = aggregationList.get(compositeName).aggregation().getAggregate();
+                if (aggregate.isComposite() && aggregate.composite() != null) {
+                    for (CompositeBucket bucket : aggregate.composite().buckets().array()) {
+                        Map<String, FieldValue> key = bucket.key();
+                        results.add(key);
                     }
-                }
-            });
-
-            // delete any remaining equipment infos in the batch
-            synchronized (equipmentInfosBatch) {
-                if (!equipmentInfosBatch.isEmpty()) {
-                    equipmentInfosRepository.deleteAll(equipmentInfosBatch);
+                    return Pair.of(results, aggregate.composite().afterKey());
                 }
             }
         }
-
-        long endTime = System.currentTimeMillis();
-        long executionTime = endTime - startTime;
-        LOGGER.info("Execution time of deleteByNetworkUuidNotIn: {} ms", executionTime);
+        return Pair.of(results, null);
     }
 
-    @Transactional
-    public void deleteAllTombstonedEquipmentsByNetworkUuidNotIn(List<UUID> networkUuids) {
-        long startTime = System.currentTimeMillis();
+    public List<UUID> getEquipmentInfosDistinctNetworkUuids() {
+        List<UUID> networkUuids = new ArrayList<>();
+        Map<String, FieldValue> afterKey = null;
+        String compositeName = "composite_agg";
+        String networkUuidField = "networkUuid";
 
-        try (Stream<TombstonedEquipmentInfos> tombstonedEquipmentInfosStream = tombstonedEquipmentInfosRepository.findByNetworkUuidNotIn(networkUuids)) {
-            List<TombstonedEquipmentInfos> tombstonedEquipmentInfosBatch = new ArrayList<>(DELETE_BATCH_SIZE);
+        do {
+            CompositeAggregation compositeAggregation = buildCompositeAggregation(networkUuidField, afterKey);
+            NativeQuery query = buildNativeQuery(compositeName, compositeAggregation);
 
-            tombstonedEquipmentInfosStream.parallel().forEach(tombstonedEquipmentInfos -> {
-                synchronized (tombstonedEquipmentInfosBatch) {
-                    tombstonedEquipmentInfosBatch.add(tombstonedEquipmentInfos);
+            SearchHits<EquipmentInfos> searchHits = elasticsearchOperations.search(query, EquipmentInfos.class);
+            Pair<List<Map<String, FieldValue>>, Map<String, FieldValue>> searchResults = processSearchResults(searchHits, compositeName);
 
-                    if (tombstonedEquipmentInfosBatch.size() >= DELETE_BATCH_SIZE) {
-                        tombstonedEquipmentInfosRepository.deleteAll(tombstonedEquipmentInfosBatch);
-                        tombstonedEquipmentInfosBatch.clear();
-                    }
-                }
-            });
+            searchResults.getLeft().stream()
+                    .map(result -> result.get(networkUuidField))
+                    .filter(Objects::nonNull)
+                    .map(FieldValue::stringValue)
+                    .map(UUID::fromString)
+                    .forEach(networkUuids::add);
 
-            // delete any remaining tombstoned equipment infos in the batch
-            synchronized (tombstonedEquipmentInfosBatch) {
-                if (!tombstonedEquipmentInfosBatch.isEmpty()) {
-                    tombstonedEquipmentInfosRepository.deleteAll(tombstonedEquipmentInfosBatch);
-                }
-            }
-        }
+            afterKey = searchResults.getRight();
+        } while (afterKey != null && !afterKey.isEmpty());
 
-        long endTime = System.currentTimeMillis();
-        long executionTime = endTime - startTime;
-        LOGGER.info("Execution time of deleteAllTombstonedEquipmentsByNetworkUuidNotIn: {} ms", executionTime);
+        return networkUuids;
     }
 
-    public long getEquipmentInfosCountNotIn(List<UUID> networkUuids) {
-        return equipmentInfosRepository.countByNetworkUuidNotIn(networkUuids);
-    }
-
-    public long getTombstonedEquipmentInfosCountNotIn(List<UUID> networkUuids) {
-        return tombstonedEquipmentInfosRepository.countByNetworkUuidNotIn(networkUuids);
+    public List<UUID> getOrphanEquipmentInfosNetworkUuids(List<UUID> networkUuidsInDatabase) {
+        List<UUID> networkUuids = getEquipmentInfosDistinctNetworkUuids();
+        networkUuids.removeAll(networkUuidsInDatabase);
+        return networkUuids;
     }
 
     public long getTombstonedEquipmentInfosCount() {
