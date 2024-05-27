@@ -26,7 +26,6 @@ import org.springframework.web.bind.annotation.*;
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
  */
-@SuppressWarnings("checkstyle:RegexpSingleline")
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/supervision")
 @Tag(name = "Study server - Supervision")
