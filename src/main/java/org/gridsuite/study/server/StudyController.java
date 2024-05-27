@@ -7,7 +7,7 @@
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.powsybl.commons.reporter.ReporterModel;
+import com.powsybl.commons.report.ReportNode;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -423,17 +423,16 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsGraphics(networkStoreService.getNetworkUuid(studyUuid), nodeUuid, substationsIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/equipments-ids")
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/equipments-ids")
     @Operation(summary = "Get equipment ids ")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of equipment ids")})
     public ResponseEntity<String> getNetworkElementsIds(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Substations id") @RequestParam(name = "substationsIds", required = false) List<String> substationsIds,
-            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
-            @Parameter(description = "equipment type") @RequestParam(name = "equipmentType") String equipmentType) {
+            @RequestBody String equipmentInfos,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode, equipmentType));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsIds(studyUuid, nodeUuid, inUpstreamBuiltParentNode, equipmentInfos));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/substations/{substationId}")
@@ -1030,7 +1029,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get node report with its parent nodes")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<List<ReporterModel>> getParentNodesReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<List<ReportNode>> getParentNodesReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                     @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                     @Parameter(description = "Node only report") @RequestParam(value = "nodeOnlyReport", required = false, defaultValue = "true") boolean nodeOnlyReport,
                                                                     @Parameter(description = "The report Type") @RequestParam(name = "reportType") StudyService.ReportType reportType,
@@ -1042,7 +1041,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get node report")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<List<ReporterModel>> getNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<List<ReportNode>> getNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @Parameter(description = "The report Id") @RequestParam(name = "reportId", required = false) String reportId,
                                                              @Parameter(description = "The report Type") @RequestParam(name = "reportType") StudyService.ReportType reportType,
@@ -1054,7 +1053,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/subreport", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get node sub-report")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node subreport"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<ReporterModel> getSubReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<ReportNode> getSubReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                       @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                       @Parameter(description = "The report Id") @RequestParam(name = "reportId") String reportId,
                                                       @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
@@ -1340,8 +1339,10 @@ public class StudyController {
     @GetMapping(value = "/loadflow-default-provider")
     @Operation(summary = "get load flow default provider")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "the load flow default provider has been found"))
-    public ResponseEntity<String> getDefaultLoadflowProvider() {
-        return ResponseEntity.ok().body(studyService.getDefaultLoadflowProvider());
+    public ResponseEntity<String> getDefaultLoadflowProvider(
+        @RequestHeader(name = HEADER_USER_ID, required = false) String userId // not required to allow to query the system default provider without a user
+    ) {
+        return ResponseEntity.ok().body(studyService.getDefaultLoadflowProvider(userId));
     }
 
     @GetMapping(value = "/security-analysis-default-provider")
