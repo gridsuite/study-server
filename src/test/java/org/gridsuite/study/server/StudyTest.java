@@ -2627,7 +2627,7 @@ public class StudyTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        List<UUID> orphanIndexedEquipments = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {});
+        List<UUID> orphanIndexedEquipments = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
         assertEquals(ORPHAN_NETWORK_UUIDS, orphanIndexedEquipments);
 
         // test delete orphan indexed equipments
