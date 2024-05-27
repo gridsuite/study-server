@@ -204,6 +204,14 @@ public class EquipmentInfosServiceTests {
         assertEquals(2, orphanNetworkUuids.size());
         assertTrue(orphanNetworkUuids.contains(orphanNetworkUuid));
         assertTrue(orphanNetworkUuids.contains(orphanNetworkUuid2));
+
+        // delete the orphan equipment infos
+        equipmentInfosService.deleteAllByNetworkUuid(orphanNetworkUuid);
+        equipmentInfosService.deleteAllByNetworkUuid(orphanNetworkUuid2);
+
+        // check that the orphan network uuids are not returned anymore
+        orphanNetworkUuids = equipmentInfosService.getOrphanEquipmentInfosNetworkUuids(List.of(NETWORK_UUID));
+        assertEquals(0, orphanNetworkUuids.size());
     }
 
     @Test
