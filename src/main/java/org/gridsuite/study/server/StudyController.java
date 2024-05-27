@@ -564,7 +564,7 @@ public class StudyController {
             studyService.assertCanModifyNode(studyUuid, originNodeUuid);
         }
         switch (action) {
-            case COPY:
+            case COPY, INSERT:
                 studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId);
                 break;
             case MOVE:
@@ -1689,7 +1689,7 @@ public class StudyController {
     }
 
     enum UpdateModificationAction {
-        MOVE, COPY
+        MOVE, COPY, INSERT
     }
 
     static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
