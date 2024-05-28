@@ -565,7 +565,7 @@ public class StudyController {
         }
         switch (action) {
             case COPY, INSERT:
-                studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId);
+                studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId, action.name());
                 break;
             case MOVE:
                 studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId);

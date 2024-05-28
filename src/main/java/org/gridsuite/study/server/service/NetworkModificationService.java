@@ -312,9 +312,9 @@ public class NetworkModificationService {
                 }).getBody();
     }
 
-    public Optional<NetworkModificationResult> duplicateModification(List<UUID> modificationUuidList, UUID networkUuid, NodeModificationInfos nodeInfos) {
+    public Optional<NetworkModificationResult> duplicateModification(List<UUID> modificationUuidList, UUID networkUuid, NodeModificationInfos nodeInfos, String action) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
-            .queryParam("action", "COPY")
+            .queryParam("action", action)
             .queryParam(NETWORK_UUID, networkUuid)
             .queryParam(REPORT_UUID, nodeInfos.getReportUuid())
             .queryParam(REPORTER_ID, nodeInfos.getId())
