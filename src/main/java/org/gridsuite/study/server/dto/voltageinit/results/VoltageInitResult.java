@@ -10,7 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -25,7 +25,7 @@ public class VoltageInitResult {
 
     private UUID resultUuid;
 
-    private ZonedDateTime writeTimeStamp;
+    private OffsetDateTime writeTimeStamp;
 
     private Map<String, String> indicators;
 
