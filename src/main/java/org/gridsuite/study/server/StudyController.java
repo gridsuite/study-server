@@ -1115,10 +1115,9 @@ public class StudyController {
     public ResponseEntity<Void> deleteNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                            @Parameter(description = "Network modification UUIDs") @RequestParam(name = "uuids", required = false) List<UUID> networkModificationUuids,
-                                                           @Parameter(description = "Delete only stashed modifications") @RequestParam(name = "onlyStashed", required = false, defaultValue = "false") Boolean onlyStashed,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, onlyStashed, userId);
+        studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
 
         return ResponseEntity.ok().build();
     }
