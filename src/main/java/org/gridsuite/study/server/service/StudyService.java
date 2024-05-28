@@ -238,6 +238,16 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
+    public List<UUID> getStudiesNetworkUuids() {
+        return studyRepository.findAll().stream()
+                .map(StudyEntity::getNetworkUuid)
+                .toList();
+    }
+
+    public List<UUID> getAllOrphanIndexedEquipmentsNetworkUuids() {
+        return equipmentInfosService.getOrphanEquipmentInfosNetworkUuids(getStudiesNetworkUuids());
+    }
+
     public String getStudyCaseName(UUID studyUuid) {
         Objects.requireNonNull(studyUuid);
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
