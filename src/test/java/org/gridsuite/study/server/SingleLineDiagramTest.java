@@ -257,6 +257,13 @@ public class SingleLineDiagramTest {
         server.setDispatcher(dispatcher);
     }
 
+    private Map<String, Object> createRequestBody(String elementType, List<String> substationsIds) {
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("elementType", elementType);
+        requestBody.put("substationsIds", substationsIds);
+        return requestBody;
+    }
+
     @Test
     public void testDiagramsAndGraphics() throws Exception {
         MvcResult mvcResult;
@@ -379,7 +386,7 @@ public class SingleLineDiagramTest {
             .andExpect(status().isNotFound());
 
         //get voltage levels
-        mvcResult = getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "MAP", List.of(), TestUtils.resourceToString("/network-voltage-levels-infos.json"));
+        mvcResult = getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("VOLTAGE_LEVEL", List.of())), TestUtils.resourceToString("/network-voltage-levels-infos.json"));
         List<VoltageLevelInfos> vliListResponse = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<List<VoltageLevelInfos>>() {
         });
         assertThat(vliListResponse, new MatcherJson<>(mapper, List.of(
@@ -421,50 +428,50 @@ public class SingleLineDiagramTest {
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substations?networkUuid=%s&variantId=%s&substationId=BBE1AA&substationId=BBE2AA", NETWORK_UUID_STRING, VARIANT_ID)));
 
         //get the lines map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LINE", "MAP", List.of(), "[]");
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LINE", "MAP", List.of("BBE1AA"), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("LINE", List.of())), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("LINE", List.of("BBE1AA"))), "[]");
 
         //get the substation map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", "MAP", List.of(), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("SUBSTATION", List.of())), "[]");
 
         //get the 2 windings transformers map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "TWO_WINDINGS_TRANSFORMER", "MAP", List.of(), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("TWO_WINDINGS_TRANSFORMER", List.of())), "[]");
 
         //get the 3 windings transformers map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "THREE_WINDINGS_TRANSFORMER", "MAP", List.of(), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("THREE_WINDINGS_TRANSFORMER", List.of())), "[]");
 
         //get the generators map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "GENERATOR", "MAP", List.of(), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("GENERATOR", List.of())), "[]");
 
         //get the batteries map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "BATTERY", "MAP", List.of(), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("BATTERY", List.of())), "[]");
 
         //get the dangling lines map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "DANGLING_LINE", "MAP", List.of(), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("DANGLING_LINE", List.of())), "[]");
 
         //get the hvdc lines map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", "MAP", List.of(), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("HVDC_LINE", List.of())), "[]");
 
         //get the lcc converter stations map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LCC_CONVERTER_STATION", "MAP", List.of(), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("LCC_CONVERTER_STATION", List.of())), "[]");
 
         //get the vsc converter stations map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VSC_CONVERTER_STATION", "MAP", List.of(), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("VSC_CONVERTER_STATION", List.of())), "[]");
 
         //get the loads map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LOAD", "MAP", List.of(), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("LOAD", List.of())), "[]");
 
         //get the shunt compensators map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "SHUNT_COMPENSATOR", "MAP", List.of(), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("SHUNT_COMPENSATOR", List.of())), "[]");
 
         //get the static var compensators map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "STATIC_VAR_COMPENSATOR", "MAP", List.of(), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("STATIC_VAR_COMPENSATOR", List.of())), "[]");
 
         //get the voltage levels map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "MAP", List.of(), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("VOLTAGE_LEVEL", List.of())), "[]");
 
         //get all map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "all", List.of(), "[]");
+        getNetworkElementsInfos1(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("all", List.of())), "[]");
 
         // get the svg component libraries
         mockMvc.perform(get("/v1/svg-component-libraries")).andExpectAll(
@@ -586,19 +593,18 @@ public class SingleLineDiagramTest {
     }
 
     @SneakyThrows
-    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNodeUuid, String elementType, String infoType, List<String> substationsIds, String responseBody) {
-        UUID stubUuid = wireMockUtils.stubNetworkElementsInfosGet(NETWORK_UUID_STRING, elementType, infoType, responseBody);
-        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
-                .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
+    private MvcResult getNetworkElementsInfos1(UUID studyUuid, UUID rootNodeUuid, String infoType, String requestBody, String responseBody) {
+        UUID stubUuid = wireMockUtils.stubNetworkElementsInfosPost(NETWORK_UUID_STRING, infoType, responseBody);
+
+        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
                 .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
-                .queryParam(String.format(QUERY_FORMAT_OPTIONAL_PARAMS, QUERY_PARAM_DC_POWERFACTOR), Double.toString(LoadFlowParameters.DEFAULT_DC_POWER_FACTOR));
-        if (!substationsIds.isEmpty()) {
-            mockHttpServletRequestBuilder.queryParam(QUERY_PARAM_SUBSTATIONS_IDS, substationsIds.stream().toArray(String[]::new));
-        }
+                .queryParam(String.format(QUERY_FORMAT_OPTIONAL_PARAMS, QUERY_PARAM_DC_POWERFACTOR), Double.toString(LoadFlowParameters.DEFAULT_DC_POWER_FACTOR))
+                .content(requestBody);
+
         MvcResult mvcResult = mockMvc.perform(mockHttpServletRequestBuilder)
                 .andExpect(status().isOk())
                 .andReturn();
-        wireMockUtils.verifyNetworkElementsInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType);
+        wireMockUtils.verifyNetworkElementsInfosPost(stubUuid, NETWORK_UUID_STRING, infoType, requestBody);
 
         return mvcResult;
     }

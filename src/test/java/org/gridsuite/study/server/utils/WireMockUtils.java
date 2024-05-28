@@ -73,18 +73,17 @@ public class WireMockUtils {
                    QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType)));
     }
 
-    public UUID stubNetworkElementsInfosGet(String networkUuid, String elementType, String infoType, String responseBody) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements"))
-                .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
+    public UUID stubNetworkElementsInfosPost(String networkUuid, String infoType, String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements"))
                 .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
-            .willReturn(WireMock.ok().withBody(responseBody))
+                .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
 
-    public void verifyNetworkElementsInfosGet(UUID stubUuid, String networkUuid, String elementType, String infoType) {
-        verifyGetRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements",
-            Map.of(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType),
-                   QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType)));
+    public void verifyNetworkElementsInfosPost(UUID stubUuid, String networkUuid, String infoType, String requestBody) {
+        verifyPostRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements", false,
+                Map.of(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType)),
+                        requestBody);
     }
 
     public UUID stubNetworkElementsIdsPost(String networkUuid, String responseBody) {
