@@ -194,6 +194,10 @@ public class EquipmentInfosServiceTests {
         UUID orphanNetworkUuid2 = UUID.randomUUID();
         EquipmentInfos orphanVlInfos = EquipmentInfos.builder().networkUuid(orphanNetworkUuid2).id("id").name("name").type("VOLTAGE_LEVEL").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
 
+        // index an equipment infos for the existing network
+        EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").name("name2").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
+
+        equipmentInfosService.addEquipmentInfos(loadInfos);
         equipmentInfosService.addEquipmentInfos(orphanLoadInfos);
         equipmentInfosService.addEquipmentInfos(orphanVlInfos);
 

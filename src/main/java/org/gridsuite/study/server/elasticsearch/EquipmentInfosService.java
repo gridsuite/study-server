@@ -14,6 +14,7 @@ import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.gridsuite.study.server.dto.BasicEquipmentInfos;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.slf4j.Logger;
@@ -46,7 +47,7 @@ public class EquipmentInfosService {
 
     private static final int PAGE_MAX_SIZE = 400;
 
-    private static final int AGGREGATION_BATCH_SIZE = 1000;
+    private static final int COMPOSITE_AGGREGATION_BATCH_SIZE = 1000;
 
     public static final Map<String, Integer> EQUIPMENT_TYPE_SCORES = Map.ofEntries(
             entry("SUBSTATION", 15),
@@ -121,7 +122,7 @@ public class EquipmentInfosService {
         );
 
         CompositeAggregation.Builder compositeAggregationBuilder = new CompositeAggregation.Builder()
-                .size(AGGREGATION_BATCH_SIZE)
+                .size(COMPOSITE_AGGREGATION_BATCH_SIZE)
                 .sources(sources);
 
         if (afterKey != null) {
@@ -131,7 +132,14 @@ public class EquipmentInfosService {
         return compositeAggregationBuilder.build();
     }
 
-    private NativeQuery buildNativeQuery(String compositeName, CompositeAggregation compositeAggregation) {
+    /**
+     * Constructs a NativeQuery with a composite aggregation.
+     *
+     * @param compositeName The name of the composite aggregation.
+     * @param compositeAggregation The composite aggregation configuration.
+     * @return A NativeQuery object configured with the specified composite aggregation.
+     */
+    private NativeQuery buildCompositeAggregationQuery(String compositeName, CompositeAggregation compositeAggregation) {
         Aggregation aggregation = Aggregation.of(a -> a.composite(compositeAggregation));
 
         return new NativeQueryBuilder()
@@ -139,7 +147,18 @@ public class EquipmentInfosService {
                 .build();
     }
 
-    private Pair<List<Map<String, FieldValue>>, Map<String, FieldValue>> processSearchResults(SearchHits<EquipmentInfos> searchHits, String compositeName) {
+    /**
+     * This method is used to extract the results of a composite aggregation from Elasticsearch search hits.
+     *
+     * @param searchHits The search hits returned from an Elasticsearch query.
+     * @param compositeName The name of the composite aggregation.
+     * @return A Pair consisting of two elements:
+     *         The left element of the Pair is a list of maps, where each map represents a bucket's key. Each bucket is a result of the composite aggregation.
+     *         The right element of the Pair is the afterKey map, which is used for pagination in Elasticsearch.
+     *         If there are no more pages, the afterKey will be null.
+     * @see <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-composite-aggregation.html">Elasticsearch Composite Aggregation Documentation</a>
+     */
+    private Pair<List<Map<String, FieldValue>>, Map<String, FieldValue>> extractCompositeAggregationResults(SearchHits<EquipmentInfos> searchHits, String compositeName) {
         ElasticsearchAggregations aggregations = (ElasticsearchAggregations) searchHits.getAggregations();
 
         List<Map<String, FieldValue>> results = new ArrayList<>();
@@ -163,14 +182,14 @@ public class EquipmentInfosService {
         List<UUID> networkUuids = new ArrayList<>();
         Map<String, FieldValue> afterKey = null;
         String compositeName = "composite_agg";
-        String networkUuidField = "networkUuid";
+        String networkUuidField = BasicEquipmentInfos.Fields.networkUuid;
 
         do {
             CompositeAggregation compositeAggregation = buildCompositeAggregation(networkUuidField, afterKey);
-            NativeQuery query = buildNativeQuery(compositeName, compositeAggregation);
+            NativeQuery query = buildCompositeAggregationQuery(compositeName, compositeAggregation);
 
             SearchHits<EquipmentInfos> searchHits = elasticsearchOperations.search(query, EquipmentInfos.class);
-            Pair<List<Map<String, FieldValue>>, Map<String, FieldValue>> searchResults = processSearchResults(searchHits, compositeName);
+            Pair<List<Map<String, FieldValue>>, Map<String, FieldValue>> searchResults = extractCompositeAggregationResults(searchHits, compositeName);
 
             searchResults.getLeft().stream()
                     .map(result -> result.get(networkUuidField))

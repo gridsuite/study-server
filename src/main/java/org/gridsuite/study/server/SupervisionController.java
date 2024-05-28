@@ -101,7 +101,7 @@ public class SupervisionController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.deleteStudyIndexedEquipmentsAndTombstoned(studyUuid));
     }
 
-    @GetMapping(value = "/orphan_indexed_equipments")
+    @GetMapping(value = "/orphan_indexed_network_uuids")
     @Operation(summary = "Get all orphan indexed equipments network uuids")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of orphan indexed equipments network uuids")})
     public ResponseEntity<List<UUID>> getOrphanIndexedEquipments() {

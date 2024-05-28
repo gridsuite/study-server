@@ -2623,7 +2623,7 @@ public class StudyTest {
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         // Test get orphan indexed equipments
-        mvcResult = mockMvc.perform(get("/v1/supervision/orphan_indexed_equipments"))
+        mvcResult = mockMvc.perform(get("/v1/supervision/orphan_indexed_network_uuids"))
                 .andExpect(status().isOk())
                 .andReturn();
 
