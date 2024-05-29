@@ -11,8 +11,10 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.SupervisionService;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.gridsuite.study.server.dto.ComputationType;
@@ -42,8 +44,11 @@ public class SupervisionController {
 
     private final SupervisionService supervisionService;
 
-    public SupervisionController(SupervisionService supervisionService) {
+    private final StudyService studyService;
+
+    public SupervisionController(SupervisionService supervisionService, StudyService studyService) {
         this.supervisionService = supervisionService;
+        this.studyService = studyService;
     }
 
     @DeleteMapping(value = "/computation/results")
@@ -94,6 +99,21 @@ public class SupervisionController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed equipments and tombstoned equipments for the given study have been deleted")})
     public ResponseEntity<Long> deleteStudyIndexedEquipmentsAndTombstoned(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.deleteStudyIndexedEquipmentsAndTombstoned(studyUuid));
+    }
+
+    @GetMapping(value = "/orphan_indexed_network_uuids")
+    @Operation(summary = "Get all orphan indexed equipments network uuids")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of orphan indexed equipments network uuids")})
+    public ResponseEntity<List<UUID>> getOrphanIndexedEquipments() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllOrphanIndexedEquipmentsNetworkUuids());
+    }
+
+    @DeleteMapping(value = "/studies/{networkUuid}/indexed-equipments-by-network-uuid")
+    @Operation(summary = "delete indexed equipments and tombstoned equipments for the given networkUuid")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed equipments and tombstoned equipments for the given networkUuid have been deleted")})
+    public ResponseEntity<Long> deleteNetworkUuidIndexedEquipmentsAndTombstoned(@PathVariable("networkUuid") UUID networkUuid) {
+        studyService.deleteEquipmentIndexes(networkUuid);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/builds")

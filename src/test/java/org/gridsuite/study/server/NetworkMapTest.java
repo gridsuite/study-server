@@ -54,10 +54,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -66,6 +63,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -262,8 +260,8 @@ public class NetworkMapTest {
 
         //get the hvdc lines ids of a network
         String hvdcLineIdsAsString = List.of("hvdc-line1", "hvdc-line2", "hvdc-line3").toString();
-        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", List.of(), hvdcLineIdsAsString);
-        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", List.of("S1"), hvdcLineIdsAsString);
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, hvdcLineIdsAsString, mapper.writeValueAsString(createRequestBody("HVDC_LINE", List.of())));
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, hvdcLineIdsAsString, mapper.writeValueAsString(createRequestBody("HVDC_LINE", List.of("S1"))));
     }
 
     @Test
@@ -283,7 +281,7 @@ public class NetworkMapTest {
 
         //get the 2wt ids of a network
         String twtIdsAsString = List.of("twt1", "twt2", "twt3").toString();
-        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "TWO_WINDINGS_TRANSFORMER", List.of(), twtIdsAsString);
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, twtIdsAsString, mapper.writeValueAsString(createRequestBody("TWO_WINDINGS_TRANSFORMER", List.of())));
         assertTrue(TestUtils.getRequestsDone(3, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
     }
 
@@ -316,7 +314,7 @@ public class NetworkMapTest {
 
         //get the substation ids of a network
         String substationIdsAsString = List.of("substation1", "substation2", "substation3").toString();
-        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", List.of(), substationIdsAsString);
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, substationIdsAsString, mapper.writeValueAsString(createRequestBody("SUBSTATION", List.of())));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
     }
 
@@ -520,17 +518,15 @@ public class NetworkMapTest {
     }
 
     @SneakyThrows
-    private MvcResult getNetworkElementsIds(UUID studyUuid, UUID rootNodeUuid, String elementType, List<String> substationsIds, String responseBody) {
-        UUID stubUuid = wireMockUtils.stubNetworkElementsIdsGet(NETWORK_UUID_STRING, elementType, responseBody);
-        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/equipments-ids", studyUuid, rootNodeUuid)
-                .queryParam(QUERY_PARAM_EQUIPMENT_TYPE, elementType);
-        if (!substationsIds.isEmpty()) {
-            mockHttpServletRequestBuilder.queryParam(QUERY_PARAM_SUBSTATIONS_IDS, substationsIds.stream().toArray(String[]::new));
-        }
+    private MvcResult getNetworkElementsIds(UUID studyUuid, UUID rootNodeUuid, String responseBody, String requestBody) {
+        UUID stubUuid = wireMockUtils.stubNetworkElementsIdsPost(NETWORK_UUID_STRING, responseBody);
+
+        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/equipments-ids", studyUuid, rootNodeUuid)
+                .content(requestBody);
         MvcResult mvcResult = mockMvc.perform(mockHttpServletRequestBuilder)
                 .andExpect(status().isOk())
                 .andReturn();
-        wireMockUtils.verifyNetworkElementsIdsGet(stubUuid, NETWORK_UUID_STRING, elementType);
+        wireMockUtils.verifyNetworkElementsIdsPost(stubUuid, NETWORK_UUID_STRING, requestBody);
 
         return mvcResult;
     }
@@ -715,6 +711,13 @@ public class NetworkMapTest {
                 .andReturn();
 
         wireMockUtils.verifyNominalVoltagesGet(stubUuid, NETWORK_UUID_STRING);
+    }
+
+    private Map<String, Object> createRequestBody(String elementType, List<String> substationsIds) {
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("elementType", elementType);
+        requestBody.put("substationsIds", substationsIds);
+        return requestBody;
     }
 
     private void cleanDB() {
