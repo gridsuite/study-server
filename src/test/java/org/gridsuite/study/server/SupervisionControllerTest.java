@@ -6,6 +6,8 @@
  */
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
@@ -83,6 +85,9 @@ public class SupervisionControllerTest {
 
     @Autowired
     private StudyRepository studyRepository;
+
+    @Autowired
+    private ObjectMapper mapper;
 
     @Value("${spring.data.elasticsearch.embedded.port:}")
     private String expectedEsPort;
@@ -221,6 +226,8 @@ public class SupervisionControllerTest {
 
     @Test
     public void testOrphan() throws Exception {
+        MvcResult mvcResult;
+
         // Test get orphan indexed equipments
         mvcResult = mockMvc.perform(get("/v1/supervision/orphan_indexed_network_uuids"))
             .andExpect(status().isOk())
