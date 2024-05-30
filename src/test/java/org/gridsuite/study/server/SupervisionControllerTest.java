@@ -65,6 +65,11 @@ public class SupervisionControllerTest {
     private static final UUID STUDY_UUID = UUID.fromString("11888888-0000-0000-0000-111111111111");
     private static final UUID NODE_UUID = UUID.fromString("12345678-8cf0-11bd-b23e-10b96e4ef00d");
 
+    private static final List<UUID> ORPHAN_NETWORK_UUIDS = List.of(
+            UUID.fromString("88888888-7777-0000-abcd-000000000000"),
+            UUID.fromString("123e4567-e89b-12d3-a456-426614174000")
+    );
+
     @MockBean
     private NetworkService networkStoreService;
 
@@ -113,6 +118,7 @@ public class SupervisionControllerTest {
         when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
         when(networkModificationTreeService.getStudyTree(STUDY_UUID)).thenReturn(RootNode.builder().studyId(STUDY_UUID).id(NODE_UUID).build());
         when(networkConversionService.checkStudyIndexationStatus(NETWORK_UUID)).thenReturn(true);
+        when(equipmentInfosService.getOrphanEquipmentInfosNetworkUuids(List.of(NETWORK_UUID))).thenReturn(ORPHAN_NETWORK_UUIDS);
     }
 
     @After
@@ -212,5 +218,20 @@ public class SupervisionControllerTest {
         assertIndexationCount(74, 0);
         assertIndexationStatus(STUDY_UUID, "INDEXED");
 
+    }
+
+    @Test
+    public void testOrphan() throws Exception {
+        // Test get orphan indexed equipments
+        mvcResult = mockMvc.perform(get("/v1/supervision/orphan_indexed_network_uuids"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        List<UUID> orphanIndexedEquipments = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertEquals(ORPHAN_NETWORK_UUIDS, orphanIndexedEquipments);
+
+        // test delete orphan indexed equipments
+        mockMvc.perform(delete("/v1/supervision/studies/{networkUuid}/indexed-equipments-by-network-uuid", ORPHAN_NETWORK_UUIDS.get(0)))
+            .andExpect(status().isOk());
     }
 }

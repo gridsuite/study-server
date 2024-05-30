@@ -188,6 +188,38 @@ public class EquipmentInfosServiceTests {
     }
 
     @Test
+    public void testGetOrphanEquipmentInfosNetworkUuids() {
+        // index some equipment infos as orphan
+        UUID orphanNetworkUuid = UUID.randomUUID();
+        EquipmentInfos orphanLoadInfos = EquipmentInfos.builder().networkUuid(orphanNetworkUuid).id("id").name("name").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
+        UUID orphanNetworkUuid2 = UUID.randomUUID();
+        EquipmentInfos orphanVlInfos = EquipmentInfos.builder().networkUuid(orphanNetworkUuid2).id("id").name("name").type("VOLTAGE_LEVEL").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
+
+        // index an equipment infos for the existing network
+        EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").name("name2").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
+
+        equipmentInfosService.addEquipmentInfos(loadInfos);
+        equipmentInfosService.addEquipmentInfos(orphanLoadInfos);
+        equipmentInfosService.addEquipmentInfos(orphanVlInfos);
+
+        // get the orphan network uuids
+        List<UUID> orphanNetworkUuids = equipmentInfosService.getOrphanEquipmentInfosNetworkUuids(List.of(NETWORK_UUID));
+
+        // check that the orphan network uuids are returned
+        assertEquals(2, orphanNetworkUuids.size());
+        assertTrue(orphanNetworkUuids.contains(orphanNetworkUuid));
+        assertTrue(orphanNetworkUuids.contains(orphanNetworkUuid2));
+
+        // delete the orphan equipment infos
+        equipmentInfosService.deleteAllByNetworkUuid(orphanNetworkUuid);
+        equipmentInfosService.deleteAllByNetworkUuid(orphanNetworkUuid2);
+
+        // check that the orphan network uuids are not returned anymore
+        orphanNetworkUuids = equipmentInfosService.getOrphanEquipmentInfosNetworkUuids(List.of(NETWORK_UUID));
+        assertEquals(0, orphanNetworkUuids.size());
+    }
+
+    @Test
     public void testCloneVariant() {
         equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type(IdentifiableType.LOAD.name()).variantId("variant1").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build());
         assertEquals(1, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
