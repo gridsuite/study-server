@@ -122,7 +122,6 @@ public class SupervisionControllerTest {
         when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
         when(networkModificationTreeService.getStudyTree(STUDY_UUID)).thenReturn(RootNode.builder().studyId(STUDY_UUID).id(NODE_UUID).build());
         when(networkConversionService.checkStudyIndexationStatus(NETWORK_UUID)).thenReturn(true);
-        when(equipmentInfosService.getOrphanEquipmentInfosNetworkUuids(List.of(NETWORK_UUID))).thenReturn(ORPHAN_NETWORK_UUIDS);
     }
 
     @After
@@ -233,11 +232,12 @@ public class SupervisionControllerTest {
             .andExpect(status().isOk())
             .andReturn();
 
-        List<UUID> orphanIndexedEquipments = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
-        assertEquals(ORPHAN_NETWORK_UUIDS, orphanIndexedEquipments);
+        List<UUID> orphanIndexedNetworkUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        // We never created a study for those indexed equipments in this network
+        assertEquals(List.of(NETWORK_UUID), orphanIndexedNetworkUuids);
 
         // test delete orphan indexed equipments
-        mockMvc.perform(delete("/v1/supervision/studies/{networkUuid}/indexed-equipments-by-network-uuid", ORPHAN_NETWORK_UUIDS.get(0)))
+        mockMvc.perform(delete("/v1/supervision/studies/{networkUuid}/indexed-equipments-by-network-uuid", NETWORK_UUID))
             .andExpect(status().isOk());
     }
 }
