@@ -58,6 +58,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getSensitivityAnalysisResultUuid(),
             modificationNode.getNonEvacuatedEnergyResultUuid(),
             modificationNode.getDynamicSimulationResultUuid(),
+            modificationNode.getStateEstimationResultUuid(),
             modificationNode.getNodeBuildStatus().toEntity());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
@@ -77,6 +78,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getSensitivityAnalysisResultUuid(),
             node.getNonEvacuatedEnergyResultUuid(),
             node.getDynamicSimulationResultUuid(),
+            node.getStateEstimationResultUuid(),
             node.getNodeBuildStatus().toDto()));
     }
 
@@ -125,6 +127,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             case SHORT_CIRCUIT_ONE_BUS -> modificationNode.setOneBusShortCircuitAnalysisResultUuid(computationUuid);
             case VOLTAGE_INITIALIZATION -> modificationNode.setVoltageInitResultUuid(computationUuid);
             case DYNAMIC_SIMULATION -> modificationNode.setDynamicSimulationResultUuid(computationUuid);
+            case STATE_ESTIMATION -> modificationNode.setStateEstimationResultUuid(computationUuid);
         }
         updateNode(modificationNode, computationType.getResultUuidLabel());
     }
@@ -140,6 +143,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             case SHORT_CIRCUIT_ONE_BUS -> ((NetworkModificationNode) node).getOneBusShortCircuitAnalysisResultUuid();
             case VOLTAGE_INITIALIZATION -> ((NetworkModificationNode) node).getVoltageInitResultUuid();
             case DYNAMIC_SIMULATION -> ((NetworkModificationNode) node).getDynamicSimulationResultUuid();
+            case STATE_ESTIMATION -> ((NetworkModificationNode) node).getStateEstimationResultUuid();
         };
     }
 
@@ -189,6 +193,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .oneBusShortCircuitAnalysisUuid(networkModificationNode.getOneBusShortCircuitAnalysisResultUuid())
             .voltageInitUuid(networkModificationNode.getVoltageInitResultUuid())
             .dynamicSimulationUuid(networkModificationNode.getDynamicSimulationResultUuid())
+            .stateEstimationUuid(networkModificationNode.getStateEstimationResultUuid())
             .build();
     }
 }

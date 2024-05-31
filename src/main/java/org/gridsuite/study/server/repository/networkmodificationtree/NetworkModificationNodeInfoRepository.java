@@ -36,4 +36,6 @@ public interface NetworkModificationNodeInfoRepository extends NodeInfoRepositor
     List<NetworkModificationNodeInfoEntity> findAllByNodeStudyId(UUID studyUuid);
 
     List<AbstractNodeInfoEntity> findAllByNodeStudyIdAndName(UUID studyUuid, String name);
+
+    List<NetworkModificationNodeInfoEntity> findAllByStateEstimationResultUuidNotNull();
 }

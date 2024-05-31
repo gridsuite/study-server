@@ -76,6 +76,9 @@ public class NotificationService {
     public static final String UPDATE_TYPE_STUDY = "study";
     public static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
     public static final String UPDATE_TYPE_INDEXATION_STATUS = "indexation_status_updated";
+    public static final String UPDATE_TYPE_STATE_ESTIMATION_FAILED = "stateEstimation_failed";
+    public static final String UPDATE_TYPE_STATE_ESTIMATION_RESULT = "stateEstimationResult";
+    public static final String UPDATE_TYPE_STATE_ESTIMATION_STATUS = "stateEstimation_status";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
     public static final String MODIFICATIONS_STASHING_IN_PROGRESS = "stashingInProgress";
