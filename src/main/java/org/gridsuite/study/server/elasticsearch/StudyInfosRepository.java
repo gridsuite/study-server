@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
-import org.gridsuite.study.server.dto.elasticsearch.CreatedStudyBasicInfos;
+import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 
 import java.util.UUID;

@@ -16,7 +16,6 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
-
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
@@ -25,7 +24,9 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.NetworkConversionService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -36,16 +37,21 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import java.util.*;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * @author Sylvain Bouzols <sylvain.bouzols at rte-france.com>
@@ -54,22 +60,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
 @SpringBootTest
-@ContextConfigurationWithTestChannel
+@ContextConfiguration(classes = {StudyApplication.class})
 public class SupervisionControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     private static final String TEST_FILE = "testCase.xiidm";
-    private static final UUID CASE_UUID = UUID.fromString("00000000-8cf0-11bd-b23e-10b96e4ef00d");
-    private static final UUID NETWORK_UUID = UUID.fromString("db240961-a7b6-4b76-bfe8-19749026c1cb");
-    private static final UUID STUDY_UUID = UUID.fromString("11888888-0000-0000-0000-111111111111");
-    private static final UUID NODE_UUID = UUID.fromString("12345678-8cf0-11bd-b23e-10b96e4ef00d");
-
-    private static final List<UUID> ORPHAN_NETWORK_UUIDS = List.of(
-            UUID.fromString("88888888-7777-0000-abcd-000000000000"),
-            UUID.fromString("123e4567-e89b-12d3-a456-426614174000")
-    );
+    private static final UUID CASE_UUID = UUID.randomUUID();
+    private static final UUID NETWORK_UUID = UUID.randomUUID();
+    private static final UUID STUDY_UUID = UUID.randomUUID();
+    private static final UUID NODE_UUID = UUID.randomUUID();
 
     @MockBean
     private NetworkService networkStoreService;
@@ -133,7 +134,7 @@ public class SupervisionControllerTest {
     private StudyEntity initStudy() throws Exception {
         StudyEntity study = insertDummyStudy(NETWORK_UUID, CASE_UUID, "");
 
-        assertIndexationStatus(STUDY_UUID, "INDEXED");
+        assertIndexationStatus(STUDY_UUID, StudyIndexationStatus.INDEXED.name());
 
         return study;
     }
@@ -208,7 +209,7 @@ public class SupervisionControllerTest {
 
         assertEquals(76, Long.parseLong(mvcResult.getResponse().getContentAsString()));
         assertIndexationCount(0, 0);
-        assertIndexationStatus(STUDY_UUID, "NOT_INDEXED");
+        assertIndexationStatus(STUDY_UUID, StudyIndexationStatus.NOT_INDEXED.name());
     }
 
     @Test
@@ -219,7 +220,7 @@ public class SupervisionControllerTest {
             .andExpect(status().isOk());
 
         assertIndexationCount(74, 0);
-        assertIndexationStatus(STUDY_UUID, "INDEXED");
+        assertIndexationStatus(STUDY_UUID, StudyIndexationStatus.INDEXED.name());
 
     }
 

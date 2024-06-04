@@ -8,7 +8,7 @@ package org.gridsuite.study.server.utils;
 
 import java.util.UUID;
 
-import org.gridsuite.study.server.dto.elasticsearch.CreatedStudyBasicInfos;
+import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 
 /**
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>

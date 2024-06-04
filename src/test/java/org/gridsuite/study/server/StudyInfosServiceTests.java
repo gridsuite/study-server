@@ -8,7 +8,7 @@ package org.gridsuite.study.server;
 
 import com.google.common.collect.Iterables;
 
-import org.gridsuite.study.server.dto.elasticsearch.CreatedStudyBasicInfos;
+import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.elasticsearch.StudyInfosRepository;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos;
