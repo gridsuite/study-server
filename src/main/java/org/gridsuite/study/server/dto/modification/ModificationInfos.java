@@ -16,7 +16,7 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
 
@@ -62,7 +62,7 @@ public class ModificationInfos {
     private UUID uuid;
 
     @Schema(description = "Modification date")
-    OffsetDateTime date;
+    Instant date;
 
     @Schema(description = "Modification type")
     ModificationType type;

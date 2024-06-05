@@ -20,8 +20,7 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
@@ -385,7 +384,7 @@ public class NotificationService {
         sendElementUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_ELEMENT_UUID, elementUuid)
                 .setHeader(HEADER_MODIFIED_BY, modifiedBy)
-                .setHeader(HEADER_MODIFICATION_DATE, OffsetDateTime.now(ZoneOffset.UTC))
+                .setHeader(HEADER_MODIFICATION_DATE, Instant.now())
                 .build()
         );
     }

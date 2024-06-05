@@ -26,7 +26,8 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.OffsetDateTime;
+
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -64,6 +65,6 @@ public class NodeEntity {
     boolean stashed;
 
     @Column(name = "stash_date", columnDefinition = "timestamptz")
-    private OffsetDateTime stashDate;
+    private Instant stashDate;
 
 }

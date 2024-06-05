@@ -27,8 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityNotFoundException;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -284,7 +283,7 @@ public class NetworkModificationTreeService {
             }
             stashedNodes.add(id);
             nodeToStash.setStashed(true);
-            nodeToStash.setStashDate(OffsetDateTime.now(ZoneOffset.UTC));
+            nodeToStash.setStashDate(Instant.now());
             //We only unlink the first deleted node so the rest of the tree is still connected as it was
             if (firstIteration) {
                 nodeToStash.setParentNode(null);
