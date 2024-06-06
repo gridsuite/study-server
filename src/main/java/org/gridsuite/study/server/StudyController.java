@@ -260,18 +260,6 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/indexation/status")
-    @Operation(summary = "check study indexation")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The study indexation status"),
-        @ApiResponse(responseCode = "204", description = "The study indexation status doesn't exist"),
-        @ApiResponse(responseCode = "404", description = "The study or network doesn't exist")})
-    public ResponseEntity<String> checkStudyIndexationStatus(@PathVariable("studyUuid") UUID studyUuid) {
-        String result = studyService.getStudyIndexationStatus(studyUuid).name();
-        return result != null ? ResponseEntity.ok().body(result) :
-            ResponseEntity.noContent().build();
-    }
-
     @PostMapping(value = "/studies/{studyUuid}/tree/subtrees", params = {"subtreeToCutParentNodeUuid", "referenceNodeUuid"})
     @Operation(summary = "cut and paste a subtree")
     @ApiResponses(value = {
@@ -1366,11 +1354,13 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getDefaultDynamicSimulationProvider());
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/reindex-all")
-    @Operation(summary = "reindex the study")
-    @ApiResponse(responseCode = "200", description = "Study reindexed")
-    public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        studyService.reindexStudy(studyUuid);
+    @PostMapping(value = "/studies/{studyUuid}/reindex-if-needed")
+    @Operation(summary = "reindex the study if needed")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Study reindexed"),
+        @ApiResponse(responseCode = "404", description = "The study or network doesn't exist")})
+    public ResponseEntity<Void> reindexStudyIfNeeded(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        studyService.reindexStudyIfNeeded(studyUuid);
         return ResponseEntity.ok().build();
     }
 
