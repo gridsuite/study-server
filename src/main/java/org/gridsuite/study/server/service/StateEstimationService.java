@@ -140,27 +140,23 @@ public class StateEstimationService {
         restTemplate.put(stateEstimationServerServerBaseUri + path, Void.class);
     }
 
-    public StateEstimationStatus getStateEstimationStatus(UUID nodeUuid) {
-        StateEstimationStatus status;
+    public String getStateEstimationStatus(UUID nodeUuid) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.STATE_ESTIMATION);
-
         if (resultUuidOpt.isEmpty()) {
             return null;
         }
-
+        String status;
         try {
             String path = UriComponentsBuilder
                     .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}/status")
                     .buildAndExpand(resultUuidOpt.get()).toUriString();
-
-            status = restTemplate.getForObject(stateEstimationServerServerBaseUri + path, StateEstimationStatus.class);
+            status = restTemplate.getForObject(stateEstimationServerServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(STATE_ESTIMATION_NOT_FOUND);
             }
             throw e;
         }
-
         return status;
     }
 
@@ -198,8 +194,8 @@ public class StateEstimationService {
     }
 
     public void assertStateEstimationNotRunning(UUID nodeUuid) {
-        StateEstimationStatus sas = getStateEstimationStatus(nodeUuid);
-        if (sas == StateEstimationStatus.RUNNING) {
+        String status = getStateEstimationStatus(nodeUuid);
+        if (StateEstimationStatus.RUNNING.name().equals(status)) {
             throw new StudyException(STATE_ESTIMATION_RUNNING);
         }
     }

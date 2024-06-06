@@ -1939,9 +1939,8 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The state estimation status has not been found")})
     public ResponseEntity<String> getStateEstimationStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        StateEstimationStatus status = stateEstimationService.getStateEstimationStatus(nodeUuid);
-        return status != null ? ResponseEntity.ok().body(status.name()) :
-            ResponseEntity.noContent().build();
+        String status = stateEstimationService.getStateEstimationStatus(nodeUuid);
+        return status != null ? ResponseEntity.ok().body(status) : ResponseEntity.noContent().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/state-estimation/stop")
