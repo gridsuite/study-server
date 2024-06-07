@@ -10,15 +10,15 @@ import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.aggregations.*;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
+import lombok.Getter;
 
 import com.powsybl.iidm.network.VariantManagerConstants;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.gridsuite.study.server.dto.BasicEquipmentInfos;
-import org.gridsuite.study.server.dto.EquipmentInfos;
-import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.gridsuite.study.server.dto.elasticsearch.BasicEquipmentInfos;
+import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
+import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.*;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -80,7 +80,17 @@ public class EquipmentInfosService {
 
     private final ElasticsearchOperations elasticsearchOperations;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(EquipmentInfosService.class);
+    @Value(ESConfig.STUDY_INDEX_NAME)
+    @Getter
+    private String studyIndexName;
+
+    @Value(ESConfig.EQUIPMENTS_INDEX_NAME)
+    @Getter
+    private String equipmentsIndexName;
+
+    @Value(ESConfig.TOMBSTONED_EQUIPMENTS_INDEX_NAME)
+    @Getter
+    private String tombstonedEquipmentsIndexName;
 
     public EquipmentInfosService(EquipmentInfosRepository equipmentInfosRepository, TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
         this.equipmentInfosRepository = equipmentInfosRepository;
