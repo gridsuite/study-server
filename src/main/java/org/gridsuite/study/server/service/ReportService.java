@@ -72,7 +72,6 @@ public class ReportService {
     public ReportNode getReport(@NonNull UUID id, @NonNull String defaultName, String reportNameFilter, StudyService.ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels) {
         var uriBuilder = UriComponentsBuilder.fromPath("{id}")
                 .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
-                .queryParam(QUERY_PARAM_REPORT_WITH_ELEMENTS, true)
                 .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
         if (!StringUtil.isBlank(reportNameFilter)) {
             uriBuilder.queryParam(QUERY_PARAM_REPORT_NAME_FILTER, reportNameFilter);
