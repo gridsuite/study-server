@@ -20,7 +20,7 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
@@ -78,9 +78,12 @@ public class NotificationService {
     public static final String UPDATE_TYPE_INDEXATION_STATUS = "indexation_status_updated";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
+    public static final String MODIFICATIONS_STASHING_IN_PROGRESS = "stashingInProgress";
+    public static final String MODIFICATIONS_RESTORING_IN_PROGRESS = "restoringInProgress";
     public static final String MODIFICATIONS_DELETING_IN_PROGRESS = "deletingInProgress";
     public static final String MODIFICATIONS_UPDATING_IN_PROGRESS = "updatingInProgress";
     public static final String MODIFICATIONS_UPDATING_FINISHED = "UPDATE_FINISHED";
+    public static final String MODIFICATIONS_DELETING_FINISHED = "DELETE_FINISHED";
 
     public static final String EVENTS_CRUD_CREATING_IN_PROGRESS = "eventCreatingInProgress";
     public static final String EVENTS_CRUD_DELETING_IN_PROGRESS = "eventDeletingInProgress";
@@ -344,6 +347,17 @@ public class NotificationService {
         );
     }
 
+    @PostCompletion
+    public void emitEndDeletionEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
+                .setHeader(HEADER_NODES, childrenUuids)
+                .setHeader(HEADER_UPDATE_TYPE, MODIFICATIONS_DELETING_FINISHED)
+                .build()
+        );
+    }
+
     public void emitStartEventCrudNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids, String crudType) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
@@ -370,7 +384,7 @@ public class NotificationService {
         sendElementUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_ELEMENT_UUID, elementUuid)
                 .setHeader(HEADER_MODIFIED_BY, modifiedBy)
-                .setHeader(HEADER_MODIFICATION_DATE, LocalDateTime.now())
+                .setHeader(HEADER_MODIFICATION_DATE, Instant.now())
                 .build()
         );
     }

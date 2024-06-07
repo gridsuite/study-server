@@ -126,13 +126,12 @@ public class NetworkModificationService {
         }
     }
 
-    public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids, boolean onlyStashed) {
+    public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
                 .queryParam(UUIDS, modificationsUuids)
                 .queryParam(GROUP_UUID, groupUuid)
-                .queryParam(QUERY_PARAM_ONLY_STASHED, onlyStashed)
                 .buildAndExpand()
                 .toUriString();
         try {
