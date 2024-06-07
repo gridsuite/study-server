@@ -102,19 +102,19 @@ public class SupervisionService {
         };
     }
 
-    public Long getStudyIndexedEquipmentsCount(UUID networkUUID) {
+    public long getStudyIndexedEquipmentsCount(UUID networkUUID) {
         return equipmentInfosService.getEquipmentInfosCount(networkUUID);
     }
 
-    public Long getStudyIndexedTombstonedEquipmentsCount(UUID networkUUID) {
+    public long getStudyIndexedTombstonedEquipmentsCount(UUID networkUUID) {
         return equipmentInfosService.getTombstonedEquipmentInfosCount(networkUUID);
     }
 
-    public Long getIndexedEquipmentsCount() {
+    public long getIndexedEquipmentsCount() {
         return equipmentInfosService.getEquipmentInfosCount();
     }
 
-    public Long getIndexedTombstonedEquipmentsCount() {
+    public long getIndexedTombstonedEquipmentsCount() {
         return equipmentInfosService.getTombstonedEquipmentInfosCount();
     }
 
