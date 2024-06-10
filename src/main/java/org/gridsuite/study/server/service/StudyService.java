@@ -1011,10 +1011,6 @@ public class StudyService {
         voltageInitService.invalidateVoltageInitStatus(networkModificationTreeService.getComputationResultUuids(studyUuid, VOLTAGE_INITIALIZATION));
     }
 
-    public void invalidateStateEstimationStatusOnAllNodes(UUID studyUuid) {
-        stateEstimationService.invalidateStateEstimationStatus(networkModificationTreeService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
-    }
-
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
                                           String caseFormat, UUID caseUuid, String caseName, UUID loadFlowParametersUuid,
                                           UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters,

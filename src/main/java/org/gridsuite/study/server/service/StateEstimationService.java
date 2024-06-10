@@ -30,7 +30,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -181,16 +180,6 @@ public class StateEstimationService {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/supervision/results-count").toUriString();
         return restTemplate.getForObject(stateEstimationServerServerBaseUri + path, Integer.class);
-    }
-
-    public void invalidateStateEstimationStatus(List<UUID> uuids) {
-        if (!uuids.isEmpty()) {
-            String path = UriComponentsBuilder
-                    .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/invalidate-status")
-                    .queryParam(RESULT_UUID, uuids).build().toUriString();
-
-            restTemplate.put(stateEstimationServerServerBaseUri + path, Void.class);
-        }
     }
 
     public void assertStateEstimationNotRunning(UUID nodeUuid) {
