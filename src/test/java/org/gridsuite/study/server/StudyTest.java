@@ -34,6 +34,7 @@ import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
+import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -735,6 +736,19 @@ public class StudyTest {
                 .andExpectAll(status().isBadRequest(),
                         content().string("Enum unknown entry 'bogus' should be among NAME, ID"))
                 .andReturn();
+    }
+
+    @Test
+    public void cleanRemovedEquipmentsInSerachTest() {
+        UUID equipmentUuid = UUID.randomUUID();
+        EquipmentInfos equipmentInfos = EquipmentInfos.builder().id(equipmentUuid.toString()).name("test").variantId(VARIANT_ID).build();
+        List<EquipmentInfos> equipmentInfosList = new ArrayList<>();
+        equipmentInfosList.add(equipmentInfos);
+        List<TombstonedEquipmentInfos> tombstonedEquipmentInfosList = List.of(TombstonedEquipmentInfos.builder().id(equipmentUuid.toString()).variantId(VARIANT_ID).build());
+        when(equipmentInfosService.searchEquipments(any())).thenReturn(equipmentInfosList);
+        when(equipmentInfosService.searchTombstonedEquipments(any())).thenReturn(tombstonedEquipmentInfosList);
+        List<EquipmentInfos> result = equipmentInfosService.searchEquipments(NETWORK_UUID, VARIANT_ID, "test", EquipmentInfosService.FieldSelector.NAME, null);
+        assertEquals(equipmentInfos, result.get(0));
     }
 
     @Test

@@ -289,14 +289,14 @@ public class EquipmentInfosService {
         return String.format(NETWORK_UUID + ":(%s) AND " + VARIANT_ID + ":(%s)", networkUuid, variantId);
     }
 
-    private BoolQuery buildSearchEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId, String equipmentType) {
+    private BoolQuery buildSearchEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId, String equipmentType) {
         // If search requires boolean logic or advanced text analysis, then use queryStringQuery.
         // Otherwise, use wildcardQuery for simple text search.
         WildcardQuery equipmentSearchQuery = Queries.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
         TermQuery networkUuidSearchQuery = Queries.termQuery(NETWORK_UUID, networkUuid.toString());
         TermsQuery variantIdSearchQuery = variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ?
-                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(initialVariantId))).build()).build() :
-                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(initialVariantId), FieldValue.of(variantId))).build()).build();
+                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(VariantManagerConstants.INITIAL_VARIANT_ID))).build()).build() :
+                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(VariantManagerConstants.INITIAL_VARIANT_ID), FieldValue.of(variantId))).build()).build();
 
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder()
                 .filter(
@@ -341,7 +341,9 @@ public class EquipmentInfosService {
 
         return equipmentInfos
                 .stream()
-                .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId()))
+                .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId()) ||
+                        // If the equipment has been recreated after the creation of a deletion hypothesis
+                        !ei.getVariantId().equals(VariantManagerConstants.INITIAL_VARIANT_ID))
                 .collect(Collectors.toList());
     }
 
@@ -354,7 +356,7 @@ public class EquipmentInfosService {
         String effectiveVariantId = variantId.isEmpty() ? VariantManagerConstants.INITIAL_VARIANT_ID : variantId;
 
         BoolQuery query = buildSearchEquipmentsQuery(userInput, fieldSelector, networkUuid,
-                VariantManagerConstants.INITIAL_VARIANT_ID, variantId, equipmentType);
+                variantId, equipmentType);
         List<EquipmentInfos> equipmentInfos = searchEquipments(query);
         return variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ? equipmentInfos : cleanModifiedAndRemovedEquipments(networkUuid, effectiveVariantId, equipmentInfos);
     }
