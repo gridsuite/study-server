@@ -297,8 +297,7 @@ public class SensitivityAnalysisTest {
 
         // run sensitivity analysis
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, nodeUuid)
-            .header(HEADER_USER_ID, "userId")
-            .header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
+            .header(HEADER_USER_ID, "userId")).andExpect(status().isOk());
 
         Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
