@@ -1011,10 +1011,4 @@ public class NetworkModificationTreeService {
             return doGetParentNode(nodeEntity.getParentNode().getIdNode(), nodeType);
         }
     }
-
-    private void getStateEstimationResultUuids(UUID nodeUuid, List<UUID> uuids) {
-        nodesRepository.findById(nodeUuid).flatMap(n -> Optional.ofNullable(repositories.get(n.getType()).getComputationResultUuid(nodeUuid, STATE_ESTIMATION))).ifPresent(uuids::add);
-        nodesRepository.findAllByParentNodeIdNode(nodeUuid)
-            .forEach(child -> getStateEstimationResultUuids(child.getIdNode(), uuids));
-    }
 }
