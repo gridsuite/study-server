@@ -4,10 +4,11 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.dto;
+package org.gridsuite.study.server.dto.elasticsearch;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
+import lombok.experimental.FieldNameConstants;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.annotation.AccessType;
 import org.springframework.data.annotation.Id;
@@ -27,6 +28,7 @@ import java.util.UUID;
 @Setter
 @ToString
 @EqualsAndHashCode
+@FieldNameConstants
 @Schema(description = "Basic equipment infos")
 public class BasicEquipmentInfos {
     @Id

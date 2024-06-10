@@ -1089,7 +1089,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isForbidden());
         checkEquipmentDeletingMessagesReceived(studyUuid1, modificationNode.getId());
-        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid1, modificationNode.getId());
+        checkEquipmentDeletingFinishedMessagesReceived(studyUuid1, modificationNode.getId());
 
         UUID modificationUuid = UUID.randomUUID();
         mockMvc.perform(delete(URI_NETWORK_MODIF, studyUuid, modificationNode.getId())
@@ -1099,7 +1099,7 @@ public class NetworkModificationTest {
         wireMockUtils.verifyDeleteRequest(stubId, "/v1/network-modifications", false, Map.of("uuids", WireMock.equalTo(modificationUuid.toString())));
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
-        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
+        checkEquipmentDeletingFinishedMessagesReceived(studyUuid, modificationNode.getId());
 
         String errorMessage = "Internal Server Error";
         stubId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/network-modifications.*"))
@@ -1111,7 +1111,7 @@ public class NetworkModificationTest {
             .andExpect(status().isBadRequest());
         wireMockUtils.verifyDeleteRequest(stubId, "/v1/network-modifications", false, Map.of("uuids", WireMock.equalTo(modificationUuid.toString())));
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
-        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
+        checkEquipmentDeletingFinishedMessagesReceived(studyUuid, modificationNode.getId());
     }
 
     @Test
@@ -2738,13 +2738,21 @@ public class NetworkModificationTest {
     }
 
     private void checkEquipmentUpdatingFinishedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
+        checkEquipmentFinishedMessagesReceived(studyNameUserIdUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
+    }
+
+    private void checkEquipmentDeletingFinishedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
+        checkEquipmentFinishedMessagesReceived(studyNameUserIdUuid, nodeUuid, NotificationService.MODIFICATIONS_DELETING_FINISHED);
+    }
+
+    private void checkEquipmentFinishedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_PARENT_NODE));
-        assertEquals(NotificationService.MODIFICATIONS_UPDATING_FINISHED, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(updateType, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private void checkEquipmentDeletedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, NetworkImpactsInfos expectedPayload) throws Exception {

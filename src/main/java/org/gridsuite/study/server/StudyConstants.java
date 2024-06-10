@@ -58,7 +58,6 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_REPORT_TYPE_FILTER = "reportTypeFilter";
     public static final String QUERY_PARAM_REPORT_DEFAULT_NAME = "defaultName";
     public static final String QUERY_PARAM_REPORT_SEVERITY_LEVEL = "severityLevels";
-    public static final String QUERY_PARAM_REPORT_WITH_ELEMENTS = "withElements";
     public static final String QUERY_PARAM_REPORT_NAME_FILTER = "reportNameFilter";
     public static final String QUERY_PARAM_REPORT_NAME_MATCHING_TYPE = "reportNameMatchingType";
     public static final String QUERY_PARAM_RECEIVER = "receiver";
