@@ -890,7 +890,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis provider is set")})
     public ResponseEntity<Void> setSecurityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid,
                                                             @RequestBody(required = false) String provider,
-                                                            @RequestHeader("userId") String userId) {
+                                                            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.updateSecurityAnalysisProvider(studyUuid, provider, userId);
         return ResponseEntity.ok().build();
     }
@@ -1838,7 +1838,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy provider is set")})
     public ResponseEntity<Void> setNonEvacuatedEnergyProvider(@PathVariable("studyUuid") UUID studyUuid,
                                                                @RequestBody(required = false) String provider,
-                                                               @RequestHeader("userId") String userId) {
+                                                               @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.updateNonEvacuatedEnergyProvider(studyUuid, provider, userId);
         return ResponseEntity.ok().build();
     }

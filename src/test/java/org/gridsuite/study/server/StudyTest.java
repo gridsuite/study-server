@@ -139,7 +139,6 @@ public class StudyTest {
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
     private static final String NOT_EXISTING_NETWORK_CASE_UUID_STRING = "00000000-0000-0000-0000-000000000001";
     private static final String HEADER_UPDATE_TYPE = "updateType";
-    private static final String USER_ID_HEADER = "userId";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
     private static final UUID NOT_EXISTING_NETWORK_UUID = UUID.randomUUID();
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
@@ -694,7 +693,7 @@ public class StudyTest {
         UUID rootNodeId = getRootNodeUuid(studyUuid);
 
         mvcResult = mockMvc
-                .perform(get("/v1/search?q={request}", String.format("userId:%s", "userId")).header(USER_ID_HEADER, "userId"))
+                .perform(get("/v1/search?q={request}", String.format("userId:%s", "userId")).header(HEADER_USER_ID, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString,
@@ -704,7 +703,7 @@ public class StudyTest {
 
         mvcResult = mockMvc
                 .perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=NAME",
-                        studyUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
+                        studyUuid, rootNodeId, "B").header(HEADER_USER_ID, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<EquipmentInfos> equipmentInfos = mapper.readValue(resultAsString,
@@ -714,7 +713,7 @@ public class StudyTest {
 
         mvcResult = mockMvc
                 .perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=NAME",
-                        studyUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
+                        studyUuid, rootNodeId, "B").header(HEADER_USER_ID, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         equipmentInfos = mapper.readValue(resultAsString, new TypeReference<List<EquipmentInfos>>() {
@@ -723,7 +722,7 @@ public class StudyTest {
 
         mvcResult = mockMvc
                 .perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=ID",
-                        studyUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
+                        studyUuid, rootNodeId, "B").header(HEADER_USER_ID, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         equipmentInfos = mapper.readValue(resultAsString, new TypeReference<List<EquipmentInfos>>() {
@@ -731,7 +730,7 @@ public class StudyTest {
         assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=bogus",
-                        studyUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
+                        studyUuid, rootNodeId, "B").header(HEADER_USER_ID, "userId"))
                 .andExpectAll(status().isBadRequest(),
                         content().string("Enum unknown entry 'bogus' should be among NAME, ID"))
                 .andReturn();
@@ -744,18 +743,18 @@ public class StudyTest {
         String userId = "userId";
 
         //empty list
-        mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId")).andExpectAll(status().isOk(),
+        mockMvc.perform(get("/v1/studies").header(HEADER_USER_ID, "userId")).andExpectAll(status().isOk(),
             content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));
 
         //empty list
-        mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(status().isOk(),
+        mockMvc.perform(get("/v1/study_creation_requests").header(HEADER_USER_ID, "userId")).andExpectAll(status().isOk(),
             content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));
 
         //insert a study
         UUID studyUuid = createStudy("userId", CASE_UUID);
 
         // check the study
-        result = mockMvc.perform(get("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
+        result = mockMvc.perform(get("/v1/studies/{studyUuid}", studyUuid).header(HEADER_USER_ID, "userId"))
                      .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
 
         resultAsString = result.getResponse().getContentAsString();
@@ -765,14 +764,14 @@ public class StudyTest {
 
         //insert a study with a non existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}",
-                NOT_EXISTING_CASE_UUID, "false").header(USER_ID_HEADER, "userId").param(CASE_FORMAT, "XIIDM"))
+                NOT_EXISTING_CASE_UUID, "false").header(HEADER_USER_ID, "userId").param(CASE_FORMAT, "XIIDM"))
                      .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.valueOf("text/plain;charset=UTF-8"))).andReturn();
         assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", result.getResponse().getContentAsString());
 
         assertTrue(TestUtils.getRequestsDone(1, server)
                        .contains(String.format("/v1/cases/%s/exists", NOT_EXISTING_CASE_UUID)));
 
-        result = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId"))
+        result = mockMvc.perform(get("/v1/studies").header(HEADER_USER_ID, "userId"))
                      .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
 
         resultAsString = result.getResponse().getContentAsString();
@@ -786,7 +785,7 @@ public class StudyTest {
         //even with the same name should work
         studyUuid = createStudy("userId2", CASE_UUID);
 
-        resultAsString = mockMvc.perform(get("/v1/studies").header("userId", "userId2"))
+        resultAsString = mockMvc.perform(get("/v1/studies").header(HEADER_USER_ID, "userId2"))
                              .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn().getResponse().getContentAsString();
 
         createdStudyBasicInfosList = mapper.readValue(resultAsString,
@@ -798,7 +797,7 @@ public class StudyTest {
 
         UUID randomUuid = UUID.randomUUID();
         //get a non existing study -> 404 not found
-        mockMvc.perform(get("/v1/studies/{studyUuid}", randomUuid).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}", randomUuid).header(HEADER_USER_ID, "userId"))
             .andExpectAll(status().isNotFound(),
                 content().contentType(MediaType.APPLICATION_JSON),
                 jsonPath("$").value(STUDY_NOT_FOUND.name()));
@@ -807,7 +806,7 @@ public class StudyTest {
 
         // expect only 1 study (public one) since the other is private and we use
         // another userId
-        result = mockMvc.perform(get("/v1/studies").header("userId", "a"))
+        result = mockMvc.perform(get("/v1/studies").header(HEADER_USER_ID, "a"))
                      .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
 
         resultAsString = result.getResponse().getContentAsString();
@@ -876,7 +875,7 @@ public class StudyTest {
         studyRepository.save(studyEntity);
 
         UUID stubUuid = wireMockUtils.stubNetworkModificationDeleteGroup();
-        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
         assertTrue(studyRepository.findById(studyUuid).isEmpty());
@@ -908,7 +907,7 @@ public class StudyTest {
         }).when(caseService).deleteCase(any());
 
         UUID stubUuid = wireMockUtils.stubNetworkModificationDeleteGroup();
-        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(HEADER_USER_ID, "userId"))
                 .andExpectAll(status().isInternalServerError(), content().string(InterruptedException.class.getName()));
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
@@ -931,7 +930,7 @@ public class StudyTest {
         studyEntity.setCaseUuid(nonExistingCaseUuid);
         studyRepository.save(studyEntity);
 
-        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk());
 
         assertTrue(studyRepository.findById(studyUuid).isEmpty());
@@ -955,7 +954,7 @@ public class StudyTest {
         MvcResult mvcResult = mockMvc
                 .perform(get("/v1/studies/metadata?ids="
                         + Stream.of(oldStudyUuid, studyUuid).map(Object::toString).collect(Collectors.joining(",")))
-                        .header(USER_ID_HEADER, "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString,
@@ -977,12 +976,12 @@ public class StudyTest {
     public void testNotifyStudyMetadataUpdated() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         mockMvc.perform(post("/v1/studies/{studyUuid}/notification?type=metadata_updated", studyUuid)
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
         checkStudyMetadataUpdatedMessagesReceived();
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/notification?type=NOT_EXISTING_TYPE", UUID.randomUUID())
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -991,7 +990,7 @@ public class StudyTest {
         UUID studyUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?reportType=NETWORK_MODIFICATION", studyUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?reportType=NETWORK_MODIFICATION", studyUuid, rootNodeUuid).header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk()).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         List<ReportNode> reporterModel = mapper.readValue(resultAsString, new TypeReference<List<ReportNode>>() { });
@@ -1024,7 +1023,7 @@ public class StudyTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(USER_ID_HEADER, userId))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, userId))
             .andExpect(status().isOk());
         checkElementUpdatedMessageSent(studyUuid, userId);
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
@@ -1040,7 +1039,7 @@ public class StudyTest {
 
     private UUID createStudy(String userId, UUID caseUuid, String parameterDuplicatedUuid, boolean parameterDuplicationSuccess) throws Exception {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
-                        .header("userId", userId)
+                        .header(HEADER_USER_ID, userId)
                         .param(CASE_FORMAT, "UCTE"))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -1070,7 +1069,7 @@ public class StudyTest {
 
     protected UUID createStudyWithImportParameters(String userId, UUID caseUuid, String caseFormat, Map<String, Object> importParameters) throws Exception {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
-                        .header("userId", userId).contentType(MediaType.APPLICATION_JSON)
+                        .header(HEADER_USER_ID, userId).contentType(MediaType.APPLICATION_JSON)
                         .param(CASE_FORMAT, caseFormat)
                         .content(mapper.writeValueAsString(importParameters)))
                 .andExpect(status().isOk())
@@ -1098,7 +1097,7 @@ public class StudyTest {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                         .param("duplicateCase", "true")
                         .param(CASE_FORMAT, "UCTE")
-                        .header("userId", userId))
+                        .header(HEADER_USER_ID, userId))
                 .andExpect(status().isOk())
                 .andReturn();
         String resultAsString = result.getResponse().getContentAsString();
@@ -1154,7 +1153,7 @@ public class StudyTest {
     public void testCreateStudyWithErrorDuringCaseImport() throws Exception {
         String userId = "userId";
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_IMPORT_ERROR)
-                        .header("userId", userId)
+                        .header(HEADER_USER_ID, userId)
                         .param(CASE_FORMAT, "UCTE"))
             .andExpect(status().is5xxServerError());
 
@@ -1165,7 +1164,7 @@ public class StudyTest {
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(
+        MvcResult mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(HEADER_USER_ID, "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
@@ -1184,7 +1183,7 @@ public class StudyTest {
     public void testCreateStudyCreationFailedWithoutErrorMessage() throws Exception {
         String userId = "userId";
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_CONVERSION_ERROR)
-                        .header("userId", userId)
+                        .header(HEADER_USER_ID, userId)
                         .param(CASE_FORMAT, "XIIDM"))
                 .andExpect(status().isOk());
 
@@ -1208,7 +1207,7 @@ public class StudyTest {
     public void testCreateStudyWithErrorDuringStudyCreation() throws Exception {
         String userId = "userId";
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_STUDY_CREATION_ERROR)
-                        .header("userId", userId)
+                        .header(HEADER_USER_ID, userId)
                         .param(CASE_FORMAT, "UCTE"))
             .andExpect(status().isOk());
 
@@ -1236,7 +1235,7 @@ public class StudyTest {
         String resultAsString;
         countDownLatch = new CountDownLatch(1);
 
-        mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(
+        mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(HEADER_USER_ID, "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
@@ -1255,7 +1254,7 @@ public class StudyTest {
         // drop the broker message for study creation request (deletion)
         output.receive(TIMEOUT, studyUpdateDestination);
 
-        mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(
+        mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(HEADER_USER_ID, "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
@@ -1265,7 +1264,7 @@ public class StudyTest {
 
         assertEquals(List.of(), bsiListResult);
 
-        mvcResult = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId")).andExpectAll(
+        mvcResult = mockMvc.perform(get("/v1/studies").header(HEADER_USER_ID, "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
@@ -1277,7 +1276,7 @@ public class StudyTest {
 
         //insert a study
         mvcResult = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", NEW_STUDY_CASE_UUID, "false")
-                                        .header(USER_ID_HEADER, "userId")
+                                        .header(HEADER_USER_ID, "userId")
                         .param(CASE_FORMAT, "XIIDM"))
                         .andExpect(status().isOk())
                         .andReturn();
@@ -1288,7 +1287,7 @@ public class StudyTest {
         assertThat(bsiResult, createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId()));
 
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests", NEW_STUDY_CASE_UUID, "false")
-                                        .header(USER_ID_HEADER, "userId")).andExpectAll(
+                                        .header(HEADER_USER_ID, "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
@@ -1308,7 +1307,7 @@ public class StudyTest {
         output.receive(TIMEOUT, studyUpdateDestination);
 
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests")
-                                        .header(USER_ID_HEADER, "userId")).andExpectAll(
+                                        .header(HEADER_USER_ID, "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
@@ -1319,7 +1318,7 @@ public class StudyTest {
         assertEquals(List.of(), bsiListResult);
 
         mvcResult = mockMvc.perform(get("/v1/studies")
-                                        .header(USER_ID_HEADER, "userId")).andExpectAll(
+                                        .header(HEADER_USER_ID, "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
@@ -1450,7 +1449,7 @@ public class StudyTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes)
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node1.getId()));
@@ -1466,7 +1465,7 @@ public class StudyTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId())
             .contentType(MediaType.APPLICATION_JSON)
             .content(createLoadAttributes)
-            .header(USER_ID_HEADER, "userId"))
+            .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node2.getId()));
@@ -1492,7 +1491,7 @@ public class StudyTest {
 
         //Test duplication from a non existing source study
         mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", UUID.randomUUID())
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isNotFound());
     }
 
@@ -1531,7 +1530,7 @@ public class StudyTest {
 
         String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
                         .param(CASE_FORMAT, "XIIDM")
-                        .header(USER_ID_HEADER, "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
         ObjectMapper mapper = new ObjectMapper();
@@ -1544,7 +1543,7 @@ public class StudyTest {
     private StudyEntity duplicateStudy(UUID studyUuid, String userId, String caseFormat) throws Exception {
         UUID stubUuid = wireMockUtils.stubDuplicateModificationGroup();
         String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
-                        .header(USER_ID_HEADER, "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         ObjectMapper mapper = new ObjectMapper();
         String newUuid = mapper.readValue(response, String.class);
@@ -1655,7 +1654,7 @@ public class StudyTest {
         UUID stubUuid = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId())
                         .content(createTwoWindingsTransformerAttributes).contentType(MediaType.APPLICATION_JSON)
-                        .header(USER_ID_HEADER, userId))
+                        .header(HEADER_USER_ID, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node1.getId()));
@@ -1670,7 +1669,7 @@ public class StudyTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createLoadAttributes)
-                .header(USER_ID_HEADER, userId))
+                .header(HEADER_USER_ID, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node2.getId()));
@@ -1798,7 +1797,7 @@ public class StudyTest {
         mockMvc.perform(post(STUDIES_URL +
                     "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
             study1Uuid, node1.getId(), node1.getId(), InsertMode.BEFORE)
-            .header(USER_ID_HEADER, "userId"))
+            .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isForbidden());
         wireMockUtils.verifyNetworkModificationCountsGet(stubGetCountUuid, node1.getModificationGroupUuid().toString());
 
@@ -1806,7 +1805,7 @@ public class StudyTest {
         mockMvc.perform(post(STUDIES_URL +
                     "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
             study1Uuid, node1.getId(), node1.getId(), InsertMode.AFTER)
-            .header(USER_ID_HEADER, "userId"))
+            .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isForbidden());
         wireMockUtils.verifyNetworkModificationCountsGet(stubGetCountUuid, node1.getModificationGroupUuid().toString());
 
@@ -1814,7 +1813,7 @@ public class StudyTest {
         mockMvc.perform(post(STUDIES_URL +
                     "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
             study1Uuid, node1.getId(), node1.getId(), InsertMode.CHILD)
-            .header(USER_ID_HEADER, "userId"))
+            .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isForbidden());
         wireMockUtils.verifyNetworkModificationCountsGet(stubGetCountUuid, node1.getModificationGroupUuid().toString());
     }
@@ -1873,14 +1872,14 @@ public class StudyTest {
         mockMvc.perform(post(STUDIES_URL +
                         "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 study1Uuid, UUID.randomUUID(), node1.getId(), InsertMode.AFTER)
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isNotFound());
 
         //try to cut to a non existing position and expect not found
         mockMvc.perform(post(STUDIES_URL +
                         "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 study1Uuid, node1.getId(), UUID.randomUUID(), InsertMode.AFTER)
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isNotFound());
 
         //try to cut and paste to before the root node and expect forbidden
@@ -1888,7 +1887,7 @@ public class StudyTest {
         mockMvc.perform(post(STUDIES_URL +
                         "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 study1Uuid, node1.getId(), rootNode.getId(), InsertMode.BEFORE)
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isForbidden());
 
         wireMockUtils.verifyNetworkModificationCountsGet(stubUuid, node1.getModificationGroupUuid().toString());
@@ -1908,13 +1907,13 @@ public class StudyTest {
         mockMvc.perform(post(STUDIES_URL +
                                 "/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}",
                         study1Uuid, emptyNode.getId(), emptyNodeChild.getId())
-                        .header(USER_ID_HEADER, userId))
+                        .header(HEADER_USER_ID, userId))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post(STUDIES_URL +
                                 "/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}",
                         study1Uuid, emptyNode.getId(), node1.getId())
-                        .header(USER_ID_HEADER, userId))
+                        .header(HEADER_USER_ID, userId))
                 .andExpect(status().isOk());
 
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(emptyNode.getId(), emptyNodeChild.getId()));
@@ -1949,12 +1948,12 @@ public class StudyTest {
         mockMvc.perform(get(STUDIES_URL +
                         "/{studyUuid}/subtree?parentNodeUuid={parentSubtreeNode}",
                 study1Uuid, emptyNode.getId())
-                .header(USER_ID_HEADER, "userId")).andExpect(status().isOk());
+                .header(HEADER_USER_ID, "userId")).andExpect(status().isOk());
 
         mockMvc.perform(get(STUDIES_URL +
                         "/{studyUuid}/subtree?parentNodeUuid={parentSubtreeNode}",
                 study1Uuid, UUID.randomUUID())
-                .header(USER_ID_HEADER, "userId")).andExpect(status().isNotFound());
+                .header(HEADER_USER_ID, "userId")).andExpect(status().isNotFound());
     }
 
     @Test
@@ -1974,7 +1973,7 @@ public class StudyTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes)
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node1.getId()));
@@ -1989,7 +1988,7 @@ public class StudyTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createLoadAttributes)
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node2.getId()));
@@ -2045,21 +2044,21 @@ public class StudyTest {
         mockMvc.perform(post(STUDIES_URL +
                         "/{studyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}&sourceStudyUuid={sourceStudyUuid}",
                 study1Uuid, UUID.randomUUID(), node1.getId(), InsertMode.AFTER, study1Uuid)
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isNotFound());
 
         //try to copy to a non existing position and expect not found
         mockMvc.perform(post(STUDIES_URL +
                         "/{studyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}&sourceStudyUuid={sourceStudyUuid}",
                 study1Uuid, node1.getId(), UUID.randomUUID(), InsertMode.AFTER, study1Uuid)
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isNotFound());
 
         //try to copy to before the root node and expect forbidden
         mockMvc.perform(post(STUDIES_URL +
                         "/{studyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}&sourceStudyUuid={sourceStudyUuid}",
                 study1Uuid, node1.getId(), rootNode.getId(), InsertMode.BEFORE, study1Uuid)
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isForbidden());
 
         // Test Built status when duplicating an empty node
@@ -2094,7 +2093,7 @@ public class StudyTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createTwoWindingsTransformerAttributes)
-                        .header(USER_ID_HEADER, "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node1.getId(), node3.getId()));
@@ -2114,7 +2113,7 @@ public class StudyTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createLoadAttributes)
-                        .header(USER_ID_HEADER, "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node2.getId()));
@@ -2141,7 +2140,7 @@ public class StudyTest {
         mockMvc.perform(post(STUDIES_URL +
                                 "/{study1Uuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}&sourceStudyUuid={sourceStudyUuid}",
                         study1Uuid, node1.getId(), node4.getId(), study1Uuid)
-                        .header(USER_ID_HEADER, "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
         List<UUID> nodesAfterDuplication = networkModificationTreeService.getAllNodes(study1Uuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
@@ -2167,12 +2166,12 @@ public class StudyTest {
         mockMvc.perform(get(STUDIES_URL +
                                 "/{studyUuid}/subtree?parentNodeUuid={parentSubtreeNode}",
                         study1Uuid, nodesAfterDuplication.get(0))
-                        .header(USER_ID_HEADER, "userId")).andExpect(status().isOk());
+                        .header(HEADER_USER_ID, "userId")).andExpect(status().isOk());
 
         mockMvc.perform(get(STUDIES_URL +
                         "/{studyUuid}/subtree?parentNodeUuid={parentSubtreeNode}",
                 study1Uuid, UUID.randomUUID())
-                .header(USER_ID_HEADER, "userId")).andExpect(status().isNotFound());
+                .header(HEADER_USER_ID, "userId")).andExpect(status().isNotFound());
 
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
 
@@ -2199,14 +2198,14 @@ public class StudyTest {
         mockMvc.perform(post(STUDIES_URL +
                                 "/{targetStudyUuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}&sourceStudyUuid={sourceStudyUuid}",
                         study1Uuid, UUID.randomUUID(), node1.getId(), study1Uuid)
-                        .header(USER_ID_HEADER, "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isNotFound());
 
         //try to copy to a non existing position and expect not found
         mockMvc.perform(post(STUDIES_URL +
                                 "/{targetStudyUuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}&sourceStudyUuid={sourceStudyUuid}",
                         study1Uuid, node1.getId(), UUID.randomUUID(), study1Uuid)
-                        .header(USER_ID_HEADER, "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isNotFound());
     }
 
@@ -2230,7 +2229,7 @@ public class StudyTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes)
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node1.getId()));
@@ -2245,7 +2244,7 @@ public class StudyTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createLoadAttributes)
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node2.getId()));
@@ -2276,7 +2275,7 @@ public class StudyTest {
         mockMvc.perform(post(STUDIES_URL +
                 "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 studyUuid, nodeToCopy.getId(), referenceNodeUuid, insertMode)
-                .header(USER_ID_HEADER, userId))
+                .header(HEADER_USER_ID, userId))
                 .andExpect(status().isOk());
         checkElementUpdatedMessageSent(studyUuid, userId);
         wireMockUtils.verifyNetworkModificationCountsGet(stubUuid, nodeToCopy.getModificationGroupUuid().toString());
@@ -2359,13 +2358,13 @@ public class StudyTest {
             mockMvc.perform(post(STUDIES_URL +
                         "/{targetStudyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                     targetStudyUuid, nodeToCopy.getId(), referenceNodeUuid, insertMode)
-                    .header(USER_ID_HEADER, "userId"))
+                    .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
         } else {
             mockMvc.perform(post(STUDIES_URL +
                             "/{targetStudyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}&sourceStudyUuid={sourceStudyUuid}",
                     targetStudyUuid, nodeToCopy.getId(), referenceNodeUuid, insertMode, sourceStudyUuid)
-                    .header(USER_ID_HEADER, "userId"))
+                    .header(HEADER_USER_ID, "userId"))
                     .andExpect(status().isOk());
         }
 
@@ -2493,7 +2492,7 @@ public class StudyTest {
 
     @Test
     public void providerTest() throws Exception {
-        UUID studyUuid = createStudy(USER_ID_HEADER, CASE_UUID);
+        UUID studyUuid = createStudy(HEADER_USER_ID, CASE_UUID);
         assertNotNull(studyUuid);
         mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
             .andExpectAll(status().isOk(),
@@ -2502,7 +2501,7 @@ public class StudyTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/provider", studyUuid)
                         .content("SuperLF")
                         .contentType(MediaType.TEXT_PLAIN)
-                        .header(USER_ID_HEADER, USER_ID_HEADER))
+                        .header(HEADER_USER_ID, HEADER_USER_ID))
                 .andExpect(status().isOk());
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(message);
@@ -2512,7 +2511,7 @@ public class StudyTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid)
                         .content("SuperSA")
                         .contentType(MediaType.TEXT_PLAIN)
-                        .header(USER_ID_HEADER, USER_ID_HEADER))
+                        .header(HEADER_USER_ID, HEADER_USER_ID))
                 .andExpect(status().isOk());
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(message);
@@ -2522,7 +2521,7 @@ public class StudyTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid)
                 .content("SuperNEE")
                 .contentType(MediaType.TEXT_PLAIN)
-                .header(USER_ID_HEADER, USER_ID_HEADER))
+                .header(HEADER_USER_ID, HEADER_USER_ID))
             .andExpect(status().isOk());
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(message);

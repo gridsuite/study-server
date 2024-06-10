@@ -352,12 +352,12 @@ public class ShortCircuitTest {
 
         // run a short circuit analysis on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, rootNodeUuid)
-                        .header("userId", "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isForbidden());
 
         //run an all-buses short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
-                        .header("userId", "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
@@ -455,11 +455,11 @@ public class ShortCircuitTest {
         UUID modificationNode4Uuid = modificationNode4.getId();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, rootNodeUuid)
-                        .header("userId", "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode4Uuid)
-                        .header("userId", "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
@@ -562,13 +562,13 @@ public class ShortCircuitTest {
         // run a one bus short circuit analysis on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, rootNodeUuid)
                 .param("busId", "BUS_TEST_ID")
-                .header("userId", "userId"))
+                .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isForbidden());
 
         //run a one bus short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
                 .param("busId", "BUS_TEST_ID")
-                .header("userId", "userId"))
+                .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
@@ -726,7 +726,7 @@ public class ShortCircuitTest {
 
         //run a short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
-                        .header("userId", "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -740,7 +740,7 @@ public class ShortCircuitTest {
         //run a one bus short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
                         .param("busId", "BUS_TEST_ID")
-                        .header("userId", "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -754,7 +754,7 @@ public class ShortCircuitTest {
 
         // invalidate status
         mockMvc.perform(put("/v1/studies/{studyUuid}/short-circuit/invalidate-status", studyNameUserIdUuid)
-                .header("userId", "userId")).andExpect(status().isOk());
+                .header(HEADER_USER_ID, "userId")).andExpect(status().isOk());
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "&resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
@@ -800,7 +800,7 @@ public class ShortCircuitTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);

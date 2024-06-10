@@ -65,6 +65,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.mockito.BDDMockito.any;
 import static org.mockito.BDDMockito.eq;
 import static org.mockito.Mockito.when;
@@ -96,7 +97,6 @@ public class StudyControllerDynamicSimulationTest {
 
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events";
 
-    private static final String HEADER_USER_ID_NAME = "userId";
     private static final String HEADER_USER_ID_VALUE = "userId";
 
     private static final String MAPPING_NAME_01 = "_01";
@@ -244,7 +244,7 @@ public class StudyControllerDynamicSimulationTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+        studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(mess).isNotNull();
@@ -270,7 +270,7 @@ public class StudyControllerDynamicSimulationTest {
         // run on a regular node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
                         studyUuid, modificationNode1Uuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
                 .andExpect(status().isOk());
@@ -316,7 +316,7 @@ public class StudyControllerDynamicSimulationTest {
         // run on root node => forbidden
         studyClient.perform(post(UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT) + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
                 studyUuid, rootNodeUuid, MAPPING_NAME_01)
-                .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                .header(HEADER_USER_ID, HEADER_USER_ID_VALUE))
                 .andExpect(status().isForbidden());
     }
 
@@ -338,7 +338,7 @@ public class StudyControllerDynamicSimulationTest {
         // run on a regular node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
                         studyUuid, modificationNode1Uuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
                 .andExpect(status().isOk());
@@ -413,7 +413,7 @@ public class StudyControllerDynamicSimulationTest {
         // run on a regular node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
                         studyUuid, modificationNode1Uuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
                 .andExpect(status().isOk());
@@ -455,7 +455,7 @@ public class StudyControllerDynamicSimulationTest {
         // get result from a node not yet done
         studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT + DELIMITER + "timeseries",
                 STUDY_UUID, NODE_NOT_DONE_UUID)
-                .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                .header(HEADER_USER_ID, HEADER_USER_ID_VALUE))
                 .andExpect(status().isNoContent());
     }
 
@@ -475,7 +475,7 @@ public class StudyControllerDynamicSimulationTest {
         // get result from a node done
         MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT + DELIMITER + "timeseries",
                         STUDY_UUID, NODE_UUID)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
 
         String timeSeriesResultJson = result.getResponse().getContentAsString();
@@ -497,7 +497,7 @@ public class StudyControllerDynamicSimulationTest {
         // get result from a node not yet done
         studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT + DELIMITER + "timeline",
                         STUDY_UUID, NODE_NOT_DONE_UUID)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE))
                 .andExpect(status().isNoContent());
     }
 
@@ -517,7 +517,7 @@ public class StudyControllerDynamicSimulationTest {
         // get result from a node done
         MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT + DELIMITER + "timeline",
                         STUDY_UUID, NODE_UUID)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
 
         List<TimelineEventInfos> timelineEventInfosListResult = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
@@ -536,7 +536,7 @@ public class StudyControllerDynamicSimulationTest {
         // get result from a node not yet run
         studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_STATUS,
                         STUDY_UUID, NODE_NOT_RUN_UUID)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE))
                 .andExpect(status().isNoContent());
     }
 
@@ -552,7 +552,7 @@ public class StudyControllerDynamicSimulationTest {
         // get timeseries metadata from a node done
         MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT + DELIMITER + "timeseries/metadata",
                         STUDY_UUID, NODE_UUID)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
 
         List<TimeSeriesMetadataInfos> resultTimeSeriesMetadataInfosList = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
@@ -573,7 +573,7 @@ public class StudyControllerDynamicSimulationTest {
         // get status from a node done
         MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_STATUS,
                         STUDY_UUID, NODE_UUID)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
         DynamicSimulationStatus statusResult = objectMapper.readValue(result.getResponse().getContentAsString(), DynamicSimulationStatus.class);
 
@@ -592,7 +592,7 @@ public class StudyControllerDynamicSimulationTest {
         // --- call endpoint to be tested --- //
         // get all mapping infos
         MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS, STUDY_UUID)
-                .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                .header(HEADER_USER_ID, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
         String content = result.getResponse().getContentAsString();
 
@@ -622,7 +622,7 @@ public class StudyControllerDynamicSimulationTest {
         // --- call endpoint to be tested --- //
         // set parameters
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_PARAMETERS, studyUuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(defaultDynamicSimulationParameters)))
                     .andExpect(status().isOk()).andReturn();
@@ -633,7 +633,7 @@ public class StudyControllerDynamicSimulationTest {
 
         // get parameters
         result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_PARAMETERS, studyUuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk()).andReturn();
 
@@ -666,7 +666,7 @@ public class StudyControllerDynamicSimulationTest {
 
         // set parameters
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_PARAMETERS, studyUuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(defaultDynamicSimulationParameters)))
                 .andExpect(status().isOk()).andReturn();
@@ -677,7 +677,7 @@ public class StudyControllerDynamicSimulationTest {
         MvcResult result;
         // --- call endpoint to be tested --- //
         result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS, studyUuid, modificationNode1Uuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk()).andReturn();
 
@@ -707,7 +707,7 @@ public class StudyControllerDynamicSimulationTest {
 
         // set parameters
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_PARAMETERS, studyUuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(defaultDynamicSimulationParameters)))
                 .andExpect(status().isOk()).andReturn();
@@ -718,7 +718,7 @@ public class StudyControllerDynamicSimulationTest {
         // --- call endpoint to be tested --- //
         // must be no content status
         studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS, studyUuid, modificationNode1Uuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent()).andReturn();
 
@@ -775,7 +775,7 @@ public class StudyControllerDynamicSimulationTest {
         // --- call endpoint to be tested --- //
         // --- Post an event --- //
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(EVENT)))
                 .andExpect(status().isOk()).andReturn();
@@ -784,7 +784,7 @@ public class StudyControllerDynamicSimulationTest {
 
         // --- Get the event --- //
         result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk()).andReturn();
 
@@ -797,7 +797,7 @@ public class StudyControllerDynamicSimulationTest {
         // --- Get event by node id and equipment id --- //
         result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
                         .param("equipmentId", EQUIPMENT_ID)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk()).andReturn();
 
@@ -811,7 +811,7 @@ public class StudyControllerDynamicSimulationTest {
 
         // call update API
         studyClient.perform(put(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(eventInfosResult)))
                 .andExpect(status().isOk()).andReturn();
@@ -821,7 +821,7 @@ public class StudyControllerDynamicSimulationTest {
         // check updated event
         result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
                         .param("equipmentId", EQUIPMENT_ID)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk()).andReturn();
         EventInfos eventInfosUpdatedResult = objectMapper.readValue(result.getResponse().getContentAsString(), EventInfos.class);
@@ -831,7 +831,7 @@ public class StudyControllerDynamicSimulationTest {
         // --- Delete an event --- //
         studyClient.perform(delete(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
                         .param("eventUuids", eventInfosUpdatedResult.getId().toString())
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk()).andReturn();
 
@@ -839,7 +839,7 @@ public class StudyControllerDynamicSimulationTest {
 
         // check result => must empty
         result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .header(HEADER_USER_ID, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk()).andReturn();
 

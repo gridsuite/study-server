@@ -297,7 +297,7 @@ public class SensitivityAnalysisTest {
 
         // run sensitivity analysis
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, nodeUuid)
-            .header("userId", "userId")
+            .header(HEADER_USER_ID, "userId")
             .header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
 
         Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
@@ -344,13 +344,13 @@ public class SensitivityAnalysisTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", studyUuid, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("userId", "userId")
+                        .header(HEADER_USER_ID, "userId")
                         .content(content))
                 .andExpectAll(status().isNotFound(), content().string("\"SENSITIVITY_ANALYSIS_NOT_FOUND\""));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", studyUuid, nodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("userId", "userId")
+                        .header(HEADER_USER_ID, "userId")
                         .content(content))
                 .andExpectAll(status().isOk(), content().bytes(SENSITIVITY_RESULTS_AS_CSV));
 
@@ -604,7 +604,7 @@ public class SensitivityAnalysisTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
@@ -702,7 +702,7 @@ public class SensitivityAnalysisTest {
         MockHttpServletRequestBuilder requestBuilder = get("/v1/studies/{studyUuid}/sensitivity-analysis/factors-count", studyNameUserIdUuid);
         IDS.getIds().forEach((key, list) -> requestBuilder.queryParam(String.format("ids[%s]", key), list.stream().map(UUID::toString).toArray(String[]::new)));
 
-        String resultAsString = mockMvc.perform(requestBuilder.header("userId", "userId"))
+        String resultAsString = mockMvc.perform(requestBuilder.header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -715,7 +715,7 @@ public class SensitivityAnalysisTest {
     private void setParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters) throws Exception {
         mockMvc.perform(
             post("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)
-                .header("userId", "userId")
+                .header(HEADER_USER_ID, "userId")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(parameters)).andExpect(
             status().isOk());

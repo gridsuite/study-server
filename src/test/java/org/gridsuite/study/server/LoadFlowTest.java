@@ -67,6 +67,7 @@ import java.io.IOException;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.junit.Assert.*;
@@ -125,8 +126,6 @@ public class LoadFlowTest {
     private static final String VARIANT_ID_2 = "variant_2";
 
     private static final long TIMEOUT = 1000;
-
-    private static final String USER_ID_HEADER = "userId";
 
     private static final String DEFAULT_PROVIDER = "defaultProvider";
     private static final String OTHER_PROVIDER = "otherProvider";
@@ -373,12 +372,12 @@ public class LoadFlowTest {
 
         // run a loadflow on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, rootNodeUuid)
-                        .header("userId", "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isForbidden());
 
         //run a loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNode3Uuid)
-                        .header("userId", "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
@@ -413,7 +412,7 @@ public class LoadFlowTest {
 
         // loadflow failed
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNode2Uuid)
-                        .header("userId", "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_FAILED);
@@ -434,7 +433,7 @@ public class LoadFlowTest {
 
         //run a loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run?limitReduction=0.7", studyNameUserIdUuid, modificationNode1Uuid)
-                        .header("userId", "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -486,7 +485,7 @@ public class LoadFlowTest {
 
         //run a loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run?limitReduction=0.7", studyNameUserIdUuid, modificationNode1Uuid)
-                        .header("userId", "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -497,7 +496,7 @@ public class LoadFlowTest {
 
         // invalidate status
         mockMvc.perform(put("/v1/studies/{studyUuid}/loadflow/invalidate-status", studyNameUserIdUuid)
-                .header("userId", "userId")).andExpect(status().isOk());
+                .header(HEADER_USER_ID, "userId")).andExpect(status().isOk());
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)));
     }
@@ -522,7 +521,7 @@ public class LoadFlowTest {
 
         //run a loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNode3Uuid)
-                        .header("userId", "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
@@ -627,7 +626,7 @@ public class LoadFlowTest {
     private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
-                    .header("userId", userId)
+                    .header(HEADER_USER_ID, userId)
                     .contentType(MediaType.ALL)
                     .content(parameters))
                 .andExpect(status().is(status.value()));
@@ -709,7 +708,7 @@ public class LoadFlowTest {
     // the following testGetDefaultProviders tests are related to StudyTest::testGetDefaultProviders but with a user and different profile cases
     @Test
     public void testGetDefaultProvidersFromProfile() throws Exception {
-        mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, VALID_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
+        mockMvc.perform(get("/v1/loadflow-default-provider").header(HEADER_USER_ID, VALID_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
                 status().isOk(),
                 content().string(OTHER_PROVIDER));
         var requests = TestUtils.getRequestsDone(2, server);
@@ -719,7 +718,7 @@ public class LoadFlowTest {
 
     @Test
     public void testGetDefaultProvidersFromProfileInvalid() throws Exception {
-        mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, INVALID_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
+        mockMvc.perform(get("/v1/loadflow-default-provider").header(HEADER_USER_ID, INVALID_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
                 status().isOk(),
                 content().string(DEFAULT_PROVIDER));
         var requests = TestUtils.getRequestsDone(3, server);
@@ -730,7 +729,7 @@ public class LoadFlowTest {
 
     @Test
     public void testGetDefaultProvidersWithoutProfile() throws Exception {
-        mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, NO_PROFILE_USER_ID)).andExpectAll(
+        mockMvc.perform(get("/v1/loadflow-default-provider").header(HEADER_USER_ID, NO_PROFILE_USER_ID)).andExpectAll(
                 status().isOk(),
                 content().string(DEFAULT_PROVIDER));
         var requests = TestUtils.getRequestsDone(2, server);
@@ -740,7 +739,7 @@ public class LoadFlowTest {
 
     @Test
     public void testGetDefaultProvidersWithoutParamInProfile() throws Exception {
-        mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, NO_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
+        mockMvc.perform(get("/v1/loadflow-default-provider").header(HEADER_USER_ID, NO_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
                 status().isOk(),
                 content().string(DEFAULT_PROVIDER));
         var requests = TestUtils.getRequestsDone(2, server);
@@ -826,7 +825,7 @@ public class LoadFlowTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
