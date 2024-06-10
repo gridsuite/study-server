@@ -67,6 +67,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class StudyServiceTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyServiceTest.class);
 
+    private static final long TIMEOUT = 1000;
+    private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
+    private static final String CASE_FORMAT_PARAM = "caseFormat";
+    private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
+    private static final String USER_ID_HEADER = "userId";
+    private static final String HEADER_UPDATE_TYPE = "updateType";
+    private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
+
+    private static final String STUDY_UPDATE_DESTINATION = "study.update";
+
     WireMockServer wireMockServer;
 
     WireMockUtils wireMockUtils;
@@ -89,16 +101,6 @@ public class StudyServiceTest {
     @Autowired
     ObjectMapper mapper;
     ObjectWriter objectWriter;
-
-    private static final long TIMEOUT = 1000;
-    private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
-    private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
-    private static final String CASE_FORMAT_PARAM = "caseFormat";
-    private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
-    private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
-    private static final String USER_ID_HEADER = "userId";
-    private static final String HEADER_UPDATE_TYPE = "updateType";
-    private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
 
     @Autowired
     private StudyRepository studyRepository;
@@ -125,8 +127,6 @@ public class StudyServiceTest {
         caseService.setCaseServerBaseUri(wireMockServer.baseUrl());
         networkConversionService.setNetworkConversionServerBaseUri(wireMockServer.baseUrl());
     }
-
-    private final String studyUpdateDestination = "study.update";
 
     @Test
     public void testCheckNetworkExistenceReturnsOk() throws Exception {
@@ -180,7 +180,7 @@ public class StudyServiceTest {
         countDownLatch.await();
 
         // study network recreation done notification
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         MessageHeaders headers = message.getHeaders();
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_NETWORK_RECREATION_DONE, headers.get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -231,7 +231,7 @@ public class StudyServiceTest {
         countDownLatch.await();
 
         // study network recreation done notification
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         MessageHeaders headers = message.getHeaders();
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_NETWORK_RECREATION_DONE, headers.get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -300,7 +300,7 @@ public class StudyServiceTest {
 
     private void assertStudyCreation(UUID studyUuid, String userId, String... errorMessage) {
         // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
@@ -308,10 +308,10 @@ public class StudyServiceTest {
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
-        output.receive(TIMEOUT, studyUpdateDestination);  // message for first modification node creation
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);  // message for first modification node creation
 
         // assert that the broker message has been sent a study creation message for creation
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -329,7 +329,7 @@ public class StudyServiceTest {
 
     @After
     public void tearDown() {
-        List<String> destinations = List.of(studyUpdateDestination);
+        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION);
 
         cleanDB();
 

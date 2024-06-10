@@ -141,6 +141,10 @@ public class NetworkModificationTest {
 
     private static final NetworkModificationResult DEFAULT_BUILD_RESULT = createModificationResultWithElementImpact(SimpleImpactType.CREATION, IdentifiableType.LINE, "lineId", Set.of("s1", "s2")).get();
 
+    //output destinations
+    private static final String STUDY_UPDATE_DESTINATION = "study.update";
+    private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -193,10 +197,6 @@ public class NetworkModificationTest {
 
     @Autowired
     private StudyRepository studyRepository;
-
-    //output destinations
-    private final String studyUpdateDestination = "study.update";
-    private final String elementUpdateDestination = "element.update";
 
     private UUID buildFailedStubId;
     private UUID buildErrorStubId;
@@ -430,7 +430,7 @@ public class NetworkModificationTest {
         modificationNode3.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark node modificationNode3 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         buildInfos = networkModificationTreeService.getBuildInfos(modificationNode4.getId());
         assertEquals("variant_3", buildInfos.getOriginVariantId()); // variant to clone is variant associated to node
@@ -441,15 +441,15 @@ public class NetworkModificationTest {
         modificationNode2.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));  // mark node modificationNode2 as not built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         modificationNode4.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));  // mark node modificationNode4 as built invalid
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode4, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         modificationNode5.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark node modificationNode5 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode5, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         // build modificationNode2 and stop build
         testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId(), 1);
@@ -461,7 +461,7 @@ public class NetworkModificationTest {
         modificationNode3.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));  // mark node modificationNode3 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         // build modificationNode3 and stop build
         testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId(), 1);
@@ -488,7 +488,7 @@ public class NetworkModificationTest {
         modificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modificationNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "node 2", userId);
@@ -612,11 +612,11 @@ public class NetworkModificationTest {
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark modificationNode1 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         modificationNode2.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark modificationNode2 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         Optional<NetworkModificationResult> networkModificationResult =
             createModificationResultWithElementImpact(SimpleImpactType.MODIFICATION, IdentifiableType.SWITCH, "switchId", Set.of("s1", "s2", "s3"));
@@ -795,7 +795,7 @@ public class NetworkModificationTest {
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreateBis).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
@@ -850,7 +850,7 @@ public class NetworkModificationTest {
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         // create shunt compensator on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createShuntCompensatorAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -939,7 +939,7 @@ public class NetworkModificationTest {
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         // create line on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createLineAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -1010,7 +1010,7 @@ public class NetworkModificationTest {
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         // create Two Windings Transformer on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createTwoWindingsTransformerAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -1325,7 +1325,7 @@ public class NetworkModificationTest {
         modificationNode3.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         // create load on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode3Uuid)
@@ -1514,7 +1514,7 @@ public class NetworkModificationTest {
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         // create substation on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createSubstationAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -1587,7 +1587,7 @@ public class NetworkModificationTest {
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         // create voltage level on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createVoltageLevelAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -2062,7 +2062,7 @@ public class NetworkModificationTest {
         node1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark node1 as built
         networkModificationTreeService.updateNode(studyUuid, node1, userId);
         checkElementUpdatedMessageSent(studyUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("COPY"))
@@ -2337,10 +2337,10 @@ public class NetworkModificationTest {
 
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         // Update a network modification on node 1 (already built) -> build invalidation of all nodes
         String generatorAttributesUpdated = "{\"type\":\"" + ModificationType.GENERATOR_MODIFICATION + "\",\"generatorId\":\"generatorId1\",\"generatorType\":\"FICTITIOUS\",\"activePower\":\"70.0\"}";
@@ -2369,7 +2369,7 @@ public class NetworkModificationTest {
         modificationNode3.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         // Create a network modification on node 2 (not built) -> build invalidation of node 3
         Map<String, Object> createLoadInfos = Map.of("type", ModificationType.LOAD_CREATION, "equipmentId", "loadId");
@@ -2411,7 +2411,7 @@ public class NetworkModificationTest {
         modificationNode1.setVoltageInitResultUuid(UUID.fromString(VOLTAGE_INIT_RESULT_UUID));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         // A modification body
         Map<String, Object> body = Map.of(
@@ -2481,7 +2481,7 @@ public class NetworkModificationTest {
 
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         // Create network modification on BUILT modification node
         Optional<NetworkModificationResult> networkModificationResult =
@@ -2542,16 +2542,16 @@ public class NetworkModificationTest {
             .andExpect(status().isOk());
 
         // Initial node update -> BUILDING
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // Successful ->  Node update -> BUILT
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_COMPLETED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
@@ -2569,12 +2569,12 @@ public class NetworkModificationTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build/stop", studyUuid, nodeUuid))
             .andExpect(status().isOk());
 
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        output.receive(TIMEOUT, studyUpdateDestination);
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_CANCELLED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
@@ -2595,17 +2595,17 @@ public class NetworkModificationTest {
             .andExpect(status().isOk());
 
         // initial node update -> building
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // fail -> second node update -> not built
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // error message sent to frontend
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_FAILED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
@@ -2623,12 +2623,12 @@ public class NetworkModificationTest {
             .andExpect(status().isInternalServerError());
 
         // initial node update -> building
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // error -> second node update -> not built
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
@@ -2639,7 +2639,7 @@ public class NetworkModificationTest {
 
     private void checkEquipmentCreatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -2649,7 +2649,7 @@ public class NetworkModificationTest {
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating model status
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -2671,7 +2671,7 @@ public class NetworkModificationTest {
     }
 
     private void checkNodesBuildStatusUpdatedMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -2692,7 +2692,7 @@ public class NetworkModificationTest {
     private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, List<UUID> nodeUuids,
                                                        NetworkImpactsInfos expectedPayload) throws Exception {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         NetworkImpactsInfos actualPayload = mapper.readValue(new String(messageStudyUpdate.getPayload()), new TypeReference<NetworkImpactsInfos>() {
         });
         assertThat(expectedPayload, new MatcherJson<>(mapper, actualPayload));
@@ -2704,7 +2704,7 @@ public class NetworkModificationTest {
 
     private void checkEquipmentDeletingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -2724,7 +2724,7 @@ public class NetworkModificationTest {
 
     private void checkEquipmentUpdatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -2747,7 +2747,7 @@ public class NetworkModificationTest {
 
     private void checkEquipmentFinishedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -2757,7 +2757,7 @@ public class NetworkModificationTest {
 
     private void checkEquipmentDeletedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, NetworkImpactsInfos expectedPayload) throws Exception {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         NetworkImpactsInfos actualPayload = mapper.readValue(new String(messageStudyUpdate.getPayload()), new TypeReference<NetworkImpactsInfos>() {
         });
         assertThat(expectedPayload, new MatcherJson<>(mapper, actualPayload));
@@ -2820,7 +2820,7 @@ public class NetworkModificationTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).header(USER_ID_HEADER, userId).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
         checkElementUpdatedMessageSent(studyUuid, userId);
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -2888,7 +2888,7 @@ public class NetworkModificationTest {
     }
 
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
-        Message<byte[]> message = output.receive(TIMEOUT, elementUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
         assertEquals(elementUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
         assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
     }
@@ -2902,7 +2902,7 @@ public class NetworkModificationTest {
     public void tearDown() throws IOException {
         cleanDB();
 
-        TestUtils.assertQueuesEmptyThenClear(List.of(studyUpdateDestination), output);
+        TestUtils.assertQueuesEmptyThenClear(List.of(STUDY_UPDATE_DESTINATION), output);
 
         try {
             TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);

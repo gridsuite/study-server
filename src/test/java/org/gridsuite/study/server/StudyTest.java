@@ -181,6 +181,10 @@ public class StudyTest {
     private static final String PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
     private static final String DUPLICATED_PARAMS_JSON = "\"" + PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
 
+    //output destinations
+    private static final String STUDY_UPDATE_DESTINATION = "study.update";
+    private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
+
     private static final String DEFAULT_PROVIDER = "defaultProvider";
 
     @Value("${non-evacuated-energy.default-provider}")
@@ -258,10 +262,6 @@ public class StudyTest {
 
     @MockBean
     private NetworkStoreService networkStoreService;
-
-    //output destinations
-    private final String studyUpdateDestination = "study.update";
-    private final String elementUpdateDestination = "element.update";
 
     private boolean indexed = false;
 
@@ -841,7 +841,7 @@ public class StudyTest {
 
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM"))
@@ -1027,7 +1027,7 @@ public class StudyTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
         checkElementUpdatedMessageSent(studyUuid, userId);
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -1124,7 +1124,7 @@ public class StudyTest {
         assertTrue(studyRepository.findById(studyUuid).isPresent());
 
         // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
@@ -1132,10 +1132,10 @@ public class StudyTest {
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
-        output.receive(TIMEOUT, studyUpdateDestination);  // message for first modification node creation
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);  // message for first modification node creation
 
         // assert that the broker message has been sent a study creation message for creation
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -1247,13 +1247,13 @@ public class StudyTest {
         countDownLatch.countDown();
 
         // drop the broker message for study creation request (creation)
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         // drop the broker message for study creation
-        output.receive(TIMEOUT * 3, studyUpdateDestination);
+        output.receive(TIMEOUT * 3, STUDY_UPDATE_DESTINATION);
         // drop the broker message for node creation
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         // drop the broker message for study creation request (deletion)
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(
                 status().isOk(),
@@ -1299,13 +1299,13 @@ public class StudyTest {
         countDownLatch.countDown();
 
         // drop the broker message for study creation request (creation)
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         // drop the broker message for study creation
         output.receive(TIMEOUT * 3);
         // drop the broker message for node creation
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         // drop the broker message for study creation request (deletion)
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests")
                                         .header(USER_ID_HEADER, "userId")).andExpectAll(
@@ -1337,7 +1337,7 @@ public class StudyTest {
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating model status
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -1359,7 +1359,7 @@ public class StudyTest {
     }
 
     private void checkNodeBuildStatusUpdatedMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -1369,7 +1369,7 @@ public class StudyTest {
 
     private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, NetworkImpactsInfos expectedPayload) throws Exception {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         NetworkImpactsInfos actualPayload = mapper.readValue(new String(messageStudyUpdate.getPayload()), new TypeReference<NetworkImpactsInfos>() {
         });
         assertThat(expectedPayload, new MatcherJson<>(mapper, actualPayload));
@@ -1384,7 +1384,7 @@ public class StudyTest {
 
     private void checkEquipmentCreatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -1394,7 +1394,7 @@ public class StudyTest {
 
     private void checkEquipmentUpdatingFinishedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -1404,7 +1404,7 @@ public class StudyTest {
 
     private void checkStudyMetadataUpdatedMessagesReceived() {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_METADATA_UPDATED, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
@@ -1483,7 +1483,7 @@ public class StudyTest {
         node2.setVoltageInitResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         // duplicate the study
@@ -1536,7 +1536,7 @@ public class StudyTest {
 
         ObjectMapper mapper = new ObjectMapper();
         String duplicatedStudyUuid = mapper.readValue(response, String.class);
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
 
         assertNull(studyRepository.findById(UUID.fromString(duplicatedStudyUuid)).orElse(null));
     }
@@ -1549,20 +1549,20 @@ public class StudyTest {
         ObjectMapper mapper = new ObjectMapper();
         String newUuid = mapper.readValue(response, String.class);
         StudyEntity sourceStudy = studyRepository.findById(studyUuid).orElseThrow();
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(newUuid, indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageOnGoing.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(StudyIndexationStatus.INDEXING_ONGOING.name(), indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_INDEXATION_STATUS));
-        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(newUuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(StudyIndexationStatus.INDEXED.name(), indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_INDEXATION_STATUS));
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
 
         StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString(newUuid)).orElse(null);
         assertNotNull(duplicatedStudy);
@@ -1682,7 +1682,7 @@ public class StudyTest {
         node2.setLoadFlowResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         // node2 should not have any child
@@ -1920,21 +1920,21 @@ public class StudyTest {
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(emptyNode.getId(), emptyNodeChild.getId()));
 
         //loadflow_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         //securityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         //sensitivityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         //nonEvacuatedEnergy_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         //shortCircuitAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         //oneBusShortCircuitAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         //dynamicSimulation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         //voltageInit_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
 
         checkSubtreeMovedMessageSent(study1Uuid, emptyNode.getId(), node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2001,7 +2001,7 @@ public class StudyTest {
         node2.setLoadFlowResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         //node2 should not have any child
@@ -2127,7 +2127,7 @@ public class StudyTest {
         node2.setLoadFlowResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         //node 4 should not have any children
@@ -2288,7 +2288,7 @@ public class StudyTest {
          * moving node
          */
         //nodeMoved
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_MOVED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(nodeToCopy.getId(), message.getHeaders().get(NotificationService.HEADER_MOVED_NODE));
@@ -2300,52 +2300,52 @@ public class StudyTest {
              */
             IntStream.rangeClosed(1, childCount).forEach(i -> {
                 //nodeUpdated
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
                 //loadflow_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
                 //securityAnalysis_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
                 //sensitivityAnalysis_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
                 //nonEvacuatedEnergy_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
                 //shortCircuitAnalysis_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
                 //oneBusShortCircuitAnalysis_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
                 //dynamicSimulation_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
                 //voltageInit_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
             });
 
             /*
              * invalidating new children
              */
             //nodeUpdated
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
             //loadflow_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
             //securityAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
             //sensitivityAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
             //sensitivityAnalysisonEvacuated_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
             //shortCircuitAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
             //oneBusShortCircuitAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
             //dynamicSimulation_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
             //voltageInit_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         } else {
             /*
              * Invalidating moved node
              */
             //nodeUpdated
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         }
     }
 
@@ -2373,9 +2373,9 @@ public class StudyTest {
         nodesAfterDuplication.removeAll(allNodesBeforeDuplication);
         assertEquals(1, nodesAfterDuplication.size());
 
-        output.receive(TIMEOUT, studyUpdateDestination); // nodeCreated
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION); // nodeCreated
         if (!EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid())) {
-            output.receive(TIMEOUT, studyUpdateDestination); // nodeUpdated
+            output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION); // nodeUpdated
         }
         checkUpdateModelsStatusMessagesReceived(targetStudyUuid, nodesAfterDuplication.get(0));
         checkElementUpdatedMessageSent(targetStudyUuid, userId);
@@ -2407,7 +2407,7 @@ public class StudyTest {
     }
 
     private void checkSubtreeMovedMessageSent(UUID studyUuid, UUID movedNodeUuid, UUID referenceNodeUuid) {
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.SUBTREE_MOVED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(movedNodeUuid, message.getHeaders().get(NotificationService.HEADER_MOVED_NODE));
@@ -2416,7 +2416,7 @@ public class StudyTest {
     }
 
     private void checkSubtreeCreatedMessageSent(UUID studyUuid, UUID newNodeUuid, UUID referenceNodeUuid) {
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.SUBTREE_CREATED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(newNodeUuid, message.getHeaders().get(NotificationService.HEADER_NEW_NODE));
@@ -2425,7 +2425,7 @@ public class StudyTest {
     }
 
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
-        Message<byte[]> message = output.receive(TIMEOUT, elementUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
         assertEquals(elementUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
         assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
     }
@@ -2442,8 +2442,8 @@ public class StudyTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", notExistingNetworkStudyUuid))
             .andExpect(status().isInternalServerError());
-        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
-        Message<byte[]> indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> indexationStatusMessageNotIndexed = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         var requests = TestUtils.getRequestsWithBodyDone(1, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/reindex-all")));
@@ -2459,13 +2459,13 @@ public class StudyTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", study1Uuid))
             .andExpectAll(status().isOk(),
                         content().string("NOT_INDEXED"));
-        indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
+        indexationStatusMessageNotIndexed = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", study1Uuid))
             .andExpect(status().isOk());
 
-        indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
-        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
+        indexationStatusMessageOnGoing = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(study1Uuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
 
@@ -2478,14 +2478,14 @@ public class StudyTest {
         assertEquals(2, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/indexed-equipments")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
 
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(study1Uuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", study1Uuid))
             .andExpect(status().is5xxServerError());
-        indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
-        indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
+        indexationStatusMessageOnGoing = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        indexationStatusMessageNotIndexed = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
@@ -2504,30 +2504,30 @@ public class StudyTest {
                         .contentType(MediaType.TEXT_PLAIN)
                         .header(USER_ID_HEADER, USER_ID_HEADER))
                 .andExpect(status().isOk());
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertNotNull(message);
         assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
-        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid)
                         .content("SuperSA")
                         .contentType(MediaType.TEXT_PLAIN)
                         .header(USER_ID_HEADER, USER_ID_HEADER))
                 .andExpect(status().isOk());
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertNotNull(message);
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
-        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid)
                 .content("SuperNEE")
                 .contentType(MediaType.TEXT_PLAIN)
                 .header(USER_ID_HEADER, USER_ID_HEADER))
             .andExpect(status().isOk());
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertNotNull(message);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
-        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
             .andExpectAll(status().isOk(),
@@ -2539,7 +2539,7 @@ public class StudyTest {
 
     @After
     public void tearDown() {
-        List<String> destinations = List.of(studyUpdateDestination, elementUpdateDestination);
+        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, ELEMENT_UPDATE_DESTINATION);
 
         cleanDB();
 

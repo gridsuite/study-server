@@ -95,6 +95,9 @@ public class SingleLineDiagramTest {
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
 
+    //output destinations
+    private static final String STUDY_UPDATE_DESTINATION = "study.update";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -130,9 +133,6 @@ public class SingleLineDiagramTest {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    //output destinations
-    private String studyUpdateDestination = "study.update";
 
     @MockBean
     private NetworkStoreService networkStoreService;
@@ -578,7 +578,7 @@ public class SingleLineDiagramTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
             .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -625,7 +625,7 @@ public class SingleLineDiagramTest {
 
     @After
     public void tearDown() {
-        List<String> destinations = List.of(studyUpdateDestination);
+        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION);
 
         cleanDB();
 

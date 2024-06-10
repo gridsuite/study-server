@@ -62,6 +62,9 @@ public class CaseTest {
     public static final String POST = "POST";
     private static final String CASE_NAME = "DefaultCaseName";
 
+    //output destinations
+    private static final String STUDY_UPDATE_DESTINATION = "study.update";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -78,9 +81,6 @@ public class CaseTest {
 
     @Autowired
     private StudyRepository studyRepository;
-
-    //output destinations
-    private String studyUpdateDestination = "study.update";
 
     @Before
     public void setup() throws IOException {
@@ -142,7 +142,7 @@ public class CaseTest {
 
     @After
     public void tearDown() {
-        List<String> destinations = List.of(studyUpdateDestination);
+        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION);
 
         cleanDB();
 
