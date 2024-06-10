@@ -1518,7 +1518,6 @@ public class StudyTest {
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
-        ObjectMapper mapper = new ObjectMapper();
         String duplicatedStudyUuid = mapper.readValue(response, String.class);
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
@@ -1530,7 +1529,6 @@ public class StudyTest {
         String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        ObjectMapper mapper = new ObjectMapper();
         String newUuid = mapper.readValue(response, String.class);
         StudyEntity sourceStudy = studyRepository.findById(studyUuid).orElseThrow();
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
