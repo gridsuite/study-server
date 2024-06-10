@@ -17,8 +17,8 @@ import org.springframework.messaging.support.MessageBuilder;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_RECEIVER;
+import static org.gridsuite.study.server.notification.NotificationService.QUERY_PARAM_RECEIVER;
 
 /**
  * Class that implements an action we want to execute after mocking an API call

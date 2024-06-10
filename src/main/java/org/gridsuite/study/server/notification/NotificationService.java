@@ -97,6 +97,12 @@ public class NotificationService {
     public static final String HEADER_PARENT_NODE = "parentNode";
     public static final String HEADER_REMOVE_CHILDREN = "removeChildren";
     public static final String HEADER_INDEXATION_STATUS = "indexation_status";
+    public static final String HEADER_RECEIVER = "receiver";
+    public static final String HEADER_MESSAGE = "message";
+    public static final String HEADER_IMPORT_PARAMETERS = "importParameters";
+    public static final String HEADER_BUS_ID = "busId";
+
+    public static final String QUERY_PARAM_RECEIVER = "receiver";
 
     public static final String NODE_UPDATED = "nodeUpdated";
     public static final String NODE_DELETED = "nodeDeleted";
