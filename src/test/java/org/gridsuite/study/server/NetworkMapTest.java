@@ -474,7 +474,7 @@ public class NetworkMapTest {
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
 
-        List<IdentifiableInfos> iiList = mapper.readValue(resultAsString, new TypeReference<List<IdentifiableInfos>>() { });
+        List<IdentifiableInfos> iiList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertThat(iiList, new MatcherJson<>(mapper, List.of(IdentifiableInfos.builder().id("BUS_1").name("BUS_1").build(),
                         IdentifiableInfos.builder().id("BUS_2").name("BUS_2").build())));
@@ -489,7 +489,7 @@ public class NetworkMapTest {
                     .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
 
-        iiList = mapper.readValue(resultAsString, new TypeReference<List<IdentifiableInfos>>() { });
+        iiList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertThat(iiList, new MatcherJson<>(mapper,
                         List.of(IdentifiableInfos.builder().id("BUSBAR_SECTION_1").name("BUSBAR_SECTION_1").build(),

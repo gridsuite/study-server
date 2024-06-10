@@ -397,8 +397,7 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/network-modifications.*") && POST.equals(request.getMethod())) {
-                    ModificationInfos modificationInfos = mapper.readValue(body.readUtf8(), new TypeReference<ModificationInfos>() {
-                    });
+                    ModificationInfos modificationInfos = mapper.readValue(body.readUtf8(), new TypeReference<>() { });
                     modificationInfos.setSubstationIds(Set.of("s2"));
                     return new MockResponse().setResponseCode(200)
                         .setBody("[" + mapper.writeValueAsString(modificationInfos) + "]")
@@ -697,9 +696,7 @@ public class StudyTest {
                 .perform(get("/v1/search?q={request}", String.format("userId:%s", "userId")).header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString,
-                new TypeReference<List<CreatedStudyBasicInfos>>() {
-                });
+        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertThat(createdStudyBasicInfosList, new MatcherJson<>(mapper, studiesInfos));
 
         mvcResult = mockMvc
@@ -707,9 +704,7 @@ public class StudyTest {
                         studyUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        List<EquipmentInfos> equipmentInfos = mapper.readValue(resultAsString,
-                new TypeReference<List<EquipmentInfos>>() {
-                });
+        List<EquipmentInfos> equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
 
         mvcResult = mockMvc
@@ -717,8 +712,7 @@ public class StudyTest {
                         studyUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        equipmentInfos = mapper.readValue(resultAsString, new TypeReference<List<EquipmentInfos>>() {
-        });
+        equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
 
         mvcResult = mockMvc
@@ -726,8 +720,7 @@ public class StudyTest {
                         studyUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        equipmentInfos = mapper.readValue(resultAsString, new TypeReference<List<EquipmentInfos>>() {
-        });
+        equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=bogus",
@@ -776,9 +769,7 @@ public class StudyTest {
                      .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
 
         resultAsString = result.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString,
-            new TypeReference<List<CreatedStudyBasicInfos>>() {
-            });
+        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertThat(createdStudyBasicInfosList.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));
 
@@ -789,9 +780,7 @@ public class StudyTest {
         resultAsString = mockMvc.perform(get("/v1/studies").header("userId", "userId2"))
                              .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn().getResponse().getContentAsString();
 
-        createdStudyBasicInfosList = mapper.readValue(resultAsString,
-            new TypeReference<List<CreatedStudyBasicInfos>>() {
-            });
+        createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertThat(createdStudyBasicInfosList.get(1),
             createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));
@@ -811,9 +800,7 @@ public class StudyTest {
                      .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
 
         resultAsString = result.getResponse().getContentAsString();
-        createdStudyBasicInfosList = mapper.readValue(resultAsString,
-            new TypeReference<List<CreatedStudyBasicInfos>>() {
-            });
+        createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertEquals(2, createdStudyBasicInfosList.size());
 
         //get available export format
@@ -958,9 +945,7 @@ public class StudyTest {
                         .header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString,
-                new TypeReference<List<CreatedStudyBasicInfos>>() {
-                });
+        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertNotNull(createdStudyBasicInfosList);
         assertEquals(2, createdStudyBasicInfosList.size());
@@ -994,7 +979,7 @@ public class StudyTest {
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?reportType=NETWORK_MODIFICATION", studyUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
-        List<ReportNode> reporterModel = mapper.readValue(resultAsString, new TypeReference<List<ReportNode>>() { });
+        List<ReportNode> reporterModel = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertThat(reporterModel.get(0), new MatcherReport(REPORT_TEST));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
@@ -1171,7 +1156,7 @@ public class StudyTest {
             .andReturn();
 
         String resultAsString = mvcResult.getResponse().getContentAsString();
-        List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
+        List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertEquals(List.of(), bsiListResult);
 
@@ -1241,7 +1226,7 @@ public class StudyTest {
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
+        List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         // once we checked study creation requests, we can countDown latch to trigger study creation request
         countDownLatch.countDown();
@@ -1261,7 +1246,7 @@ public class StudyTest {
                         .andReturn();
 
         resultAsString = mvcResult.getResponse().getContentAsString();
-        bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
+        bsiListResult = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertEquals(List.of(), bsiListResult);
 
@@ -1271,7 +1256,7 @@ public class StudyTest {
                         .andReturn();
 
         resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         countDownLatch = new CountDownLatch(1);
 
@@ -1294,7 +1279,7 @@ public class StudyTest {
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
 
-        bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
+        bsiListResult = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         countDownLatch.countDown();
 
@@ -1314,7 +1299,7 @@ public class StudyTest {
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
 
-        bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
+        bsiListResult = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertEquals(List.of(), bsiListResult);
 
@@ -1324,7 +1309,7 @@ public class StudyTest {
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+        csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(7, server);
@@ -1370,8 +1355,7 @@ public class StudyTest {
     private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, NetworkImpactsInfos expectedPayload) throws Exception {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
-        NetworkImpactsInfos actualPayload = mapper.readValue(new String(messageStudyUpdate.getPayload()), new TypeReference<NetworkImpactsInfos>() {
-        });
+        NetworkImpactsInfos actualPayload = mapper.readValue(new String(messageStudyUpdate.getPayload()), new TypeReference<>() { });
         assertThat(expectedPayload, new MatcherJson<>(mapper, actualPayload));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));

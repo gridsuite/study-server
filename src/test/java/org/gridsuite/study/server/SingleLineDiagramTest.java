@@ -380,8 +380,7 @@ public class SingleLineDiagramTest {
 
         //get voltage levels
         mvcResult = getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "MAP", List.of(), TestUtils.resourceToString("/network-voltage-levels-infos.json"));
-        List<VoltageLevelInfos> vliListResponse = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<List<VoltageLevelInfos>>() {
-        });
+        List<VoltageLevelInfos> vliListResponse = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
         assertThat(vliListResponse, new MatcherJson<>(mapper, List.of(
                 VoltageLevelInfos.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").build(),
                 VoltageLevelInfos.builder().id("BBE2AA1").name("BBE2AA1").substationId("BBE2AA").build(),

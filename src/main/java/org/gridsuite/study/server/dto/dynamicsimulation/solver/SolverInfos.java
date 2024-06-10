@@ -37,11 +37,10 @@ public interface SolverInfos {
     static List<SolverInfos> parseJson(String json, ObjectMapper objectMapper) {
         List<SolverInfos> solvers;
         try {
-            solvers = objectMapper.readValue(json, new TypeReference<List<SolverInfos>>() { });
+            solvers = objectMapper.readValue(json, new TypeReference<>() { });
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
-
         return solvers;
     }
 

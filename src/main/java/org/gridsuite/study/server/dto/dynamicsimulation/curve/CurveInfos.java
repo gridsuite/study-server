@@ -37,11 +37,10 @@ public class CurveInfos {
     public static List<CurveInfos> parseJson(String json, ObjectMapper objectMapper) {
         List<CurveInfos> curves;
         try {
-            curves = objectMapper.readValue(json, new TypeReference<List<CurveInfos>>() { });
+            curves = objectMapper.readValue(json, new TypeReference<>() { });
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
-
         return curves;
     }
 
