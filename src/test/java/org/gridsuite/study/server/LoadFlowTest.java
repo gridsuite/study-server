@@ -121,8 +121,8 @@ public class LoadFlowTest {
 
     private static final String LOADFLOW_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
 
+    private static final String USER_ID = "userId";
     private static final String VARIANT_ID = "variant_1";
-
     private static final String VARIANT_ID_2 = "variant_2";
 
     private static final long TIMEOUT = 1000;
@@ -372,12 +372,12 @@ public class LoadFlowTest {
 
         // run a loadflow on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, rootNodeUuid)
-                        .header(HEADER_USER_ID, "userId"))
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isForbidden());
 
         //run a loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNode3Uuid)
-                        .header(HEADER_USER_ID, "userId"))
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
@@ -412,7 +412,7 @@ public class LoadFlowTest {
 
         // loadflow failed
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNode2Uuid)
-                        .header(HEADER_USER_ID, "userId"))
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_FAILED);
@@ -433,7 +433,7 @@ public class LoadFlowTest {
 
         //run a loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run?limitReduction=0.7", studyNameUserIdUuid, modificationNode1Uuid)
-                        .header(HEADER_USER_ID, "userId"))
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -485,7 +485,7 @@ public class LoadFlowTest {
 
         //run a loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run?limitReduction=0.7", studyNameUserIdUuid, modificationNode1Uuid)
-                        .header(HEADER_USER_ID, "userId"))
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -496,7 +496,7 @@ public class LoadFlowTest {
 
         // invalidate status
         mockMvc.perform(put("/v1/studies/{studyUuid}/loadflow/invalidate-status", studyNameUserIdUuid)
-                .header(HEADER_USER_ID, "userId")).andExpect(status().isOk());
+                .header(HEADER_USER_ID, USER_ID)).andExpect(status().isOk());
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)));
     }
@@ -521,7 +521,7 @@ public class LoadFlowTest {
 
         //run a loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNode3Uuid)
-                        .header(HEADER_USER_ID, "userId"))
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
@@ -759,7 +759,7 @@ public class LoadFlowTest {
 
         JSONAssert.assertEquals(LOADFLOW_DEFAULT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, "userId", HttpStatus.OK);
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, USER_ID, HttpStatus.OK);
 
         //checking update is registered
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
@@ -773,7 +773,7 @@ public class LoadFlowTest {
 
         studyNameUserIdUuid = studyEntity2.getId();
 
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, "userId", HttpStatus.OK);
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, USER_ID, HttpStatus.OK);
 
         //get initial loadFlow parameters
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
@@ -825,7 +825,7 @@ public class LoadFlowTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId"))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);

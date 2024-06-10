@@ -144,8 +144,9 @@ public class VoltageInitTest {
     private static final String VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST = "[{\"type\": \"VOLTAGE_INIT_MODIFICATION\",\"uuid\": \"254a3b85-14ad-4436-bf62-3e60af831dd1\",\"date\": \"2023-09-18T10:58:32.582239Z\",\"stashed\": false,\"generators\": [],\"transformers\": [],\"staticVarCompensators\": [],\"vscConverterStations\": [],\"shuntCompensators\": []}]";
 
     private static final String VOLTAGE_INIT_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
-    private static final String VARIANT_ID = "variant_1";
 
+    private static final String USER_ID = "userId";
+    private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
 
     private static final long TIMEOUT = 1000;
@@ -327,7 +328,7 @@ public class VoltageInitTest {
     private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, StudyVoltageInitParameters parameters) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)
-                        .header(HEADER_USER_ID, "userId")
+                        .header(HEADER_USER_ID, USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(parameters))).andExpect(
                 status().isOk());
@@ -391,7 +392,7 @@ public class VoltageInitTest {
 
         mockMvc.perform(
             post("/v1/studies/{studyUuid}/voltage-init/parameters", studyEntity.getId())
-                .header(HEADER_USER_ID, "userId")
+                .header(HEADER_USER_ID, USER_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(studyVoltageInitParameters))).andExpect(
             status().isOk());
@@ -415,7 +416,7 @@ public class VoltageInitTest {
             UUID.randomUUID(), VARIANT_ID_2, "node 1");
         //run a voltage init analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run", studyEntity.getId(), modificationNode1.getId())
-                        .header(HEADER_USER_ID, "userId"))
+                        .header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isOk());
 
         // Running the computation
@@ -453,12 +454,12 @@ public class VoltageInitTest {
 
         // run a voltage init on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run", studyNameUserIdUuid, rootNodeUuid)
-                        .header(HEADER_USER_ID, "userId"))
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isForbidden());
 
         //run a voltage init analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run", studyNameUserIdUuid, modificationNode3Uuid)
-                        .header(HEADER_USER_ID, "userId"))
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
@@ -486,7 +487,7 @@ public class VoltageInitTest {
 
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)
-                        .header(HEADER_USER_ID, "userId")
+                        .header(HEADER_USER_ID, USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createStudyVoltageInitParameters(false, VOLTAGE_INIT_PARAMETERS_INFOS_2)))).andExpect(
                 status().isOk());
@@ -507,7 +508,7 @@ public class VoltageInitTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run", studyNameUserIdUuid, modificationNode2Uuid)
-                        .header(HEADER_USER_ID, "userId"))
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_FAILED);
@@ -537,7 +538,7 @@ public class VoltageInitTest {
 
         // run a voltage init analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run", studyNameUserIdUuid, modificationNode3Uuid)
-                .header(HEADER_USER_ID, "userId"))
+                .header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
@@ -548,7 +549,7 @@ public class VoltageInitTest {
 
         // just retrieve modifications list from modificationNode3Uuid
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", studyNameUserIdUuid, modificationNode3Uuid)
-                .header(HEADER_USER_ID, "userId")).andExpect(status().isOk());
+                .header(HEADER_USER_ID, USER_ID)).andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(2, server).stream().allMatch(r ->
                 r.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/network-modifications\\?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=false") ||
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")
@@ -556,7 +557,7 @@ public class VoltageInitTest {
 
         // clone and copy modifications to modificationNode3Uuid
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", studyNameUserIdUuid, modificationNode3Uuid)
-            .header(HEADER_USER_ID, "userId")).andExpect(status().isOk());
+            .header(HEADER_USER_ID, USER_ID)).andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
@@ -570,7 +571,7 @@ public class VoltageInitTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.NODE_BUILD_STATUS_UPDATED);
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid);
-        checkElementUpdatedMessageSent(studyNameUserIdUuid, "userId");
+        checkElementUpdatedMessageSent(studyNameUserIdUuid, USER_ID);
     }
 
     private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid) {
@@ -750,7 +751,7 @@ public class VoltageInitTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId"))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
