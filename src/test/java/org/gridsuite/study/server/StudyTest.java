@@ -117,8 +117,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfigurationWithTestChannel
 public class StudyTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyTest.class);
-    private static final String USER_ID = "userId";
-    private static final String USER_ID_2 = "userId2";
 
     @Autowired
     private MockMvc mockMvc;
@@ -170,6 +168,8 @@ public class StudyTest {
     private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
     private static final String CASE_FORMAT = "caseFormat";
+    private static final String USER_ID = "userId";
+    private static final String USER_ID_2 = "userId2";
     private static final String NO_PARAMS_IN_PROFILE_USER_ID = "noParamInProfileUser";
     private static final String USER_PROFILE_NO_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}";
     private static final String INVALID_PARAMS_IN_PROFILE_USER_ID = "invalidParamInProfileUser";
@@ -1325,7 +1325,7 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains("/v1/parameters/default"));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/userId/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + USER_ID + "/profile")));
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
