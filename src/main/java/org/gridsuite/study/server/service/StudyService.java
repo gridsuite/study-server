@@ -1739,7 +1739,7 @@ public class StudyService {
         return result;
     }
 
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, Optional<String> busId, String userId) throws JsonProcessingException {
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, Optional<String> busId, String userId) {
         networkModificationTreeService.getComputationResultUuid(nodeUuid, busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS)
                                       .ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
         final Optional<UUID> parametersUuid = studyRepository.findById(studyUuid).map(StudyEntity::getShortCircuitParametersUuid);

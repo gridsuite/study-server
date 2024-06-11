@@ -8,6 +8,7 @@ package org.gridsuite.study.server.dto;
 
 /**
  * @author AJELLAL Ali <ali.ajellal@rte-france.com>
+ * @deprecated for delete
  */
 @Deprecated(forRemoval = true, since = "1.7.0")
 public enum ShortCircuitPredefinedConfiguration {
