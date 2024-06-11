@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.shortcircuit.ShortCircuitParameters;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.*;
@@ -67,6 +66,7 @@ public class ConsumerService {
     private final UserAdminService userAdminService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyRepository studyRepository;
+    private final ShortCircuitService shortCircuitService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -75,6 +75,7 @@ public class ConsumerService {
                            SecurityAnalysisService securityAnalysisService,
                            CaseService caseService,
                            LoadFlowService loadFlowService,
+                           ShortCircuitService shortCircuitService,
                            UserAdminService userAdminService,
                            NetworkModificationTreeService networkModificationTreeService,
                            SensitivityAnalysisService sensitivityAnalysisService,
@@ -89,6 +90,7 @@ public class ConsumerService {
         this.networkModificationTreeService = networkModificationTreeService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.studyRepository = studyRepository;
+        this.shortCircuitService = shortCircuitService;
     }
 
     @Bean
@@ -183,10 +185,9 @@ public class ConsumerService {
             if (receiverString != null) {
                 CaseImportReceiver receiver;
                 try {
-                    receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8),
-                            CaseImportReceiver.class);
+                    receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8), CaseImportReceiver.class);
                 } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
+                    LOGGER.error("Error while parsing CaseImportReceiver data", e);
                     return;
                 }
 
@@ -198,23 +199,21 @@ public class ConsumerService {
 
                 StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
                 try {
-                    ShortCircuitParameters shortCircuitParameters = ShortCircuitService.getDefaultShortCircuitParameters();
-                    DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
                     if (studyEntity != null) {
                         // if studyEntity is not null, it means we are recreating network for existing study
                         // we only update network infos sent by network conversion server
                         studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
                     } else {
-                        UserProfileInfos userProfileInfos = getUserProfile(userId);
-                        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId, userProfileInfos);
+                        DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
+                        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId, getUserProfile(userId));
+                        UUID shortCircuitParametersUuid = createDefaultShortCircuitAnalysisParameters();
                         UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters();
                         UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters();
-                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, loadFlowParametersUuid, ShortCircuitService.toEntity(shortCircuitParameters, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters, importReportUuid);
+                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, loadFlowParametersUuid, shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters, importReportUuid);
                     }
-
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
-                    LOGGER.error(e.toString(), e);
+                    LOGGER.error("Error while importing case", e);
                 } finally {
                     // if studyEntity is already existing, we don't delete anything in the end of the process
                     if (studyEntity == null) {
@@ -250,19 +249,37 @@ public class ConsumerService {
         // no profile, or no/bad LF parameters in profile => use default values
         try {
             return loadFlowService.createDefaultLoadFlowParameters();
-        } catch (Exception e) {
-            LOGGER.error(e.toString(), e);
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default parameters for LoadFlow analysis", e);
+            return null;
         }
-        return null;
+    }
+
+    private UUID createDefaultShortCircuitAnalysisParameters() {
+        try {
+            return shortCircuitService.createParameters(null);
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default parameters for ShortCircuit analysis", e);
+            return null;
+        }
     }
 
     private UUID createDefaultSensitivityAnalysisParameters() {
         try {
             return sensitivityAnalysisService.createDefaultSensitivityAnalysisParameters();
-        } catch (Exception e) {
-            LOGGER.error(e.toString(), e);
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default parameters for Sensitivity analysis", e);
+            return null;
         }
-        return null;
+    }
+
+    private UUID createDefaultSecurityAnalysisParameters() {
+        try {
+            return securityAnalysisService.createDefaultSecurityAnalysisParameters();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default parameters for Security analysis", e);
+            return null;
+        }
     }
 
     @Bean
@@ -497,14 +514,5 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeVoltageInitFailed() {
         return message -> consumeCalculationFailed(message, VOLTAGE_INITIALIZATION);
-    }
-
-    private UUID createDefaultSecurityAnalysisParameters() {
-        try {
-            return securityAnalysisService.createDefaultSecurityAnalysisParameters();
-        } catch (Exception e) {
-            LOGGER.error(e.toString(), e);
-        }
-        return null;
     }
 }

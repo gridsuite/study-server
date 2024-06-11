@@ -11,22 +11,17 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.shortcircuit.InitialVoltageProfileMode;
-import com.powsybl.shortcircuit.ShortCircuitParameters;
-import com.powsybl.shortcircuit.StudyType;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.assertj.core.api.WithAssertions;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ShortCircuitParametersInfos;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
@@ -53,6 +48,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
@@ -60,11 +56,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
@@ -82,7 +74,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-public class ShortCircuitTest {
+public class ShortCircuitTest implements WithAssertions {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ShortCircuitTest.class);
 
@@ -104,21 +96,19 @@ public class ShortCircuitTest {
 
     private static final String SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
 
-    private static final String SHORT_CIRCUIT_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"faults\":[]";
+    private static final String SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID = "00000000-1111-2222-3333-444444444444";
 
-    private static String FAULT_TYPES_JSON;
+    private static final String SHORT_CIRCUIT_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"faults\":[]}";
 
     private static final String CSV_HEADERS = "{csvHeaders}";
 
     private static final byte[] SHORT_CIRCUIT_ANALYSIS_CSV_RESULT = {0x00, 0x11};
 
     private static final String SHORT_CIRCUIT_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+
     private static final String VARIANT_ID = "variant_1";
-
     private static final String VARIANT_ID_2 = "variant_2";
-
     private static final String VARIANT_ID_3 = "variant_3";
-
     private static final String VARIANT_ID_4 = "variant_4";
 
     private static final long TIMEOUT = 1000;
@@ -176,12 +166,8 @@ public class ShortCircuitTest {
         reportService.setReportServerBaseUri(baseUrl);
 
         String shortCircuitAnalysisResultUuidStr = objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
-
         String shortCircuitAnalysisResultNotFoundUuidStr = objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND);
-
         String shortCircuitAnalysisErrorResultUuidStr = objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_ERROR_RESULT_UUID);
-
-        FAULT_TYPES_JSON = objectMapper.writeValueAsString(List.of(""));
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -189,7 +175,6 @@ public class ShortCircuitTest {
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
-                request.getBody();
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&busId=BUS_TEST_ID&variantId=" + VARIANT_ID_2)) {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
@@ -264,14 +249,20 @@ public class ShortCircuitTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("1");
+                } else if ("POST".equalsIgnoreCase(request.getMethod()) && path.equals("/v1/parameters/default")) {
+                    return new MockResponse().setResponseCode(200).setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE).setBody("\"" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID + "\"");
+                } else if ("GET".equalsIgnoreCase(request.getMethod()) && path.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)) {
+                    return new MockResponse().setResponseCode(200).setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE).setBody(TestUtils.resourceToString("/short-circuit-parameters.json"));
+                } else if ("PUT".equalsIgnoreCase(request.getMethod()) && path.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)) {
+                    return new MockResponse().setResponseCode(200);
                 } else {
-                    LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
-                    return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
+                    LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
+                    return new MockResponse().setResponseCode(418)
+                            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE)
+                            .setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                 }
             }
-
         };
-
         server.setDispatcher(dispatcher);
     }
 
@@ -282,47 +273,16 @@ public class ShortCircuitTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         //get default ShortCircuitParameters
-        mockMvc.perform(get("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk(),
-                content().string(TestUtils.resourceToString("/short-circuit-parameters.json")));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid))
+               .andExpectAll(status().isOk(), content().string(TestUtils.resourceToString("/short-circuit-parameters.json")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/parameters/default")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)));
 
-        // change some short circuit parameters
-        ShortCircuitParameters shortCircuitParametersWithIccMax = ShortCircuitService.newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, true, true, true, true, InitialVoltageProfileMode.NOMINAL, null);
-        ShortCircuitParametersInfos shortCircuitParametersWithIccMaxInfos = new ShortCircuitParametersInfos();
-        shortCircuitParametersWithIccMaxInfos.setParameters(shortCircuitParametersWithIccMax);
-        shortCircuitParametersWithIccMaxInfos.setPredefinedParameters(ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_CEI909);
-
-        mockMvc.perform(
-                post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)
                         .header(HEADER_USER_ID, "testUserId")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectWriter.writeValueAsString(shortCircuitParametersWithIccMaxInfos))).andExpect(
-                status().isOk());
-
-        //getting set values
-        mockMvc.perform(get("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk(),
-                content().string(TestUtils.resourceToString("/short-circuit-updated-parameters.json")));
-
-        // change some short circuit parameters
-        ShortCircuitParameters shortCircuitParametersWithIccMin = ShortCircuitService.newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, false, false, false, true, InitialVoltageProfileMode.NOMINAL, null);
-        ShortCircuitParametersInfos shortCircuitParametersWithIccMinInfos = new ShortCircuitParametersInfos();
-        shortCircuitParametersWithIccMinInfos.setParameters(shortCircuitParametersWithIccMin);
-
-        //change predefined params
-        shortCircuitParametersWithIccMinInfos.setPredefinedParameters(ShortCircuitPredefinedConfiguration.ICC_MIN_WITH_NOMINAL_VOLTAGE_MAP);
-
-        mockMvc.perform(
-                post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)
-                        .header(HEADER_USER_ID, "testUserId")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectWriter.writeValueAsString(shortCircuitParametersWithIccMinInfos))).andExpect(
-                status().isOk());
-
-        //getting set values
-        mockMvc.perform(get("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk(),
-                content().string(TestUtils.resourceToString("/short-circuit-updated-predefined-parameters.json")));
+                        .content("{\"dumb\": \"json\"}").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)));
     }
 
     @Test
@@ -630,8 +590,7 @@ public class ShortCircuitTest {
     }
 
     @Test
-    @SneakyThrows
-    public void testResetUuidResultWhenSCFailed() {
+    public void testResetUuidResultWhenSCFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
@@ -647,8 +606,8 @@ public class ShortCircuitTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), shortCircuitAnalysisFailedDestination);
             return resultUuid;
-        }).when(studyService).runShortCircuit(any(), any(), any());
-        studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), "");
+        }).when(studyService).runShortCircuit(any(), any(), any(), any());
+        studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), Optional.empty(), "user_1");
 
         // Test reset uuid result in the database
         assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.SHORT_CIRCUIT).isEmpty());
@@ -762,10 +721,9 @@ public class ShortCircuitTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
-        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "",
-                UUID.randomUUID(), defaultShortCircuitParametersEntity, null, null,
+                UUID.randomUUID(), null, null, null,
                 defaultNonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);

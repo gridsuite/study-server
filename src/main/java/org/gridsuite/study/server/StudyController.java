@@ -51,10 +51,12 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyConstants.CASE_FORMAT;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -626,18 +628,14 @@ public class StudyController {
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run")
     @Operation(summary = "run short circuit analysis on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis has started")})
+    @ApiResponse(responseCode = "200", description = "The short circuit analysis has started")
     public ResponseEntity<Void> runShortCircuit(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestParam(value = "busId", required = false) String busId,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @RequestParam(value = "busId", required = false) Optional<String> busId,
+            @RequestHeader(HEADER_USER_ID) String userId) throws IOException {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        if (busId == null) {
-            studyService.runShortCircuit(studyUuid, nodeUuid, userId);
-        } else {
-            studyService.runShortCircuit(studyUuid, nodeUuid, userId, busId);
-        }
+        studyService.runShortCircuit(studyUuid, nodeUuid, busId, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -912,22 +910,21 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getDynamicSimulationProvider(studyUuid));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
+    @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "set short-circuit analysis parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")})
+    @ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")
     public ResponseEntity<Void> setShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) ShortCircuitParametersInfos shortCircuitParametersInfos,
+            @RequestBody(required = false) String shortCircuitParametersInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setShortCircuitParameters(studyUuid, shortCircuitParametersInfos, userId);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
+    @GetMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get short-circuit analysis parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters")})
-    public ResponseEntity<ShortCircuitParametersInfos> getShortCircuitParameters(
-            @PathVariable("studyUuid") UUID studyUuid) {
+    @ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters return by shortcircuit-server")
+    public ResponseEntity<String> getShortCircuitParameters(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getShortCircuitParametersInfo(studyUuid));
     }
 

@@ -9,6 +9,7 @@ package org.gridsuite.study.server.dto;
 /**
  * @author AJELLAL Ali <ali.ajellal@rte-france.com>
  */
+@Deprecated(forRemoval = true, since = "1.7.0")
 public enum ShortCircuitPredefinedConfiguration {
     ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP,
     ICC_MAX_WITH_CEI909,

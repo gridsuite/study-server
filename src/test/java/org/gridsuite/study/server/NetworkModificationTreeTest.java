@@ -34,7 +34,6 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
@@ -319,7 +318,7 @@ public class NetworkModificationTreeTest {
             .caseName("caseName1")
             .networkId("netId")
             .networkUuid(networkUuid)
-            .shortCircuitParameters(new ShortCircuitParametersEntity())
+            .shortCircuitParametersUuid(UUID.randomUUID())
             .build();
     }
 
