@@ -123,6 +123,12 @@ public class ShortCircuitTest {
 
     private static final long TIMEOUT = 1000;
 
+    //output destinations
+    private static final String STUDY_UPDATE_DESTINATION = "study.update";
+    private static final String SHORT_CIRCUIT_ANALYSIS_RESULT_DESTINATION = "shortcircuitanalysis.result";
+    private static final String SHORT_CIRCUIT_ANALYSIS_STOPPED_DESTINATION = "shortcircuitanalysis.stopped";
+    private static final String SHORT_CIRCUIT_ANALYSIS_FAILED_DESTINATION = "shortcircuitanalysis.failed";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -153,12 +159,6 @@ public class ShortCircuitTest {
 
     @Autowired
     private ReportService reportService;
-
-    //output destinations
-    private final String studyUpdateDestination = "study.update";
-    private final String shortCircuitAnalysisResultDestination = "shortcircuitanalysis.result";
-    private final String shortCircuitAnalysisStoppedDestination = "shortcircuitanalysis.stopped";
-    private final String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.failed";
 
     @Before
     public void setup() throws IOException {
@@ -195,7 +195,7 @@ public class ShortCircuitTest {
                         .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .setHeader("busId", "BUS_TEST_ID")
-                        .build(), shortCircuitAnalysisResultDestination);
+                        .build(), SHORT_CIRCUIT_ANALYSIS_RESULT_DESTINATION);
                     return new MockResponse().setResponseCode(200)
                         .setBody(shortCircuitAnalysisResultUuidStr)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -203,7 +203,7 @@ public class ShortCircuitTest {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build(), shortCircuitAnalysisResultDestination);
+                            .build(), SHORT_CIRCUIT_ANALYSIS_RESULT_DESTINATION);
                     return new MockResponse().setResponseCode(200)
                             .setBody(shortCircuitAnalysisResultUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -211,14 +211,14 @@ public class ShortCircuitTest {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build(), shortCircuitAnalysisResultDestination);
+                            .build(), SHORT_CIRCUIT_ANALYSIS_RESULT_DESTINATION);
                     return new MockResponse().setResponseCode(200)
                             .setBody(shortCircuitAnalysisResultNotFoundUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build(), shortCircuitAnalysisFailedDestination);
+                            .build(), SHORT_CIRCUIT_ANALYSIS_FAILED_DESTINATION);
                     return new MockResponse().setResponseCode(200)
                             .setBody(shortCircuitAnalysisErrorResultUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -251,7 +251,7 @@ public class ShortCircuitTest {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", resultUuid)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build(), shortCircuitAnalysisStoppedDestination);
+                            .build(), SHORT_CIRCUIT_ANALYSIS_STOPPED_DESTINATION);
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results")) {
@@ -645,7 +645,7 @@ public class ShortCircuitTest {
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
-            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), shortCircuitAnalysisFailedDestination);
+            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), SHORT_CIRCUIT_ANALYSIS_FAILED_DESTINATION);
             return resultUuid;
         }).when(studyService).runShortCircuit(any(), any(), any());
         studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), "");
@@ -653,7 +653,7 @@ public class ShortCircuitTest {
         // Test reset uuid result in the database
         assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.SHORT_CIRCUIT).isEmpty());
 
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED, updateType);
@@ -664,7 +664,7 @@ public class ShortCircuitTest {
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, String updateTypeToCheck, String otherUpdateTypeToCheck) {
-        Message<byte[]> shortCircuitAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> shortCircuitAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, shortCircuitAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) shortCircuitAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         if (otherUpdateTypeToCheck == null) {
@@ -802,7 +802,7 @@ public class ShortCircuitTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -816,7 +816,7 @@ public class ShortCircuitTest {
 
     @After
     public void tearDown() {
-        List<String> destinations = List.of(studyUpdateDestination, shortCircuitAnalysisResultDestination, shortCircuitAnalysisStoppedDestination, shortCircuitAnalysisFailedDestination);
+        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, SHORT_CIRCUIT_ANALYSIS_RESULT_DESTINATION, SHORT_CIRCUIT_ANALYSIS_STOPPED_DESTINATION, SHORT_CIRCUIT_ANALYSIS_FAILED_DESTINATION);
 
         cleanDB();
 

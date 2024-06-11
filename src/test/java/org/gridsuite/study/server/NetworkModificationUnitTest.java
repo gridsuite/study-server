@@ -78,15 +78,16 @@ class NetworkModificationUnitTest {
     private static final long TIMEOUT = 1000;
     private static final String VARIANT_1 = "variant_1";
 
+    //output destinations
+    private static final String STUDY_UPDATE_DESTINATION = "study.update";
+
     private UUID studyUuid;
     private UUID node1Uuid;
     private UUID node2Uuid;
     private UUID node3Uuid;
 
-    //output destinations
     @Autowired
     private OutputDestination output;
-    private final String studyUpdateDestination = "study.update";
 
     @BeforeEach
     public void setup() {
@@ -148,7 +149,7 @@ class NetworkModificationUnitTest {
     }
 
     private void checkUpdateBuildStateMessageReceived(UUID studyUuid, UUID nodeUuid) {
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
 
         MessageHeaders headersStatus = messageStatus.getHeaders();
@@ -159,7 +160,7 @@ class NetworkModificationUnitTest {
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating model status
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -199,7 +200,7 @@ class NetworkModificationUnitTest {
 
     @AfterEach
     public void tearDown() {
-        List<String> destinations = List.of(studyUpdateDestination);
+        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION);
         assertQueuesEmptyThenClear(destinations);
     }
 

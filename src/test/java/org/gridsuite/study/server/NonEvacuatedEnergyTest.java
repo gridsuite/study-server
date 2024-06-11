@@ -113,6 +113,12 @@ public class NonEvacuatedEnergyTest {
 
     private static final long TIMEOUT = 1000;
 
+    //output destinations
+    private static final String STUDY_UPDATE_DESTINATION = "study.update";
+    private static final String NON_EVACUATED_ENERGY_RESULT_DESTINATION = "nonEvacuatedEnergy.result";
+    private static final String NON_EVACUATED_ENERGY_STOPPED_DESTINATION = "nonEvacuatedEnergy.stopped";
+    private static final String NON_EVACUATED_ENERGY_FAILED_DESTINATION = "nonEvacuatedEnergy.failed";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -155,12 +161,6 @@ public class NonEvacuatedEnergyTest {
     @MockBean
     private LoadFlowService loadFlowService;
 
-    //output destinations
-    private final String studyUpdateDestination = "study.update";
-    private final String nonEvacuatedEnergyResultDestination = "nonEvacuatedEnergy.result";
-    private final String nonEvacuatedEnergyStoppedDestination = "nonEvacuatedEnergy.stopped";
-    private final String nonEvacuatedEnergyFailedDestination = "nonEvacuatedEnergy.failed";
-
     @Before
     public void setup() throws IOException {
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
@@ -198,19 +198,19 @@ public class NonEvacuatedEnergyTest {
                         .setHeader("resultUuid", resultUuid)
                         .setHeader(HEADER_USER_ID, "userId")
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                        .build(), nonEvacuatedEnergyResultDestination);
+                        .build(), NON_EVACUATED_ENERGY_RESULT_DESTINATION);
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/non-evacuated-energy.*")) {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader(HEADER_USER_ID, "userId")
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                        .build(), nonEvacuatedEnergyFailedDestination);
+                        .build(), NON_EVACUATED_ENERGY_FAILED_DESTINATION);
                     return new MockResponse().setResponseCode(200).setBody("\"" + NON_EVACUATED_ENERGY_ERROR_NODE_RESULT_UUID + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/non-evacuated-energy.*")) {
                     input.send(MessageBuilder.withPayload("")
-                        .build(), nonEvacuatedEnergyFailedDestination);
+                        .build(), NON_EVACUATED_ENERGY_FAILED_DESTINATION);
                     return new MockResponse().setResponseCode(200).setBody("\"" + NON_EVACUATED_ENERGY_ERROR_NODE_RESULT_UUID + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/non-evacuated-energy/results/" + NON_EVACUATED_ENERGY_RESULT_UUID + "/stop.*")
@@ -219,7 +219,7 @@ public class NonEvacuatedEnergyTest {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", resultUuid)
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                        .build(), nonEvacuatedEnergyStoppedDestination);
+                        .build(), NON_EVACUATED_ENERGY_STOPPED_DESTINATION);
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/non-evacuated-energy/results/" + NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID)) {
@@ -275,17 +275,17 @@ public class NonEvacuatedEnergyTest {
         UUID uuidResponse = mapper.readValue(resultAsString, UUID.class);
         assertEquals(uuidResponse, resultUuid);
 
-        Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
 
-        Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, sensitivityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_RESULT, updateType);
 
-        sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
@@ -308,7 +308,7 @@ public class NonEvacuatedEnergyTest {
         // stop sensitivity analysis non evacuated energy
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/stop", studyUuid, nodeUuid)).andExpect(status().isOk());
 
-        sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertTrue(updateType.equals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS) || updateType.equals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_RESULT));
@@ -346,17 +346,17 @@ public class NonEvacuatedEnergyTest {
                 .contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId")).andExpect(status().isOk())
             .andReturn();
 
-        Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
 
-        Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_RESULT, updateType);
 
-        sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
@@ -436,12 +436,12 @@ public class NonEvacuatedEnergyTest {
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
-            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), nonEvacuatedEnergyFailedDestination);
+            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), NON_EVACUATED_ENERGY_FAILED_DESTINATION);
             return resultUuid;
         }).when(studyService).runNonEvacuatedEnergy(any(), any(), any());
         studyService.runNonEvacuatedEnergy(studyEntity.getId(), modificationNode.getId(), "userId");
 
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_FAILED, updateType);
@@ -469,13 +469,13 @@ public class NonEvacuatedEnergyTest {
         assertEquals(NON_EVACUATED_ENERGY_ERROR_NODE_RESULT_UUID, uuidResponse);
 
         // failed sensitivity analysis non evacuated energy
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_FAILED, updateType);
 
         // message sent by run controller to notify frontend sensitivity analysis non evacuated energy is running and should update status
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
@@ -498,7 +498,7 @@ public class NonEvacuatedEnergyTest {
         // failed sensitivity analysis non evacuated energy without receiver -> no failure message sent to frontend
 
         // message sent by run controller to notify frontend sensitivity analysis non evacuated energy is running and should update status
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid2, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
@@ -548,7 +548,7 @@ public class NonEvacuatedEnergyTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -566,7 +566,7 @@ public class NonEvacuatedEnergyTest {
 
     @After
     public void tearDown() {
-        List<String> destinations = List.of(studyUpdateDestination, nonEvacuatedEnergyFailedDestination, nonEvacuatedEnergyResultDestination, nonEvacuatedEnergyStoppedDestination);
+        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, NON_EVACUATED_ENERGY_FAILED_DESTINATION, NON_EVACUATED_ENERGY_RESULT_DESTINATION, NON_EVACUATED_ENERGY_STOPPED_DESTINATION);
 
         cleanDB();
 

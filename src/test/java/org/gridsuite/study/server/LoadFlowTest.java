@@ -139,11 +139,11 @@ public class LoadFlowTest {
     private static String LOADFLOW_PROFILE_PARAMETERS_JSON;
 
     //output destinations
-    private final String studyUpdateDestination = "study.update";
-    private final String elementUpdateDestination = "element.update";
-    private final String loadflowResultDestination = "loadflow.result";
-    private final String loadflowStoppedDestination = "loadflow.stopped";
-    private final String loadflowFailedDestination = "loadflow.failed";
+    private static final String STUDY_UPDATE_DESTINATION = "study.update";
+    private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
+    private static final String LOADFLOW_RESULT_DESTINATION = "loadflow.result";
+    private static final String LOADFLOW_STOPPED_DESTINATION = "loadflow.stopped";
+    private static final String LOADFLOW_FAILED_DESTINATION = "loadflow.failed";
 
     @Autowired
     private MockMvc mockMvc;
@@ -249,14 +249,14 @@ public class LoadFlowTest {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", LOADFLOW_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build(), loadflowResultDestination);
+                            .build(), LOADFLOW_RESULT_DESTINATION);
                     return new MockResponse().setResponseCode(200)
                             .setBody(loadFlowResultUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build(), loadflowFailedDestination);
+                            .build(), LOADFLOW_FAILED_DESTINATION);
                     return new MockResponse().setResponseCode(200)
                             .setBody(loadFlowErrorResultUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -289,7 +289,7 @@ public class LoadFlowTest {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", resultUuid)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build(), loadflowStoppedDestination);
+                            .build(), LOADFLOW_STOPPED_DESTINATION);
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results")) {
@@ -552,7 +552,7 @@ public class LoadFlowTest {
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
-            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), loadflowFailedDestination);
+            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), LOADFLOW_FAILED_DESTINATION);
             return resultUuid;
         }).when(studyService).runLoadFlow(any(), any(), any(), any());
         studyService.runLoadFlow(studyEntity.getId(), modificationNode.getId(), "", null);
@@ -560,14 +560,14 @@ public class LoadFlowTest {
         // Test reset uuid result in the database
         assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), LOAD_FLOW).isEmpty());
 
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_FAILED, updateType);
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, String updateTypeToCheck, String otherUpdateTypeToCheck) {
-        Message<byte[]> loadFlowStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> loadFlowStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, loadFlowStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) loadFlowStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         if (otherUpdateTypeToCheck == null) {
@@ -632,19 +632,19 @@ public class LoadFlowTest {
                     .content(parameters))
                 .andExpect(status().is(status.value()));
 
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        message = output.receive(TIMEOUT, elementUpdateDestination);
+        message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
     }
 
@@ -828,7 +828,7 @@ public class LoadFlowTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -842,7 +842,7 @@ public class LoadFlowTest {
 
     @After
     public void tearDown() {
-        List<String> destinations = List.of(studyUpdateDestination, loadflowResultDestination, loadflowStoppedDestination, loadflowFailedDestination);
+        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, LOADFLOW_RESULT_DESTINATION, LOADFLOW_STOPPED_DESTINATION, LOADFLOW_FAILED_DESTINATION);
 
         cleanDB();
 
