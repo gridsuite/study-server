@@ -66,7 +66,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
@@ -393,8 +396,7 @@ public class NonEvacuatedEnergyTest {
     }
 
     @Test
-    @SneakyThrows
-    public void testGetSensitivityNonEvacuatedEnergyResultWithWrongId() {
+    public void testGetSensitivityNonEvacuatedEnergyResultWithWrongId() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID notFoundSensitivityUuid = UUID.randomUUID();
         UUID studyUuid = studyEntity.getId();
@@ -421,8 +423,7 @@ public class NonEvacuatedEnergyTest {
     }
 
     @Test
-    @SneakyThrows
-    public void testResetUuidResultWhenNonEvacuatedEnergyFailed() {
+    public void testResetUuidResultWhenNonEvacuatedEnergyFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());

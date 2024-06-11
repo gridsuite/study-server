@@ -905,9 +905,8 @@ public class NetworkModificationTreeTest {
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
     }
 
-    @SneakyThrows
     @Test
-    public void testLightNode() {
+    public void testLightNode() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         final NetworkModificationNode hypo = buildNetworkModificationNode("hypo", "potamus", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
@@ -1228,7 +1227,7 @@ public class NetworkModificationTreeTest {
     }
 
     @Test
-    public void testUpdateBuildStatus() {
+    public void testUpdateBuildStatus() throws Exception {
         Pair<UUID, NetworkModificationNode> result = createTreeForBuildStatus();
         UUID leafNodeId = result.getSecond().getId();
         UUID studyUuid = result.getFirst();
@@ -1263,7 +1262,7 @@ public class NetworkModificationTreeTest {
     }
 
     @Test
-    public void testUpdateApplicationStatus() {
+    public void testUpdateApplicationStatus() throws Exception {
         Pair<UUID, NetworkModificationNode> result = createTreeForBuildStatus();
         UUID leafNodeId = result.getSecond().getId();
         UUID studyUuid = result.getFirst();
@@ -1295,8 +1294,7 @@ public class NetworkModificationTreeTest {
      * Create a network modification tree to test the build status.
      * @return a pair with the ID of the study and the ID of the leaf node of the tree
      */
-    @SneakyThrows
-    private Pair<UUID, NetworkModificationNode> createTreeForBuildStatus() {
+    private Pair<UUID, NetworkModificationNode> createTreeForBuildStatus() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         final NetworkModificationNode node1 = buildNetworkModificationNode("built_with_error", "not built node", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT_WITH_ERROR);

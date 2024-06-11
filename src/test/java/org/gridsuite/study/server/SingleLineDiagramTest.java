@@ -585,8 +585,7 @@ public class SingleLineDiagramTest {
         return modificationNode;
     }
 
-    @SneakyThrows
-    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNodeUuid, String elementType, String infoType, List<String> substationsIds, String responseBody) {
+    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNodeUuid, String elementType, String infoType, List<String> substationsIds, String responseBody) throws Exception {
         UUID stubUuid = wireMockUtils.stubNetworkElementsInfosGet(NETWORK_UUID_STRING, elementType, infoType, responseBody);
         MockHttpServletRequestBuilder mockHttpServletRequestBuilder = get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
                 .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
@@ -603,8 +602,7 @@ public class SingleLineDiagramTest {
         return mvcResult;
     }
 
-    @SneakyThrows
-    private MvcResult getNetworkEquipmentsInfos(UUID studyUuid, UUID rootNodeUuid, String equipmentPath, List<String> substationsIds, String responseBody) {
+    private MvcResult getNetworkEquipmentsInfos(UUID studyUuid, UUID rootNodeUuid, String equipmentPath, List<String> substationsIds, String responseBody) throws Exception {
         UUID stubUuid = wireMockUtils.stubNetworkEquipmentsInfosGet(NETWORK_UUID_STRING, equipmentPath, responseBody);
         MockHttpServletRequestBuilder mockHttpServletRequestBuilder = get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/{elementPath}", studyUuid, rootNodeUuid, equipmentPath);
         if (!substationsIds.isEmpty()) {

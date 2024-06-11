@@ -60,7 +60,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -630,8 +629,7 @@ public class ShortCircuitTest {
     }
 
     @Test
-    @SneakyThrows
-    public void testResetUuidResultWhenSCFailed() {
+    public void testResetUuidResultWhenSCFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
