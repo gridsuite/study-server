@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
+import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
@@ -1673,7 +1674,7 @@ public class StudyService {
                 .addAll(subReporter.getChildren()));
         return subReportersByNode.keySet().stream().map(nodeId -> {
             ReportNode newSubReporter = ReportNode.newRootReportNode().withMessageTemplate(nodeId, nodeId)
-                    .withUntypedValue("id", reportUuid.toString()).build();
+                    .withUntypedValue("subReportId", reportUuid.toString()).build();
             subReportersByNode.get(nodeId).forEach(child -> insertReportNode(newSubReporter, child));
             return newSubReporter;
         }).collect(Collectors.toList());
