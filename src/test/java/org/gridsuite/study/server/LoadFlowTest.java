@@ -537,8 +537,7 @@ public class LoadFlowTest {
     }
 
     @Test
-    @SneakyThrows
-    public void testResetUuidResultWhenLFFailed() {
+    public void testResetUuidResultWhenLFFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), LOADFLOW_PARAMETERS_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());

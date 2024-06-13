@@ -31,8 +31,8 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
+import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -1595,9 +1595,8 @@ public class NetworkModificationTest {
                 .andExpect(status().isForbidden());
     }
 
-    @SneakyThrows
     @Test
-    public void testLineSplitWithVoltageLevel() {
+    public void testLineSplitWithVoltageLevel() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1664,9 +1663,8 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, badBody);
     }
 
-    @SneakyThrows
     @Test
-    public void testLineAttachToVoltageLevel() {
+    public void testLineAttachToVoltageLevel() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1704,9 +1702,8 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, createLineAttachToVoltageLevelAttributes);
     }
 
-    @SneakyThrows
     @Test
-    public void testLinesAttachToSplitLines() {
+    public void testLinesAttachToSplitLines() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1757,9 +1754,8 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, badBody);
     }
 
-    @SneakyThrows
     @Test
-    public void testScaling() {
+    public void testScaling() throws Exception {
         checkScaling(ModificationType.GENERATOR_SCALING);
         checkScaling(ModificationType.LOAD_SCALING);
     }
@@ -1818,9 +1814,8 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, requestBody);
     }
 
-    @SneakyThrows
     @Test
-    public void testDeleteVoltageLevelOnline() {
+    public void testDeleteVoltageLevelOnline() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1870,9 +1865,8 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubIdPutErr, MODIFICATION_UUID, badBody);
     }
 
-    @SneakyThrows
     @Test
-    public void testDeleteAttachingline() {
+    public void testDeleteAttachingline() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -2448,9 +2442,8 @@ public class NetworkModificationTest {
         });
     }
 
-    @SneakyThrows
     @Test
-    public void testUpdateOfBuildStatus() {
+    public void testUpdateOfBuildStatus() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
@@ -2827,9 +2820,8 @@ public class NetworkModificationTest {
         return modificationNode;
     }
 
-    @SneakyThrows
     @Test
-    public void testCreateModificationWithErrors() {
+    public void testCreateModificationWithErrors() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();

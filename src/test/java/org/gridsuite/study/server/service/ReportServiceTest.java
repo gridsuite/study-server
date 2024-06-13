@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.commons.report.ReportNode;
 import com.powsybl.commons.report.ReportNodeJsonModule;
-
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
@@ -20,7 +19,6 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
@@ -28,6 +26,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.utils.MatcherReport;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
@@ -47,13 +46,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_DEFAULT_NAME;
-import static org.gridsuite.study.server.utils.TestUtils.addChildReportNode;
-import static org.gridsuite.study.server.utils.TestUtils.checkReportNodes;
-import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
+import static org.gridsuite.study.server.utils.TestUtils.*;
 import static org.junit.Assert.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -172,9 +172,8 @@ public class ReportServiceTest {
         return networkModificationTreeService.getStudyTree(studyEntity.getId());
     }
 
-    @SneakyThrows
     @Test
-    public void testReport() {
+    public void testReport() throws Exception {
         RootNode rootNode = createRoot();
         ReportNode expectedRootReporter = getNodeReport(ROOT_NODE_REPORT_UUID.toString(), rootNode.getId().toString());
 
@@ -216,9 +215,8 @@ public class ReportServiceTest {
         assertTrue(TestUtils.getRequestsDone(2, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
 
-    @SneakyThrows
     @Test
-    public void testMultipleReport() {
+    public void testMultipleReport() throws Exception {
         RootNode rootNode = createRoot();
         NetworkModificationNode node = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), rootNode.getId(), createModificationNodeInfo("Modification Node", MODIFICATION_NODE_REPORT_UUID), InsertMode.AFTER, null);
         NetworkModificationNode child1 = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), node.getId(), createModificationNodeInfo("Child 1", MODIFICATION_CHILD_NODE1_REPORT_UUID), InsertMode.AFTER, null);
@@ -262,9 +260,8 @@ public class ReportServiceTest {
         assertNotEquals(mapper.writeValueAsString(reportsNode1), mapper.writeValueAsString(reportsNode2));
     }
 
-    @SneakyThrows
     @Test
-    public void testSubReport() {
+    public void testSubReport() throws Exception {
         RootNode rootNode = createRoot();
         ReportNode expectedRootReporter = getRootNodeSimpleReport(ROOT_NODE_REPORT_UUID.toString());
 
@@ -279,9 +276,8 @@ public class ReportServiceTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/subreports/.*")));
     }
 
-    @SneakyThrows
     @Test
-    public void testNodeReport() {
+    public void testNodeReport() throws Exception {
         RootNode rootNode = createRoot();
         ReportNode expectedRootReporter = getNodeReport(ROOT_NODE_REPORT_UUID.toString(), rootNode.getId().toString());
 

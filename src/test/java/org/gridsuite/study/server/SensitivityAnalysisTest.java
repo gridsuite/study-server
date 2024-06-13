@@ -459,8 +459,7 @@ public class SensitivityAnalysisTest {
     }
 
     @Test
-    @SneakyThrows
-    public void testGetSensitivityResultWithWrongId() {
+    public void testGetSensitivityResultWithWrongId() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID notFoundSensitivityUuid = UUID.randomUUID();
         UUID studyUuid = studyEntity.getId();
@@ -494,8 +493,7 @@ public class SensitivityAnalysisTest {
     }
 
     @Test
-    @SneakyThrows
-    public void testResetUuidResultWhenSAFailed() {
+    public void testResetUuidResultWhenSAFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());

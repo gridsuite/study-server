@@ -8,7 +8,6 @@ package org.gridsuite.study.server.repository;
 
 import com.powsybl.shortcircuit.InitialVoltageProfileMode;
 import com.powsybl.shortcircuit.StudyType;
-import lombok.SneakyThrows;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.After;
@@ -155,7 +154,6 @@ public class RepositoriesTest {
     }
 
     @Test
-    @SneakyThrows
     @Transactional
     public void testStudyImportParameters() {
         Map<String, String> importParametersExpected = Map.of("param1", "changedValue1, changedValue2", "param2", "changedValue");
