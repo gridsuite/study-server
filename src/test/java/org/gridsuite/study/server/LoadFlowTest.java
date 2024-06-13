@@ -803,8 +803,7 @@ public class LoadFlowTest {
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
-                .getContentAsString(), new TypeReference<>() {
-                });
+                .getContentAsString(), new TypeReference<>() { });
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
