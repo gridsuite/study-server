@@ -51,7 +51,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -633,7 +632,7 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestParam(value = "busId", required = false) Optional<String> busId,
-            @RequestHeader(HEADER_USER_ID) String userId) throws IOException {
+            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.runShortCircuit(studyUuid, nodeUuid, busId, userId);
         return ResponseEntity.ok().build();
