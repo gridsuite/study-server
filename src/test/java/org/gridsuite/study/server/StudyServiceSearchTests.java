@@ -7,9 +7,10 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.iidm.network.VariantManagerConstants;
-import org.gridsuite.study.server.dto.EquipmentInfos;
-import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
+
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
+import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
+import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
