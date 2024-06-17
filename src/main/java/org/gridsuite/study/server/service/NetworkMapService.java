@@ -54,16 +54,14 @@ public class NetworkMapService {
         this.restTemplate = restTemplate;
     }
 
-    public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, String infoType, double dcPowerFactor) {
+    public String getElementsInfos(UUID networkUuid, String variantId, String equipmentInfos, String infoType, double dcPowerFactor) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
-        if (substationsIds != null) {
-            builder = builder.queryParam(QUERY_PARAM_SUBSTATIONS_IDS, substationsIds);
-        }
+
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
+
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
 
         InfoTypeParameters infoTypeParameters = InfoTypeParameters.builder()
@@ -71,7 +69,11 @@ public class NetworkMapService {
                 .build();
         queryParamInfoTypeParameters(infoTypeParameters, builder);
         String url = builder.buildAndExpand(networkUuid).toUriString();
-        return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(equipmentInfos, headers);
+        return restTemplate.postForObject(networkMapServerBaseUri + url, httpEntity, String.class);
     }
 
     public String getElementInfos(UUID networkUuid, String variantId, String elementType, String infoType, String operation, double dcPowerFactor, String elementId) {
