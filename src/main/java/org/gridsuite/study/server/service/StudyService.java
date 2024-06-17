@@ -1674,7 +1674,7 @@ public class StudyService {
                 .addAll(subReporter.getChildren()));
         return subReportersByNode.keySet().stream().map(nodeId -> {
             ReportNode newSubReporter = ReportNode.newRootReportNode().withMessageTemplate(nodeId, nodeId)
-                    .withUntypedValue("id", reportUuid.toString()).build();
+                    .withUntypedValue("subReportId", reportUuid.toString()).build();
             subReportersByNode.get(nodeId).forEach(child -> insertReportNode(newSubReporter, child));
             return newSubReporter;
         }).collect(Collectors.toList());
