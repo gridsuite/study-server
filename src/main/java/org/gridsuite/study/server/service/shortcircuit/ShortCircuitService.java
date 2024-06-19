@@ -302,12 +302,15 @@ public class ShortCircuitService extends AbstractComputationService {
         return getEnumValues(enumName, resultUuid, SHORT_CIRCUIT_API_VERSION, shortCircuitServerBaseUri, SHORT_CIRCUIT_ANALYSIS_NOT_FOUND, restTemplate);
     }
 
+    private UriComponentsBuilder getBaseUriForParameters() {
+        return UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri).pathSegment(SHORT_CIRCUIT_API_VERSION, "parameters");
+    }
+
     public UUID createParameters(@Nullable final String parametersInfos) {
-        final UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri)
-                                                             .pathSegment(SHORT_CIRCUIT_API_VERSION, "parameters");
+        final UriComponentsBuilder uri = getBaseUriForParameters();
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.setAccept(List.of(MediaType.TEXT_PLAIN));
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
             if (StringUtils.isBlank(parametersInfos)) {
                 return restTemplate.postForObject(uri.pathSegment("default").build().toUri(), new HttpEntity<>(headers), UUID.class);
             } else {
@@ -323,8 +326,8 @@ public class ShortCircuitService extends AbstractComputationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         try {
-            restTemplate.put(UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri)
-                .pathSegment(SHORT_CIRCUIT_API_VERSION, "parameters", "{parametersUuid}")
+            restTemplate.put(getBaseUriForParameters()
+                .pathSegment("{parametersUuid}")
                 .buildAndExpand(parametersUuid)
                 .toUri(), new HttpEntity<>(parametersInfos, headers));
         } catch (final HttpStatusCodeException e) {
@@ -336,8 +339,8 @@ public class ShortCircuitService extends AbstractComputationService {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-            return restTemplate.exchange(UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri)
-                .pathSegment(SHORT_CIRCUIT_API_VERSION, "parameters", "{parametersUuid}")
+            return restTemplate.exchange(getBaseUriForParameters()
+                .pathSegment("{parametersUuid}")
                 .buildAndExpand(parametersUuid)
                 .toUri(), HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
         } catch (final HttpStatusCodeException e) {
@@ -348,9 +351,8 @@ public class ShortCircuitService extends AbstractComputationService {
     public UUID duplicateParameters(UUID parametersUuid) {
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.setAccept(List.of(MediaType.TEXT_PLAIN));
-            return restTemplate.postForObject(UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri)
-                .pathSegment(SHORT_CIRCUIT_API_VERSION, "parameters")
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+            return restTemplate.postForObject(getBaseUriForParameters()
                 .queryParam("duplicateFrom", parametersUuid)
                 .build()
                 .toUri(), new HttpEntity<>(headers), UUID.class);

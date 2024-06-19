@@ -250,9 +250,9 @@ public class ShortCircuitTest implements WithAssertions {
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("1");
                 } else if ("POST".equalsIgnoreCase(request.getMethod()) && path.equals("/v1/parameters/default")) {
-                    return new MockResponse().setResponseCode(200).setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE).setBody("\"" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID + "\"");
+                    return new MockResponse().setResponseCode(200).setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody("\"" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID + "\"");
                 } else if ("GET".equalsIgnoreCase(request.getMethod()) && path.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)) {
-                    return new MockResponse().setResponseCode(200).setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE).setBody(TestUtils.resourceToString("/short-circuit-parameters.json"));
+                    return new MockResponse().setResponseCode(200).setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(TestUtils.resourceToString("/short-circuit-parameters.json"));
                 } else if ("PUT".equalsIgnoreCase(request.getMethod()) && path.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)) {
                     return new MockResponse().setResponseCode(200);
                 } else {
