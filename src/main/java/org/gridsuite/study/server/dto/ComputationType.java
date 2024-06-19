@@ -28,7 +28,10 @@ public enum ComputationType {
             NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED),
     SHORT_CIRCUIT_ONE_BUS("One bus Short circuit analysis", "oneBusShortCircuitAnalysisResultUuid",
             NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT,
-            NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_FAILED);
+            NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_FAILED),
+    STATE_ESTIMATION("State estimation", "stateEstimationResultUuid",
+        NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_RESULT,
+        NotificationService.UPDATE_TYPE_STATE_ESTIMATION_FAILED);
 
     private final String label; // used for logs
     private final String resultUuidLabel;
