@@ -43,7 +43,8 @@ public class RestResponseEntityExceptionHandler {
                     VOLTAGE_INIT_PARAMETERS_NOT_FOUND,
                     SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND,
                     LOADFLOW_PARAMETERS_NOT_FOUND,
-                    SENSITIVITY_ANALYSIS_PARAMETERS_NOT_FOUND
+                    SENSITIVITY_ANALYSIS_PARAMETERS_NOT_FOUND,
+                    STATE_ESTIMATION_NOT_FOUND
                     -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getType());
             case CASE_NOT_FOUND -> ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(exception.getMessage());
             case STUDY_ALREADY_EXISTS -> ResponseEntity.status(HttpStatus.CONFLICT).body(type);
@@ -54,7 +55,8 @@ public class RestResponseEntityExceptionHandler {
                     NON_EVACUATED_ENERGY_RUNNING,
                     DYNAMIC_SIMULATION_RUNNING,
                     SHORT_CIRCUIT_ANALYSIS_RUNNING,
-                    VOLTAGE_INIT_RUNNING
+                    VOLTAGE_INIT_RUNNING,
+                    STATE_ESTIMATION_RUNNING
                     -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(type);
             case NOT_ALLOWED,
                     BAD_NODE_TYPE,

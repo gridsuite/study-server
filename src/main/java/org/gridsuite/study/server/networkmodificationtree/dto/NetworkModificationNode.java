@@ -51,6 +51,8 @@ public class NetworkModificationNode extends AbstractNode {
 
     private UUID dynamicSimulationResultUuid;
 
+    private UUID stateEstimationResultUuid;
+
     private NodeBuildStatus nodeBuildStatus;
 
     @Override

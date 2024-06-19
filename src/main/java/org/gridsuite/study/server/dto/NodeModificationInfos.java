@@ -40,4 +40,6 @@ public class NodeModificationInfos {
     private UUID voltageInitUuid;
 
     private UUID dynamicSimulationUuid;
+
+    private UUID stateEstimationUuid;
 }
