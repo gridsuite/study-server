@@ -175,6 +175,7 @@ class NetworkModificationUnitTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
     }
 
     private StudyEntity insertStudy(UUID networkUuid, UUID caseUuid) {
@@ -186,7 +187,7 @@ class NetworkModificationUnitTest {
 
     private NodeEntity insertNode(StudyEntity study, UUID nodeId, NodeEntity parentNode, BuildStatus buildStatus) {
         NodeEntity node = nodeRepository.save(new NodeEntity(nodeId, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
-        NetworkModificationNodeInfoEntity nodeInfos = new NetworkModificationNodeInfoEntity(UUID.randomUUID(), VARIANT_1, new HashSet<>(), null, null, null, null, null, null, null, null, NodeBuildStatus.from(buildStatus).toEntity());
+        NetworkModificationNodeInfoEntity nodeInfos = new NetworkModificationNodeInfoEntity(UUID.randomUUID(), VARIANT_1, new HashSet<>(), null, null, null, null, null, null, null, null, null, NodeBuildStatus.from(buildStatus).toEntity());
         nodeInfos.setIdNode(node.getIdNode());
         networkModificationNodeInfoRepository.save(nodeInfos);
 

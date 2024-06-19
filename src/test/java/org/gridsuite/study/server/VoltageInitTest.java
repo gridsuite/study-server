@@ -187,6 +187,9 @@ public class VoltageInitTest {
     private ShortCircuitService shortCircuitService;
 
     @Autowired
+    private StateEstimationService stateEstimationService;
+
+    @Autowired
     private VoltageInitService voltageInitService;
 
     @MockBean
@@ -224,6 +227,7 @@ public class VoltageInitTest {
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
+        stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
 
         String voltageInitResultUuidStr = objectMapper.writeValueAsString(VOLTAGE_INIT_RESULT_UUID);
 
@@ -426,7 +430,7 @@ public class VoltageInitTest {
         TestUtils.assertRequestMatches("PUT", "/v1/results/.*/modifications-group-uuid", server);
 
         // Applying modifications also invalidate all results of the node, so it creates a lot of study update notifications
-        IntStream.range(0, 18).forEach(i -> output.receive(1000, studyUpdateDestination));
+        IntStream.range(0, 21).forEach(i -> output.receive(1000, studyUpdateDestination));
         // It deletes the voltage-init modification and creates a new one on the node
         IntStream.range(0, 2).forEach(i -> output.receive(1000, elementUpdateDestination));
     }
@@ -580,6 +584,7 @@ public class VoltageInitTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
     }
 
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {

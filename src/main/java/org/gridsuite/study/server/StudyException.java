@@ -110,6 +110,9 @@ public class StudyException extends RuntimeException {
         NOT_IMPLEMENTED,
         EVALUATE_FILTER_FAILED,
         GET_USER_PROFILE_FAILED,
+        STATE_ESTIMATION_RUNNING,
+        STATE_ESTIMATION_NOT_FOUND,
+        STATE_ESTIMATION_ERROR,
     }
 
     private final Type type;
