@@ -53,6 +53,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
@@ -189,8 +190,7 @@ public class ShortCircuitTest {
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
-                request.getBody();
-                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&busId=BUS_TEST_ID&variantId=" + VARIANT_ID_2)) {
+                if (path.matches("^/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.+&reportUuid=.+&reporterId=.+&busId=BUS_TEST_ID&variantId=" + VARIANT_ID_2 + "$")) {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
@@ -198,75 +198,74 @@ public class ShortCircuitTest {
                         .build(), shortCircuitAnalysisResultDestination);
                     return new MockResponse().setResponseCode(200)
                         .setBody(shortCircuitAnalysisResultUuidStr)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)) {
+                        .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE);
+                } else if (path.matches("^/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.+&reportUuid=.+&reporterId=.+&variantId=" + VARIANT_ID_2 + "$")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisResultDestination);
                     return new MockResponse().setResponseCode(200)
                             .setBody(shortCircuitAnalysisResultUuidStr)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING_NOT_FOUND + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_4)) {
+                            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE);
+                } else if (path.matches("^/v1/networks/" + NETWORK_UUID_STRING_NOT_FOUND + "/run-and-save\\?receiver=.+&reportUuid=.+&reporterId=.+&variantId=" + VARIANT_ID_4 + "$")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisResultDestination);
                     return new MockResponse().setResponseCode(200)
                             .setBody(shortCircuitAnalysisResultNotFoundUuidStr)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
+                            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE);
+                } else if (path.matches("^/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.+&reportUuid=.+&reporterId=.+&variantId=" + VARIANT_ID + "$")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisFailedDestination);
                     return new MockResponse().setResponseCode(200)
                             .setBody(shortCircuitAnalysisErrorResultUuidStr)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=FULL")) {
-                    return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault-types")) {
+                            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE);
+                } else if (path.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "?mode=FULL")) {
                     return new MockResponse().setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged" + "\\?mode=FULL&page=0&size=20&sort=id,DESC")) {
-                    return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv")) {
-                    return new MockResponse().setResponseCode(200).setBody(getBinaryAsBuffer(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT))
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv")) {
+                            .setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
+                            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE);
+                } else if (path.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault-types")) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged?mode=FULL&page=0&size=20&sort=id,DESC")) {
+                    return new MockResponse().setResponseCode(200)
+                            .setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
+                            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE);
+                } else if (path.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv")) {
+                    return new MockResponse().setResponseCode(200)
+                            .setBody(getBinaryAsBuffer(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT))
+                            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE);
+                } else if (path.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv")) {
                         return new MockResponse().setResponseCode(404);
-                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/feeder_results/paged" + "\\?mode=FULL&filters=fakeFilters&page=0&size=20&sort=id,DESC")) {
-                    return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")) {
-                    return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "&resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)) {
+                } else if (path.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/feeder_results/paged?mode=FULL&filters=fakeFilters&page=0&size=20&sort=id,DESC")) {
                     return new MockResponse().setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop.*")
-                        || path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
-                    String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID : SHORT_CIRCUIT_ANALYSIS_RESULT_UUID;
+                            .setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
+                            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE);
+                } else if (path.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")) {
+                    return new MockResponse().setResponseCode(200)
+                            .setBody(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON)
+                            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE);
+                } else if (path.equals("/v1/results/invalidate-status?resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "&resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("^/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop.+$")
+                        || path.matches("^/v1/results/" + SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.+$")) {
                     input.send(MessageBuilder.withPayload("")
-                            .setHeader("resultUuid", resultUuid)
+                            .setHeader("resultUuid", path.matches("[?&]variantId=" + VARIANT_ID_2) ? SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID : SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisStoppedDestination);
-                    return new MockResponse().setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results")) {
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/treereports")) {
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/supervision/results-count")) {
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8")
-                        .setBody("1");
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.equals("/v1/results")) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.equals("/v1/treereports")) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.equals("/v1/supervision/results-count")) {
+                    return new MockResponse().setResponseCode(200).setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE).setBody("1");
                 } else {
-                    LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
-                    return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
+                    LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
+                    return new MockResponse().setResponseCode(418)
+                            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE)
+                            .setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                 }
             }
 
@@ -366,7 +365,7 @@ public class ShortCircuitTest {
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("^/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.+&reportUuid=.+&reporterId=.+&variantId=" + VARIANT_ID_2 + "$")));
 
         // get short circuit result
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode3Uuid))
@@ -374,13 +373,13 @@ public class ShortCircuitTest {
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=FULL")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "?mode=FULL")));
 
         // export short circuit analysis csv result
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, modificationNode3Uuid)
                 .param("type", "ALL_BUSES")
                 .content(CSV_HEADERS)).andExpectAll(status().isOk(), content().bytes(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT));
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv")));
 
         // get short circuit result but with unknown node
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, unknownModificationNodeUuid)).andExpect(
@@ -393,14 +392,14 @@ public class ShortCircuitTest {
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
 
         // stop short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode3Uuid)).andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("^/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop\\?receiver=.+nodeUuid.+$")));
 
         // short circuit analysis failed
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode2Uuid)
@@ -411,7 +410,7 @@ public class ShortCircuitTest {
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("^/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.+&reportUuid=.+&reporterId=.+&variantId=" + VARIANT_ID + "$")));
 
         // Test result count
         // In short-circuit server there is no distinction between 1-bus and all-buses, so the count will return all kinds of short-circuit
@@ -419,7 +418,7 @@ public class ShortCircuitTest {
                 .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
                 .queryParam("dryRun", String.valueOf(true)))
                 .andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/supervision/results-count")));
 
         // Delete Shortcircuit results
         // In short-circuit server there is no distinction between 1-bus and all-buses, so we remove all kinds of short-circuit
@@ -431,7 +430,7 @@ public class ShortCircuitTest {
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/treereports")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
     }
 
@@ -468,14 +467,14 @@ public class ShortCircuitTest {
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING_NOT_FOUND + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_4)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("^/v1/networks/" + NETWORK_UUID_STRING_NOT_FOUND + "/run-and-save\\?receiver=.+&reportUuid=.+&reporterId=.+&variantId=" + VARIANT_ID_4 + "$")));
 
         // export short circuit analysis csv result not found
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, modificationNode4Uuid)
                 .param("type", "ALL_BUSES")
                 .content(CSV_HEADERS)).andExpectAll(status().isNotFound());
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv")));
     }
 
     @Test
@@ -501,21 +500,21 @@ public class ShortCircuitTest {
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("^/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.+&reportUuid=.+&reporterId=.+&variantId=" + VARIANT_ID_2 + "$")));
 
         // get fault types
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
                         studyNameUserIdUuid, modificationNode1Uuid, ComputationType.SHORT_CIRCUIT, "fault-types"))
                 .andExpectAll(status().isOk());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault-types")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault-types")));
 
         // get short circuit result with pagination
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20&sort=id,DESC", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged\\?mode=FULL&page=0&size=20&sort=id,DESC")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged?mode=FULL&page=0&size=20&sort=id,DESC")));
 
         // get short circuit result with pagination but with unknown node
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20", studyNameUserIdUuid, unknownModificationNodeUuid)).andExpect(
@@ -528,14 +527,14 @@ public class ShortCircuitTest {
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
 
         // stop short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)).andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("^/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop\\?receiver=.+nodeUuid.+$")));
     }
 
     @Test
@@ -577,7 +576,7 @@ public class ShortCircuitTest {
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("^/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.+&reportUuid=.+&reporterId=.+&variantId=" + VARIANT_ID_2 + "$")));
 
         assertEquals(1, networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
 
@@ -589,7 +588,7 @@ public class ShortCircuitTest {
                 content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
             );
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=FULL")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "?mode=FULL")));
 
         // get short circuit result with pagination
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20&sort=id,DESC&filters=fakeFilters", studyNameUserIdUuid, modificationNode3Uuid)
@@ -598,7 +597,7 @@ public class ShortCircuitTest {
             status().isOk(),
             content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/feeder_results/paged\\?mode=FULL&filters=fakeFilters&page=0&size=20&sort=id,DESC")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/feeder_results/paged?mode=FULL&filters=fakeFilters&page=0&size=20&sort=id,DESC")));
 
         // get one bus short circuit status
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, modificationNode3Uuid)
@@ -608,14 +607,14 @@ public class ShortCircuitTest {
                 content().string(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON)
             );
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
 
         //Test result count
         mockMvc.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
                         .queryParam("dryRun", String.valueOf(true)))
                 .andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/supervision/results-count")));
 
         // Delete Shortcircuit results
         mockMvc.perform(delete("/v1/supervision/computation/results")
@@ -625,7 +624,7 @@ public class ShortCircuitTest {
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/treereports")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
     }
 
@@ -735,7 +734,7 @@ public class ShortCircuitTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("^/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.+&reportUuid=.+&reporterId=.+&variantId=" + VARIANT_ID_2 + "$")));
 
         //run a one bus short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
@@ -750,14 +749,14 @@ public class ShortCircuitTest {
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("^/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.+&reportUuid=.+&reporterId=.+&variantId=" + VARIANT_ID_2 + "$")));
 
         // invalidate status
         mockMvc.perform(put("/v1/studies/{studyUuid}/short-circuit/invalidate-status", studyNameUserIdUuid)
                 .header("userId", "userId")).andExpect(status().isOk());
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "&resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/results/invalidate-status?resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "&resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
 
     }
 
