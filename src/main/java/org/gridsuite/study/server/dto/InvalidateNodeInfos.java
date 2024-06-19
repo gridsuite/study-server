@@ -46,6 +46,8 @@ public class InvalidateNodeInfos {
     private List<UUID> voltageInitResultUuids = new ArrayList<>();
     private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
 
+    private List<UUID> stateEstimationResultUuids = new ArrayList<>();
+
     public void addReportUuid(UUID reportUuid) {
         reportUuids.add(reportUuid);
     }
@@ -91,5 +93,9 @@ public class InvalidateNodeInfos {
 
     public void addDynamicSimulationResultUuid(UUID dynamicSimulationResultUuid) {
         dynamicSimulationResultUuids.add(dynamicSimulationResultUuid);
+    }
+
+    public void addStateEstimationResultUuid(UUID stateEstimationResultUuid) {
+        stateEstimationResultUuids.add(stateEstimationResultUuid);
     }
 }
