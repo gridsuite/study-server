@@ -697,7 +697,7 @@ public class StudyService {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         String nodeName = networkModificationTreeService.getNode(nodeUuid).getName();
-        UUID caseUuid = (studyName == null) ? getStudyCaseUuid(studyUuid) : null;
+        UUID caseUuid = (studyName == null) ? self.getStudyCaseUuid(studyUuid) : null;
 
         return networkConversionService.exportNetwork(networkUuid, variantId, caseUuid, nodeName, studyName, format, paramatersJson);
     }
