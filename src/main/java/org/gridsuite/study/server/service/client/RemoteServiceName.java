@@ -52,7 +52,8 @@ public enum RemoteServiceName {
     STUDY_SERVER,
     TIMESERIES_SERVER,
     USER_ADMIN_SERVER,
-    VOLTAGE_INIT_SERVER;
+    VOLTAGE_INIT_SERVER,
+    STATE_ESTIMATION_SERVER;
 
     /**
      * Service name in the format found in {@link RemoteServicesProperties.Service#getName() Service.name}

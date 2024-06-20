@@ -10,15 +10,15 @@ import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.aggregations.*;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
+import lombok.Getter;
 
 import com.powsybl.iidm.network.VariantManagerConstants;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.gridsuite.study.server.dto.BasicEquipmentInfos;
-import org.gridsuite.study.server.dto.EquipmentInfos;
-import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.gridsuite.study.server.dto.elasticsearch.BasicEquipmentInfos;
+import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
+import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.*;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -80,7 +80,17 @@ public class EquipmentInfosService {
 
     private final ElasticsearchOperations elasticsearchOperations;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(EquipmentInfosService.class);
+    @Value(ESConfig.STUDY_INDEX_NAME)
+    @Getter
+    private String studyIndexName;
+
+    @Value(ESConfig.EQUIPMENTS_INDEX_NAME)
+    @Getter
+    private String equipmentsIndexName;
+
+    @Value(ESConfig.TOMBSTONED_EQUIPMENTS_INDEX_NAME)
+    @Getter
+    private String tombstonedEquipmentsIndexName;
 
     public EquipmentInfosService(EquipmentInfosRepository equipmentInfosRepository, TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
         this.equipmentInfosRepository = equipmentInfosRepository;
@@ -279,14 +289,14 @@ public class EquipmentInfosService {
         return String.format(NETWORK_UUID + ":(%s) AND " + VARIANT_ID + ":(%s)", networkUuid, variantId);
     }
 
-    private BoolQuery buildSearchEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId, String equipmentType) {
+    private BoolQuery buildSearchEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId, String equipmentType) {
         // If search requires boolean logic or advanced text analysis, then use queryStringQuery.
         // Otherwise, use wildcardQuery for simple text search.
         WildcardQuery equipmentSearchQuery = Queries.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
         TermQuery networkUuidSearchQuery = Queries.termQuery(NETWORK_UUID, networkUuid.toString());
         TermsQuery variantIdSearchQuery = variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ?
-                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(initialVariantId))).build()).build() :
-                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(initialVariantId), FieldValue.of(variantId))).build()).build();
+                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(VariantManagerConstants.INITIAL_VARIANT_ID))).build()).build() :
+                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(VariantManagerConstants.INITIAL_VARIANT_ID), FieldValue.of(variantId))).build()).build();
 
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder()
                 .filter(
@@ -331,7 +341,9 @@ public class EquipmentInfosService {
 
         return equipmentInfos
                 .stream()
-                .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId()))
+                .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId()) ||
+                        // If the equipment has been recreated after the creation of a deletion hypothesis
+                        !ei.getVariantId().equals(VariantManagerConstants.INITIAL_VARIANT_ID))
                 .collect(Collectors.toList());
     }
 
@@ -344,7 +356,7 @@ public class EquipmentInfosService {
         String effectiveVariantId = variantId.isEmpty() ? VariantManagerConstants.INITIAL_VARIANT_ID : variantId;
 
         BoolQuery query = buildSearchEquipmentsQuery(userInput, fieldSelector, networkUuid,
-                VariantManagerConstants.INITIAL_VARIANT_ID, variantId, equipmentType);
+                variantId, equipmentType);
         List<EquipmentInfos> equipmentInfos = searchEquipments(query);
         return variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ? equipmentInfos : cleanModifiedAndRemovedEquipments(networkUuid, effectiveVariantId, equipmentInfos);
     }

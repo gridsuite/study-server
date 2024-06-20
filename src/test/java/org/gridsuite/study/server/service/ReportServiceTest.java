@@ -99,6 +99,8 @@ public class ReportServiceTest {
 
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
 
+    private static final String SUB_REPORT_ID = "subReportId";
+
     private static final long TIMEOUT = 1000;
 
     private void cleanDB() {
@@ -301,25 +303,25 @@ public class ReportServiceTest {
     private ReportNode getNodeSimpleReport(String reportUuid, String nodeUuid) {
         ReportNode reporter = ReportNode.newRootReportNode().withMessageTemplate(reportUuid, reportUuid).build();
         reporter.newReportNode().withMessageTemplate(nodeUuid, nodeUuid)
-                .withUntypedValue("id", reportUuid).add();
+                .withUntypedValue(SUB_REPORT_ID, reportUuid).add();
         return reporter;
     }
 
     private ReportNode getRootNodeSimpleReport(String reportUuid) {
         ReportNode reporter = ReportNode.newRootReportNode().withMessageTemplate(reportUuid, reportUuid).build();
         reporter.newReportNode().withMessageTemplate("Root", "Root")
-                .withUntypedValue("id", reportUuid).add();
+                .withUntypedValue(SUB_REPORT_ID, reportUuid).add();
         return reporter;
     }
 
     private ReportNode getNodeMultipleReport(String reportUuid, String nodeUuid) {
         ReportNode reporter = ReportNode.newRootReportNode().withMessageTemplate(reportUuid, reportUuid).build();
         ReportNode subReporter = ReportNode.newRootReportNode().withMessageTemplate(MODIFICATION_NODE_UUID.toString(), MODIFICATION_NODE_UUID.toString())
-                .withUntypedValue("id", reportUuid).build();
+                .withUntypedValue(SUB_REPORT_ID, reportUuid).build();
         subReporter.newReportNode().withMessageTemplate("test" + nodeUuid, "test" + nodeUuid).add();
         addChildReportNode(reporter, subReporter);
         addChildReportNode(reporter, ReportNode.newRootReportNode().withMessageTemplate(nodeUuid, nodeUuid)
-                .withUntypedValue("id", reportUuid).build());
+                .withUntypedValue(SUB_REPORT_ID, reportUuid).build());
         return reporter;
     }
 }

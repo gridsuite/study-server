@@ -66,7 +66,22 @@ public class SupervisionService {
 
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    public SupervisionService(StudyService studyService, NetworkModificationTreeService networkModificationTreeService, NetworkService networkStoreService, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository, ReportService reportService, LoadFlowService loadFlowService, DynamicSimulationService dynamicSimulationService, SecurityAnalysisService securityAnalysisService, SensitivityAnalysisService sensitivityAnalysisService, NonEvacuatedEnergyService nonEvacuatedEnergyService, ShortCircuitService shortCircuitService, VoltageInitService voltageInitService, EquipmentInfosService equipmentInfosService) {
+    private final StateEstimationService stateEstimationService;
+
+    public SupervisionService(StudyService studyService,
+                              NetworkModificationTreeService networkModificationTreeService,
+                              NetworkService networkStoreService,
+                              NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
+                              ReportService reportService,
+                              LoadFlowService loadFlowService,
+                              DynamicSimulationService dynamicSimulationService,
+                              SecurityAnalysisService securityAnalysisService,
+                              SensitivityAnalysisService sensitivityAnalysisService,
+                              NonEvacuatedEnergyService nonEvacuatedEnergyService,
+                              ShortCircuitService shortCircuitService,
+                              VoltageInitService voltageInitService,
+                              EquipmentInfosService equipmentInfosService,
+                              StateEstimationService stateEstimationService) {
         this.networkStoreService = networkStoreService;
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -80,6 +95,7 @@ public class SupervisionService {
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
         this.equipmentInfosService = equipmentInfosService;
+        this.stateEstimationService = stateEstimationService;
     }
 
     @Transactional
@@ -98,23 +114,25 @@ public class SupervisionService {
                     dryRun ? shortCircuitService.getShortCircuitResultsCount() : deleteShortcircuitResults();
             case VOLTAGE_INITIALIZATION ->
                     dryRun ? voltageInitService.getVoltageInitResultsCount() : deleteVoltageInitResults();
+            case STATE_ESTIMATION ->
+                dryRun ? stateEstimationService.getStateEstimationResultsCount() : deleteStateEstimationResults();
             default -> throw new StudyException(ELEMENT_NOT_FOUND);
         };
     }
 
-    public Long getStudyIndexedEquipmentsCount(UUID networkUUID) {
+    public long getStudyIndexedEquipmentsCount(UUID networkUUID) {
         return equipmentInfosService.getEquipmentInfosCount(networkUUID);
     }
 
-    public Long getStudyIndexedTombstonedEquipmentsCount(UUID networkUUID) {
+    public long getStudyIndexedTombstonedEquipmentsCount(UUID networkUUID) {
         return equipmentInfosService.getTombstonedEquipmentInfosCount(networkUUID);
     }
 
-    public Long getIndexedEquipmentsCount() {
+    public long getIndexedEquipmentsCount() {
         return equipmentInfosService.getEquipmentInfosCount();
     }
 
-    public Long getIndexedTombstonedEquipmentsCount() {
+    public long getIndexedTombstonedEquipmentsCount() {
         return equipmentInfosService.getTombstonedEquipmentInfosCount();
     }
 
@@ -237,6 +255,18 @@ public class SupervisionService {
             AbstractNodeInfoEntity::getReportUuid,
             node -> node.getId() + "@" + subReporterKey)
         );
+    }
+
+    private Integer deleteStateEstimationResults() {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByStateEstimationResultUuidNotNull();
+        nodes.forEach(node -> node.setStateEstimationResultUuid(null));
+        Map<UUID, String> subreportToDelete = formatSubreportMap(StudyService.ReportType.STATE_ESTIMATION.reportKey, nodes);
+        reportService.deleteTreeReports(subreportToDelete);
+        stateEstimationService.deleteStateEstimationResults();
+        LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.STATE_ESTIMATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        return nodes.size();
     }
 
     @Transactional

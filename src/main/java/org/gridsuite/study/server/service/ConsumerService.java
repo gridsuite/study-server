@@ -507,4 +507,19 @@ public class ConsumerService {
         }
         return null;
     }
+
+    @Bean
+    public Consumer<Message<String>> consumeStateEstimationResult() {
+        return message -> consumeCalculationResult(message, STATE_ESTIMATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeStateEstimationStopped() {
+        return message -> consumeCalculationStopped(message, STATE_ESTIMATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeStateEstimationFailed() {
+        return message -> consumeCalculationFailed(message, STATE_ESTIMATION);
+    }
 }

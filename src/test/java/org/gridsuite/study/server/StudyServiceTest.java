@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.network.store.client.NetworkStoreService;
+
 import org.gridsuite.study.server.dto.BasicStudyInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyRepository;
