@@ -642,6 +642,9 @@ public class StudyTest {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=" + VARIANT_ID + "&caseUuid=" + CASE_UUID_STRING:
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=" + VARIANT_ID + "&studyName=studyName" + "&nodeName=node+3":
+                        return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=" + VARIANT_ID + "&caseUuid=" + CASE_UUID_STRING + "&nodeName=node+3":
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -849,10 +852,10 @@ public class StudyTest {
         output.receive(TIMEOUT, studyUpdateDestination);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}?studyName=studyName", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM"))
             .andExpect(status().isOk());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/XIIDM?variantId=%s&caseUuid=%s&nodeName=%s", NETWORK_UUID_STRING, VARIANT_ID, CASE_UUID, "node+3")));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/XIIDM?variantId=%s&studyName=%s&nodeName=%s", NETWORK_UUID_STRING, VARIANT_ID, "studyName", "node+3")));
     }
 
     @Test
