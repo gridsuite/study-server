@@ -11,12 +11,15 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.SupervisionService;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.gridsuite.study.server.dto.ComputationType;
-import org.springframework.beans.factory.annotation.Value;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,26 +32,24 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Study server - Supervision")
 public class SupervisionController {
 
-    // Simple solution to get index name (with the prefix by environment).
-    // Maybe use the Spring boot actuator or other solution ?
-    // Keep indexName in sync with the annotation @Document in EquipmentInfos and TombstonedEquipmentInfos
-    @Value("#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}equipments")
-    public String indexNameEquipments;
-    @Value("#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}tombstoned-equipments")
-    public String indexNameTombstonedEquipments;
-
-    @Value("#{@environment.getProperty('spring.data.elasticsearch.host')}" + ":" + "#{@environment.getProperty('spring.data.elasticsearch.port')}")
-    public String elasticSerachHost;
-
     private final SupervisionService supervisionService;
 
-    public SupervisionController(SupervisionService supervisionService) {
+    private final StudyService studyService;
+
+    private final EquipmentInfosService equipmentInfosService;
+
+    private final ClientConfiguration elasticsearchClientConfiguration;
+
+    public SupervisionController(SupervisionService supervisionService, StudyService studyService, EquipmentInfosService equipmentInfosService, ClientConfiguration elasticsearchClientConfiguration) {
         this.supervisionService = supervisionService;
+        this.studyService = studyService;
+        this.equipmentInfosService = equipmentInfosService;
+        this.elasticsearchClientConfiguration = elasticsearchClientConfiguration;
     }
 
     @DeleteMapping(value = "/computation/results")
     @Operation(summary = "delete all results of a given computation")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all loadflow results have been deleted")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all computation results have been deleted")})
     public ResponseEntity<Integer> deleteComputationResults(@Parameter(description = "Computation type") @RequestParam("type") ComputationType computationType,
                                                            @Parameter(description = "Dry run") @RequestParam("dryRun") boolean dryRun) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.deleteComputationResults(computationType, dryRun));
@@ -58,42 +59,60 @@ public class SupervisionController {
     @Operation(summary = "get the elasticsearch address")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "the elasticsearch address")})
     public ResponseEntity<String> getElasticsearchHost() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(elasticSerachHost);
+        String host = elasticsearchClientConfiguration.getEndpoints().get(0).getHostName()
+                        + ":"
+                        + elasticsearchClientConfiguration.getEndpoints().get(0).getPort();
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(host);
     }
 
-    @GetMapping(value = "/indexed-equipments-index-name")
+    @GetMapping(value = "/equipments/index-name")
     @Operation(summary = "get the indexed equipments index name")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed equipments index name")})
     public ResponseEntity<String> getIndexedEquipmentsIndexName() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(indexNameEquipments);
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(equipmentInfosService.getEquipmentsIndexName());
     }
 
-    @GetMapping(value = "/indexed-tombstoned-equipments-index-name")
+    @GetMapping(value = "/tombstoned-equipments/index-name")
     @Operation(summary = "get the indexed tombstoned equipments index name")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed tombstoned equipments index name")})
     public ResponseEntity<String> getIndexedTombstonedEquipmentsIndexName() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(indexNameTombstonedEquipments);
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(equipmentInfosService.getTombstonedEquipmentsIndexName());
     }
 
-    @GetMapping(value = "/indexed-equipments-count")
+    @GetMapping(value = "/equipments/indexation-count")
     @Operation(summary = "get indexed equipments count for all studies")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed equipments count")})
-    public ResponseEntity<Long> getIndexedEquipmentsCount() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getIndexedEquipmentsCount());
+    public ResponseEntity<String> getIndexedEquipmentsCount() {
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.getIndexedEquipmentsCount()));
     }
 
-    @GetMapping(value = "/indexed-tombstoned-equipments-count")
+    @GetMapping(value = "/tombstoned-equipments/indexation-count")
     @Operation(summary = "get indexed tombstoned equipments count for all studies")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Tombstoned equipments count")})
-    public ResponseEntity<Long> getIndexedTombstonedEquipmentsCount() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getIndexedTombstonedEquipmentsCount());
+    public ResponseEntity<String> getIndexedTombstonedEquipmentsCount() {
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.getIndexedTombstonedEquipmentsCount()));
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/indexed-equipments")
+    @DeleteMapping(value = "/studies/{studyUuid}/equipments/indexation")
     @Operation(summary = "delete indexed equipments and tombstoned equipments for the given study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed equipments and tombstoned equipments for the given study have been deleted")})
-    public ResponseEntity<Long> deleteStudyIndexedEquipmentsAndTombstoned(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.deleteStudyIndexedEquipmentsAndTombstoned(studyUuid));
+    public ResponseEntity<String> deleteStudyIndexedEquipmentsAndTombstoned(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.deleteStudyIndexedEquipmentsAndTombstoned(studyUuid)));
+    }
+
+    @GetMapping(value = "/orphan_indexed_network_uuids")
+    @Operation(summary = "Get all orphan indexed equipments network uuids")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of orphan indexed equipments network uuids")})
+    public ResponseEntity<List<UUID>> getOrphanIndexedEquipments() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllOrphanIndexedEquipmentsNetworkUuids());
+    }
+
+    @DeleteMapping(value = "/studies/{networkUuid}/indexed-equipments-by-network-uuid")
+    @Operation(summary = "delete indexed equipments and tombstoned equipments for the given networkUuid")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed equipments and tombstoned equipments for the given networkUuid have been deleted")})
+    public ResponseEntity<Long> deleteNetworkUuidIndexedEquipmentsAndTombstoned(@PathVariable("networkUuid") UUID networkUuid) {
+        studyService.deleteEquipmentIndexes(networkUuid);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/builds")

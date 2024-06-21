@@ -17,9 +17,10 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
-import org.gridsuite.study.server.dto.EquipmentInfos;
-import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
+
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
+import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
+import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
@@ -36,10 +37,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.elasticsearch.client.elc.Queries;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static org.hamcrest.core.Is.is;
@@ -63,6 +61,8 @@ public class EquipmentInfosServiceTests {
     private static final String EQUIPMENT_NAME_FULLASCII_FIELD = "equipmentName.fullascii";
     private static final String EQUIPMENT_NAME_FIELD = "equipmentName";
     private static final String NETWORK_UUID_FIELD = "networkUuid.keyword";
+
+    private static final String VARIANT_ID = "variant_1";
 
     private static final UUID NETWORK_UUID = UUID.fromString("db240961-a7b6-4b76-bfe8-19749026c1cb");
     private static final UUID NETWORK_UUID_2 = UUID.fromString("8c73b846-5dbe-4ac8-a9c9-8422fda261bb");
@@ -184,6 +184,38 @@ public class EquipmentInfosServiceTests {
 
         assertEquals(0, equipmentInfosService.getTombstonedEquipmentInfosCount());
         assertEquals(0, equipmentInfosService.getEquipmentInfosCount());
+    }
+
+    @Test
+    public void testGetOrphanEquipmentInfosNetworkUuids() {
+        // index some equipment infos as orphan
+        UUID orphanNetworkUuid = UUID.randomUUID();
+        EquipmentInfos orphanLoadInfos = EquipmentInfos.builder().networkUuid(orphanNetworkUuid).id("id").name("name").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
+        UUID orphanNetworkUuid2 = UUID.randomUUID();
+        EquipmentInfos orphanVlInfos = EquipmentInfos.builder().networkUuid(orphanNetworkUuid2).id("id").name("name").type("VOLTAGE_LEVEL").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
+
+        // index an equipment infos for the existing network
+        EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").name("name2").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
+
+        equipmentInfosService.addEquipmentInfos(loadInfos);
+        equipmentInfosService.addEquipmentInfos(orphanLoadInfos);
+        equipmentInfosService.addEquipmentInfos(orphanVlInfos);
+
+        // get the orphan network uuids
+        List<UUID> orphanNetworkUuids = equipmentInfosService.getOrphanEquipmentInfosNetworkUuids(List.of(NETWORK_UUID));
+
+        // check that the orphan network uuids are returned
+        assertEquals(2, orphanNetworkUuids.size());
+        assertTrue(orphanNetworkUuids.contains(orphanNetworkUuid));
+        assertTrue(orphanNetworkUuids.contains(orphanNetworkUuid2));
+
+        // delete the orphan equipment infos
+        equipmentInfosService.deleteAllByNetworkUuid(orphanNetworkUuid);
+        equipmentInfosService.deleteAllByNetworkUuid(orphanNetworkUuid2);
+
+        // check that the orphan network uuids are not returned anymore
+        orphanNetworkUuids = equipmentInfosService.getOrphanEquipmentInfosNetworkUuids(List.of(NETWORK_UUID));
+        assertEquals(0, orphanNetworkUuids.size());
     }
 
     @Test
@@ -396,5 +428,18 @@ public class EquipmentInfosServiceTests {
         query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_ID_FIELD, createEquipmentName("fFR1àÀ1  FFR2AA1  2"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
         pbsc.checkThat(hits.size(), is(1));
+    }
+
+    @Test
+    public void cleanRemovedEquipmentsInSerachTest() {
+        UUID equipmentUuid = UUID.randomUUID();
+        EquipmentInfos equipmentInfos = EquipmentInfos.builder().id(equipmentUuid.toString()).name("test").networkUuid(NETWORK_UUID).type("LOAD").variantId(VARIANT_ID).build();
+        TombstonedEquipmentInfos tombstonedEquipmentInfos = TombstonedEquipmentInfos.builder().id(equipmentUuid.toString()).networkUuid(NETWORK_UUID).variantId(VARIANT_ID).build();
+        // following the creation of a hypothesis for equipment deletion
+        equipmentInfosService.addTombstonedEquipmentInfos(tombstonedEquipmentInfos);
+        // following the creation of a hypothesis for previously deleted equipment creation
+        equipmentInfosService.addEquipmentInfos(equipmentInfos);
+        List<EquipmentInfos> result = equipmentInfosService.searchEquipments(NETWORK_UUID, VARIANT_ID, "test", EquipmentInfosService.FieldSelector.NAME, "LOAD");
+        assertEquals(equipmentInfos, result.get(0));
     }
 }

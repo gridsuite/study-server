@@ -26,7 +26,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityNotFoundException;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,6 +40,7 @@ import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSI
 import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT;
 import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_BUS;
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
+import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -151,6 +153,7 @@ public class NetworkModificationTreeService {
                 newGroupUuid,
                 UUID.randomUUID().toString(),
                 new HashSet<>(),
+                null,
                 null,
                 null,
                 null,
@@ -282,7 +285,7 @@ public class NetworkModificationTreeService {
             }
             stashedNodes.add(id);
             nodeToStash.setStashed(true);
-            nodeToStash.setStashDate(LocalDateTime.now());
+            nodeToStash.setStashDate(Instant.now());
             //We only unlink the first deleted node so the rest of the tree is still connected as it was
             if (firstIteration) {
                 nodeToStash.setParentNode(null);
@@ -349,6 +352,11 @@ public class NetworkModificationTreeService {
             UUID dynamicSimulationResultUuid = repositories.get(nodeToDelete.getType()).getComputationResultUuid(id, DYNAMIC_SIMULATION);
             if (dynamicSimulationResultUuid != null) {
                 deleteNodeInfos.addDynamicSimulationResultUuid(dynamicSimulationResultUuid);
+            }
+
+            UUID stateEstimationResultUuid = repositories.get(nodeToDelete.getType()).getComputationResultUuid(id, STATE_ESTIMATION);
+            if (stateEstimationResultUuid != null) {
+                deleteNodeInfos.addStateEstimationResultUuid(stateEstimationResultUuid);
             }
 
             if (!deleteChildren) {
@@ -453,6 +461,7 @@ public class NetworkModificationTreeService {
                 model.setShortCircuitAnalysisResultUuid(null);
                 model.setOneBusShortCircuitAnalysisResultUuid(null);
                 model.setVoltageInitResultUuid(null);
+                model.setStateEstimationResultUuid(null);
 
                 nextParentId = self.createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD, null).getId();
                 networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId);
@@ -803,6 +812,12 @@ public class NetworkModificationTreeService {
             }
         }
 
+        UUID stateEstimationResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), STATE_ESTIMATION);
+        if (stateEstimationResultUuid != null) {
+            invalidateNodeInfos.addStateEstimationResultUuid(stateEstimationResultUuid);
+            reportTypes.add(StudyService.ReportType.STATE_ESTIMATION);
+        }
+
         invalidateNodeInfos.addReportTypes(reportUuid, reportTypes);
     }
 
@@ -862,6 +877,7 @@ public class NetworkModificationTreeService {
             if (deleteVoltageInitResults) {
                 nodeRepository.updateComputationResultUuid(childUuid, null, VOLTAGE_INITIALIZATION);
             }
+            nodeRepository.updateComputationResultUuid(childUuid, null, STATE_ESTIMATION);
         }
     }
 

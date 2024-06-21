@@ -20,7 +20,7 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
@@ -76,6 +76,9 @@ public class NotificationService {
     public static final String UPDATE_TYPE_STUDY = "study";
     public static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
     public static final String UPDATE_TYPE_INDEXATION_STATUS = "indexation_status_updated";
+    public static final String UPDATE_TYPE_STATE_ESTIMATION_FAILED = "stateEstimation_failed";
+    public static final String UPDATE_TYPE_STATE_ESTIMATION_RESULT = "stateEstimationResult";
+    public static final String UPDATE_TYPE_STATE_ESTIMATION_STATUS = "stateEstimation_status";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
     public static final String MODIFICATIONS_STASHING_IN_PROGRESS = "stashingInProgress";
@@ -384,7 +387,7 @@ public class NotificationService {
         sendElementUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_ELEMENT_UUID, elementUuid)
                 .setHeader(HEADER_MODIFIED_BY, modifiedBy)
-                .setHeader(HEADER_MODIFICATION_DATE, LocalDateTime.now())
+                .setHeader(HEADER_MODIFICATION_DATE, Instant.now())
                 .build()
         );
     }

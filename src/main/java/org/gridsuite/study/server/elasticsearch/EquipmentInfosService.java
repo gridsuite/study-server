@@ -7,18 +7,23 @@
 package org.gridsuite.study.server.elasticsearch;
 
 import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.aggregations.*;
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
+import lombok.Getter;
 
 import com.powsybl.iidm.network.VariantManagerConstants;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.dto.EquipmentInfos;
-import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
+import org.apache.commons.lang3.tuple.Pair;
+import org.gridsuite.study.server.dto.elasticsearch.BasicEquipmentInfos;
+import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
+import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.elasticsearch.client.elc.NativeQuery;
-import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
-import org.springframework.data.elasticsearch.client.elc.Queries;
+import org.springframework.data.elasticsearch.client.elc.*;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
@@ -41,6 +46,8 @@ public class EquipmentInfosService {
     }
 
     private static final int PAGE_MAX_SIZE = 400;
+
+    private static final int COMPOSITE_AGGREGATION_BATCH_SIZE = 1000;
 
     public static final Map<String, Integer> EQUIPMENT_TYPE_SCORES = Map.ofEntries(
             entry("SUBSTATION", 15),
@@ -73,6 +80,18 @@ public class EquipmentInfosService {
 
     private final ElasticsearchOperations elasticsearchOperations;
 
+    @Value(ESConfig.STUDY_INDEX_NAME)
+    @Getter
+    private String studyIndexName;
+
+    @Value(ESConfig.EQUIPMENTS_INDEX_NAME)
+    @Getter
+    private String equipmentsIndexName;
+
+    @Value(ESConfig.TOMBSTONED_EQUIPMENTS_INDEX_NAME)
+    @Getter
+    private String tombstonedEquipmentsIndexName;
+
     public EquipmentInfosService(EquipmentInfosRepository equipmentInfosRepository, TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
         this.equipmentInfosRepository = equipmentInfosRepository;
         this.tombstonedEquipmentInfosRepository = tombstonedEquipmentInfosRepository;
@@ -104,6 +123,101 @@ public class EquipmentInfosService {
 
     public long getEquipmentInfosCount() {
         return equipmentInfosRepository.count();
+    }
+
+    private CompositeAggregation buildCompositeAggregation(String field, Map<String, FieldValue> afterKey) {
+        List<Map<String, CompositeAggregationSource>> sources = List.of(
+                Map.of(field, CompositeAggregationSource.of(s -> s.terms(t -> t.field(field + ".keyword")))
+                )
+        );
+
+        CompositeAggregation.Builder compositeAggregationBuilder = new CompositeAggregation.Builder()
+                .size(COMPOSITE_AGGREGATION_BATCH_SIZE)
+                .sources(sources);
+
+        if (afterKey != null) {
+            compositeAggregationBuilder.after(afterKey);
+        }
+
+        return compositeAggregationBuilder.build();
+    }
+
+    /**
+     * Constructs a NativeQuery with a composite aggregation.
+     *
+     * @param compositeName The name of the composite aggregation.
+     * @param compositeAggregation The composite aggregation configuration.
+     * @return A NativeQuery object configured with the specified composite aggregation.
+     */
+    private NativeQuery buildCompositeAggregationQuery(String compositeName, CompositeAggregation compositeAggregation) {
+        Aggregation aggregation = Aggregation.of(a -> a.composite(compositeAggregation));
+
+        return new NativeQueryBuilder()
+                .withAggregation(compositeName, aggregation)
+                .build();
+    }
+
+    /**
+     * This method is used to extract the results of a composite aggregation from Elasticsearch search hits.
+     *
+     * @param searchHits The search hits returned from an Elasticsearch query.
+     * @param compositeName The name of the composite aggregation.
+     * @return A Pair consisting of two elements:
+     *         The left element of the Pair is a list of maps, where each map represents a bucket's key. Each bucket is a result of the composite aggregation.
+     *         The right element of the Pair is the afterKey map, which is used for pagination in Elasticsearch.
+     *         If there are no more pages, the afterKey will be null.
+     * @see <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-composite-aggregation.html">Elasticsearch Composite Aggregation Documentation</a>
+     */
+    private Pair<List<Map<String, FieldValue>>, Map<String, FieldValue>> extractCompositeAggregationResults(SearchHits<EquipmentInfos> searchHits, String compositeName) {
+        ElasticsearchAggregations aggregations = (ElasticsearchAggregations) searchHits.getAggregations();
+
+        List<Map<String, FieldValue>> results = new ArrayList<>();
+        if (aggregations != null) {
+            Map<String, ElasticsearchAggregation> aggregationList = aggregations.aggregationsAsMap();
+            if (!aggregationList.isEmpty()) {
+                Aggregate aggregate = aggregationList.get(compositeName).aggregation().getAggregate();
+                if (aggregate.isComposite() && aggregate.composite() != null) {
+                    for (CompositeBucket bucket : aggregate.composite().buckets().array()) {
+                        Map<String, FieldValue> key = bucket.key();
+                        results.add(key);
+                    }
+                    return Pair.of(results, aggregate.composite().afterKey());
+                }
+            }
+        }
+        return Pair.of(results, null);
+    }
+
+    public List<UUID> getEquipmentInfosDistinctNetworkUuids() {
+        List<UUID> networkUuids = new ArrayList<>();
+        Map<String, FieldValue> afterKey = null;
+        String compositeName = "composite_agg";
+        String networkUuidField = BasicEquipmentInfos.Fields.networkUuid;
+
+        do {
+            CompositeAggregation compositeAggregation = buildCompositeAggregation(networkUuidField, afterKey);
+            NativeQuery query = buildCompositeAggregationQuery(compositeName, compositeAggregation);
+
+            SearchHits<EquipmentInfos> searchHits = elasticsearchOperations.search(query, EquipmentInfos.class);
+            Pair<List<Map<String, FieldValue>>, Map<String, FieldValue>> searchResults = extractCompositeAggregationResults(searchHits, compositeName);
+
+            searchResults.getLeft().stream()
+                    .map(result -> result.get(networkUuidField))
+                    .filter(Objects::nonNull)
+                    .map(FieldValue::stringValue)
+                    .map(UUID::fromString)
+                    .forEach(networkUuids::add);
+
+            afterKey = searchResults.getRight();
+        } while (afterKey != null && !afterKey.isEmpty());
+
+        return networkUuids;
+    }
+
+    public List<UUID> getOrphanEquipmentInfosNetworkUuids(List<UUID> networkUuidsInDatabase) {
+        List<UUID> networkUuids = getEquipmentInfosDistinctNetworkUuids();
+        networkUuids.removeAll(networkUuidsInDatabase);
+        return networkUuids;
     }
 
     public long getTombstonedEquipmentInfosCount() {
@@ -175,14 +289,14 @@ public class EquipmentInfosService {
         return String.format(NETWORK_UUID + ":(%s) AND " + VARIANT_ID + ":(%s)", networkUuid, variantId);
     }
 
-    private BoolQuery buildSearchEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId, String equipmentType) {
+    private BoolQuery buildSearchEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId, String equipmentType) {
         // If search requires boolean logic or advanced text analysis, then use queryStringQuery.
         // Otherwise, use wildcardQuery for simple text search.
         WildcardQuery equipmentSearchQuery = Queries.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
         TermQuery networkUuidSearchQuery = Queries.termQuery(NETWORK_UUID, networkUuid.toString());
         TermsQuery variantIdSearchQuery = variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ?
-                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(initialVariantId))).build()).build() :
-                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(initialVariantId), FieldValue.of(variantId))).build()).build();
+                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(VariantManagerConstants.INITIAL_VARIANT_ID))).build()).build() :
+                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(VariantManagerConstants.INITIAL_VARIANT_ID), FieldValue.of(variantId))).build()).build();
 
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder()
                 .filter(
@@ -227,7 +341,9 @@ public class EquipmentInfosService {
 
         return equipmentInfos
                 .stream()
-                .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId()))
+                .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId()) ||
+                        // If the equipment has been recreated after the creation of a deletion hypothesis
+                        !ei.getVariantId().equals(VariantManagerConstants.INITIAL_VARIANT_ID))
                 .collect(Collectors.toList());
     }
 
@@ -240,7 +356,7 @@ public class EquipmentInfosService {
         String effectiveVariantId = variantId.isEmpty() ? VariantManagerConstants.INITIAL_VARIANT_ID : variantId;
 
         BoolQuery query = buildSearchEquipmentsQuery(userInput, fieldSelector, networkUuid,
-                VariantManagerConstants.INITIAL_VARIANT_ID, variantId, equipmentType);
+                variantId, equipmentType);
         List<EquipmentInfos> equipmentInfos = searchEquipments(query);
         return variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ? equipmentInfos : cleanModifiedAndRemovedEquipments(networkUuid, effectiveVariantId, equipmentInfos);
     }

@@ -14,7 +14,8 @@ spring:
       consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;\
       consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;\
       consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed;\
-      consumeNonEvacuatedEnergyResult;consumeNonEvacuatedEnergyStopped;consumeNonEvacuatedEnergyFailed"
+      consumeNonEvacuatedEnergyResult;consumeNonEvacuatedEnergyStopped;consumeNonEvacuatedEnergyFailed;\
+      consumeStateEstimationResult;consumeStateEstimationStopped;consumeStateEstimationFailed"
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -93,6 +94,15 @@ spring:
         consumeVoltageInitFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.failed
           group: studyVoltageInitFailedGroup
+        consumeStateEstimationResult-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.result
+          group: studyStateEstimationResultGroup
+        consumeStateEstimationStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.stopped
+          group: studyStateEstimationStoppedGroup
+        consumeStateEstimationFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.failed
+          group: studyStateEstimationFailedGroup
         consumeCaseImportSucceeded-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.succeeded
           group: studyCaseImportSucceededGroup
@@ -163,3 +173,6 @@ gridsuite:
     -
       name: filter-server
       base-uri: http://filter-server/
+    -
+      name: state-estimation-server
+      base-uri: http://state-estimation-server/

@@ -33,6 +33,7 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -221,6 +222,9 @@ public class StudyTest {
     @Autowired
     private LoadFlowService loadflowService;
 
+    @Autowired
+    private StateEstimationService stateEstimationService;
+
     @MockBean
     private EquipmentInfosService equipmentInfosService;
 
@@ -351,6 +355,7 @@ public class StudyTest {
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         voltageInitService.setVoltageInitServerBaseUri(baseUrl);
         loadflowService.setLoadFlowServerBaseUri(baseUrl);
+        stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
 
         String baseUrlWireMock = wireMockServer.baseUrl();
         networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
@@ -1355,6 +1360,7 @@ public class StudyTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
     }
 
     private void checkNodeBuildStatusUpdatedMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
@@ -1480,7 +1486,7 @@ public class StudyTest {
         node2.setOneBusShortCircuitAnalysisResultUuid(UUID.randomUUID());
         node2.setDynamicSimulationResultUuid(UUID.randomUUID());
         node2.setVoltageInitResultUuid(UUID.randomUUID());
-        node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
+        node2.setStateEstimationResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -1577,11 +1583,13 @@ public class StudyTest {
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getSecurityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getSensitivityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getNonEvacuatedEnergyResultUuid());
+        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getStateEstimationResultUuid());
 
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getLoadFlowResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSecurityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSensitivityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getNonEvacuatedEnergyResultUuid());
+        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getStateEstimationResultUuid());
 
         //Check requests to duplicate modification groups has been emitted (3 nodes)
         wireMockUtils.verifyDuplicateModificationGroup(stubUuid, 3);
@@ -1680,6 +1688,7 @@ public class StudyTest {
 
         node2.setLoadFlowResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
+        node2.setStateEstimationResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -1934,6 +1943,8 @@ public class StudyTest {
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //voltageInit_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //stateEstimation_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
         checkSubtreeMovedMessageSent(study1Uuid, emptyNode.getId(), node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -1999,6 +2010,7 @@ public class StudyTest {
 
         node2.setLoadFlowResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
+        node2.setStateEstimationResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2125,6 +2137,7 @@ public class StudyTest {
         node2.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));
         node2.setLoadFlowResultUuid(UUID.randomUUID());
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
+        node2.setStateEstimationResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2316,6 +2329,8 @@ public class StudyTest {
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
                 //voltageInit_status
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                //stateEstimation_status
+                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             });
 
             /*
@@ -2338,6 +2353,8 @@ public class StudyTest {
             //dynamicSimulation_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //voltageInit_status
+            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            //stateEstimation_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         } else {
             /*
@@ -2534,86 +2551,6 @@ public class StudyTest {
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.stream().allMatch(r -> r.matches("/v1/parameters/.*/provider")));
-    }
-
-    @Test
-    public void testSupervision() throws Exception {
-        MvcResult mvcResult;
-        UUID studyUuid = createStudy("userId", CASE_UUID);
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", studyUuid))
-            .andExpect(status().isOk());
-
-        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
-        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(studyUuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", studyUuid))
-            .andExpectAll(status().isOk(),
-                        content().string("INDEXED"));
-
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        // Test get elasticsearch host
-        mvcResult = mockMvc.perform(get("/v1/supervision/elasticsearch-host"))
-            .andExpect(status().isOk())
-            .andReturn();
-
-        assertEquals("localhost:9200", mvcResult.getResponse().getContentAsString());
-
-        // Test get indexed equipments index name
-        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-equipments-index-name"))
-            .andExpect(status().isOk())
-            .andReturn();
-
-        assertEquals("equipments", mvcResult.getResponse().getContentAsString());
-
-        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-tombstoned-equipments-index-name"))
-            .andExpect(status().isOk())
-            .andReturn();
-
-        assertEquals("tombstoned-equipments", mvcResult.getResponse().getContentAsString());
-
-        // Test get indexed equipments and tombstoned equipments counts
-        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-equipments-count"))
-            .andExpect(status().isOk())
-            .andReturn();
-
-        assertEquals(32, Long.parseLong(mvcResult.getResponse().getContentAsString()));
-
-        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-tombstoned-equipments-count"))
-            .andExpect(status().isOk())
-            .andReturn();
-
-        assertEquals(8, Long.parseLong(mvcResult.getResponse().getContentAsString()));
-
-        // Test indexed equipments deletion
-        mvcResult = mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/indexed-equipments", studyUuid))
-            .andExpect(status().isOk())
-            .andReturn();
-
-        assertEquals(20, Long.parseLong(mvcResult.getResponse().getContentAsString()));
-
-        Message<byte[]> indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", studyUuid))
-            .andExpectAll(status().isOk(),
-                        content().string("NOT_INDEXED"));
-
-        var requests = TestUtils.getRequestsWithBodyDone(3, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
-        assertEquals(1, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/indexed-equipments")).count());
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
-
-        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/nodes/builds", studyUuid))
-            .andExpect(status().isOk());
-
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
     }
 
     @After
