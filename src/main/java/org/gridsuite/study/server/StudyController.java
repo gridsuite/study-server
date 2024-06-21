@@ -77,6 +77,7 @@ public class StudyController {
     private final LoadFlowService loadflowService;
     private final CaseService caseService;
     private final RemoteServicesInspector remoteServicesInspector;
+    private final StateEstimationService stateEstimationService;
 
     public StudyController(StudyService studyService,
             NetworkService networkStoreService,
@@ -90,7 +91,8 @@ public class StudyController {
             VoltageInitService voltageInitService,
             LoadFlowService loadflowService,
             CaseService caseService,
-            RemoteServicesInspector remoteServicesInspector) {
+            RemoteServicesInspector remoteServicesInspector,
+            StateEstimationService stateEstimationService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -104,6 +106,7 @@ public class StudyController {
         this.loadflowService = loadflowService;
         this.caseService = caseService;
         this.remoteServicesInspector = remoteServicesInspector;
+        this.stateEstimationService = stateEstimationService;
     }
 
     @InitBinder
@@ -450,18 +453,17 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationMapData(studyUuid, nodeUuid, substationId, inUpstreamBuiltParentNode));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/elements")
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/elements")
     @Operation(summary = "Get network elements infos")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of network elements infos")})
     public ResponseEntity<String> getNetworkElementsInfos(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Substations id") @RequestParam(name = "substationsIds", required = false) List<String> substationsIds,
-            @Parameter(description = "Element type") @RequestParam(name = "elementType") String elementType,
+            @RequestBody String equipmentInfos,
             @Parameter(description = "Info type") @RequestParam(name = "infoType") String infoType,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, substationsIds, elementType, infoType, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, equipmentInfos, infoType, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}")
@@ -1907,5 +1909,48 @@ public class StudyController {
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "Filter uuid to be applied") @PathVariable("filterUuid") UUID filterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(studyUuid, filterUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/state-estimation/run")
+    @Operation(summary = "run state estimation on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation has started")})
+    public ResponseEntity<Void> runStateEstimation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                    @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.runStateEstimation(studyUuid, nodeUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/state-estimation/result")
+    @Operation(summary = "Get a state estimation result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation result"),
+        @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The state estimation has not been found")})
+    public ResponseEntity<String> getStateEstimationResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = stateEstimationService.getStateEstimationResult(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+            ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/state-estimation/status")
+    @Operation(summary = "Get the state estimation status on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation status"),
+        @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The state estimation status has not been found")})
+    public ResponseEntity<String> getStateEstimationStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String status = stateEstimationService.getStateEstimationStatus(nodeUuid);
+        return status != null ? ResponseEntity.ok().body(status) : ResponseEntity.noContent().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/state-estimation/stop")
+    @Operation(summary = "stop state estimation on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation has been stopped")})
+    public ResponseEntity<Void> stopStateEstimation(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        stateEstimationService.stopStateEstimation(studyUuid, nodeUuid);
+        return ResponseEntity.ok().build();
     }
 }

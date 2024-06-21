@@ -152,6 +152,7 @@ public final class TestUtils {
             .securityAnalysisResultUuid(UUID.randomUUID())
             .sensitivityAnalysisResultUuid(UUID.randomUUID())
             .nonEvacuatedEnergyResultUuid(UUID.randomUUID())
+            .stateEstimationResultUuid(UUID.randomUUID())
             .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT))
             .children(Collections.emptyList()).build();
     }

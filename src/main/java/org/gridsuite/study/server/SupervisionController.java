@@ -49,7 +49,7 @@ public class SupervisionController {
 
     @DeleteMapping(value = "/computation/results")
     @Operation(summary = "delete all results of a given computation")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all loadflow results have been deleted")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all computation results have been deleted")})
     public ResponseEntity<Integer> deleteComputationResults(@Parameter(description = "Computation type") @RequestParam("type") ComputationType computationType,
                                                            @Parameter(description = "Dry run") @RequestParam("dryRun") boolean dryRun) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.deleteComputationResults(computationType, dryRun));

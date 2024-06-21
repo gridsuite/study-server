@@ -62,6 +62,9 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @Column(name = "dynamicSimulationResultUuid")
     private UUID dynamicSimulationResultUuid;
 
+    @Column(name = "stateEstimationResultUuid")
+    private UUID stateEstimationResultUuid;
+
     @Embedded
     @AttributeOverrides(value = {
         @AttributeOverride(name = "localBuildStatus", column = @Column(name = "localBuildStatus", nullable = false)),

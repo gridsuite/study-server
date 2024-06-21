@@ -43,6 +43,8 @@ public class DeleteNodeInfos {
     private List<UUID> voltageInitResultUuids = new ArrayList<>();
     private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
 
+    private List<UUID> stateEstimationResultUuids = new ArrayList<>();
+
     public void addModificationGroupUuid(UUID modificationGroupUuid) {
         modificationGroupUuids.add(modificationGroupUuid);
     }
@@ -85,5 +87,9 @@ public class DeleteNodeInfos {
 
     public void addVoltageInitResultUuid(UUID voltageInitResultUuid) {
         voltageInitResultUuids.add(voltageInitResultUuid);
+    }
+
+    public void addStateEstimationResultUuid(UUID stateEstimationResultUuid) {
+        stateEstimationResultUuids.add(stateEstimationResultUuid);
     }
 }
