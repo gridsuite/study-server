@@ -25,7 +25,6 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
 import org.gridsuite.study.server.dto.sensianalysis.EquipmentsContainer;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -33,13 +32,11 @@ import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -66,7 +63,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
@@ -507,9 +507,8 @@ public class NonEvacuatedEnergyTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
-        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", UUID.randomUUID(), defaultShortCircuitParametersEntity, null, null,
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", UUID.randomUUID(), null, null, null,
                                                              nonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
@@ -517,10 +516,8 @@ public class NonEvacuatedEnergyTest {
     }
 
     private StudyEntity insertDummyStudyWithSpecificParams(UUID networkUuid, UUID caseUuid) {
-
-        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", UUID.randomUUID(), defaultShortCircuitParametersEntity, null, null,
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", UUID.randomUUID(), null, null, null,
                                                              nonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);

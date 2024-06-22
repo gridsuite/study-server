@@ -7,14 +7,12 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.network.store.client.NetworkStoreService;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
@@ -24,7 +22,6 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.NonEvacuatedEnergyService;
 import org.gridsuite.study.server.service.ReportService;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -182,10 +179,9 @@ class NetworkModificationUnitTest {
     }
 
     private StudyEntity insertStudy(UUID networkUuid, UUID caseUuid) {
-        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "",
-            UUID.randomUUID(), defaultShortCircuitParametersEntity, null, null, defaultNonEvacuatedEnergyParametersEntity);
+            UUID.randomUUID(), null, null, null, defaultNonEvacuatedEnergyParametersEntity);
         return studyRepository.save(studyEntity);
     }
 

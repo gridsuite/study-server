@@ -13,36 +13,28 @@ import com.google.common.io.ByteStreams;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.commons.report.ReportNode;
 import com.powsybl.commons.report.ReportNodeAdder;
-
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.junit.platform.commons.util.StringUtils;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -95,7 +87,7 @@ public final class TestUtils {
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat,
                                                UUID loadFlowParametersUuid,
-                                               ShortCircuitParametersEntity shortCircuitParametersEntity,
+                                               UUID shortCircuitParametersUuid,
                                                UUID voltageInitParametersUuid,
                                                UUID securityAnalysisParametersUuid,
                                                UUID sensitivityParametersUuid,
@@ -105,7 +97,7 @@ public final class TestUtils {
             .networkId("netId")
             .networkUuid(networkUuid)
             .loadFlowParametersUuid(loadFlowParametersUuid)
-            .shortCircuitParameters(shortCircuitParametersEntity)
+            .shortCircuitParametersUuid(shortCircuitParametersUuid)
             .voltageInitParametersUuid(voltageInitParametersUuid)
             .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
             .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
@@ -116,7 +108,7 @@ public final class TestUtils {
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat,
                                                UUID loadFlowParametersUuid,
-                                               ShortCircuitParametersEntity shortCircuitParametersEntity,
+                                               UUID shortCircuitParametersUuid,
                                                UUID securityAnalysisParametersUuid,
                                                UUID sensitivityParametersUuid,
                                                NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {
@@ -124,7 +116,7 @@ public final class TestUtils {
                 .networkId("netId")
                 .networkUuid(networkUuid)
                 .loadFlowParametersUuid(loadFlowParametersUuid)
-                .shortCircuitParameters(shortCircuitParametersEntity)
+                .shortCircuitParametersUuid(shortCircuitParametersUuid)
                 .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
                 .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
                 .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
@@ -132,12 +124,11 @@ public final class TestUtils {
     }
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat) {
-        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .caseName(caseName)
             .networkId("netId")
             .networkUuid(networkUuid)
-            .shortCircuitParameters(defaultShortCircuitParametersEntity)
+            .shortCircuitParametersUuid(UUID.randomUUID())
             .build();
     }
 

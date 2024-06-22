@@ -6,15 +6,12 @@
  */
 package org.gridsuite.study.server.repository;
 
-import lombok.*;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
-import org.gridsuite.study.server.dto.StudyIndexationStatus;
-import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
-import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
-import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-
 import jakarta.persistence.*;
+import lombok.*;
+import org.gridsuite.study.server.dto.StudyIndexationStatus;
+import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.sensianalysis.SensitivityAnalysisParametersEntity;
+import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 
 import java.util.Map;
 import java.util.UUID;
@@ -23,7 +20,6 @@ import java.util.UUID;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
-
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -102,6 +98,10 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             ))
     private LoadFlowParametersEntity loadFlowParameters;
 
+    /**
+     * @deprecated to remove when the data is migrated into the shortcircuit-server
+     */
+    @Deprecated(forRemoval = true, since = "1.7.0")
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "shortCircuitParametersEntity_id",
             referencedColumnName = "id",
@@ -109,6 +109,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
                     name = "shortCircuitParameters_id_fk"
             ))
     private ShortCircuitParametersEntity shortCircuitParameters;
+
+    @Column(name = "shortCircuitParametersUuid")
+    private UUID shortCircuitParametersUuid;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "dynamicSimulationParametersEntity_id",
@@ -179,13 +182,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             name = "study_voltage_init_parameters_id_fk"
         ))
     private StudyVoltageInitParametersEntity voltageInitParameters;
-
-    public ShortCircuitParametersEntity getShortCircuitParameters() {
-        if (this.shortCircuitParameters == null) {
-            this.setShortCircuitParameters(ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters(), ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP));
-        }
-        return this.shortCircuitParameters;
-    }
 
     @Value
     public static class StudyNetworkUuid {
