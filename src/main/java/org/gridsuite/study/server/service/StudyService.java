@@ -495,8 +495,8 @@ public class StudyService {
 
         StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(new StudyEntity(studyUuid, networkUuid, networkId, caseFormat, caseUuid, caseName,
                     null, null, null, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
-                    loadFlowParametersUuid, null, null, shortCircuitParametersUuid, dynamicSimulationParametersEntity, voltageInitParametersUuid, null, securityAnalysisParametersUuid,
-                    null, sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED, new StudyVoltageInitParametersEntity()),
+                    loadFlowParametersUuid, shortCircuitParametersUuid, dynamicSimulationParametersEntity, voltageInitParametersUuid, securityAnalysisParametersUuid,
+                    sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED, new StudyVoltageInitParametersEntity()),
                 importReportUuid);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
