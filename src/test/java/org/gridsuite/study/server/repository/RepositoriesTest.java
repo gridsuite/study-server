@@ -6,10 +6,6 @@
  */
 package org.gridsuite.study.server.repository;
 
-import com.powsybl.shortcircuit.InitialVoltageProfileMode;
-import com.powsybl.shortcircuit.StudyType;
-import lombok.SneakyThrows;
-import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.After;
 import org.junit.Test;
@@ -19,20 +15,19 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.Map;
+import java.util.UUID;
 
-import static org.junit.Assert.*;
-
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
-
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @DisableElasticsearch
 public class RepositoriesTest {
-
     @Autowired
     StudyRepository studyRepository;
 
@@ -52,110 +47,61 @@ public class RepositoriesTest {
     @Test
     @Transactional
     public void testStudyRepository() {
-        Set<String> countriesTemp = new HashSet<>();
-        countriesTemp.add("FR");
+        UUID shortCircuitParametersUuid1 = UUID.randomUUID();
+        UUID shortCircuitParametersUuid2 = UUID.randomUUID();
+        UUID shortCircuitParametersUuid3 = UUID.randomUUID();
 
-        ShortCircuitParametersEntity shortCircuitParametersEntity = new ShortCircuitParametersEntity(false, false, false, false, StudyType.TRANSIENT, 1, false, false, false, false, InitialVoltageProfileMode.NOMINAL, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
-
-        countriesTemp.add("IT");
-
-        ShortCircuitParametersEntity shortCircuitParametersEntity2 = new ShortCircuitParametersEntity(true, true, false, true, StudyType.STEADY_STATE, 0, false, false, false, false, InitialVoltageProfileMode.NOMINAL, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
-
-        countriesTemp.add("DE");
-
-        ShortCircuitParametersEntity shortCircuitParametersEntity3 = new ShortCircuitParametersEntity(true, false, false, true, StudyType.SUB_TRANSIENT, 10, false, false, false, false, InitialVoltageProfileMode.NOMINAL, ShortCircuitPredefinedConfiguration.ICC_MAX_WITH_NOMINAL_VOLTAGE_MAP);
-
-        StudyEntity studyEntity1 = StudyEntity.builder()
+        StudyEntity studyEntity1 = studyRepository.save(StudyEntity.builder()
                 .id(UUID.randomUUID())
                 .networkUuid(UUID.randomUUID())
                 .networkId("networkId")
                 .caseFormat("caseFormat")
                 .caseUuid(UUID.randomUUID())
-                .shortCircuitParameters(shortCircuitParametersEntity)
-                .build();
+                .shortCircuitParametersUuid(shortCircuitParametersUuid1)
+                .build());
 
-        StudyEntity studyEntity2 = StudyEntity.builder()
+        StudyEntity studyEntity2 = studyRepository.save(StudyEntity.builder()
                 .id(UUID.randomUUID())
                 .networkUuid(UUID.randomUUID())
                 .networkId("networkId2")
                 .caseFormat("caseFormat2")
                 .caseUuid(UUID.randomUUID())
-                .shortCircuitParameters(shortCircuitParametersEntity2)
-                .build();
+                .shortCircuitParametersUuid(shortCircuitParametersUuid2)
+                .build());
 
-        StudyEntity studyEntity3 = StudyEntity.builder()
+        studyRepository.save(StudyEntity.builder()
                 .id(UUID.randomUUID())
                 .networkUuid(UUID.randomUUID())
                 .networkId("networkId3")
                 .caseFormat("caseFormat3")
                 .caseUuid(UUID.randomUUID())
-                .shortCircuitParameters(shortCircuitParametersEntity3)
-                .build();
+                .shortCircuitParametersUuid(shortCircuitParametersUuid3)
+                .build());
 
-        studyRepository.save(studyEntity1);
-        studyRepository.save(studyEntity2);
-        studyRepository.save(studyEntity3);
-
-        List<StudyEntity> findAllStudies = studyRepository.findAll();
-        assertEquals(3, findAllStudies.size());
-
-        StudyEntity savedStudyEntity1 = findAllStudies.stream().filter(e -> studyEntity1.getId() != null && studyEntity1.getId().equals(e.getId())).findFirst().orElse(null);
-        StudyEntity savedStudyEntity2 = findAllStudies.stream().filter(e -> studyEntity2.getId() != null && studyEntity2.getId().equals(e.getId())).findFirst().orElse(null);
-
-        assertNotNull(savedStudyEntity1);
-        assertNotNull(savedStudyEntity2);
+        assertThat(studyEntity1).as("studyEntity1").extracting(StudyEntity::getId).isNotNull();
+        assertThat(studyEntity2).as("studyEntity2").extracting(StudyEntity::getId).isNotNull();
+        assertThat(studyRepository.findAll()).as("studyRepository").hasSize(3)
+                .anyMatch(se -> studyEntity1.getId().equals(se.getId()))
+                .anyMatch(se -> studyEntity2.getId().equals(se.getId()));
 
         // updates
-        savedStudyEntity1.setShortCircuitParameters(shortCircuitParametersEntity);
-        studyRepository.save(savedStudyEntity1);
-
-        StudyEntity savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
-        assertNotNull(savedStudyEntity1Updated.getShortCircuitParameters());
-
-        studyRepository.save(savedStudyEntity1Updated);
-        savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
-        assertNotNull(savedStudyEntity1Updated);
+        final UUID newShortCircuitParametersUuid = UUID.randomUUID();
+        studyEntity1.setShortCircuitParametersUuid(newShortCircuitParametersUuid);
+        studyRepository.save(studyEntity1);
+        assertThat(studyRepository.findById(studyEntity1.getId())).isPresent().get()
+                .extracting(StudyEntity::getShortCircuitParametersUuid).isNotNull().isEqualTo(newShortCircuitParametersUuid);
     }
 
+    @Transactional
     @Test
     public void testStudyCreationRequest() {
         UUID studyUuid = UUID.randomUUID();
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(studyUuid);
         studyCreationRequestRepository.save(studyCreationRequestEntity);
-        assertEquals(1, studyCreationRequestRepository.findAll().size());
-        assertTrue(studyCreationRequestRepository.findById(studyUuid).isPresent());
+        assertThat(studyCreationRequestRepository.findAll()).singleElement().extracting(StudyCreationRequestEntity::getId).isEqualTo(studyUuid);
     }
 
     @Test
-    @Transactional
-    public void testStudyDefaultShortCircuitParameters() {
-
-        StudyEntity studyEntity1 = StudyEntity.builder()
-                .id(UUID.randomUUID())
-                .networkUuid(UUID.randomUUID())
-                .networkId("networkId")
-                .caseFormat("caseFormat")
-                .caseUuid(UUID.randomUUID())
-                .shortCircuitParameters(null) // intentionally set to null
-                .build();
-
-        ShortCircuitParametersEntity shortCircuitParamFromEntity1 = studyEntity1.getShortCircuitParameters();
-        assertNotNull(shortCircuitParamFromEntity1);
-
-        assertEquals(20., shortCircuitParamFromEntity1.getMinVoltageDropProportionalThreshold(), 0.001); // 20 is the default value
-        assertEquals(20., studyEntity1.getShortCircuitParameters().getMinVoltageDropProportionalThreshold(), 0.001);
-        studyEntity1.getShortCircuitParameters().setMinVoltageDropProportionalThreshold(30.);
-        assertEquals(30., studyEntity1.getShortCircuitParameters().getMinVoltageDropProportionalThreshold(), 0.001);
-
-        studyRepository.save(studyEntity1);
-
-        StudyEntity savedStudyEntity1 = studyRepository.findAll().get(0);
-        assertNotNull(savedStudyEntity1.getShortCircuitParameters());
-        assertEquals(30., savedStudyEntity1.getShortCircuitParameters().getMinVoltageDropProportionalThreshold(), 0.001);
-    }
-
-    @Test
-    @SneakyThrows
     @Transactional
     public void testStudyImportParameters() {
         Map<String, String> importParametersExpected = Map.of("param1", "changedValue1, changedValue2", "param2", "changedValue");

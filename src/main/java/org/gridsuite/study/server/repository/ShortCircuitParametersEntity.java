@@ -8,16 +8,17 @@ package org.gridsuite.study.server.repository;
 
 import com.powsybl.shortcircuit.InitialVoltageProfileMode;
 import com.powsybl.shortcircuit.StudyType;
-import lombok.*;
-
 import jakarta.persistence.*;
+import lombok.*;
 import org.gridsuite.study.server.dto.ShortCircuitPredefinedConfiguration;
 
 import java.util.UUID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ * @deprecated to remove when the data is migrated into the shortcircuit-server
  */
+@Deprecated(forRemoval = true, since = "1.7.0")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -25,7 +26,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "shortCircuitParameters")
-public class ShortCircuitParametersEntity {
+class ShortCircuitParametersEntity {
 
     public ShortCircuitParametersEntity(boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult, boolean withFeederResult, StudyType studyType, double minVoltageDropProportionalThreshold, boolean withLoads, boolean withShuntCompensators, boolean withVscConverterStations, boolean withNeutralPosition, InitialVoltageProfileMode initialVoltageProfileMode, ShortCircuitPredefinedConfiguration predefinedParameters) {
         this(null, withLimitViolations, withVoltageResult, withFortescueResult, withFeederResult, studyType, minVoltageDropProportionalThreshold, predefinedParameters, withLoads, withShuntCompensators, withVscConverterStations, withNeutralPosition, initialVoltageProfileMode);
