@@ -181,7 +181,6 @@ public class NetworkModificationTreeTest {
     private static final String MODIFICATION1_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String MODIFICATION2_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef111";
     private static final String MODIFICATION_GROUP_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef222";
-    private static final String USER_ID_HEADER = "userId";
 
     @MockBean
     private Network network;
@@ -350,7 +349,7 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/tree", study.getId()))
             .andExpect(status().isOk());
 
-        mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", study.getId(), root.getId(), false).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", study.getId(), root.getId(), false).header(HEADER_USER_ID, "userId"))
             .andExpect(status().is4xxClientError());
     }
 
@@ -468,7 +467,7 @@ public class NetworkModificationTreeTest {
         assertNotNull(stashedNode4.getStashDate());
 
         var result = mockMvc.perform(get("/v1/studies/{studyUuid}/tree/nodes/stash", root.getStudyId())
-                        .header(USER_ID_HEADER, "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -502,7 +501,7 @@ public class NetworkModificationTreeTest {
         assertNull(restoredNode4.getStashDate());
 
         result = mockMvc.perform(get("/v1/studies/{studyUuid}/tree/nodes/stash", root.getStudyId())
-                        .header(USER_ID_HEADER, "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk())
                 .andReturn();
         //Only the first level nodes should appear
@@ -677,7 +676,7 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", root.getStudyId(), UUID.randomUUID())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(node1))
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isNotFound());
 
     }
@@ -693,7 +692,7 @@ public class NetworkModificationTreeTest {
                 .toList();
 
         String deleteNodeUuid = child.stream().map(AbstractNode::getId).map(UUID::toString).reduce("", (a1, a2) -> a1 + "," + a2).substring(1);
-        mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes?deleteChildren={delete}", studyUuid, deleteChildren).header(USER_ID_HEADER, "userId")
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes?deleteChildren={delete}", studyUuid, deleteChildren).header(HEADER_USER_ID, "userId")
                         .queryParam("ids", deleteNodeUuid))
             .andExpect(status().isOk());
 
@@ -721,7 +720,7 @@ public class NetworkModificationTreeTest {
     }
 
     private void stashNode(UUID studyUuid, AbstractNode child, boolean stashChildren, Set<AbstractNode> expectedStash, String userId) throws Exception {
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}/stash?stashChildren={stash}", studyUuid, child.getId(), stashChildren).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}/stash?stashChildren={stash}", studyUuid, child.getId(), stashChildren).header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
         checkElementUpdatedMessageSent(studyUuid, userId);
@@ -741,7 +740,7 @@ public class NetworkModificationTreeTest {
 
         String param = nodeId.stream().map(UUID::toString).reduce("", (a1, a2) -> a1 + "," + a2).substring(1);
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}", studyUuid, anchorNodeId).header(USER_ID_HEADER, "userId")
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}", studyUuid, anchorNodeId).header(HEADER_USER_ID, "userId")
                         .queryParam("ids", param))
                 .andExpect(status().isOk());
 
@@ -773,7 +772,7 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}?mode=BEFORE", root.getStudyId(), root.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(networkModification1))
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
             .andExpect(status().is4xxClientError());
 
         createNode(root.getStudyId(), root, networkModification1, userId);
@@ -800,7 +799,7 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", root.getStudyId(), UUID.randomUUID())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(networkModification1))
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isNotFound());
 
     }
@@ -845,7 +844,7 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(node1))
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk());
 
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
@@ -869,7 +868,7 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(justANameUpdate))
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk());
         assertEquals(NODE_RENAMED, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(HEADER_UPDATE_TYPE));
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
@@ -882,7 +881,7 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(node1))
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isNotFound());
     }
 
@@ -902,7 +901,7 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(nodeDescriptionUpdate))
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
         assertEquals(NODE_UPDATED, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(HEADER_UPDATE_TYPE));
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
@@ -998,7 +997,7 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNode.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(newNodeBodyJson)
-                .header(USER_ID_HEADER, userId))
+                .header(HEADER_USER_ID, userId))
             .andExpect(status().isOk());
         checkElementUpdatedMessageSent(studyUuid, userId);
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
@@ -1022,7 +1021,7 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}?mode={mode}", studyUuid, parentNode.getId(), mode)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(newNodeBodyJson)
-                .header(USER_ID_HEADER, "userId"))
+                .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk());
 
         checkElementUpdatedMessageSent(studyUuid, userId);
@@ -1121,7 +1120,7 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNode.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectWriter.writeValueAsString(newNode))
-                        .header(USER_ID_HEADER, "userId"))
+                        .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isForbidden());
     }
 
@@ -1177,7 +1176,7 @@ public class NetworkModificationTreeTest {
         node = buildNetworkModificationNode("modification node 3", "", UUID.fromString(MODIFICATION_GROUP_UUID_STRING), VARIANT_ID, null, null, null, null, null, null, null, BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?uuids={modificationID1}&stashed=false", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
-            .header(USER_ID_HEADER, userId))
+            .header(HEADER_USER_ID, userId))
             .andExpect(status().isOk());
 
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
@@ -1215,7 +1214,7 @@ public class NetworkModificationTreeTest {
         node = buildNetworkModificationNode("modification node 3", "", UUID.fromString(MODIFICATION_GROUP_UUID_STRING), VARIANT_ID, null, null, null, null, null, null, null, BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?uuids={modificationID1}&stashed=true", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
-                        .header(USER_ID_HEADER, userId))
+                        .header(HEADER_USER_ID, userId))
                 .andExpect(status().isOk());
 
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));

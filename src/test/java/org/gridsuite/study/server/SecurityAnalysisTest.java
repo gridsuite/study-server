@@ -61,7 +61,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import java.io.IOException;
 import java.util.*;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
@@ -548,7 +548,7 @@ public class SecurityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s/status", resultUuid)));
 
         // stop security analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop", studyUuid, nodeUuid).header("userId", "userId")).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop", studyUuid, nodeUuid).header(HEADER_USER_ID, "userId")).andExpect(status().isOk());
 
         securityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -616,7 +616,7 @@ public class SecurityAnalysisTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
@@ -645,7 +645,7 @@ public class SecurityAnalysisTest {
         //update the parameters
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)
-                        .header("userId", "userId")
+                        .header(HEADER_USER_ID, "userId")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mnBodyJson)).andExpect(
                 status().isOk());
@@ -661,7 +661,7 @@ public class SecurityAnalysisTest {
         //same with set parameters
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)
-                        .header("userId", "userId")
+                        .header(HEADER_USER_ID, "userId")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mnBodyJson)).andExpect(
                 status().isOk());
@@ -679,7 +679,7 @@ public class SecurityAnalysisTest {
 
         //test update parameters without having already created parameters -> should call create instead of update
         mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid)
-                        .header("userId", "userId")
+                        .header(HEADER_USER_ID, "userId")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mnBodyJson))
                 .andExpect(status().isOk());

@@ -37,7 +37,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 
 /**

@@ -13,7 +13,6 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.network.store.client.NetworkStoreService;
-
 import org.gridsuite.study.server.dto.BasicStudyInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -52,12 +51,14 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.StudyConstants.HEADER_IMPORT_PARAMETERS;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_IMPORT_PARAMETERS;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringRunner.class)
@@ -97,8 +98,6 @@ public class StudyServiceTest {
     private static final String CASE_FORMAT_PARAM = "caseFormat";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
-    private static final String USER_ID_HEADER = "userId";
-    private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
     private static final UUID SHORTCIRCUIT_PARAMETERS_UUID = UUID.fromString("00000000-bd22-4a75-83d3-9e530245c7f4");
 
@@ -143,7 +142,7 @@ public class StudyServiceTest {
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
 
         mockMvc.perform(head("/v1/studies/{studyUuid}/network", studyUuid)
-                .header(USER_ID_HEADER, userId))
+                .header(HEADER_USER_ID, userId))
             .andExpect(status().isOk());
     }
 
@@ -159,7 +158,7 @@ public class StudyServiceTest {
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenThrow(new PowsyblException("Network '" + NETWORK_UUID + "' not found"));
 
         mockMvc.perform(head("/v1/studies/{studyUuid}/network", studyUuid)
-                .header(USER_ID_HEADER, userId))
+                .header(HEADER_USER_ID, userId))
 
             .andExpect(status().isNoContent());
     }
@@ -179,7 +178,7 @@ public class StudyServiceTest {
         UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(CASE_UUID.toString());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/network", studyUuid)
-                .header(USER_ID_HEADER, userId))
+                .header(HEADER_USER_ID, userId))
             .andExpect(status().isOk());
 
         countDownLatch.await();
@@ -206,7 +205,7 @@ public class StudyServiceTest {
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), false);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/network", studyUuid)
-                .header(USER_ID_HEADER, userId))
+                .header(HEADER_USER_ID, userId))
             .andExpect(status().isFailedDependency());
 
         wireMockUtils.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
@@ -230,7 +229,7 @@ public class StudyServiceTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/network", studyUuid)
                 .param(HEADER_IMPORT_PARAMETERS, objectWriter.writeValueAsString(newImportParameters))
                 .param("caseUuid", CASE_UUID_STRING)
-                .header(USER_ID_HEADER, userId))
+                .header(HEADER_USER_ID, userId))
             .andExpectAll(status().isOk());
 
         countDownLatch.await();
@@ -263,7 +262,7 @@ public class StudyServiceTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/network", studyUuid)
                 .param(HEADER_IMPORT_PARAMETERS, objectWriter.writeValueAsString(newImportParameters))
                 .param("caseUuid", CASE_UUID_STRING)
-                .header(USER_ID_HEADER, userId))
+                .header(HEADER_USER_ID, userId))
             .andExpectAll(status().isFailedDependency());
 
         wireMockUtils.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
@@ -284,7 +283,7 @@ public class StudyServiceTest {
         when(shortCircuitService.createParameters(null)).thenReturn(SHORTCIRCUIT_PARAMETERS_UUID);
 
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
-                        .header("userId", userId)
+                        .header(HEADER_USER_ID, userId)
                         .param(CASE_FORMAT_PARAM, "UCTE"))
             .andExpect(status().isOk())
             .andReturn();
