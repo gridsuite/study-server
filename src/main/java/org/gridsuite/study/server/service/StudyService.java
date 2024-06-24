@@ -491,7 +491,6 @@ public class StudyService {
         String networkId = Objects.requireNonNull(networkInfos.getNetworkId());
         Objects.requireNonNull(caseFormat);
         Objects.requireNonNull(caseUuid);
-        Objects.requireNonNull(shortCircuitParametersUuid);
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(new StudyEntity(studyUuid, networkUuid, networkId, caseFormat, caseUuid, caseName,
