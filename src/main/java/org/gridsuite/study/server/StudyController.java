@@ -556,7 +556,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated.")})
     public ResponseEntity<Void> moveOrCopyModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestParam("action") UpdateModificationAction action,
+                                                         @RequestParam("action") StudyConstants.ModificationsActionType action,
                                                          @Nullable @RequestParam("originNodeUuid") UUID originNodeUuid,
                                                          @RequestBody List<UUID> modificationsToCopyUuidList,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
@@ -568,7 +568,7 @@ public class StudyController {
         }
         switch (action) {
             case COPY, INSERT:
-                studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId, action.name());
+                studyService.createModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId, action);
                 break;
             case MOVE:
                 studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId);
@@ -1683,10 +1683,6 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of optional services")})
     public ResponseEntity<List<ServiceStatusInfos>> getOptionalServices() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(remoteServicesInspector.getOptionalServices());
-    }
-
-    enum UpdateModificationAction {
-        MOVE, COPY, INSERT
     }
 
     static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
