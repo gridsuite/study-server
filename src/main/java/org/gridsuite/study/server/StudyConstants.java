@@ -78,4 +78,8 @@ public final class StudyConstants {
         FEEDER_POSITION,
         STATE_VARIABLE
     }
+
+    public enum ModificationsActionType {
+        MOVE, COPY, INSERT
+    }
 }
