@@ -44,6 +44,7 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_VARIANT_ID = "variantId";
     public static final String QUERY_PARAM_EQUIPMENT_TYPE = "equipmentType";
     public static final String QUERY_PARAM_ELEMENT_TYPE = "elementType";
+    public static final String QUERY_PARAM_NOMINAL_VOLTAGES = "nominalVoltages";
     public static final String QUERY_PARAM_INFO_TYPE = "infoType";
     public static final String QUERY_PARAM_OPTIONAL_PARAMS = "optionalParameters";
     public static final String QUERY_FORMAT_OPTIONAL_PARAMS = QUERY_PARAM_OPTIONAL_PARAMS + "[%s]";
