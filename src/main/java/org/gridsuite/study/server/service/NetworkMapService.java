@@ -28,10 +28,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -163,7 +160,7 @@ public class NetworkMapService {
         return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
     }
 
-    public String getElementsIds(UUID networkUuid, String variantId, String equipmentInfos) {
+    public String getElementsIds(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, List<Double> nominalVoltages) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements-ids";
 
         UriComponentsBuilder builder = UriComponentsBuilder
@@ -171,10 +168,14 @@ public class NetworkMapService {
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
+        builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
+        if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
+            builder = builder.queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, nominalVoltages);
+        }
         String url = builder.buildAndExpand(networkUuid).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(equipmentInfos, headers);
+        HttpEntity<List<String>> httpEntity = new HttpEntity<>(substationsIds, headers);
         return restTemplate.postForObject(networkMapServerBaseUri + url, httpEntity, String.class);
     }
 
