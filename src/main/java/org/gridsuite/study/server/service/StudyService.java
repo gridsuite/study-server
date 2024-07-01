@@ -8,12 +8,11 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.commons.report.*;
+import com.powsybl.commons.report.ReportNode;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
-import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import lombok.NonNull;
 import org.gridsuite.study.server.StudyConstants;
@@ -483,10 +482,23 @@ public class StudyService {
 
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
                                               UUID caseUuid, String caseName, UUID loadFlowParametersUuid,
-                                              ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
+                                              UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                               Map<String, String> importParameters, UUID importReportUuid) {
-        StudyEntity studyEntity = insertStudyEntity(studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParametersUuid, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity, voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters);
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(userId);
+        UUID networkUuid = Objects.requireNonNull(networkInfos.getNetworkUuid());
+        String networkId = Objects.requireNonNull(networkInfos.getNetworkId());
+        Objects.requireNonNull(caseFormat);
+        Objects.requireNonNull(caseUuid);
+        Objects.requireNonNull(importParameters);
+
+        StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(new StudyEntity(studyUuid, networkUuid, networkId, caseFormat, caseUuid, caseName,
+                    null, null, null, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
+                    loadFlowParametersUuid, shortCircuitParametersUuid, dynamicSimulationParametersEntity, voltageInitParametersUuid, securityAnalysisParametersUuid,
+                    sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED, new StudyVoltageInitParametersEntity()),
+                importReportUuid);
+
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
@@ -526,16 +538,19 @@ public class StudyService {
             copiedLoadFlowParametersUuid = loadflowService.duplicateLoadFlowParameters(sourceStudy.getLoadFlowParametersUuid());
         }
 
-        UUID securityAnalysisParametersUuid = sourceStudy.getSecurityAnalysisParametersUuid();
-        UUID copiedSecurityAnalysisParametersUuid = null;
-        if (securityAnalysisParametersUuid != null) {
-            copiedSecurityAnalysisParametersUuid = securityAnalysisService.duplicateSecurityAnalysisParameters(securityAnalysisParametersUuid);
+        UUID copiedShortCircuitParametersUuid = null;
+        if (sourceStudy.getShortCircuitParametersUuid() != null) {
+            copiedShortCircuitParametersUuid = shortCircuitService.duplicateParameters(sourceStudy.getShortCircuitParametersUuid());
         }
 
-        UUID sensitivityAnalysisParametersUuid = sourceStudy.getSensitivityAnalysisParametersUuid();
+        UUID copiedSecurityAnalysisParametersUuid = null;
+        if (sourceStudy.getSecurityAnalysisParametersUuid() != null) {
+            copiedSecurityAnalysisParametersUuid = securityAnalysisService.duplicateSecurityAnalysisParameters(sourceStudy.getSecurityAnalysisParametersUuid());
+        }
+
         UUID copiedSensitivityAnalysisParametersUuid = null;
-        if (sensitivityAnalysisParametersUuid != null) {
-            copiedSensitivityAnalysisParametersUuid = sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(sensitivityAnalysisParametersUuid);
+        if (sourceStudy.getSensitivityAnalysisParametersUuid() != null) {
+            copiedSensitivityAnalysisParametersUuid = sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(sourceStudy.getSensitivityAnalysisParametersUuid());
         }
 
         NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos = sourceStudy.getNonEvacuatedEnergyParameters() == null ?
@@ -547,8 +562,6 @@ public class StudyService {
             copiedVoltageInitParametersUuid = voltageInitService.duplicateVoltageInitParameters(sourceStudy.getVoltageInitParametersUuid());
         }
 
-        ShortCircuitParameters shortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
-        ShortCircuitPredefinedConfiguration shortCircuitPredefinedConfiguration = sourceStudy.getShortCircuitParameters().getPredefinedParameters();
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudy.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
 
         StudyEntity studyEntity = StudyEntity.builder()
@@ -560,7 +573,7 @@ public class StudyService {
                 .nonEvacuatedEnergyProvider(sourceStudy.getNonEvacuatedEnergyProvider())
                 .dynamicSimulationProvider(sourceStudy.getDynamicSimulationProvider())
                 .dynamicSimulationParameters(DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper))
-                .shortCircuitParameters(ShortCircuitService.toEntity(shortCircuitParameters, shortCircuitPredefinedConfiguration))
+                .shortCircuitParametersUuid(copiedShortCircuitParametersUuid)
                 .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
                 .sensitivityAnalysisParametersUuid(copiedSensitivityAnalysisParametersUuid)
                 .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
@@ -891,24 +904,33 @@ public class StudyService {
         });
     }
 
-    public ShortCircuitParameters getShortCircuitParameters(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(studyEntity -> ShortCircuitService.fromEntity(studyEntity.getShortCircuitParameters()))
-                .orElse(null);
-    }
-
-    public ShortCircuitParametersInfos getShortCircuitParametersInfo(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(studyEntity -> ShortCircuitService.toShortCircuitParametersInfo(studyEntity.getShortCircuitParameters()))
-                .orElse(null);
+    @Transactional
+    public String getShortCircuitParametersInfo(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        if (studyEntity.getShortCircuitParametersUuid() == null) {
+            studyEntity.setShortCircuitParametersUuid(shortCircuitService.createParameters(null));
+            studyRepository.save(studyEntity);
+        }
+        return shortCircuitService.getParameters(studyEntity.getShortCircuitParametersUuid());
     }
 
     @Transactional
-    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParametersInfos shortCircuitParametersInfos, String userId) {
-        Objects.requireNonNull(shortCircuitParametersInfos);
-        Objects.requireNonNull(shortCircuitParametersInfos.getParameters());
-        ShortCircuitParametersEntity shortCircuitParametersEntity = ShortCircuitService.toEntity(shortCircuitParametersInfos.getParameters(), shortCircuitParametersInfos.getPredefinedParameters());
-        updateShortCircuitParameters(studyUuid, shortCircuitParametersEntity);
+    public void setShortCircuitParameters(UUID studyUuid, @Nullable String shortCircuitParametersInfos, String userId) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        /* +-----------------------+----------------+-----------------------------------------+
+         * | entity.parametersUuid | parametersInfo | action                                  |
+         * | no                    | no             | create default ones                     |
+         * | no                    | yes            | create new ones                         |
+         * | yes                   | no             | reset existing ones (with default ones) |
+         * | yes                   | yes            | update existing ones                    |
+         * +-----------------------+----------------+-----------------------------------------+
+         */
+        if (studyEntity.getShortCircuitParametersUuid() != null) {
+            shortCircuitService.updateParameters(studyEntity.getShortCircuitParametersUuid(), shortCircuitParametersInfos);
+        } else {
+            studyEntity.setShortCircuitParametersUuid(shortCircuitService.createParameters(shortCircuitParametersInfos));
+            studyRepository.save(studyEntity);
+        }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -1012,26 +1034,6 @@ public class StudyService {
 
     public void invalidateVoltageInitStatusOnAllNodes(UUID studyUuid) {
         voltageInitService.invalidateVoltageInitStatus(networkModificationTreeService.getComputationResultUuids(studyUuid, VOLTAGE_INITIALIZATION));
-    }
-
-    private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
-                                          String caseFormat, UUID caseUuid, String caseName, UUID loadFlowParametersUuid,
-                                          UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters,
-                                          UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
-                                          Map<String, String> importParameters) {
-        Objects.requireNonNull(uuid);
-        Objects.requireNonNull(userId);
-        Objects.requireNonNull(networkUuid);
-        Objects.requireNonNull(networkId);
-        Objects.requireNonNull(caseFormat);
-        Objects.requireNonNull(caseUuid);
-        Objects.requireNonNull(shortCircuitParameters);
-        Objects.requireNonNull(importParameters);
-
-        StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, null, null, null, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
-                loadFlowParametersUuid, null, shortCircuitParameters, dynamicSimulationParameters, voltageInitParametersUuid, null, securityAnalysisParametersUuid,
-                null, sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED, new StudyVoltageInitParametersEntity());
-        return self.saveStudyThenCreateBasicTree(studyEntity, importReportUuid);
     }
 
     @Transactional
@@ -1142,11 +1144,6 @@ public class StudyService {
                 LOGGER.error("Could not remove loadflow Parameters with uuid:" + lfParametersUuid, e);
             }
         }
-    }
-
-    public void updateShortCircuitParameters(UUID studyUuid, ShortCircuitParametersEntity shortCircuitParametersEntity) {
-        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setShortCircuitParameters(shortCircuitParametersEntity));
     }
 
     public void updateDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity) {
@@ -1605,14 +1602,14 @@ public class StudyService {
     }
 
     @Transactional
-    public void duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, String userId) {
+    public void createModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, String userId, StudyConstants.ModificationsActionType action) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.duplicateModification(modificationUuidList, networkUuid, nodeInfos);
+            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModifications(modificationUuidList, networkUuid, nodeInfos, action);
             // invalidate the whole subtree except the target node (we have built this node during the duplication)
             networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, modificationResult));
             updateStatuses(studyUuid, nodeUuid, true, true, true);
@@ -1752,31 +1749,14 @@ public class StudyService {
         return result;
     }
 
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String userId) {
-        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, SHORT_CIRCUIT);
-        prevResultUuidOpt.ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
-
-        ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
-        shortCircuitParameters.setWithFortescueResult(false);
-        UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, null, shortCircuitParameters, userId);
-
-        updateComputationResultUuid(nodeUuid, result, SHORT_CIRCUIT);
-
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        return result;
-    }
-
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String userId, String busId) {
-        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SHORT_CIRCUIT_ONE_BUS);
-        prevResultUuidOpt.ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
-
-        ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
-        shortCircuitParameters.setWithFortescueResult(true);
-        UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId, shortCircuitParameters, userId);
-
-        updateComputationResultUuid(nodeUuid, result, ComputationType.SHORT_CIRCUIT_ONE_BUS);
-
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, Optional<String> busId, String userId) {
+        networkModificationTreeService.getComputationResultUuid(nodeUuid, busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS)
+                                      .ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
+        final Optional<UUID> parametersUuid = studyRepository.findById(studyUuid).map(StudyEntity::getShortCircuitParametersUuid);
+        final UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId.orElse(null), parametersUuid, userId);
+        updateComputationResultUuid(nodeUuid, result, busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid,
+                busId.isEmpty() ? NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS : NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         return result;
     }
 
@@ -1968,10 +1948,10 @@ public class StudyService {
 
     // --- Dynamic Simulation service methods END --- //
 
-    public String getNetworkElementsIds(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode, String equipmentInfos) {
+    public String getNetworkElementsIds(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode, String equipmentType, List<Double> nominalVoltages) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         return networkMapService.getElementsIds(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
-                equipmentInfos);
+                substationsIds, equipmentType, nominalVoltages);
     }
 
     @Transactional(readOnly = true)

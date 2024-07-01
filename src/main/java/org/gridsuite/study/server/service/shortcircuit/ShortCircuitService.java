@@ -9,15 +9,14 @@ package org.gridsuite.study.server.service.shortcircuit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.shortcircuit.InitialVoltageProfileMode;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
-import com.powsybl.shortcircuit.StudyType;
-import com.powsybl.shortcircuit.VoltageRange;
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
+import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.StudyService;
@@ -25,6 +24,7 @@ import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -53,20 +53,12 @@ public class ShortCircuitService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
 
-    static final List<VoltageRange> CEI909_VOLTAGE_PROFILE = List.of(
-            new VoltageRange(10.0, 199.99, 1.1),
-            new VoltageRange(200.0, 299.99, 1.09),
-            new VoltageRange(300.0, 500.0, 1.05)
-    );
-
+    @Setter
     private String shortCircuitServerBaseUri;
 
     private final NetworkService networkStoreService;
-
-    NetworkModificationTreeService networkModificationTreeService;
-
+    private final NetworkModificationTreeService networkModificationTreeService;
     private final ObjectMapper objectMapper;
-
     private final RestTemplate restTemplate;
 
     @Autowired
@@ -82,7 +74,7 @@ public class ShortCircuitService extends AbstractComputationService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String busId, ShortCircuitParameters shortCircuitParameters, String userId) {
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String busId, Optional<UUID> parametersUuid, String userId) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
         UUID reportUuid = getReportUuid(nodeUuid);
@@ -100,7 +92,8 @@ public class ShortCircuitService extends AbstractComputationService {
                 .queryParam("reportUuid", reportUuid.toString())
                 .queryParam("reporterId", nodeUuid.toString())
                 .queryParam("reportType", StringUtils.isBlank(busId) ? StudyService.ReportType.SHORT_CIRCUIT.reportKey :
-                        StudyService.ReportType.SHORT_CIRCUIT_ONE_BUS.reportKey);
+                        StudyService.ReportType.SHORT_CIRCUIT_ONE_BUS.reportKey)
+                .queryParamIfPresent("parametersUuid", parametersUuid);
 
         if (!StringUtils.isBlank(busId)) {
             uriComponentsBuilder.queryParam("busId", busId);
@@ -115,7 +108,7 @@ public class ShortCircuitService extends AbstractComputationService {
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<ShortCircuitParameters> httpEntity = new HttpEntity<>(shortCircuitParameters, headers);
+        HttpEntity<ShortCircuitParameters> httpEntity = new HttpEntity<>(headers);
 
         return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
@@ -262,57 +255,6 @@ public class ShortCircuitService extends AbstractComputationService {
         return networkModificationTreeService.getReportUuid(nodeUuid);
     }
 
-    public static ShortCircuitParametersEntity toEntity(ShortCircuitParameters parameters, ShortCircuitPredefinedConfiguration shortCircuitPredefinedConfiguration) {
-        Objects.requireNonNull(parameters);
-        return new ShortCircuitParametersEntity(parameters.isWithLimitViolations(),
-                parameters.isWithVoltageResult(),
-                parameters.isWithFortescueResult(),
-                parameters.isWithFeederResult(),
-                parameters.getStudyType(),
-                parameters.getMinVoltageDropProportionalThreshold(),
-                parameters.isWithLoads(),
-                parameters.isWithShuntCompensators(),
-                parameters.isWithVSCConverterStations(),
-                parameters.isWithNeutralPosition(),
-                parameters.getInitialVoltageProfileMode(),
-                shortCircuitPredefinedConfiguration);
-    }
-
-    public static ShortCircuitParameters fromEntity(ShortCircuitParametersEntity entity) {
-        Objects.requireNonNull(entity);
-        List<VoltageRange> voltageRanges = InitialVoltageProfileMode.CONFIGURED.equals(entity.getInitialVoltageProfileMode()) ? CEI909_VOLTAGE_PROFILE : null;
-        return newShortCircuitParameters(entity.getStudyType(), entity.getMinVoltageDropProportionalThreshold(), entity.isWithFeederResult(), entity.isWithLimitViolations(), entity.isWithVoltageResult(), entity.isWithFortescueResult(), entity.isWithLoads(), entity.isWithShuntCompensators(), entity.isWithVscConverterStations(), entity.isWithNeutralPosition(), entity.getInitialVoltageProfileMode(), voltageRanges);
-    }
-
-    public static ShortCircuitParameters copy(ShortCircuitParameters shortCircuitParameters) {
-        return newShortCircuitParameters(shortCircuitParameters.getStudyType(), shortCircuitParameters.getMinVoltageDropProportionalThreshold(), shortCircuitParameters.isWithFeederResult(), shortCircuitParameters.isWithLimitViolations(), shortCircuitParameters.isWithVoltageResult(), shortCircuitParameters.isWithFortescueResult(), shortCircuitParameters.isWithLoads(), shortCircuitParameters.isWithShuntCompensators(), shortCircuitParameters.isWithVSCConverterStations(), shortCircuitParameters.isWithNeutralPosition(), shortCircuitParameters.getInitialVoltageProfileMode(), shortCircuitParameters.getVoltageRanges());
-    }
-
-    public static ShortCircuitParameters newShortCircuitParameters(StudyType studyType, double minVoltageDropProportionalThreshold, boolean withFeederResult, boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult, boolean withLoads, boolean withShuntCompensators, boolean withVscConverterStations, boolean withNeutralPosition, InitialVoltageProfileMode initialVoltageProfileMode, List<VoltageRange> voltageRanges) {
-        return new ShortCircuitParameters()
-                .setStudyType(studyType)
-                .setMinVoltageDropProportionalThreshold(minVoltageDropProportionalThreshold)
-                .setWithFeederResult(withFeederResult)
-                .setWithLimitViolations(withLimitViolations)
-                .setWithVoltageResult(withVoltageResult)
-                .setWithFortescueResult(withFortescueResult)
-                .setWithLoads(withLoads)
-                .setWithShuntCompensators(withShuntCompensators)
-                .setWithVSCConverterStations(withVscConverterStations)
-                .setWithNeutralPosition(withNeutralPosition)
-                .setInitialVoltageProfileMode(initialVoltageProfileMode)
-                // the voltageRanges is not taken in account when initialVoltageProfileMode=NOMINAL
-                .setVoltageRanges(voltageRanges);
-    }
-
-    public static ShortCircuitParameters getDefaultShortCircuitParameters() {
-        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false, false, false, true, true, InitialVoltageProfileMode.NOMINAL, null);
-    }
-
-    public void setShortCircuitServerBaseUri(String shortCircuitServerBaseUri) {
-        this.shortCircuitServerBaseUri = shortCircuitServerBaseUri;
-    }
-
     public void deleteShortCircuitAnalysisResult(UUID uuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}")
                 .buildAndExpand(uuid)
@@ -345,15 +287,6 @@ public class ShortCircuitService extends AbstractComputationService {
         }
     }
 
-    public static ShortCircuitParametersInfos toShortCircuitParametersInfo(ShortCircuitParametersEntity entity) {
-        Objects.requireNonNull(entity);
-        return ShortCircuitParametersInfos.builder()
-                .predefinedParameters(entity.getPredefinedParameters())
-                .parameters(fromEntity(entity))
-                .cei909VoltageRanges(CEI909_VOLTAGE_PROFILE)
-                .build();
-    }
-
     public void invalidateShortCircuitStatus(List<UUID> uuids) {
         if (!uuids.isEmpty()) {
             String path = UriComponentsBuilder
@@ -367,5 +300,64 @@ public class ShortCircuitService extends AbstractComputationService {
     @Override
     public List<String> getEnumValues(String enumName, UUID resultUuid) {
         return getEnumValues(enumName, resultUuid, SHORT_CIRCUIT_API_VERSION, shortCircuitServerBaseUri, SHORT_CIRCUIT_ANALYSIS_NOT_FOUND, restTemplate);
+    }
+
+    private UriComponentsBuilder getBaseUriForParameters() {
+        return UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri).pathSegment(SHORT_CIRCUIT_API_VERSION, "parameters");
+    }
+
+    public UUID createParameters(@Nullable final String parametersInfos) {
+        final UriComponentsBuilder uri = getBaseUriForParameters();
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+            if (StringUtils.isBlank(parametersInfos)) {
+                return restTemplate.postForObject(uri.pathSegment("default").build().toUri(), new HttpEntity<>(headers), UUID.class);
+            } else {
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                return restTemplate.postForObject(uri.build().toUri(), new HttpEntity<>(parametersInfos, headers), UUID.class);
+            }
+        } catch (final HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_SHORTCIRCUIT_PARAMETERS_FAILED);
+        }
+    }
+
+    public void updateParameters(final UUID parametersUuid, final String parametersInfos) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        try {
+            restTemplate.put(getBaseUriForParameters()
+                .pathSegment("{parametersUuid}")
+                .buildAndExpand(parametersUuid)
+                .toUri(), new HttpEntity<>(parametersInfos, headers));
+        } catch (final HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SHORTCIRCUIT_PARAMETERS_FAILED);
+        }
+    }
+
+    public String getParameters(UUID parametersUuid) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+            return restTemplate.exchange(getBaseUriForParameters()
+                .pathSegment("{parametersUuid}")
+                .buildAndExpand(parametersUuid)
+                .toUri(), HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
+        } catch (final HttpStatusCodeException e) {
+            throw handleHttpError(e, GET_SHORTCIRCUIT_PARAMETERS_FAILED);
+        }
+    }
+
+    public UUID duplicateParameters(UUID parametersUuid) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+            return restTemplate.postForObject(getBaseUriForParameters()
+                .queryParam("duplicateFrom", parametersUuid)
+                .build()
+                .toUri(), new HttpEntity<>(headers), UUID.class);
+        } catch (final HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_SHORTCIRCUIT_PARAMETERS_FAILED);
+        }
     }
 }

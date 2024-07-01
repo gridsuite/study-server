@@ -54,7 +54,8 @@ import java.beans.PropertyEditorSupport;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyConstants.CASE_FORMAT;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -433,10 +434,12 @@ public class StudyController {
     public ResponseEntity<String> getNetworkElementsIds(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestBody String equipmentInfos,
-            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
+            @RequestBody(required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
+            @Parameter(description = "equipment type") @RequestParam(name = "equipmentType") String equipmentType,
+            @Parameter(description = "Nominal Voltages") @RequestParam(name = "nominalVoltages", required = false) List<Double> nominalVoltages) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsIds(studyUuid, nodeUuid, inUpstreamBuiltParentNode, equipmentInfos));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode, equipmentType, nominalVoltages));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/substations/{substationId}")
@@ -555,7 +558,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated.")})
     public ResponseEntity<Void> moveOrCopyModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestParam("action") UpdateModificationAction action,
+                                                         @RequestParam("action") StudyConstants.ModificationsActionType action,
                                                          @Nullable @RequestParam("originNodeUuid") UUID originNodeUuid,
                                                          @RequestBody List<UUID> modificationsToCopyUuidList,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
@@ -566,8 +569,8 @@ public class StudyController {
             studyService.assertCanModifyNode(studyUuid, originNodeUuid);
         }
         switch (action) {
-            case COPY:
-                studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId);
+            case COPY, INSERT:
+                studyService.createModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId, action);
                 break;
             case MOVE:
                 studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId);
@@ -628,18 +631,14 @@ public class StudyController {
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run")
     @Operation(summary = "run short circuit analysis on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis has started")})
+    @ApiResponse(responseCode = "200", description = "The short circuit analysis has started")
     public ResponseEntity<Void> runShortCircuit(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestParam(value = "busId", required = false) String busId,
+            @RequestParam(value = "busId", required = false) Optional<String> busId,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        if (busId == null) {
-            studyService.runShortCircuit(studyUuid, nodeUuid, userId);
-        } else {
-            studyService.runShortCircuit(studyUuid, nodeUuid, userId, busId);
-        }
+        studyService.runShortCircuit(studyUuid, nodeUuid, busId, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -914,22 +913,21 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getDynamicSimulationProvider(studyUuid));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
+    @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "set short-circuit analysis parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")})
+    @ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")
     public ResponseEntity<Void> setShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) ShortCircuitParametersInfos shortCircuitParametersInfos,
+            @RequestBody(required = false) String shortCircuitParametersInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setShortCircuitParameters(studyUuid, shortCircuitParametersInfos, userId);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
+    @GetMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get short-circuit analysis parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters")})
-    public ResponseEntity<ShortCircuitParametersInfos> getShortCircuitParameters(
-            @PathVariable("studyUuid") UUID studyUuid) {
+    @ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters return by shortcircuit-server")
+    public ResponseEntity<String> getShortCircuitParameters(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getShortCircuitParametersInfo(studyUuid));
     }
 
@@ -1687,10 +1685,6 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of optional services")})
     public ResponseEntity<List<ServiceStatusInfos>> getOptionalServices() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(remoteServicesInspector.getOptionalServices());
-    }
-
-    enum UpdateModificationAction {
-        MOVE, COPY
     }
 
     static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {

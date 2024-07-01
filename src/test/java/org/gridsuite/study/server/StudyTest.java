@@ -41,11 +41,11 @@ import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.*;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -108,21 +108,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
-
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
 public class StudyTest {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyTest.class);
 
     @Autowired
     private MockMvc mockMvc;
 
     private static final String FIRST_VARIANT_ID = "first_variant_id";
-
     private static final long TIMEOUT = 1000;
     private static final String STUDIES_URL = "/v1/studies";
     private static final String TEST_FILE_UCTE = "testCase.ucte";
@@ -151,8 +148,8 @@ public class StudyTest {
     private static final ReportNode ROOT_REPORT_TEST = ReportNode.newRootReportNode().withMessageTemplate(REPORT_UUID.toString(), REPORT_UUID.toString()).build();
     private static final ReportNode REPORT_TEST = ReportNode.newRootReportNode().withMessageTemplate("test", "test").build();
     private static final String VARIANT_ID = "variant_1";
-    public static final String POST = "POST";
-    public static final String DELETE = "DELETE";
+    private static final String POST = "POST";
+    private static final String DELETE = "DELETE";
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String VARIANT_ID_3 = "variant_3";
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
@@ -221,6 +218,9 @@ public class StudyTest {
 
     @Autowired
     private LoadFlowService loadflowService;
+
+    @Autowired
+    private ShortCircuitService shortCircuitService;
 
     @Autowired
     private StateEstimationService stateEstimationService;
@@ -304,8 +304,7 @@ public class StudyTest {
         doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
     }
 
-    private void initMockBeansNetworkNotExisting(Network notExistingNetwork) {
-
+    private void initMockBeansNetworkNotExisting() {
         when(networkStoreService.cloneNetwork(NOT_EXISTING_NETWORK_UUID, Collections.emptyList())).thenThrow(new PowsyblException("Network " + NOT_EXISTING_NETWORK_UUID + " not found"));
         when(networkStoreService.getNetwork(NOT_EXISTING_NETWORK_UUID)).thenThrow(new PowsyblException("Network " + NOT_EXISTING_NETWORK_UUID + " not found"));
         when(networkStoreService.getNetwork(NOT_EXISTING_NETWORK_UUID, PreloadingStrategy.COLLECTION)).thenThrow(new PowsyblException("Network " + NOT_EXISTING_NETWORK_UUID + " not found"));
@@ -332,7 +331,7 @@ public class StudyTest {
         Network notExistingNetwork = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
         notExistingNetwork.getVariantManager().cloneVariant(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID);
         notExistingNetwork.getVariantManager().setWorkingVariant(VariantManagerConstants.INITIAL_VARIANT_ID);
-        initMockBeansNetworkNotExisting(notExistingNetwork);
+        initMockBeansNetworkNotExisting();
 
         server = new MockWebServer();
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
@@ -355,6 +354,7 @@ public class StudyTest {
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         voltageInitService.setVoltageInitServerBaseUri(baseUrl);
         loadflowService.setLoadFlowServerBaseUri(baseUrl);
+        shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
         stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
 
         String baseUrlWireMock = wireMockServer.baseUrl();
@@ -453,7 +453,7 @@ public class StudyTest {
                             countDownLatch.await();
                             sendCaseImportSucceededMessage(path, NETWORK_INFOS, "XIIDM");
                         } catch (Exception e) {
-                            System.err.println(e);
+                            LOGGER.error("Error while waiting", e);
                         }
                     }).start();
                     return new MockResponse().setResponseCode(200);
@@ -475,7 +475,7 @@ public class StudyTest {
                             countDownLatch.await();
                             sendCaseImportSucceededMessage(path, NETWORK_INFOS, "XIIDM");
                         } catch (Exception e) {
-                            System.err.println(e);
+                            LOGGER.error("Error while waiting", e);
                         }
                     }).start();
                     return new MockResponse().setResponseCode(200);
@@ -494,8 +494,6 @@ public class StudyTest {
                     } else {
                         return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
                     }
-                } else if (path.matches("/v1/parameters/default") && POST.equals(request.getMethod())) {
-                    return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.matches("/v1/parameters/.*") && DELETE.equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/parameters/.*/provider")) {
@@ -654,7 +652,7 @@ public class StudyTest {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID_3:
                         return new MockResponse().setResponseCode(200);
                     default:
-                        LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
+                        LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
                         return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                 }
             }
@@ -1059,7 +1057,7 @@ public class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        int nbRequest = 7;
+        int nbRequest = 8;
         if (parameterDuplicatedUuid != null && !parameterDuplicationSuccess) {
             nbRequest++;
         }
@@ -1090,15 +1088,17 @@ public class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(7, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(8, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/exists", caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/disableExpiration", caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/default")));
 
-        assertEquals(mapper.writeValueAsString(importParameters),
-                requests.stream().filter(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*"))
-                    .findFirst().orElseThrow().getBody());
+        assertEquals(mapper.writeValueAsString(importParameters), requests.stream()
+                .filter(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*"))
+                .findFirst()
+                .orElseThrow()
+                .getBody());
         return studyUuid;
     }
 
@@ -1116,7 +1116,7 @@ public class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(8, server);
+        var requests = TestUtils.getRequestsDone(9, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
         assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=%s", caseUuid, true)));
         // note : it's a new case UUID
@@ -1335,7 +1335,7 @@ public class StudyTest {
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(7, server);
+        var requests = TestUtils.getRequestsDone(8, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", NEW_STUDY_CASE_UUID)));
@@ -1376,21 +1376,6 @@ public class StudyTest {
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
-    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, NetworkImpactsInfos expectedPayload) throws Exception {
-        // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
-        NetworkImpactsInfos actualPayload = mapper.readValue(new String(messageStudyUpdate.getPayload()), new TypeReference<NetworkImpactsInfos>() {
-        });
-        assertThat(expectedPayload, new MatcherJson<>(mapper, actualPayload));
-        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_NODE));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
-
-        checkNodeBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
-        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
-    }
-
     private void checkEquipmentCreatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
@@ -1417,10 +1402,6 @@ public class StudyTest {
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_METADATA_UPDATED, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
-    }
-
-    private void checkEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, NetworkImpactsInfos expectedPayload) throws Exception {
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, expectedPayload);
     }
 
     @Test
@@ -1496,7 +1477,7 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         // duplicate the study
-        StudyEntity duplicatedStudy = duplicateStudy(study1Uuid, userId, "UCTE");
+        StudyEntity duplicatedStudy = duplicateStudy(study1Uuid);
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
 
         //Test duplication from a non existing source study
@@ -1550,7 +1531,7 @@ public class StudyTest {
         assertNull(studyRepository.findById(UUID.fromString(duplicatedStudyUuid)).orElse(null));
     }
 
-    private StudyEntity duplicateStudy(UUID studyUuid, String userId, String caseFormat) throws Exception {
+    private StudyEntity duplicateStudy(UUID studyUuid) throws Exception {
         UUID stubUuid = wireMockUtils.stubDuplicateModificationGroup();
         String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
                         .header(USER_ID_HEADER, "userId"))
@@ -1624,6 +1605,12 @@ public class StudyTest {
             assertNotNull(duplicatedStudy.getLoadFlowParametersUuid());
             numberOfRequests++;
         }
+        if (sourceStudy.getShortCircuitParametersUuid() == null) {
+            assertNull(duplicatedStudy.getShortCircuitParametersUuid());
+        } else {
+            assertNotNull(duplicatedStudy.getShortCircuitParametersUuid());
+            numberOfRequests++;
+        }
         requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + duplicatedStudy.getNetworkUuid() + "/reindex-all")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
@@ -1632,6 +1619,9 @@ public class StudyTest {
         }
         if (sourceStudy.getLoadFlowParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getLoadFlowParametersUuid())).count());
+        }
+        if (sourceStudy.getShortCircuitParametersUuid() != null) {
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getShortCircuitParametersUuid())).count());
         }
         if (sourceStudy.getSecurityAnalysisParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getSecurityAnalysisParametersUuid())).count());
