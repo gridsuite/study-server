@@ -51,7 +51,7 @@ public class NetworkMapService {
         this.restTemplate = restTemplate;
     }
 
-    public String getElementsInfos(UUID networkUuid, String variantId, String equipmentInfos, String infoType, double dcPowerFactor) {
+    public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, List<Double> nominalVoltages, String infoType, double dcPowerFactor) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
 
@@ -59,8 +59,12 @@ public class NetworkMapService {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
 
-        builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
+        builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType)
+                .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
 
+        if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
+            builder = builder.queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, nominalVoltages);
+        }
         InfoTypeParameters infoTypeParameters = InfoTypeParameters.builder()
                 .optionalParameters(Map.of(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor)))
                 .build();
@@ -69,7 +73,7 @@ public class NetworkMapService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(equipmentInfos, headers);
+        HttpEntity<List<String>> httpEntity = new HttpEntity<>(substationsIds, headers);
         return restTemplate.postForObject(networkMapServerBaseUri + url, httpEntity, String.class);
     }
 
@@ -146,7 +150,7 @@ public class NetworkMapService {
     }
 
     public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds,
-            String equipmentPath) {
+                                       String equipmentPath) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath;
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromPath(path);
@@ -217,8 +221,8 @@ public class NetworkMapService {
     }
 
     public List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID networkUuid, String variantId,
-            String voltageLevelId,
-            String busPath) {
+                                                                        String voltageLevelId,
+                                                                        String busPath) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION
                 + "/networks/{networkUuid}/voltage-levels/{voltageLevelId}/" + busPath);
         if (!StringUtils.isBlank(variantId)) {

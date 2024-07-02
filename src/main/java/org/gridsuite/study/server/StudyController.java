@@ -460,11 +460,14 @@ public class StudyController {
     public ResponseEntity<String> getNetworkElementsInfos(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestBody String equipmentInfos,
+            @RequestBody(required = false) List<String> substationsIds,
             @Parameter(description = "Info type") @RequestParam(name = "infoType") String infoType,
-            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
+            @Parameter(description = "element type") @RequestParam(name = "elementType") String elementType,
+            @Parameter(description = "Should get in upstream built node ?")
+            @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
+            @Parameter(description = "Nominal Voltages") @RequestParam(name = "nominalVoltages", required = false) List<Double> nominalVoltages) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, equipmentInfos, infoType, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, substationsIds, infoType, elementType, inUpstreamBuiltParentNode, nominalVoltages));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}")
