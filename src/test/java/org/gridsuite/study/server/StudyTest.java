@@ -634,16 +634,19 @@ public class StudyTest {
                     case "/v1/export/formats":
                         return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?caseUuid=" + CASE_UUID_STRING + "&nodeName=Root":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=" + "studyName_Root":
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=" + VARIANT_ID + "&caseUuid=" + CASE_UUID_STRING:
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM":
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=" + VARIANT_ID + "&studyName=studyName" + "&nodeName=node+3":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=" + VARIANT_ID + "&fileName=" + "studyName_Root":
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=" + VARIANT_ID + "&caseUuid=" + CASE_UUID_STRING + "&nodeName=node+3":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=" + VARIANT_ID + "&fileName=studyName_node+3":
+                        return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=" + VARIANT_ID:
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -830,10 +833,10 @@ public class StudyTest {
 
         //export a network
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, rootNodeUuid, "XIIDM"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}?studyName=studyName", studyNameUserIdUuid, rootNodeUuid, "XIIDM"))
             .andExpect(status().isOk());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/XIIDM?caseUuid=%s&nodeName=%s", NETWORK_UUID_STRING, CASE_UUID, "Root")));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/XIIDM?fileName=%s", NETWORK_UUID_STRING, "studyName_Root")));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}?formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D", studyNameUserIdUuid, rootNodeUuid, "XIIDM"))
             .andExpect(status().isOk());
@@ -853,7 +856,7 @@ public class StudyTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}?studyName=studyName", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM"))
             .andExpect(status().isOk());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/XIIDM?variantId=%s&studyName=%s&nodeName=%s", NETWORK_UUID_STRING, VARIANT_ID, "studyName", "node+3")));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/XIIDM?variantId=%s&fileName=%s", NETWORK_UUID_STRING, VARIANT_ID, "studyName_node+3")));
     }
 
     @Test
