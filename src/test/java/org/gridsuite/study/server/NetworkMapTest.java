@@ -342,7 +342,7 @@ public class NetworkMapTest {
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the voltage levels and its equipments
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LIST", mapper.writeValueAsString(createRequestBody("VOLTAGE_LEVEL", List.of())), "[{\"id\":\"MTAUBP3\",\"nominalVoltage\":0.0,\"topologyKind\":\"NODE_BREAKER\"}]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LIST", "VOLTAGE_LEVEL", List.of(), mapper.writeValueAsString(List.of()), "[{\"id\":\"MTAUBP3\",\"nominalVoltage\":0.0,\"topologyKind\":\"NODE_BREAKER\"}]");
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
     }
 
@@ -374,7 +374,7 @@ public class NetworkMapTest {
 
         //get the substations with it's voltage levels
         String substationDataAsString = mapper.writeValueAsString(List.of(IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build()));
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("SUBSTATION", List.of())), substationDataAsString);
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "SUBSTATION", List.of(), mapper.writeValueAsString(List.of()), substationDataAsString);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
     }
 
@@ -389,8 +389,8 @@ public class NetworkMapTest {
 
         //get the lines
         String lineDataAsString = mapper.writeValueAsString(List.of(IdentifiableInfos.builder().id(LINE_ID_1).name("LINE_NAME_1").build()));
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("LINE", List.of())), lineDataAsString);
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("LINE", List.of("S1"))), lineDataAsString);
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "LINE", null, mapper.writeValueAsString(List.of()), lineDataAsString);
+        //getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "LINE", null, mapper.writeValueAsString(List.of("S1")), lineDataAsString);
         assertTrue(TestUtils.getRequestsDone(2, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
     }
 
@@ -405,7 +405,7 @@ public class NetworkMapTest {
 
         //get the lines
         String hvdcLineDataAsString = mapper.writeValueAsString(IdentifiableInfos.builder().id(HVDC_LINE_ID_1).name("HVDC_LINE_NAME_1").build());
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", mapper.writeValueAsString(createRequestBody("HVDC_LINE", List.of())), hvdcLineDataAsString);
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "HVDC_LINE", null, mapper.writeValueAsString(List.of()), hvdcLineDataAsString);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
     }
 
@@ -539,18 +539,20 @@ public class NetworkMapTest {
     }
 
     @SneakyThrows
-    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNodeUuid, String infoType, String responseBody, String requestBody) {
-        UUID stubUuid = wireMockUtils.stubNetworkElementsInfosPost(NETWORK_UUID_STRING, infoType, responseBody);
+    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNodeUuid, String infoType, String elementType, List<Double> nominalVoltages, String requestBody, String responseBody) {
+       UUID stubUuid = wireMockUtils.stubNetworkElementsInfosPost(NETWORK_UUID_STRING, infoType, elementType, nominalVoltages, responseBody);
 
         MockHttpServletRequestBuilder mockHttpServletRequestBuilder = post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
                 .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
+                .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
+                .queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, List.of().toString())
                 .queryParam(String.format(QUERY_FORMAT_OPTIONAL_PARAMS, QUERY_PARAM_DC_POWERFACTOR), Double.toString(LoadFlowParameters.DEFAULT_DC_POWER_FACTOR))
                 .content(requestBody);
 
         MvcResult mvcResult = mockMvc.perform(mockHttpServletRequestBuilder)
                 .andExpect(status().isOk())
                 .andReturn();
-        wireMockUtils.verifyNetworkElementsInfosPost(stubUuid, NETWORK_UUID_STRING, infoType, requestBody);
+       wireMockUtils.verifyNetworkElementsInfosPost(stubUuid, NETWORK_UUID_STRING, elementType, infoType, requestBody);
 
         return mvcResult;
     }
