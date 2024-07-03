@@ -74,13 +74,14 @@ public class WireMockUtils {
                    QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType)));
     }
 
-    public UUID stubNetworkElementsInfosPost(String networkUuid, String infoType, String elementType, String nominalVoltages, String responseBody) {
+    public UUID stubNetworkElementsInfosPost(String networkUuid, String infoType, String elementType, List<Double> nominalVoltages, String responseBody) {
         MappingBuilder requestPatternBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements"))
                 .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
                 .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType));
         if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
-            requestPatternBuilder.withQueryParam(QUERY_PARAM_NOMINAL_VOLTAGES, WireMock.equalToJson(nominalVoltages));
-
+            for (Double voltage : nominalVoltages) {
+                requestPatternBuilder.withQueryParam("nominalVoltages", WireMock.equalTo(voltage.toString()));
+            }
         }
 
         return wireMock.stubFor(requestPatternBuilder

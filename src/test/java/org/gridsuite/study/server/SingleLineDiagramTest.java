@@ -599,7 +599,7 @@ public class SingleLineDiagramTest {
                     .collect(Collectors.toList());
         }
         String nominalVoltagesParam = nominalVoltageStrings.isEmpty() ? null : mapper.writeValueAsString(nominalVoltageStrings);
-        UUID stubUuid = wireMockUtils.stubNetworkElementsInfosPost(NETWORK_UUID_STRING, infoType, elementType, nominalVoltagesParam, responseBody);
+        UUID stubUuid = wireMockUtils.stubNetworkElementsInfosPost(NETWORK_UUID_STRING, infoType, elementType, nominalVoltages, responseBody);
 
         MockHttpServletRequestBuilder mockHttpServletRequestBuilder = post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
                 .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
