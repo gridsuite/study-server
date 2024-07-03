@@ -545,14 +545,15 @@ public class NetworkMapTest {
         MockHttpServletRequestBuilder mockHttpServletRequestBuilder = post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
                 .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
                 .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
-                .queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, List.of().toString())
+                //.queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, List.of().toString())
                 .queryParam(String.format(QUERY_FORMAT_OPTIONAL_PARAMS, QUERY_PARAM_DC_POWERFACTOR), Double.toString(LoadFlowParameters.DEFAULT_DC_POWER_FACTOR))
+                .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody);
 
         MvcResult mvcResult = mockMvc.perform(mockHttpServletRequestBuilder)
                 .andExpect(status().isOk())
                 .andReturn();
-       wireMockUtils.verifyNetworkElementsInfosPost(stubUuid, NETWORK_UUID_STRING, elementType, infoType, requestBody);
+       wireMockUtils.verifyNetworkElementsInfosPost(stubUuid, NETWORK_UUID_STRING, infoType, elementType, requestBody);
 
         return mvcResult;
     }

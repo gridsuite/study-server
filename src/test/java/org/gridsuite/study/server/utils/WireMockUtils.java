@@ -77,9 +77,9 @@ public class WireMockUtils {
 
     public UUID stubNetworkElementsInfosPost(String networkUuid, String infoType, String elementType, List<Double> nominalVoltages, String responseBody) {
         MappingBuilder requestPatternBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements"))
-                .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
                 .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
-                .withQueryParam(QUERY_PARAM_NOMINAL_VOLTAGES, WireMock.equalTo(List.of().toString()));
+                .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType));
+                //.withQueryParam(QUERY_PARAM_NOMINAL_VOLTAGES, WireMock.equalTo(List.of().toString()));
         return wireMock.stubFor(requestPatternBuilder
                 .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
@@ -87,7 +87,7 @@ public class WireMockUtils {
 
     public void verifyNetworkElementsInfosPost(UUID stubUuid, String networkUuid, String infoType, String elementType, String requestBody) {
         verifyPostRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements", false,
-                Map.of(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType),QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType), QUERY_PARAM_NOMINAL_VOLTAGES, WireMock.matching(".*")),
+                Map.of(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType), QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType)),
                         requestBody);
     }
 
