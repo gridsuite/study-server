@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
@@ -75,20 +74,28 @@ public class WireMockUtils {
                    QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType)));
     }
 
-    public UUID stubNetworkElementsInfosPost(String networkUuid, String infoType, String elementType, List<Double> nominalVoltages, String responseBody) {
+    public UUID stubNetworkElementsInfosPost(String networkUuid, String infoType, String elementType, String nominalVoltages, String responseBody) {
         MappingBuilder requestPatternBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements"))
                 .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
                 .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType));
-                //.withQueryParam(QUERY_PARAM_NOMINAL_VOLTAGES, WireMock.equalTo(List.of().toString()));
+        if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
+            requestPatternBuilder.withQueryParam(QUERY_PARAM_NOMINAL_VOLTAGES, WireMock.equalToJson(nominalVoltages));
+
+        }
+
         return wireMock.stubFor(requestPatternBuilder
                 .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
 
-    public void verifyNetworkElementsInfosPost(UUID stubUuid, String networkUuid, String infoType, String elementType, String requestBody) {
+    public void verifyNetworkElementsInfosPost(UUID stubUuid, String networkUuid, String infoType, String elementType, String nominalVoltagesParam, String requestBody) {
         verifyPostRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements", false,
-                Map.of(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType), QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType)),
-                        requestBody);
+                Map.of(
+                        QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType),
+                        QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType)
+                ),
+                requestBody
+        );
     }
 
     public UUID stubNetworkElementsIdsPost(String networkUuid, String responseBody) {
