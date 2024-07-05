@@ -545,14 +545,6 @@ public class NetworkMapTest {
 
     @SneakyThrows
     private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNodeUuid, String infoType, String elementType, List<Double> nominalVoltages, String requestBody, String responseBody) {
-        List<String> nominalVoltageStrings = new ArrayList<>();
-
-        if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
-            nominalVoltageStrings = nominalVoltages.stream()
-                    .map(String::valueOf)
-                    .collect(Collectors.toList());
-        }
-        String nominalVoltagesParam = nominalVoltageStrings.isEmpty() ? null : mapper.writeValueAsString(nominalVoltageStrings);
         UUID stubUuid = wireMockUtils.stubNetworkElementsInfosPost(NETWORK_UUID_STRING, infoType, elementType, nominalVoltages, responseBody);
 
         MockHttpServletRequestBuilder mockHttpServletRequestBuilder = post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
@@ -571,7 +563,7 @@ public class NetworkMapTest {
         MvcResult mvcResult = mockMvc.perform(mockHttpServletRequestBuilder)
                 .andExpect(status().isOk())
                 .andReturn();
-        wireMockUtils.verifyNetworkElementsInfosPost(stubUuid, NETWORK_UUID_STRING, infoType, elementType, nominalVoltagesParam, requestBody);
+        wireMockUtils.verifyNetworkElementsInfosPost(stubUuid, NETWORK_UUID_STRING, infoType, elementType, requestBody);
 
         return mvcResult;
     }
@@ -738,13 +730,6 @@ public class NetworkMapTest {
                 .andReturn();
 
         wireMockUtils.verifyNominalVoltagesGet(stubUuid, NETWORK_UUID_STRING);
-    }
-
-    private Map<String, Object> createRequestBody(String elementType, List<String> substationsIds) {
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("elementType", elementType);
-        requestBody.put("substationsIds", substationsIds);
-        return requestBody;
     }
 
     private void cleanDB() {

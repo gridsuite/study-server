@@ -89,7 +89,7 @@ public class WireMockUtils {
         ).getId();
     }
 
-    public void verifyNetworkElementsInfosPost(UUID stubUuid, String networkUuid, String infoType, String elementType, String nominalVoltagesParam, String requestBody) {
+    public void verifyNetworkElementsInfosPost(UUID stubUuid, String networkUuid, String infoType, String elementType, String requestBody) {
         verifyPostRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements", false,
                 Map.of(
                         QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType),

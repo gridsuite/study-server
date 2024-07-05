@@ -255,13 +255,6 @@ public class SingleLineDiagramTest {
         server.setDispatcher(dispatcher);
     }
 
-    private Map<String, Object> createRequestBody(String elementType, List<String> substationsIds) {
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("elementType", elementType);
-        requestBody.put("substationsIds", substationsIds);
-        return requestBody;
-    }
-
     @Test
     public void testDiagramsAndGraphics() throws Exception {
         MvcResult mvcResult;
@@ -612,7 +605,7 @@ public class SingleLineDiagramTest {
         MvcResult mvcResult = mockMvc.perform(mockHttpServletRequestBuilder)
                 .andExpect(status().isOk())
                 .andReturn();
-        wireMockUtils.verifyNetworkElementsInfosPost(stubUuid, NETWORK_UUID_STRING, infoType, elementType, nominalVoltagesParam, requestBody);
+        wireMockUtils.verifyNetworkElementsInfosPost(stubUuid, NETWORK_UUID_STRING, infoType, elementType, requestBody);
 
         return mvcResult;
     }
