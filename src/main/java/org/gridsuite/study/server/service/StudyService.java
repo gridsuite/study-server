@@ -494,9 +494,9 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(new StudyEntity(studyUuid, networkUuid, networkId, caseFormat, caseUuid, caseName,
-                    null, null, null, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
-                    loadFlowParametersUuid, shortCircuitParametersUuid, dynamicSimulationParametersEntity, voltageInitParametersUuid, securityAnalysisParametersUuid,
-                    sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED, new StudyVoltageInitParametersEntity()),
+                        null, null, null, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
+                        loadFlowParametersUuid, shortCircuitParametersUuid, dynamicSimulationParametersEntity, voltageInitParametersUuid, securityAnalysisParametersUuid,
+                        sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED, new StudyVoltageInitParametersEntity()),
                 importReportUuid);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
@@ -554,8 +554,8 @@ public class StudyService {
         }
 
         NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos = sourceStudy.getNonEvacuatedEnergyParameters() == null ?
-            NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos() :
-            NonEvacuatedEnergyService.fromEntity(sourceStudy.getNonEvacuatedEnergyParameters());
+                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos() :
+                NonEvacuatedEnergyService.fromEntity(sourceStudy.getNonEvacuatedEnergyParameters());
 
         UUID copiedVoltageInitParametersUuid = null;
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
@@ -641,12 +641,12 @@ public class StudyService {
                 "substations", substationId);
     }
 
-    public String getNetworkElementsInfos(UUID studyUuid, UUID nodeUuid, String equipmentInfos, String infoType, boolean inUpstreamBuiltParentNode) {
+    public String getNetworkElementsInfos(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, String infoType, String elementType, boolean inUpstreamBuiltParentNode, List<Double> nominalVoltages) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
         return networkMapService.getElementsInfos(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
-                equipmentInfos, infoType, loadFlowParameters.getDcPowerFactor());
+                substationsIds, elementType, nominalVoltages, infoType, loadFlowParameters.getDcPowerFactor());
     }
 
     public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, String elementType, InfoTypeParameters infoTypeParameters, String elementId, boolean inUpstreamBuiltParentNode) {
@@ -810,10 +810,10 @@ public class StudyService {
 
     public NonEvacuatedEnergyParametersInfos getNonEvacuatedEnergyParametersInfos(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-            .map(studyEntity -> studyEntity.getNonEvacuatedEnergyParameters() != null ?
-                NonEvacuatedEnergyService.fromEntity(studyEntity.getNonEvacuatedEnergyParameters()) :
-                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos())
-            .orElse(null);
+                .map(studyEntity -> studyEntity.getNonEvacuatedEnergyParameters() != null ?
+                        NonEvacuatedEnergyService.fromEntity(studyEntity.getNonEvacuatedEnergyParameters()) :
+                        NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos())
+                .orElse(null);
     }
 
     @Transactional
@@ -946,7 +946,7 @@ public class StudyService {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
-                StandardCharsets.UTF_8);
+                    StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -1549,7 +1549,7 @@ public class StudyService {
     public StudyIndexationStatus getStudyIndexationStatus(UUID studyUuid) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         if (study.getIndexationStatus() == StudyIndexationStatus.INDEXED
-            && !networkConversionService.checkStudyIndexationStatus(study.getNetworkUuid())) {
+                && !networkConversionService.checkStudyIndexationStatus(study.getNetworkUuid())) {
             updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
         }
         return study.getIndexationStatus();
@@ -1671,7 +1671,7 @@ public class StudyService {
     }
 
     private List<ReportNode> getSubReporters(UUID nodeUuid, UUID reportUuid, String reportNameFilter,
-            ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels) {
+                                             ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels) {
         ReportNode reporter = reportService.getReport(reportUuid, nodeUuid.toString(), reportNameFilter,
                 reportNameMatchingType, severityLevels);
         Map<String, List<ReportNode>> subReportersByNode = new LinkedHashMap<>();
@@ -1702,10 +1702,10 @@ public class StudyService {
                 NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
 
         Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
-            networkModificationResult.getNetworkImpacts().stream()
-                .filter(impact -> impact.isSimple() && ((SimpleElementImpact) impact).isDeletion())
-                .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(((SimpleElementImpact) impact).getElementId(), impact.getElementType().name()))
-            .collect(Collectors.toSet());
+                networkModificationResult.getNetworkImpacts().stream()
+                        .filter(impact -> impact.isSimple() && ((SimpleElementImpact) impact).isDeletion())
+                        .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(((SimpleElementImpact) impact).getElementId(), impact.getElementType().name()))
+                        .collect(Collectors.toSet());
 
         Set<String> impactedElementTypes = networkModificationResult.getNetworkImpacts().stream()
                 .filter(impact -> impact.isCollection())
@@ -1713,11 +1713,11 @@ public class StudyService {
                 .collect(Collectors.toSet());
 
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
-            NetworkImpactsInfos.builder()
-                .deletedEquipments(deletionsInfos)
-                .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
-                .impactedElementTypes(impactedElementTypes)
-                .build()
+                NetworkImpactsInfos.builder()
+                        .deletedEquipments(deletionsInfos)
+                        .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
+                        .impactedElementTypes(impactedElementTypes)
+                        .build()
         );
     }
 
@@ -1750,7 +1750,7 @@ public class StudyService {
 
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, Optional<String> busId, String userId) {
         networkModificationTreeService.getComputationResultUuid(nodeUuid, busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS)
-                                      .ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
+                .ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
         final Optional<UUID> parametersUuid = studyRepository.findById(studyUuid).map(StudyEntity::getShortCircuitParametersUuid);
         final UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId.orElse(null), parametersUuid, userId);
         updateComputationResultUuid(nodeUuid, result, busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
@@ -1791,16 +1791,16 @@ public class StudyService {
     public StudyVoltageInitParameters getVoltageInitParameters(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return new StudyVoltageInitParameters(
-            Optional.ofNullable(studyEntity.getVoltageInitParametersUuid()).map(voltageInitService::getVoltageInitParameters).orElse(null),
-            Optional.ofNullable(studyEntity.getVoltageInitParameters()).map(StudyVoltageInitParametersEntity::shouldApplyModifications).orElse(true)
+                Optional.ofNullable(studyEntity.getVoltageInitParametersUuid()).map(voltageInitService::getVoltageInitParameters).orElse(null),
+                Optional.ofNullable(studyEntity.getVoltageInitParameters()).map(StudyVoltageInitParametersEntity::shouldApplyModifications).orElse(true)
         );
     }
 
     public boolean shouldApplyModifications(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return Optional.ofNullable(studyEntity.getVoltageInitParameters())
-            .map(StudyVoltageInitParametersEntity::shouldApplyModifications)
-            .orElse(true);
+                .map(StudyVoltageInitParametersEntity::shouldApplyModifications)
+                .orElse(true);
     }
 
     // --- Dynamic Simulation service methods BEGIN --- //
@@ -1991,7 +1991,7 @@ public class StudyService {
     public String getSensitivityAnalysisParameters(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return sensitivityAnalysisService.getSensitivityAnalysisParameters(
-            sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity));
+                sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity));
     }
 
     @Transactional
@@ -2004,8 +2004,8 @@ public class StudyService {
     @Transactional
     public void setNonEvacuatedEnergyParametersInfos(UUID studyUuid, NonEvacuatedEnergyParametersInfos parameters, String userId) {
         updateNonEvacuatedEnergyParameters(studyUuid,
-            NonEvacuatedEnergyService.toEntity(parameters != null ? parameters :
-                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos()));
+                NonEvacuatedEnergyService.toEntity(parameters != null ? parameters :
+                        NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos()));
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -2067,26 +2067,26 @@ public class StudyService {
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyStagesDefinition(nonEvacuatedEnergyParametersInfos.getStagesDefinition());
 
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyStagesSelection(nonEvacuatedEnergyParametersInfos.getStagesSelection()
-            .stream()
-            .filter(NonEvacuatedEnergyStagesSelection::isActivated)
-            .collect(Collectors.toList()));
+                .stream()
+                .filter(NonEvacuatedEnergyStagesSelection::isActivated)
+                .collect(Collectors.toList()));
 
         List<NonEvacuatedEnergyGeneratorCappingsByType> generatorsCappingsByType = nonEvacuatedEnergyParametersInfos.getGeneratorsCappings().getGenerators()
-            .stream()
-            .filter(NonEvacuatedEnergyGeneratorCappingsByType::isActivated)
-            .collect(Collectors.toList());
+                .stream()
+                .filter(NonEvacuatedEnergyGeneratorCappingsByType::isActivated)
+                .collect(Collectors.toList());
         NonEvacuatedEnergyGeneratorsCappings generatorsCappings = new NonEvacuatedEnergyGeneratorsCappings(nonEvacuatedEnergyParametersInfos.getGeneratorsCappings().getSensitivityThreshold(), generatorsCappingsByType);
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyGeneratorsCappings(generatorsCappings);
 
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyMonitoredBranches(nonEvacuatedEnergyParametersInfos.getMonitoredBranches()
-            .stream()
-            .filter(NonEvacuatedEnergyMonitoredBranches::isActivated)
-            .collect(Collectors.toList()));
+                .stream()
+                .filter(NonEvacuatedEnergyMonitoredBranches::isActivated)
+                .collect(Collectors.toList()));
 
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyContingencies(nonEvacuatedEnergyParametersInfos.getContingencies()
-            .stream()
-            .filter(NonEvacuatedEnergyContingencies::isActivated)
-            .collect(Collectors.toList()));
+                .stream()
+                .filter(NonEvacuatedEnergyContingencies::isActivated)
+                .collect(Collectors.toList()));
 
         UUID result = nonEvacuatedEnergyService.runNonEvacuatedEnergy(nodeUuid, networkUuid, variantId, reportUuid, provider, nonEvacuatedEnergyInputData, studyEntity.getLoadFlowParametersUuid(), userId);
 
@@ -2106,8 +2106,8 @@ public class StudyService {
 
     public String getNonEvacuatedEnergyProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-            .map(StudyEntity::getNonEvacuatedEnergyProvider)
-            .orElse("");
+                .map(StudyEntity::getNonEvacuatedEnergyProvider)
+                .orElse("");
     }
 
     private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid) {
