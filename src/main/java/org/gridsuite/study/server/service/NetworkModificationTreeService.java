@@ -29,6 +29,7 @@ import jakarta.persistence.EntityNotFoundException;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -1010,5 +1011,17 @@ public class NetworkModificationTreeService {
         } else {
             return doGetParentNode(nodeEntity.getParentNode().getIdNode(), nodeType);
         }
+    }
+
+    public int countBuiltNodes(UUID studyUuid) {
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
+        AtomicInteger nbNodeBuilt = new AtomicInteger(0);
+        nodes.forEach(n -> {
+            NodeModificationInfos nodeModificationInfos = repositories.get(n.getType()).getNodeModificationInfos(n.getIdNode());
+            if (nodeModificationInfos != null && nodeModificationInfos.getNodeBuildStatus() != null && nodeModificationInfos.getNodeBuildStatus().isBuilt()) {
+                nbNodeBuilt.getAndIncrement();
+            }
+        });
+        return nbNodeBuilt.get();
     }
 }

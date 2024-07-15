@@ -8,6 +8,7 @@ package org.gridsuite.study.server.dto;
 
 import lombok.Builder;
 import lombok.Getter;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 
 import java.util.UUID;
 
@@ -42,4 +43,6 @@ public class NodeModificationInfos {
     private UUID dynamicSimulationUuid;
 
     private UUID stateEstimationUuid;
+
+    private NodeBuildStatus nodeBuildStatus;
 }

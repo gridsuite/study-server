@@ -194,6 +194,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .voltageInitUuid(networkModificationNode.getVoltageInitResultUuid())
             .dynamicSimulationUuid(networkModificationNode.getDynamicSimulationResultUuid())
             .stateEstimationUuid(networkModificationNode.getStateEstimationResultUuid())
+            .nodeBuildStatus(networkModificationNode.getNodeBuildStatus())
             .build();
     }
 }
