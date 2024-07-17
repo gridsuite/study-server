@@ -1014,14 +1014,15 @@ public class NetworkModificationTreeService {
     }
 
     public int countBuiltNodes(UUID studyUuid) {
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        AtomicInteger nbNodeBuilt = new AtomicInteger(0);
+        // retrieve all network modifications un-stashed nodes existing in this study
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
+        AtomicInteger builtNodeNumber = new AtomicInteger(0);
         nodes.forEach(n -> {
-            NodeModificationInfos nodeModificationInfos = repositories.get(n.getType()).getNodeModificationInfos(n.getIdNode());
-            if (nodeModificationInfos != null && nodeModificationInfos.getNodeBuildStatus() != null && nodeModificationInfos.getNodeBuildStatus().isBuilt()) {
-                nbNodeBuilt.getAndIncrement();
+            // perform N queries, but it's fast: 27 ms for 400-node loop
+            if (repositories.get(n.getType()).getNodeBuildStatus(n.getIdNode()).isBuilt()) {
+                builtNodeNumber.getAndIncrement();
             }
         });
-        return nbNodeBuilt.get();
+        return builtNodeNumber.get();
     }
 }
