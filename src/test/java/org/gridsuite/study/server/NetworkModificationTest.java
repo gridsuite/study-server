@@ -215,6 +215,7 @@ public class NetworkModificationTest {
     private final String elementUpdateDestination = "element.update";
 
     private UUID buildOkStubId;
+    private UUID buildStopStubId;
     private UUID buildFailedStubId;
     private UUID buildErrorStubId;
     private UUID userProfileStubId;
@@ -266,9 +267,9 @@ public class NetworkModificationTest {
             .willReturn(WireMock.ok())).getId();
         buildErrorStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_3_STRING + "/build"))
             .willReturn(WireMock.serverError())).getId();
-        wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/build/stop"))
+        buildStopStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/build/stop"))
             .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.stopped"))
-            .willReturn(WireMock.ok()));
+            .willReturn(WireMock.ok())).getId();
         userProfileStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID + "/profile"))
             .willReturn(WireMock.ok()
                 .withBody(USER_PROFILE_10_BUILDS_JSON)
@@ -392,7 +393,7 @@ public class NetworkModificationTest {
                     }
                     return new MockResponse().setResponseCode(500);
                 } else {
-                    LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
+                    LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                 }
             }
@@ -580,7 +581,7 @@ public class NetworkModificationTest {
 
         Map<String, Object> createLoadInfos = Map.of("type", ModificationType.LOAD_CREATION, "equipmentId", "loadId");
         String jsonCreateLoadInfos = mapper.writeValueAsString(createLoadInfos);
-        UUID stubId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
+        wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
 
         // Mark the node status as built
         modificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));
@@ -595,12 +596,12 @@ public class NetworkModificationTest {
         // Create network modification on BUILT modification node
         Optional<NetworkModificationResult> networkModificationResult =
                 createModificationResultWithElementImpact(SimpleImpactType.CREATION, IdentifiableType.LOAD, "loadId", Set.of("s1"));
-        stubId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(networkModificationResult));
+        wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(networkModificationResult));
         NetworkImpactsInfos expectedPayload = NetworkImpactsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s1")).deletedEquipments(ImmutableSet.of()).build();
 
         // Build first node with errors
         networkModificationResult.get().setApplicationStatus(NetworkModificationResult.ApplicationStatus.WITH_ERRORS);
-        stubId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(networkModificationResult));
+        UUID stubId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(networkModificationResult));
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                         .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
@@ -1199,9 +1200,8 @@ public class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
         checkEquipmentDeletingFinishedMessagesReceived(studyUuid, modificationNode.getId());
 
-        String errorMessage = "Internal Server Error";
         stubId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/network-modifications.*"))
-            .willReturn(WireMock.serverError().withBody(errorMessage))
+            .willReturn(WireMock.serverError().withBody("Internal Server Error"))
         ).getId();
         mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", studyUuid, modificationNode.getId())
                 .queryParam("uuids", modificationUuid.toString())
@@ -2681,10 +2681,8 @@ public class NetworkModificationTest {
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_COMPLETED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(Set.of("s1", "s2"), buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
-        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build"))
-                .withQueryParam(QUERY_PARAM_RECEIVER, WireMock.matching(".*"))
-        );
-
+        wireMockUtils.verifyPostRequest(buildOkStubId, "/v1/networks/" + NETWORK_UUID_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
+        wireMockUtils.verifyGetRequest(profileStubId, "/v1/users/" + userId + "/profile", Map.of());
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid).getGlobalBuildStatus());  // node is built
 
         networkModificationTreeService.updateNodeBuildStatus(nodeUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
@@ -2702,15 +2700,9 @@ public class NetworkModificationTest {
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_CANCELLED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid).getGlobalBuildStatus()); // node is not built
 
-        wireMockServer.verify(1, WireMock.putRequestedFor(WireMock.urlPathEqualTo("/v1/build/stop"))
-                .withQueryParam(QUERY_PARAM_RECEIVER, WireMock.matching(".*"))
-        );
-        wireMockUtils.verifyGetRequest(profileStubId, "/v1/users/" + userId + "/profile", Map.of());
-        //TODO remove after refactoring (it's here because there is several tests inside the same test method
-        wireMockServer.resetRequests();
+        wireMockUtils.verifyPutRequest(buildStopStubId, "/v1/build/stop", true, Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")), null);
     }
 
     // builds on network 2 will fail
@@ -2984,33 +2976,33 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING, VARIANT_ID);
 
         // String message error
-        String errorMessage = "Internal Server Error";
+        String contentErrorMessage = "Internal Server Error";
         stubId = wireMockUtils.stubNetworkModificationPostWithError(jsonCreateLoadInfos);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                 .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
                 .header(USER_ID_HEADER, userId))
-            .andExpectAll(status().isBadRequest(), content().string(errorMessage));
+            .andExpectAll(status().isBadRequest(), content().string(contentErrorMessage));
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING);
 
         // Json message error
-        stubId = wireMockUtils.stubNetworkModificationPostWithError(jsonCreateLoadInfos, String.format("{\"message\" : \"%s\"}", errorMessage));
+        stubId = wireMockUtils.stubNetworkModificationPostWithError(jsonCreateLoadInfos, String.format("{\"message\" : \"%s\"}", contentErrorMessage));
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                 .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
                 .header(USER_ID_HEADER, userId))
-            .andExpectAll(status().isBadRequest(), content().string(errorMessage));
+            .andExpectAll(status().isBadRequest(), content().string(contentErrorMessage));
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING);
 
         // Bad json message error
-        errorMessage = String.format("{\"foo\" : \"%s\"}", errorMessage);
-        stubId = wireMockUtils.stubNetworkModificationPostWithError(jsonCreateLoadInfos, errorMessage);
+        contentErrorMessage = String.format("{\"foo\" : \"%s\"}", contentErrorMessage);
+        stubId = wireMockUtils.stubNetworkModificationPostWithError(jsonCreateLoadInfos, contentErrorMessage);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                 .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
                 .header(USER_ID_HEADER, userId))
-            .andExpectAll(status().isBadRequest(), content().string(errorMessage));
+            .andExpectAll(status().isBadRequest(), content().string(contentErrorMessage));
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING);
