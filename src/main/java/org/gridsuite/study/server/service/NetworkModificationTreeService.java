@@ -29,7 +29,6 @@ import jakarta.persistence.EntityNotFoundException;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -1013,16 +1012,9 @@ public class NetworkModificationTreeService {
         }
     }
 
-    public int countBuiltNodes(UUID studyUuid) {
-        // retrieve all network modifications un-stashed nodes existing in this study
+    public long countBuiltNodes(UUID studyUuid) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
-        AtomicInteger builtNodeNumber = new AtomicInteger(0);
-        nodes.forEach(n -> {
-            // perform N queries, but it's fast: 27 ms for 400-node loop
-            if (repositories.get(n.getType()).getNodeBuildStatus(n.getIdNode()).isBuilt()) {
-                builtNodeNumber.getAndIncrement();
-            }
-        });
-        return builtNodeNumber.get();
+        // perform N queries, but it's fast: 25 ms for 400 nodes
+        return nodes.stream().filter(n -> repositories.get(n.getType()).getNodeBuildStatus(n.getIdNode()).isBuilt()).count();
     }
 }

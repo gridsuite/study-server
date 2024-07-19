@@ -1247,7 +1247,7 @@ public class StudyService {
         // check restrictions on node builds number
         UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId).orElse(null);
         if (userProfileInfos != null && userProfileInfos.getMaxAllowedBuilds() != null) {
-            int nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid);
+            long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid);
             if (nbBuiltNodes >= userProfileInfos.getMaxAllowedBuilds()) {
                 throw new StudyException(MAX_NODE_BUILDS_EXCEEDED, "max allowed built nodes : " + userProfileInfos.getMaxAllowedBuilds());
             }
