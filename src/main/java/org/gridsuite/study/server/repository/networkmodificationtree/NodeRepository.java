@@ -23,6 +23,8 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
 
     List<NodeEntity> findAllByStudyId(UUID id);
 
+    List<NodeEntity> findAllByStudyIdAndTypeAndStashed(UUID id, NodeType type, boolean stashed);
+
     List<NodeEntity> findAllByStudyIdAndStashedAndParentNodeIdNodeOrderByStashDateDesc(UUID id, boolean stashed, UUID parentNode);
 
     Optional<NodeEntity> findByStudyIdAndType(UUID id, NodeType type);
