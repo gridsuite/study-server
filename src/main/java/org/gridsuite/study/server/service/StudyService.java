@@ -258,8 +258,10 @@ public class StudyService {
         return study != null ? study.getCaseName() : "";
     }
 
-    public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
-        return studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos)
+    public List<BasicStudyInfos> getStudiesMetadata(List<UUID> uuids) {
+        return Stream.concat(
+                studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos),
+                studyCreationRequestRepository.findAllById(uuids).stream().map(StudyService::toBasicStudyInfos))
                 .collect(Collectors.toList());
 
     }
