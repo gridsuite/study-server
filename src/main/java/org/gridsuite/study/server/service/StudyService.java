@@ -706,11 +706,12 @@ public class StudyService {
         return result;
     }
 
-    public ExportNetworkInfos exportNetwork(UUID studyUuid, UUID nodeUuid, String format, String paramatersJson) {
+    public ExportNetworkInfos exportNetwork(UUID studyUuid, UUID nodeUuid, String format, String paramatersJson, String studyName) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
+        String nodeName = networkModificationTreeService.getNode(nodeUuid).getName();
 
-        return networkConversionService.exportNetwork(networkUuid, variantId, format, paramatersJson);
+        return networkConversionService.exportNetwork(networkUuid, variantId, nodeName, studyName, format, paramatersJson);
     }
 
     private void assertComputationNotRunning(UUID nodeUuid) {
