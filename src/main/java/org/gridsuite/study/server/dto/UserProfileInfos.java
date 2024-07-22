@@ -25,4 +25,6 @@ public class UserProfileInfos {
     private String name;
 
     private UUID loadFlowParameterId;
+
+    Integer maxAllowedBuilds;
 }

@@ -1232,17 +1232,27 @@ public class StudyService {
         return networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
     }
 
-    public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+    public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userId) {
+        assertCanBuildNode(studyUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid);
         networkModificationTreeService.updateNodeBuildStatus(nodeUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
-
         try {
             networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
         } catch (Exception e) {
             networkModificationTreeService.updateNodeBuildStatus(nodeUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT));
             throw new StudyException(NODE_BUILD_ERROR, e.getMessage());
         }
+    }
 
+    private void assertCanBuildNode(@NonNull UUID studyUuid, @NonNull String userId) {
+        // check restrictions on node builds number
+        UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId).orElse(null);
+        if (userProfileInfos != null && userProfileInfos.getMaxAllowedBuilds() != null) {
+            long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid);
+            if (nbBuiltNodes >= userProfileInfos.getMaxAllowedBuilds()) {
+                throw new StudyException(MAX_NODE_BUILDS_EXCEEDED, "max allowed built nodes : " + userProfileInfos.getMaxAllowedBuilds());
+            }
+        }
     }
 
     public void unbuildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {

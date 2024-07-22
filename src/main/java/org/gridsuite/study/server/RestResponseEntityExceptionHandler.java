@@ -109,6 +109,7 @@ public class RestResponseEntityExceptionHandler {
                     MISSING_PARAMETER
                     -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getType());
             case NOT_IMPLEMENTED -> ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(exception.getMessage());
+            case MAX_NODE_BUILDS_EXCEEDED -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(StudyException.Type.MAX_NODE_BUILDS_EXCEEDED + " " + exception.getMessage());
             default -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         };
     }
