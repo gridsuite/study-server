@@ -17,6 +17,7 @@ import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.commons.report.ReportNode;
+import com.powsybl.commons.report.ReportNodeImpl;
 import com.powsybl.commons.report.ReportNodeJsonModule;
 import com.powsybl.iidm.network.Line;
 import com.powsybl.iidm.network.Network;
@@ -996,7 +997,7 @@ public class StudyTest {
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?reportType=NETWORK_MODIFICATION", studyUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
-        List<ReportNode> reporterModel = mapper.readValue(resultAsString, new TypeReference<List<ReportNode>>() { });
+        List<ReportNodeImpl> reporterModel = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertThat(reporterModel.get(0), new MatcherReport(REPORT_TEST));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));

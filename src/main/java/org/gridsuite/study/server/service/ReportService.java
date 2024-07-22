@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.report.ReportNode;
 import com.powsybl.commons.report.ReportNodeDeserializer;
+import com.powsybl.commons.report.ReportNodeImpl;
 import com.powsybl.commons.report.ReportNodeJsonModule;
 import lombok.NonNull;
 import org.apache.poi.util.StringUtil;
@@ -90,7 +91,7 @@ public class ReportService {
         var path = uriBuilder.buildAndExpand(id).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        List<ReportNode> reporters = restTemplate.exchange(serverUri + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReportNode>>() {
+        List<ReportNodeImpl> reporters = restTemplate.exchange(serverUri + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReportNodeImpl>>() {
         }).getBody();
         // TODO : Remove this hack when fix to avoid key collision in hades2 will be done
         ReportNode reporter = ReportNode.newRootReportNode()
