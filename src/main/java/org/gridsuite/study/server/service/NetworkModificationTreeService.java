@@ -1011,4 +1011,10 @@ public class NetworkModificationTreeService {
             return doGetParentNode(nodeEntity.getParentNode().getIdNode(), nodeType);
         }
     }
+
+    public long countBuiltNodes(UUID studyUuid) {
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
+        // perform N queries, but it's fast: 25 ms for 400 nodes
+        return nodes.stream().filter(n -> repositories.get(n.getType()).getNodeBuildStatus(n.getIdNode()).isBuilt()).count();
+    }
 }

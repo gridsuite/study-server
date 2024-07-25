@@ -460,11 +460,14 @@ public class StudyController {
     public ResponseEntity<String> getNetworkElementsInfos(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestBody String equipmentInfos,
+            @RequestBody(required = false) List<String> substationsIds,
             @Parameter(description = "Info type") @RequestParam(name = "infoType") String infoType,
-            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
+            @Parameter(description = "element type") @RequestParam(name = "elementType") String elementType,
+            @Parameter(description = "Should get in upstream built node ?")
+            @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
+            @Parameter(description = "Nominal Voltages") @RequestParam(name = "nominalVoltages", required = false) List<Double> nominalVoltages) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, equipmentInfos, infoType, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, substationsIds, infoType, elementType, inUpstreamBuiltParentNode, nominalVoltages));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}")
@@ -777,10 +780,10 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("format") String format,
-            @RequestParam(value = "formatParameters", required = false) String parametersJson) {
-
+            @RequestParam(value = "formatParameters", required = false) String parametersJson,
+            @RequestParam(value = "studyName", required = false) String studyName) {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid);
-        ExportNetworkInfos exportNetworkInfos = studyService.exportNetwork(studyUuid, nodeUuid, format, parametersJson);
+        ExportNetworkInfos exportNetworkInfos = studyService.exportNetwork(studyUuid, nodeUuid, format, parametersJson, studyName);
 
         HttpHeaders header = new HttpHeaders();
         header.setContentDisposition(ContentDisposition.builder("attachment").filename(exportNetworkInfos.getFileName(), StandardCharsets.UTF_8).build());
@@ -1296,9 +1299,10 @@ public class StudyController {
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist"),
                            @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
     public ResponseEntity<Void> buildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.buildNode(studyUuid, nodeUuid);
+        studyService.buildNode(studyUuid, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1737,14 +1741,16 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/sensitivity-analysis/factors-count")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/factors-count")
     @Operation(summary = "Get the factors count of sensitivity parameters")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The factors count of sensitivity parameters")})
     public ResponseEntity<Long> getSensitivityAnalysisFactorsCount(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Is Injections Set") @RequestParam(name = "isInjectionsSet", required = false) Boolean isInjectionsSet,
             SensitivityFactorsIdsByGroup factorsIds) {
-        return ResponseEntity.ok().body(sensitivityAnalysisService.getSensitivityAnalysisFactorsCount(networkStoreService.getNetworkUuid(studyUuid), factorsIds, isInjectionsSet));
+        return ResponseEntity.ok().body(sensitivityAnalysisService.getSensitivityAnalysisFactorsCount(networkStoreService.getNetworkUuid(studyUuid),
+            networkModificationTreeService.getVariantId(nodeUuid), factorsIds, isInjectionsSet));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")
