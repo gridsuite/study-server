@@ -6,10 +6,6 @@
  */
 package org.gridsuite.study.server.service;
 
-import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.commons.report.ReportNodeDeserializer;
-import com.powsybl.commons.report.ReportNodeJsonModule;
 import lombok.NonNull;
 import org.apache.poi.util.StringUtil;
 import org.gridsuite.study.server.RemoteServicesProperties;
@@ -45,14 +41,9 @@ public class ReportService {
     private final RestTemplate restTemplate;
 
     @Autowired
-    public ReportService(ObjectMapper objectMapper,
-                         RemoteServicesProperties remoteServicesProperties,
+    public ReportService(RemoteServicesProperties remoteServicesProperties,
                          RestTemplate restTemplate) {
         this.reportServerBaseUri = remoteServicesProperties.getServiceUri("report-server");
-        ReportNodeJsonModule reporterModelJsonModule = new ReportNodeJsonModule();
-        reporterModelJsonModule.setSerializers(null); // FIXME: remove when dicos will be used on the front side
-        objectMapper.registerModule(reporterModelJsonModule);
-        objectMapper.setInjectableValues(new InjectableValues.Std().addValue(ReportNodeDeserializer.DICTIONARY_VALUE_ID, null)); //FIXME : remove with powsyble core
         this.restTemplate = restTemplate;
     }
 

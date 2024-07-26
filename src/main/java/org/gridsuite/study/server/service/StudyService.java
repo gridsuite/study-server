@@ -1647,6 +1647,7 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public List<Report> getParentNodesReport(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType, Set<String> severityLevels) {
+        // recursive function to retrieve all reports from a given node up to the Root node
         Pair<String, ReportNameMatchingType> filtersParameters = getFiltersParamaters(nodeUuid, nodeOnlyReport, reportType);
         AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
         List<Report> subReporters = reportService.getReport(nodeInfos.getReportUuid(), nodeUuid.toString(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
@@ -1655,10 +1656,10 @@ public class StudyService {
         } else if (nodeOnlyReport) {
             return List.of(subReporters.get(subReporters.size() - 1));
         } else {
-            if (subReporters.get(0).message().equals(ROOT_NODE_NAME)) {
+            String subReporterNodeId = subReporters.get(0).message();
+            if (ROOT_NODE_NAME.equalsIgnoreCase(subReporterNodeId)) {
                 return subReporters;
             }
-            String subReporterNodeId = subReporters.get(0).message();
             Optional<UUID> parentUuid = networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporterNodeId));
             if (parentUuid.isEmpty()) {
                 return subReporters;
