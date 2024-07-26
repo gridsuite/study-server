@@ -779,10 +779,10 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("format") String format,
-            @RequestParam(value = "formatParameters", required = false) String parametersJson) {
-
+            @RequestParam(value = "formatParameters", required = false) String parametersJson,
+            @RequestParam(value = "studyName", required = false) String studyName) {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid);
-        ExportNetworkInfos exportNetworkInfos = studyService.exportNetwork(studyUuid, nodeUuid, format, parametersJson);
+        ExportNetworkInfos exportNetworkInfos = studyService.exportNetwork(studyUuid, nodeUuid, format, parametersJson, studyName);
 
         HttpHeaders header = new HttpHeaders();
         header.setContentDisposition(ContentDisposition.builder("attachment").filename(exportNetworkInfos.getFileName(), StandardCharsets.UTF_8).build());
@@ -1298,9 +1298,10 @@ public class StudyController {
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist"),
                            @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
     public ResponseEntity<Void> buildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.buildNode(studyUuid, nodeUuid);
+        studyService.buildNode(studyUuid, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
