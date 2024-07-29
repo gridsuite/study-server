@@ -13,6 +13,7 @@ import com.google.common.io.ByteStreams;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.commons.report.ReportNode;
 import com.powsybl.commons.report.ReportNodeAdder;
+import com.powsybl.commons.report.ReportNodeImpl;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
@@ -200,7 +201,7 @@ public final class TestUtils {
         return parent;
     }
 
-    public static void checkReportNodes(List<ReportNode> reports, List<ReportNode> expectedReports) {
+    public static void checkReportNodes(List<ReportNodeImpl> reports, List<ReportNodeImpl> expectedReports) {
         reports.forEach(r -> assertThat(r, new MatcherReport(expectedReports.get(reports.indexOf(r)))));
     }
 }
