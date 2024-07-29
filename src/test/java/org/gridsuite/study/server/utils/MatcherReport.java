@@ -6,25 +6,26 @@
  */
 package org.gridsuite.study.server.utils;
 
-import com.powsybl.commons.report.ReportNode;
+import org.gridsuite.study.server.dto.Report;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
+
+import java.util.Objects;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-public class MatcherReport extends TypeSafeMatcher<ReportNode> {
+public class MatcherReport extends TypeSafeMatcher<Report> {
 
-    ReportNode reference;
+    Report reference;
 
-    public MatcherReport(ReportNode report) {
-        this.reference = report;
+    public MatcherReport(Report report) {
+        reference = report;
     }
 
     @Override
-    public boolean matchesSafely(ReportNode m) {
-        return reference.getMessageKey().equals(m.getMessageKey()) &&
-                reference.getMessageTemplate().equals(m.getMessageTemplate());
+    public boolean matchesSafely(Report m) {
+        return Objects.equals(reference.message(), m.message()) && Objects.equals(reference.severity(), m.severity());
     }
 
     @Override

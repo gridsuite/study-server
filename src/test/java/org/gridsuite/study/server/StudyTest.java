@@ -16,7 +16,6 @@ import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.commons.report.ReportNode;
 import com.powsybl.commons.report.ReportNodeJsonModule;
 import com.powsybl.iidm.network.Line;
 import com.powsybl.iidm.network.Network;
@@ -96,7 +95,6 @@ import static org.gridsuite.study.server.notification.NotificationService.DEFAUL
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
-import static org.gridsuite.study.server.utils.TestUtils.addChildReportNode;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -145,8 +143,7 @@ public class StudyTest {
     private static final NetworkInfos NETWORK_INFOS = new NetworkInfos(NETWORK_UUID, "20140116_0830_2D4_UX1_pst");
     private static final NetworkInfos NOT_EXISTING_NETWORK_INFOS = new NetworkInfos(NOT_EXISTING_NETWORK_UUID, "not_existing_network_id");
     private static final UUID REPORT_UUID = UUID.randomUUID();
-    private static final ReportNode ROOT_REPORT_TEST = ReportNode.newRootReportNode().withMessageTemplate(REPORT_UUID.toString(), REPORT_UUID.toString()).build();
-    private static final ReportNode REPORT_TEST = ReportNode.newRootReportNode().withMessageTemplate("test", "test").build();
+    private static final Report REPORT_TEST = Report.builder().id(REPORT_UUID).message("test").severity(StudyConstants.Severity.WARN).build();
     private static final String VARIANT_ID = "variant_1";
     private static final String POST = "POST";
     private static final String DELETE = "DELETE";
@@ -375,8 +372,6 @@ public class StudyTest {
         String networkInfos3AsString = mapper.writeValueAsString(NETWORK_INFOS_3);
         String clonedCaseUuidAsString = mapper.writeValueAsString(CLONED_CASE_UUID);
 
-        addChildReportNode(ROOT_REPORT_TEST, REPORT_TEST);
-
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
@@ -466,7 +461,7 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/reports/.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(mapper.writeValueAsString(ROOT_REPORT_TEST.getChildren()))
+                    return new MockResponse().setResponseCode(200).setBody(mapper.writeValueAsString(List.of(REPORT_TEST)))
                         .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     // need asynchronous run to get study creation requests
@@ -628,7 +623,7 @@ public class StudyTest {
 
                     case "/v1/reports/" + NETWORK_UUID_STRING:
                         return new MockResponse().setResponseCode(200)
-                            .setBody(mapper.writeValueAsString(REPORT_TEST))
+                            .setBody(mapper.writeValueAsString(List.of(REPORT_TEST)))
                             .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
 
                     case "/v1/export/formats":
@@ -1003,9 +998,9 @@ public class StudyTest {
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?reportType=NETWORK_MODIFICATION", studyUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
-        List<ReportNode> reporterModel = mapper.readValue(resultAsString, new TypeReference<List<ReportNode>>() { });
-
-        assertThat(reporterModel.get(0), new MatcherReport(REPORT_TEST));
+        List<Report> reports = mapper.readValue(resultAsString, new TypeReference<List<Report>>() { });
+        assertEquals(1, reports.size());
+        assertThat(reports.get(0), new MatcherReport(REPORT_TEST));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
 
