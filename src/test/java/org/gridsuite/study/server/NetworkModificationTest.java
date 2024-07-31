@@ -16,7 +16,6 @@ import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.commons.report.ReportNode;
 import com.powsybl.iidm.network.IdentifiableType;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
@@ -31,6 +30,7 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
+import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -130,7 +130,7 @@ public class NetworkModificationTest {
 
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
 
-    private static final ReportNode REPORT_TEST = ReportNode.newRootReportNode().withMessageTemplate("test", "test").build();
+    private static final Report REPORT_TEST = Report.builder().id(UUID.randomUUID()).message("test").severity(StudyConstants.Severity.WARN).build();
 
     private static final String TEST_FILE = "testCase.xiidm";
 

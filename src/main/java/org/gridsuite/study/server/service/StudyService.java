@@ -8,7 +8,6 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.commons.report.ReportNode;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
@@ -75,7 +74,6 @@ import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_OPERATION;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
-import static org.gridsuite.study.server.utils.StudyUtils.insertReportNode;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -1635,13 +1633,13 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public ReportNode getSubReport(String subReportId, Set<String> severityLevels) {
+    public Report getSubReport(String subReportId, Set<String> severityLevels) {
         return reportService.getSubReport(UUID.fromString(subReportId), severityLevels);
     }
 
     @Transactional(readOnly = true)
-    public List<ReportNode> getNodeReport(UUID nodeUuid, String reportId, ReportType reportType, Set<String> severityLevels) {
-        return getSubReporters(nodeUuid, UUID.fromString(reportId), nodeUuid + "@" + reportType.reportKey, ReportNameMatchingType.EXACT_MATCHING, severityLevels);
+    public List<Report> getNodeReport(UUID nodeUuid, String reportId, ReportType reportType, Set<String> severityLevels) {
+        return reportService.getReport(UUID.fromString(reportId), nodeUuid.toString(), nodeUuid + "@" + reportType.reportKey, ReportNameMatchingType.EXACT_MATCHING, severityLevels);
     }
 
     private Pair<String, ReportNameMatchingType> getFiltersParamaters(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType) {
@@ -1659,46 +1657,27 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReportNode> getParentNodesReport(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType, Set<String> severityLevels) {
+    public List<Report> getParentNodesReport(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType, Set<String> severityLevels) {
+        // recursive function to retrieve all reports from a given node up to the Root node
         Pair<String, ReportNameMatchingType> filtersParameters = getFiltersParamaters(nodeUuid, nodeOnlyReport, reportType);
         AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
-        List<ReportNode> subReporters = getSubReporters(nodeUuid, nodeInfos.getReportUuid(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
+        List<Report> subReporters = reportService.getReport(nodeInfos.getReportUuid(), nodeUuid.toString(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
         if (subReporters.isEmpty()) {
             return subReporters;
         } else if (nodeOnlyReport) {
             return List.of(subReporters.get(subReporters.size() - 1));
         } else {
-            if (subReporters.get(0).getMessageKey().equals(ROOT_NODE_NAME)) {
+            String subReporterNodeId = subReporters.get(0).message();
+            if (ROOT_NODE_NAME.equalsIgnoreCase(subReporterNodeId)) {
                 return subReporters;
             }
-            Optional<UUID> parentUuid = networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporters.get(0).getMessageKey()));
+            Optional<UUID> parentUuid = networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporterNodeId));
             if (parentUuid.isEmpty()) {
                 return subReporters;
             }
-            List<ReportNode> parentReporters = self.getParentNodesReport(parentUuid.get(), false, reportType, severityLevels);
+            List<Report> parentReporters = self.getParentNodesReport(parentUuid.get(), false, reportType, severityLevels);
             return Stream.concat(parentReporters.stream(), subReporters.stream()).collect(Collectors.toList());
         }
-    }
-
-    private List<ReportNode> getSubReporters(UUID nodeUuid, UUID reportUuid, String reportNameFilter,
-                                             ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels) {
-        ReportNode reporter = reportService.getReport(reportUuid, nodeUuid.toString(), reportNameFilter,
-                reportNameMatchingType, severityLevels);
-        Map<String, List<ReportNode>> subReportersByNode = new LinkedHashMap<>();
-        reporter.getChildren().forEach(
-                subReporter -> subReportersByNode.putIfAbsent(getNodeIdFromReportKey(subReporter), new ArrayList<>()));
-        reporter.getChildren().forEach(subReporter -> subReportersByNode.get(getNodeIdFromReportKey(subReporter))
-                .addAll(subReporter.getChildren()));
-        return subReportersByNode.keySet().stream().map(nodeId -> {
-            ReportNode newSubReporter = ReportNode.newRootReportNode().withMessageTemplate(nodeId, nodeId)
-                    .withUntypedValue("subReportId", reportUuid.toString()).build();
-            subReportersByNode.get(nodeId).forEach(child -> insertReportNode(newSubReporter, child));
-            return newSubReporter;
-        }).collect(Collectors.toList());
-    }
-
-    private String getNodeIdFromReportKey(ReportNode reporter) {
-        return Arrays.stream(reporter.getMessageKey().split("@")).findFirst().orElseThrow();
     }
 
     private void updateNode(UUID studyUuid, UUID nodeUuid, Optional<NetworkModificationResult> networkModificationResult) {

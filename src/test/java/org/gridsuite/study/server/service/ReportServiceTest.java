@@ -10,9 +10,6 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.commons.report.ReportNode;
-import com.powsybl.commons.report.ReportNodeImpl;
-import com.powsybl.commons.report.ReportNodeJsonModule;
 
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
@@ -21,6 +18,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
+import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -52,13 +50,13 @@ import java.util.*;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_DEFAULT_NAME;
-import static org.gridsuite.study.server.utils.TestUtils.addChildReportNode;
-import static org.gridsuite.study.server.utils.TestUtils.checkReportNodes;
+import static org.gridsuite.study.server.utils.TestUtils.checkReports;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.Assert.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -73,10 +71,7 @@ public class ReportServiceTest {
 
     private static final UUID ROOT_NODE_REPORT_UUID = UUID.randomUUID();
     private static final UUID MODIFICATION_NODE_REPORT_UUID = UUID.randomUUID();
-
-    private static UUID MODIFICATION_NODE_UUID;
     private static final UUID MODIFICATION_CHILD_NODE1_REPORT_UUID = UUID.randomUUID();
-
     private static final UUID MODIFICATION_CHILD_NODE2_REPORT_UUID = UUID.randomUUID();
     @Autowired
     private ObjectMapper mapper;
@@ -100,8 +95,6 @@ public class ReportServiceTest {
 
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
 
-    private static final String SUB_REPORT_ID = "subReportId";
-
     private static final long TIMEOUT = 1000;
 
     private void cleanDB() {
@@ -119,15 +112,6 @@ public class ReportServiceTest {
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         reportService.setReportServerBaseUri(baseUrl);
 
-        // FIXME: remove lines when dicos will be used on the front side
-        // Override the custom module to restore the standard module in order to have the original serialization used like the report server
-        mapper.registerModule(new ReportNodeJsonModule() {
-            @Override
-            public Object getTypeId() {
-                return getClass().getName() + "override";
-            }
-        });
-
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
@@ -135,14 +119,16 @@ public class ReportServiceTest {
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
                 if (path.matches("/v1/reports/.*\\?defaultName=.*")) {
+                    String reportUuid = Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2);
+                    String nodeUuid = request.getRequestUrl().queryParameter(QUERY_PARAM_REPORT_DEFAULT_NAME);
                     return new MockResponse().setResponseCode(HttpStatus.OK.value())
-                            .setBody(mapper.writeValueAsString(getNodeReport(Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2), request.getRequestUrl().queryParameter(QUERY_PARAM_REPORT_DEFAULT_NAME)).getChildren()))
+                            .setBody(mapper.writeValueAsString(List.of(getNodeReport(UUID.fromString(reportUuid), nodeUuid))))
                             .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 } else if (path.matches("/v1/subreports/.*\\?severityLevels=.*")) {
                     String reportId = Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2);
-                        return new MockResponse().setResponseCode(HttpStatus.OK.value())
-                                .setBody(mapper.writeValueAsString(getRootNodeSimpleReport(reportId).getChildren()))
-                                .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                            .setBody(mapper.writeValueAsString(getNodeReport(UUID.fromString(reportId), reportId)))
+                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(HttpStatus.I_AM_A_TEAPOT.value()).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -177,14 +163,15 @@ public class ReportServiceTest {
     @Test
     public void testReport() {
         RootNode rootNode = createRoot();
-        ReportNode expectedRootReporter = getNodeReport(ROOT_NODE_REPORT_UUID.toString(), rootNode.getId().toString());
+        List<Report> expectedRootReports = List.of(getNodeReport(ROOT_NODE_REPORT_UUID, rootNode.getId().toString()));
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), rootNode.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
-        List<ReportNodeImpl> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        List<Report> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
-        checkReportNodes(reports, expectedRootReporter.getChildren().stream().map(ReportNodeImpl.class::cast).toList());
+        assertEquals(1, reports.size());
+        checkReports(reports, expectedRootReports);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), rootNode.getId()))
@@ -192,19 +179,19 @@ public class ReportServiceTest {
             .andReturn();
         reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
-        checkReportNodes(reports, expectedRootReporter.getChildren().stream().map(ReportNodeImpl.class::cast).toList());
+        checkReports(reports, expectedRootReports);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         NetworkModificationNode node = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), rootNode.getId(), createModificationNodeInfo("Node1", MODIFICATION_NODE_REPORT_UUID), InsertMode.AFTER, null);
         output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);  // message for modification node creation
-        ReportNode expectedNodeReporter = getNodeReport(MODIFICATION_NODE_REPORT_UUID.toString(), node.getId().toString());
+        List<Report> expectedNodeReports = List.of(getNodeReport(MODIFICATION_NODE_REPORT_UUID, node.getId().toString()));
 
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), node.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
-        checkReportNodes(reports, expectedNodeReporter.getChildren().stream().map(ReportNodeImpl.class::cast).toList());
+        checkReports(reports, expectedNodeReports);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), node.getId()))
@@ -212,8 +199,8 @@ public class ReportServiceTest {
             .andReturn();
         reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
-        final List<ReportNode> expectedReports = Stream.concat(expectedRootReporter.getChildren().stream(), expectedNodeReporter.getChildren().stream()).toList();
-        checkReportNodes(reports, expectedReports.stream().map(ReportNodeImpl.class::cast).toList());
+        final List<Report> expectedReports = Stream.concat(expectedRootReports.stream(), expectedNodeReports.stream()).toList();
+        checkReports(reports, expectedReports);
         assertTrue(TestUtils.getRequestsDone(2, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
 
@@ -230,53 +217,80 @@ public class ReportServiceTest {
         output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
-        MODIFICATION_NODE_UUID = node.getId();
+        /*           Root
+        *             |
+        *      "Modification Node"
+        *             |
+        *         "child2"
+        *             |
+        *        "child 1"
+        */
+        Report child1ExpectedReport = getNodeReport(MODIFICATION_CHILD_NODE1_REPORT_UUID, child1.getId().toString());
+        Report child2ExpectedReport = Report.builder()
+                .id(MODIFICATION_CHILD_NODE2_REPORT_UUID)
+                .message(child2.getId().toString())
+                .subReports(List.of(child1ExpectedReport))
+                .build();
+        Report modifNodeExpectedReport = Report.builder()
+                .id(MODIFICATION_NODE_REPORT_UUID)
+                .message(node.getId().toString())
+                .subReports(List.of(child2ExpectedReport))
+                .build();
+        Report rootExpectedReport = Report.builder()
+                .id(ROOT_NODE_REPORT_UUID)
+                .message(rootNode.getId().toString())
+                .subReports(List.of(modifNodeExpectedReport))
+                .build();
 
-        ReportNode expectedRootReporter = getNodeReport(ROOT_NODE_REPORT_UUID.toString(), rootNode.getId().toString());
-        ReportNode expectedChild1Reporter = getNodeReport(MODIFICATION_CHILD_NODE1_REPORT_UUID.toString(), child1.getId().toString());
-        ReportNode expectedChild2Reporter = getNodeReport(MODIFICATION_CHILD_NODE2_REPORT_UUID.toString(), child2.getId().toString());
-
+        // get only Child1 report
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), child1.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
-        List<ReportNodeImpl> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        List<Report> child1Reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
-        checkReportNodes(reports, List.of(expectedChild1Reporter.getChildren().get(1)).stream().map(ReportNodeImpl.class::cast).toList());
+        checkReports(child1Reports, List.of(child1ExpectedReport));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), child1.getId()))
-            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
-            .andReturn();
-        List<ReportNodeImpl> reportsNode1 = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
-        });
-        checkReportNodes(reportsNode1, Stream.concat(expectedRootReporter.getChildren().stream(), expectedChild1Reporter.getChildren().stream()).toList().stream().map(ReportNodeImpl.class::cast).toList());
-        assertTrue(TestUtils.getRequestsDone(2, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
-
+        // get Child2 report + parents
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), child2.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
-        List<ReportNodeImpl> reportsNode2 = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        List<Report> child2AndParentsReports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
-        checkReportNodes(reportsNode2, Stream.concat(expectedRootReporter.getChildren().stream(), expectedChild2Reporter.getChildren().stream()).toList().stream().map(ReportNodeImpl.class::cast).toList());
-        assertTrue(TestUtils.getRequestsDone(2, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+        // We are expecting 3 nodes reports, from Root to current child2
+        List<Report> childrenAndParentsExpectedReports = new ArrayList<>();
+        childrenAndParentsExpectedReports.add(rootExpectedReport);
+        childrenAndParentsExpectedReports.add(modifNodeExpectedReport);
+        childrenAndParentsExpectedReports.add(child2ExpectedReport);
+        checkReports(child2AndParentsReports, childrenAndParentsExpectedReports);
+        assertTrue(TestUtils.getRequestsDone(childrenAndParentsExpectedReports.size(), server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
-        assertNotEquals(mapper.writeValueAsString(reportsNode1), mapper.writeValueAsString(reportsNode2));
+        // get Child1 report + parents
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), child1.getId()))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+        List<Report> child1AndParentsReports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        });
+        // We are expecting one more node report, from Root to current node child1
+        childrenAndParentsExpectedReports.add(child1ExpectedReport);
+        checkReports(child1AndParentsReports, childrenAndParentsExpectedReports);
+        assertTrue(TestUtils.getRequestsDone(childrenAndParentsExpectedReports.size(), server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
 
     @SneakyThrows
     @Test
     public void testSubReport() {
         RootNode rootNode = createRoot();
-        ReportNode expectedRootReporter = getRootNodeSimpleReport(ROOT_NODE_REPORT_UUID.toString());
+        Report expectedSubReport = getNodeReport(ROOT_NODE_REPORT_UUID, ROOT_NODE_REPORT_UUID.toString());
 
         MvcResult mvcResult =
                 mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/subreport?reportId={id}&severityLevels=INFO&severityLevels=WARN",
                                 rootNode.getStudyId(), rootNode.getId(), ROOT_NODE_REPORT_UUID.toString()))
                         .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
-        ReportNodeImpl report = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        Report report = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
-        checkReportNodes(List.of(report), List.of(expectedRootReporter).stream().map(ReportNodeImpl.class::cast).toList());
+        assertThat(expectedSubReport, new MatcherReport(report));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/subreports/.*")));
     }
 
@@ -284,45 +298,20 @@ public class ReportServiceTest {
     @Test
     public void testNodeReport() {
         RootNode rootNode = createRoot();
-        ReportNode expectedRootReporter = getNodeReport(ROOT_NODE_REPORT_UUID.toString(), rootNode.getId().toString());
+        Report expectedReport = getNodeReport(ROOT_NODE_REPORT_UUID, rootNode.getId().toString());
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report?reportId={id}&reportType=NETWORK_MODIFICATION",
                                 rootNode.getStudyId(), rootNode.getId(), ROOT_NODE_REPORT_UUID.toString()))
                         .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
-        List<ReportNodeImpl> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        List<Report> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
-        reports.forEach(r -> assertThat(r, new MatcherReport(expectedRootReporter.getChildren().get(reports.indexOf(r)))));
+        assertEquals(1, reports.size());
+        assertThat(reports.get(0), new MatcherReport(expectedReport));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
 
-    private ReportNode getNodeReport(String reportUuid, String nodeUuid) {
-        return Set.of(ROOT_NODE_REPORT_UUID.toString(), MODIFICATION_NODE_REPORT_UUID.toString()).contains(reportUuid) ?
-                getNodeSimpleReport(reportUuid, nodeUuid) : getNodeMultipleReport(reportUuid, nodeUuid);
-    }
-
-    private ReportNode getNodeSimpleReport(String reportUuid, String nodeUuid) {
-        ReportNode reporter = ReportNode.newRootReportNode().withMessageTemplate(reportUuid, reportUuid).build();
-        reporter.newReportNode().withMessageTemplate(nodeUuid, nodeUuid)
-                .withUntypedValue(SUB_REPORT_ID, reportUuid).add();
-        return reporter;
-    }
-
-    private ReportNode getRootNodeSimpleReport(String reportUuid) {
-        ReportNode reporter = ReportNode.newRootReportNode().withMessageTemplate(reportUuid, reportUuid).build();
-        reporter.newReportNode().withMessageTemplate("Root", "Root")
-                .withUntypedValue(SUB_REPORT_ID, reportUuid).add();
-        return reporter;
-    }
-
-    private ReportNode getNodeMultipleReport(String reportUuid, String nodeUuid) {
-        ReportNode reporter = ReportNode.newRootReportNode().withMessageTemplate(reportUuid, reportUuid).build();
-        ReportNode subReporter = ReportNode.newRootReportNode().withMessageTemplate(MODIFICATION_NODE_UUID.toString(), MODIFICATION_NODE_UUID.toString())
-                .withUntypedValue(SUB_REPORT_ID, reportUuid).build();
-        subReporter.newReportNode().withMessageTemplate("test" + nodeUuid, "test" + nodeUuid).add();
-        addChildReportNode(reporter, subReporter);
-        addChildReportNode(reporter, ReportNode.newRootReportNode().withMessageTemplate(nodeUuid, nodeUuid)
-                .withUntypedValue(SUB_REPORT_ID, reportUuid).build());
-        return reporter;
+    private Report getNodeReport(UUID reportUuid, String nodeUuid) {
+        return Report.builder().id(reportUuid).message(nodeUuid).build();
     }
 }

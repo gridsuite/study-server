@@ -82,4 +82,14 @@ public final class StudyConstants {
     public enum ModificationsActionType {
         MOVE, COPY, INSERT
     }
+
+    public enum Severity {
+        UNKNOWN,
+        TRACE,
+        DEBUG,
+        INFO,
+        WARN,
+        ERROR,
+        FATAL
+    }
 }

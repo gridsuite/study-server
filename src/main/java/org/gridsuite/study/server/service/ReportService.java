@@ -6,15 +6,10 @@
  */
 package org.gridsuite.study.server.service;
 
-import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.commons.report.ReportNode;
-import com.powsybl.commons.report.ReportNodeDeserializer;
-import com.powsybl.commons.report.ReportNodeImpl;
-import com.powsybl.commons.report.ReportNodeJsonModule;
 import lombok.NonNull;
 import org.apache.poi.util.StringUtil;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.dto.Report;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -32,7 +27,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.utils.StudyUtils.insertReportNode;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -47,14 +41,9 @@ public class ReportService {
     private final RestTemplate restTemplate;
 
     @Autowired
-    public ReportService(ObjectMapper objectMapper,
-                         RemoteServicesProperties remoteServicesProperties,
+    public ReportService(RemoteServicesProperties remoteServicesProperties,
                          RestTemplate restTemplate) {
         this.reportServerBaseUri = remoteServicesProperties.getServiceUri("report-server");
-        ReportNodeJsonModule reporterModelJsonModule = new ReportNodeJsonModule();
-        reporterModelJsonModule.setSerializers(null); // FIXME: remove when dicos will be used on the front side
-        objectMapper.registerModule(reporterModelJsonModule);
-        objectMapper.setInjectableValues(new InjectableValues.Std().addValue(ReportNodeDeserializer.DICTIONARY_VALUE_ID, null)); //FIXME : remove with powsyble core
         this.restTemplate = restTemplate;
     }
 
@@ -70,7 +59,7 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "subreports" + DELIMITER;
     }
 
-    public ReportNode getReport(@NonNull UUID id, @NonNull String defaultName, String reportNameFilter, StudyService.ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels) {
+    public List<Report> getReport(@NonNull UUID id, @NonNull String defaultName, String reportNameFilter, StudyService.ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels) {
         var uriBuilder = UriComponentsBuilder.fromPath("{id}")
                 .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
                 .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
@@ -78,29 +67,21 @@ public class ReportService {
             uriBuilder.queryParam(QUERY_PARAM_REPORT_NAME_FILTER, reportNameFilter);
             uriBuilder.queryParam(QUERY_PARAM_REPORT_NAME_MATCHING_TYPE, reportNameMatchingType);
         }
-        return reportServerCall(id, this.getReportsServerURI(), uriBuilder);
-    }
-
-    public ReportNode getSubReport(@NonNull UUID id, Set<String> severityLevels) {
-        var uriBuilder = UriComponentsBuilder.fromPath("{id}")
-                .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
-        return reportServerCall(id, this.getSubReportsServerURI(), uriBuilder);
-    }
-
-    private ReportNode reportServerCall(UUID id, String serverUri, UriComponentsBuilder uriBuilder) {
         var path = uriBuilder.buildAndExpand(id).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        List<ReportNodeImpl> reporters = restTemplate.exchange(serverUri + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReportNodeImpl>>() {
+        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<Report>>() {
         }).getBody();
-        // TODO : Remove this hack when fix to avoid key collision in hades2 will be done
-        ReportNode reporter = ReportNode.newRootReportNode()
-                .withMessageTemplate(id.toString(), id.toString())
-                .build();
-        if (reporters != null) {
-            reporters.forEach(reportNode -> insertReportNode(reporter, reportNode));
-        }
-        return reporter;
+    }
+
+    public Report getSubReport(@NonNull UUID id, Set<String> severityLevels) {
+        var uriBuilder = UriComponentsBuilder.fromPath("{id}")
+                .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
+        var path = uriBuilder.buildAndExpand(id).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return restTemplate.exchange(this.getSubReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<Report>() {
+        }).getBody();
     }
 
     public void deleteReport(@NonNull UUID reportUuid) {
