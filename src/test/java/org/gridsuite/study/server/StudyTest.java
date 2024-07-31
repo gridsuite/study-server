@@ -16,7 +16,6 @@ import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.commons.report.ReportNodeJsonModule;
 import com.powsybl.iidm.network.Line;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
@@ -356,15 +355,6 @@ public class StudyTest {
 
         String baseUrlWireMock = wireMockServer.baseUrl();
         networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
-
-        // FIXME: remove lines when dicos will be used on the front side
-        // Override the custom module to restore the standard module in order to have the original serialization used like the report server
-        mapper.registerModule(new ReportNodeJsonModule() {
-            @Override
-            public Object getTypeId() {
-                return getClass().getName() + "override";
-            }
-        });
 
         String networkInfosAsString = mapper.writeValueAsString(NETWORK_INFOS);
         String notExistingNetworkInfosAsString = mapper.writeValueAsString(NOT_EXISTING_NETWORK_INFOS);

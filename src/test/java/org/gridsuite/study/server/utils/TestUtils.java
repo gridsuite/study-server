@@ -191,7 +191,7 @@ public final class TestUtils {
         return buf;
     }
 
-    public static void checkReportNodes(List<Report> reports, List<Report> expectedReports) {
+    public static void checkReports(List<Report> reports, List<Report> expectedReports) {
         reports.forEach(r -> assertThat(r, new MatcherReport(expectedReports.get(reports.indexOf(r)))));
     }
 }

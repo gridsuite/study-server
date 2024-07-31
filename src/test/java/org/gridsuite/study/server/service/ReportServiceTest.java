@@ -10,7 +10,6 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.commons.report.ReportNodeJsonModule;
 
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
@@ -51,12 +50,13 @@ import java.util.*;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_DEFAULT_NAME;
-import static org.gridsuite.study.server.utils.TestUtils.checkReportNodes;
+import static org.gridsuite.study.server.utils.TestUtils.checkReports;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.Assert.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -111,15 +111,6 @@ public class ReportServiceTest {
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         reportService.setReportServerBaseUri(baseUrl);
-
-        // FIXME: remove lines when dicos will be used on the front side
-        // Override the custom module to restore the standard module in order to have the original serialization used like the report server
-        mapper.registerModule(new ReportNodeJsonModule() {
-            @Override
-            public Object getTypeId() {
-                return getClass().getName() + "override";
-            }
-        });
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -180,7 +171,7 @@ public class ReportServiceTest {
         List<Report> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
         assertEquals(1, reports.size());
-        checkReportNodes(reports, expectedRootReports);
+        checkReports(reports, expectedRootReports);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), rootNode.getId()))
@@ -188,7 +179,7 @@ public class ReportServiceTest {
             .andReturn();
         reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
-        checkReportNodes(reports, expectedRootReports);
+        checkReports(reports, expectedRootReports);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         NetworkModificationNode node = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), rootNode.getId(), createModificationNodeInfo("Node1", MODIFICATION_NODE_REPORT_UUID), InsertMode.AFTER, null);
@@ -200,7 +191,7 @@ public class ReportServiceTest {
             .andReturn();
         reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
-        checkReportNodes(reports, expectedNodeReports);
+        checkReports(reports, expectedNodeReports);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), node.getId()))
@@ -209,7 +200,7 @@ public class ReportServiceTest {
         reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
         final List<Report> expectedReports = Stream.concat(expectedRootReports.stream(), expectedNodeReports.stream()).toList();
-        checkReportNodes(reports, expectedReports);
+        checkReports(reports, expectedReports);
         assertTrue(TestUtils.getRequestsDone(2, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
 
@@ -257,7 +248,7 @@ public class ReportServiceTest {
             .andReturn();
         List<Report> child1Reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
-        checkReportNodes(child1Reports, List.of(child1ExpectedReport));
+        checkReports(child1Reports, List.of(child1ExpectedReport));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         // get Child2 report + parents
@@ -271,7 +262,7 @@ public class ReportServiceTest {
         childrenAndParentsExpectedReports.add(rootExpectedReport);
         childrenAndParentsExpectedReports.add(modifNodeExpectedReport);
         childrenAndParentsExpectedReports.add(child2ExpectedReport);
-        checkReportNodes(child2AndParentsReports, childrenAndParentsExpectedReports);
+        checkReports(child2AndParentsReports, childrenAndParentsExpectedReports);
         assertTrue(TestUtils.getRequestsDone(childrenAndParentsExpectedReports.size(), server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         // get Child1 report + parents
@@ -282,7 +273,7 @@ public class ReportServiceTest {
         });
         // We are expecting one more node report, from Root to current node child1
         childrenAndParentsExpectedReports.add(child1ExpectedReport);
-        checkReportNodes(child1AndParentsReports, childrenAndParentsExpectedReports);
+        checkReports(child1AndParentsReports, childrenAndParentsExpectedReports);
         assertTrue(TestUtils.getRequestsDone(childrenAndParentsExpectedReports.size(), server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
 
