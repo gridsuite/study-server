@@ -1,0 +1,29 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:pro="http://www.liquibase.org/xml/ns/pro"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="chuinetri (assisted)" id="1719233731805-1">
+        <dropColumn tableName="study" columnName="load_flow_parameters_entity_id"/>
+        <dropColumn tableName="study" columnName="security_analysis_parameters_entity_id"/>
+        <dropColumn tableName="study" columnName="sensitivity_analysis_parameters_entity_id"/>
+        <dropColumn tableName="study" columnName="short_circuit_parameters_entity_id"/>
+    </changeSet>
+    <changeSet author="chuinetri (assisted)" id="1719233731805-2">
+        <dropTable cascadeConstraints="true" tableName="contingencies"/>
+        <dropTable cascadeConstraints="true" tableName="injections"/>
+        <dropTable cascadeConstraints="true" tableName="load_flow_parameters"/>
+        <dropTable cascadeConstraints="true" tableName="load_flow_parameters_entity_countries_to_balance"/>
+        <dropTable cascadeConstraints="true" tableName="load_flow_specific_parameters"/>
+        <dropTable cascadeConstraints="true" tableName="monitored_branch"/>
+        <dropTable cascadeConstraints="true" tableName="security_analysis_parameters"/>
+        <dropTable cascadeConstraints="true" tableName="sensitivity_analysis_parameters"/>
+        <dropTable cascadeConstraints="true" tableName="sensitivity_factor_for_injection_entity"/>
+        <dropTable cascadeConstraints="true" tableName="sensitivity_factor_for_node_entity"/>
+        <dropTable cascadeConstraints="true" tableName="sensitivity_factor_with_distrib_type_entity"/>
+        <dropTable cascadeConstraints="true" tableName="sensitivity_factor_with_sensi_type_for_hvdc_entity"/>
+        <dropTable cascadeConstraints="true" tableName="sensitivity_factor_with_sensi_type_for_pst_entity"/>
+        <dropTable cascadeConstraints="true" tableName="short_circuit_parameters"/>
+    </changeSet>
+</databaseChangeLog>

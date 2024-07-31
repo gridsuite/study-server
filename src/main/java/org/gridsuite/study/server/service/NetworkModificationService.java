@@ -53,6 +53,7 @@ public class NetworkModificationService {
     private static final String REPORT_UUID = "reportUuid";
     private static final String REPORTER_ID = "reporterId";
     private static final String VARIANT_ID = "variantId";
+    private static final String QUERY_PARAM_ACTION = "action";
     private final NetworkService networkStoreService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper;
@@ -290,7 +291,7 @@ public class NetworkModificationService {
     public Optional<NetworkModificationResult> moveModifications(UUID originGroupUuid, List<UUID> modificationUuidList, UUID beforeUuid, UUID networkUuid, NodeModificationInfos nodeInfos, boolean buildTargetNode) {
         Objects.requireNonNull(networkUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
-            .queryParam("action", "MOVE")
+            .queryParam(QUERY_PARAM_ACTION, ModificationsActionType.MOVE.name())
             .queryParam(NETWORK_UUID, networkUuid)
             .queryParam(REPORT_UUID, nodeInfos.getReportUuid())
             .queryParam(REPORTER_ID, nodeInfos.getId())
@@ -311,9 +312,9 @@ public class NetworkModificationService {
                 }).getBody();
     }
 
-    public Optional<NetworkModificationResult> duplicateModification(List<UUID> modificationUuidList, UUID networkUuid, NodeModificationInfos nodeInfos) {
+    public Optional<NetworkModificationResult> createModifications(List<UUID> modificationUuidList, UUID networkUuid, NodeModificationInfos nodeInfos, ModificationsActionType action) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
-            .queryParam("action", "COPY")
+            .queryParam(QUERY_PARAM_ACTION, action.name())
             .queryParam(NETWORK_UUID, networkUuid)
             .queryParam(REPORT_UUID, nodeInfos.getReportUuid())
             .queryParam(REPORTER_ID, nodeInfos.getId())

@@ -113,6 +113,7 @@ public class StudyException extends RuntimeException {
         STATE_ESTIMATION_RUNNING,
         STATE_ESTIMATION_NOT_FOUND,
         STATE_ESTIMATION_ERROR,
+        MAX_NODE_BUILDS_EXCEEDED,
     }
 
     private final Type type;

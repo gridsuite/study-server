@@ -695,7 +695,8 @@ public class SensitivityAnalysisTest {
     public void testGetSensitivityAnalysisFactorsCount() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         UUID studyNameUserIdUuid = studyEntity.getId();
-        MockHttpServletRequestBuilder requestBuilder = get("/v1/studies/{studyUuid}/sensitivity-analysis/factors-count", studyNameUserIdUuid);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+        MockHttpServletRequestBuilder requestBuilder = get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/factors-count", studyNameUserIdUuid, rootNodeUuid);
         IDS.getIds().forEach((key, list) -> requestBuilder.queryParam(String.format("ids[%s]", key), list.stream().map(UUID::toString).toArray(String[]::new)));
 
         String resultAsString = mockMvc.perform(requestBuilder.header("userId", "userId"))

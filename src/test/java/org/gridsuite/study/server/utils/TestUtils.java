@@ -11,11 +11,10 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.google.common.io.ByteStreams;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.commons.report.ReportNode;
-import com.powsybl.commons.report.ReportNodeAdder;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
+import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
@@ -192,15 +191,7 @@ public final class TestUtils {
         return buf;
     }
 
-    public static ReportNode addChildReportNode(ReportNode parent, ReportNode child) {
-        ReportNodeAdder adder = parent.newReportNode();
-        adder.withMessageTemplate(child.getMessageKey(), child.getMessageKey());
-        child.getValues().keySet().forEach(key -> adder.withUntypedValue(key, child.getValue(key).toString()));
-        adder.add();
-        return parent;
-    }
-
-    public static void checkReportNodes(List<ReportNode> reports, List<ReportNode> expectedReports) {
+    public static void checkReports(List<Report> reports, List<Report> expectedReports) {
         reports.forEach(r -> assertThat(r, new MatcherReport(expectedReports.get(reports.indexOf(r)))));
     }
 }

@@ -395,10 +395,13 @@ public class SensitivityAnalysisService {
         }
     }
 
-    public Long getSensitivityAnalysisFactorsCount(UUID networkUuid, SensitivityFactorsIdsByGroup factorsIds, Boolean isInjectionsSet) {
+    public Long getSensitivityAnalysisFactorsCount(UUID networkUuid, String variantId, SensitivityFactorsIdsByGroup factorsIds, Boolean isInjectionsSet) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/factors-count")
                 .queryParam("isInjectionsSet", isInjectionsSet);
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
 
         factorsIds.getIds().forEach((key, value) -> uriComponentsBuilder.queryParam(String.format("ids[%s]", key), value));
 
