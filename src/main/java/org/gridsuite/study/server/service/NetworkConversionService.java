@@ -92,15 +92,23 @@ public class NetworkConversionService {
         return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public ExportNetworkInfos exportNetwork(UUID networkUuid, String variantId, String nodeName, String studyName, String format, String paramatersJson) {
+    /**
+     * @param fileName name of the exported file. If null, a file name is generated from the study and node names
+     */
+    public ExportNetworkInfos exportNetwork(UUID networkUuid, String variantId, String nodeName, String studyName,
+                                            String format, String paramatersJson, String fileName) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
                 + "/networks/{networkUuid}/export/{format}");
         if (!variantId.isEmpty()) {
             uriComponentsBuilder.queryParam("variantId", variantId);
         }
 
-        if (!StringUtils.isEmpty(studyName) && !StringUtils.isEmpty(nodeName)) {
-            uriComponentsBuilder.queryParam("fileName", URLEncoder.encode(studyName + "_" + nodeName, StandardCharsets.UTF_8));
+        String finalFilename = fileName;
+        if (StringUtils.isEmpty(finalFilename) && !StringUtils.isEmpty(studyName) && !StringUtils.isEmpty(nodeName)) {
+            finalFilename = URLEncoder.encode(studyName + "_" + nodeName, StandardCharsets.UTF_8);
+        }
+        if (!StringUtils.isEmpty(finalFilename)) {
+            uriComponentsBuilder.queryParam("fileName", finalFilename);
         }
 
         String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
