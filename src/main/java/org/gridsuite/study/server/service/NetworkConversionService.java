@@ -103,11 +103,12 @@ public class NetworkConversionService {
             uriComponentsBuilder.queryParam("variantId", variantId);
         }
 
-        if (StringUtils.isEmpty(fileName) && !StringUtils.isEmpty(studyName) && !StringUtils.isEmpty(nodeName)) {
-            fileName = URLEncoder.encode(studyName + "_" + nodeName, StandardCharsets.UTF_8);
+        String finalFilename = fileName;
+        if (StringUtils.isEmpty(finalFilename) && !StringUtils.isEmpty(studyName) && !StringUtils.isEmpty(nodeName)) {
+            finalFilename = URLEncoder.encode(studyName + "_" + nodeName, StandardCharsets.UTF_8);
         }
-        if (!StringUtils.isEmpty(fileName)) {
-            uriComponentsBuilder.queryParam("fileName", fileName);
+        if (!StringUtils.isEmpty(finalFilename)) {
+            uriComponentsBuilder.queryParam("fileName", finalFilename);
         }
 
         String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
