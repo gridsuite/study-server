@@ -228,7 +228,7 @@ public class SingleLineDiagramTest {
                         return new MockResponse().setResponseCode(500)
                             .addHeader("Content-Type", "application/json; charset=utf-8")
                             .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"tmp\",\"path\":\"/v1/networks\"}");
-                    case "/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&voltageLevelsIds=vlFr1A":
+                    case "/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&initGeoData=true&voltageLevelsIds=vlFr1A":
                         return new MockResponse().setResponseCode(200).setBody("nad-svg")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -363,17 +363,17 @@ public class SingleLineDiagramTest {
                         randomUuid, rootNodeUuid, "substationId")).andExpect(status().isNotFound());
 
         // get the network area diagram
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&voltageLevelsIds=vlFr1A", studyNameUserIdUuid, rootNodeUuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&initGeoData=true&voltageLevelsIds=vlFr1A", studyNameUserIdUuid, rootNodeUuid))
             .andExpectAll(
                 content().contentType(MediaType.APPLICATION_JSON),
                 status().isOk(),
                 content().string("nad-svg")
             );
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&voltageLevelsIds=vlFr1A")));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&initGeoData=true&voltageLevelsIds=vlFr1A")));
 
         // get the network area diagram from a study that doesn't exist
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&voltageLevelsIds=vlFr1A", randomUuid, rootNodeUuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&initGeoData=true&voltageLevelsIds=vlFr1A", randomUuid, rootNodeUuid))
             .andExpect(status().isNotFound());
 
         //get voltage levels
