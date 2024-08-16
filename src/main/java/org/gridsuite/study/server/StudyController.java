@@ -1003,8 +1003,8 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Voltage levels ids") @RequestParam(name = "voltageLevelsIds") List<String> voltageLevelsIds,
             @Parameter(description = "depth") @RequestParam(name = "depth", defaultValue = "0") int depth,
-            @Parameter(description = "Initialize NAD with Geographical Data") @RequestParam(name = "initGeoData", defaultValue = "true") boolean initGeoData) {
-        String result = studyService.getNetworkAreaDiagram(studyUuid, nodeUuid, voltageLevelsIds, depth, initGeoData);
+            @Parameter(description = "Initialize NAD with Geographical Data") @RequestParam(name = "withGeoData", defaultValue = "true") boolean withGeoData) {
+        String result = studyService.getNetworkAreaDiagram(studyUuid, nodeUuid, voltageLevelsIds, depth, withGeoData);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
