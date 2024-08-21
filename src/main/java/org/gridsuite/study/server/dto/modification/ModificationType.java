@@ -29,6 +29,7 @@ public enum ModificationType {
     GROOVY_SCRIPT,
     OPERATING_STATUS_MODIFICATION,
     SHUNT_COMPENSATOR_CREATION,
+    STATIC_VAR_COMPENSATOR_CREATION,
     LINES_ATTACH_TO_SPLIT_LINES,
     LOAD_SCALING,
     DELETE_VOLTAGE_LEVEL_ON_LINE,
@@ -52,6 +53,8 @@ public enum ModificationType {
                 return "substations";
             case SHUNT_COMPENSATOR_CREATION:
                 return "shunt-compensators";
+            case STATIC_VAR_COMPENSATOR_CREATION:
+                return "static-var-compensators";
             case VOLTAGE_LEVEL_CREATION:
                 return "voltage-levels";
             case LINE_SPLIT_WITH_VOLTAGE_LEVEL:
