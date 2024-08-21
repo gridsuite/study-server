@@ -1638,7 +1638,7 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<Report> getNodeReport(UUID nodeUuid, String reportId, ReportType reportType, Set<String> severityLevels) {
+    public List<Report> getNodeReport(UUID nodeUuid, String reportId, Set<String> severityLevels) {
         return reportService.getReport(UUID.fromString(reportId), nodeUuid.toString(), null, null, severityLevels);
     }
 
