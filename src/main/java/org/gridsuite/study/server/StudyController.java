@@ -780,9 +780,9 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("format") String format,
             @RequestParam(value = "formatParameters", required = false) String parametersJson,
-            @RequestParam(value = "studyName", required = false) String studyName) {
+            @RequestParam(value = "fileName") String fileName) {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid);
-        ExportNetworkInfos exportNetworkInfos = studyService.exportNetwork(studyUuid, nodeUuid, format, parametersJson, studyName);
+        ExportNetworkInfos exportNetworkInfos = studyService.exportNetwork(studyUuid, nodeUuid, format, parametersJson, fileName);
 
         HttpHeaders header = new HttpHeaders();
         header.setContentDisposition(ContentDisposition.builder("attachment").filename(exportNetworkInfos.getFileName(), StandardCharsets.UTF_8).build());
