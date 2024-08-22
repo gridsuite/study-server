@@ -1637,8 +1637,8 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<Report> getNodeReport(UUID nodeUuid, String reportId, ReportType reportType, Set<String> severityLevels) {
-        return reportService.getReport(UUID.fromString(reportId), nodeUuid.toString(), nodeUuid + "@" + reportType.reportKey, ReportNameMatchingType.EXACT_MATCHING, severityLevels);
+    public List<Report> getNodeReport(UUID nodeUuid, String reportId, Set<String> severityLevels) {
+        return reportService.getReport(UUID.fromString(reportId), nodeUuid.toString(), null, null, severityLevels);
     }
 
     private Pair<String, ReportNameMatchingType> getFiltersParamaters(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType) {
