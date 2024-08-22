@@ -142,7 +142,7 @@ public class StudyTest {
     private static final NetworkInfos NETWORK_INFOS = new NetworkInfos(NETWORK_UUID, "20140116_0830_2D4_UX1_pst");
     private static final NetworkInfos NOT_EXISTING_NETWORK_INFOS = new NetworkInfos(NOT_EXISTING_NETWORK_UUID, "not_existing_network_id");
     private static final UUID REPORT_UUID = UUID.randomUUID();
-    private static final Report REPORT_TEST = Report.builder().id(REPORT_UUID).message("test").severity(StudyConstants.Severity.WARN).build();
+    private static final Report REPORT_TEST = Report.builder().id(REPORT_UUID).message("test").severities(List.of(StudyConstants.Severity.WARN)).build();
     private static final String VARIANT_ID = "variant_1";
     private static final String POST = "POST";
     private static final String DELETE = "DELETE";

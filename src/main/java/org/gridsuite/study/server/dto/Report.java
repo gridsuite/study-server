@@ -21,7 +21,6 @@ import java.util.UUID;
 public record Report(
         UUID id,
         String message,
-        StudyConstants.Severity severity,
-        List<StudyConstants.Severity> subReportsSeverities,
+        List<StudyConstants.Severity> severities,
         List<Report> subReports
 ) { }
