@@ -2022,6 +2022,13 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
+    @Transactional
+    public void invalidateSecurityAnalysisStatus(UUID studyUuid, String userId) {
+        invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
     public void invalidateShortCircuitStatusOnAllNodes(UUID studyUuid) {
         shortCircuitService.invalidateShortCircuitStatus(networkModificationTreeService.getShortCircuitResultUuids(studyUuid));
     }

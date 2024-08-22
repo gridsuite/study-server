@@ -1763,6 +1763,17 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/security-analysis/invalidate-status")
+    @Operation(summary = "Invalidate security analysis status on study nodes")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The security analysis status has been invalidated on all study nodes"),
+        @ApiResponse(responseCode = "404", description = "The study is not found")})
+    public ResponseEntity<Void> invalidateSecurityAnalysisStatus(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                 @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.invalidateSecurityAnalysisStatus(studyUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/short-circuit/invalidate-status")
     @Operation(summary = "Invalidate short circuit status on study nodes")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit status has been invalidated on all study nodes"),
