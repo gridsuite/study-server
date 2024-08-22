@@ -288,6 +288,9 @@ public class SecurityAnalysisTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", MediaType.APPLICATION_JSON_UTF8)
                         .setBody("1");
+                } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=.*")) {
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID)) {
                     if (method.equals("GET")) {
                         return new MockResponse().setResponseCode(200)
@@ -802,6 +805,37 @@ public class SecurityAnalysisTest {
                 && CSV_TRANSLATION_DTO_STRING.equals(r.getBody())
         ));
     }
+
+    @Test
+    public void testInvalidateStatus() throws Exception {
+
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID nodeUuid = modificationNode.getId();
+
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
+                studyUuid, nodeUuid, CONTINGENCY_LIST_NAME).header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
+        assertEquals(1, networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
+
+        // we dont care about previous messages, already tested in the others tests
+        output.clear();
+        //invalidate status
+        mockMvc.perform(put("/v1/studies/{studyUuid}/security-analysis/invalidate-status", studyUuid)
+                .header("userId", "userId")).andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=.*")));
+        Message<byte[]> securityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertNull(securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
+    }
+
+
 
     private void cleanDB() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
