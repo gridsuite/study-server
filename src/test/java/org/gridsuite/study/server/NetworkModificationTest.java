@@ -217,6 +217,7 @@ public class NetworkModificationTest {
     private UUID userProfileQuotaStubId;
     private UUID userProfileQuotaExceededStubId;
     private UUID userProfileNoQuotaStubId;
+    private UUID userNoProfileStubId;
 
     private final String errorMessage = "nullPointerException: unexpected null somewhere";
 
@@ -277,6 +278,8 @@ public class NetworkModificationTest {
                 .willReturn(WireMock.ok()
                 .withBody((String) null)
                 .withHeader("Content-Type", "application/json"))).getId();
+        userNoProfileStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID_NO_PROFILE + "/profile/max-builds"))
+                .willReturn(WireMock.notFound())).getId();
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -462,6 +465,20 @@ public class NetworkModificationTest {
 
         // build modificationNode1: ok
         testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode1.getId(), userId, userProfileNoQuotaStubId);
+    }
+
+    @Test
+    public void testBuildNoProfile() throws Exception {
+        String userId = USER_ID_NO_PROFILE;
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        UUID modificationGroupUuid1 = UUID.randomUUID();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+                modificationGroupUuid1, "variant_1", "node 1", userId);
+
+        // build modificationNode1: ok
+        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode1.getId(), userId, userNoProfileStubId);
     }
 
     @Test
