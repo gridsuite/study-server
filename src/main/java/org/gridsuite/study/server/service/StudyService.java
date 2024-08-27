@@ -1243,11 +1243,11 @@ public class StudyService {
 
     private void assertCanBuildNode(@NonNull UUID studyUuid, @NonNull String userId) {
         // check restrictions on node builds number
-        UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId).orElse(null);
-        if (userProfileInfos != null && userProfileInfos.getMaxAllowedBuilds() != null) {
+        Optional<Integer> maxAllowedBuilds = userAdminService.getUserMaxAllowedBuilds(userId);
+        if (maxAllowedBuilds.isPresent()) {
             long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid);
-            if (nbBuiltNodes >= userProfileInfos.getMaxAllowedBuilds()) {
-                throw new StudyException(MAX_NODE_BUILDS_EXCEEDED, "max allowed built nodes : " + userProfileInfos.getMaxAllowedBuilds());
+            if (nbBuiltNodes >= maxAllowedBuilds.get()) {
+                throw new StudyException(MAX_NODE_BUILDS_EXCEEDED, "max allowed built nodes : " + maxAllowedBuilds.get());
             }
         }
     }
