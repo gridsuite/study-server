@@ -12,7 +12,7 @@ spring:
       consumeCaseImportSucceeded;consumeCaseImportFailed;\
       consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;\
       consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;\
-      consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;\
+      consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeVoltageInitCancelFailed;\
       consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed;\
       consumeNonEvacuatedEnergyResult;consumeNonEvacuatedEnergyStopped;consumeNonEvacuatedEnergyFailed;\
       consumeStateEstimationResult;consumeStateEstimationStopped;consumeStateEstimationFailed"
@@ -94,6 +94,9 @@ spring:
         consumeVoltageInitFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.failed
           group: studyVoltageInitFailedGroup
+        consumeVoltageInitCancelFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.cancelfailed
+          group: studyVoltageInitCancelFailedGroup
         consumeStateEstimationResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.result
           group: studyStateEstimationResultGroup
