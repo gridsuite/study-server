@@ -1243,13 +1243,12 @@ public class StudyService {
 
     private void assertCanBuildNode(@NonNull UUID studyUuid, @NonNull String userId) {
         // check restrictions on node builds number
-        Optional<Integer> maxAllowedBuilds = userAdminService.getUserMaxAllowedBuilds(userId);
-        if (maxAllowedBuilds.isPresent()) {
+        userAdminService.getUserMaxAllowedBuilds(userId).ifPresent(maxBuilds -> {
             long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid);
-            if (nbBuiltNodes >= maxAllowedBuilds.get()) {
-                throw new StudyException(MAX_NODE_BUILDS_EXCEEDED, "max allowed built nodes : " + maxAllowedBuilds.get());
+            if (nbBuiltNodes >= maxBuilds) {
+                throw new StudyException(MAX_NODE_BUILDS_EXCEEDED, "max allowed built nodes : " + maxBuilds);
             }
-        }
+        });
     }
 
     public void unbuildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
