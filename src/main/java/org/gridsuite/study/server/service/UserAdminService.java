@@ -27,6 +27,8 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 @Service
 public class UserAdminService {
     private static final String USERS_PROFILE_URI = "/users/{sub}/profile";
+
+    private static final String USERS_MAX_ALLOWED_BUILDS_URI = USERS_PROFILE_URI + "/max-builds";
     private final RestTemplate restTemplate;
     private String userAdminServerBaseUri;
 
@@ -48,6 +50,19 @@ public class UserAdminService {
         } catch (HttpStatusCodeException e) {
             if (e.getStatusCode().value() == 404) {
                 return Optional.empty(); // a user may not have a profile
+            }
+            throw handleHttpError(e, GET_USER_PROFILE_FAILED);
+        }
+    }
+
+    public Optional<Integer> getUserMaxAllowedBuilds(String sub) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_MAX_ALLOWED_BUILDS_URI)
+            .buildAndExpand(sub).toUriString();
+        try {
+            return Optional.ofNullable(restTemplate.getForObject(userAdminServerBaseUri + path, Integer.class));
+        } catch (HttpStatusCodeException e) {
+            if (e.getStatusCode().value() == 404) {
+                return Optional.empty(); // no profile == unlimited builds
             }
             throw handleHttpError(e, GET_USER_PROFILE_FAILED);
         }
