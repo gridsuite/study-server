@@ -20,6 +20,7 @@ import java.util.UUID;
 @Builder
 public record Report(
         UUID id,
+        UUID parentId,
         String message,
         List<StudyConstants.Severity> severities,
         List<Report> subReports
