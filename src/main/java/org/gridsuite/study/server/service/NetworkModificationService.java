@@ -225,6 +225,28 @@ public class NetworkModificationService {
         }
     }
 
+    public void updateModificationsActivation(UUID groupUUid, List<UUID> modificationsUuids, boolean active) {
+        Objects.requireNonNull(groupUUid);
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder
+            .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
+            .queryParam(UUIDS, modificationsUuids)
+            .queryParam(GROUP_UUID, groupUUid)
+            .queryParam(QUERY_PARAM_ACTIVE, active)
+            .buildAndExpand()
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
+        try {
+            restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
+        }
+    }
+
     public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);

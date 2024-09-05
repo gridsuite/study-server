@@ -1121,7 +1121,7 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", params = "stashed")
     @Operation(summary = "Stash network modifications for a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications were stashed / restored "), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> stashNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
@@ -1135,6 +1135,19 @@ public class StudyController {
         } else {
             studyService.restoreNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
         }
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", params = "active")
+    @Operation(summary = "Update 'active' value for a network modifications for a node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications were stashed / restored "), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Void> updateNetworkModificationsActivation(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                          @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                          @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
+                                                          @Parameter(description = "New active value") @RequestParam(name = "active", required = true) Boolean active,
+                                                          @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.updateNetworkModificationsActivation(studyUuid, nodeUuid, networkModificationUuids, userId, active);
         return ResponseEntity.ok().build();
     }
 
