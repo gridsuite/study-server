@@ -14,6 +14,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeStatusEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 
 import java.util.HashSet;
@@ -48,38 +49,40 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getModificationGroupUuid(),
-            modificationNode.getVariantId(),
-            modificationNode.getModificationsToExclude(),
-            modificationNode.getShortCircuitAnalysisResultUuid(),
-            modificationNode.getOneBusShortCircuitAnalysisResultUuid(),
-            modificationNode.getLoadFlowResultUuid(),
-            modificationNode.getVoltageInitResultUuid(),
-            modificationNode.getSecurityAnalysisResultUuid(),
-            modificationNode.getSensitivityAnalysisResultUuid(),
-            modificationNode.getNonEvacuatedEnergyResultUuid(),
-            modificationNode.getDynamicSimulationResultUuid(),
-            modificationNode.getStateEstimationResultUuid(),
-            modificationNode.getNodeBuildStatus().toEntity());
+            List.of(TimePointNodeStatusEntity.builder()
+                .variantId(modificationNode.getVariantId())
+                .modificationsToExclude(modificationNode.getModificationsToExclude())
+                .shortCircuitAnalysisResultUuid(modificationNode.getShortCircuitAnalysisResultUuid())
+                .oneBusShortCircuitAnalysisResultUuid(modificationNode.getOneBusShortCircuitAnalysisResultUuid())
+                .loadFlowResultUuid(modificationNode.getLoadFlowResultUuid())
+                .voltageInitResultUuid(modificationNode.getVoltageInitResultUuid())
+                .securityAnalysisResultUuid(modificationNode.getSecurityAnalysisResultUuid())
+                .sensitivityAnalysisResultUuid(modificationNode.getSensitivityAnalysisResultUuid())
+                .nonEvacuatedEnergyResultUuid(modificationNode.getNonEvacuatedEnergyResultUuid())
+                .dynamicSimulationResultUuid(modificationNode.getDynamicSimulationResultUuid())
+                .stateEstimationResultUuid(modificationNode.getStateEstimationResultUuid())
+                .nodeBuildStatus(modificationNode.getNodeBuildStatus().toEntity()).build()));
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
     @Override
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
         @SuppressWarnings("unused")
-        int ignoreSize = node.getModificationsToExclude().size(); // to load the lazy collection
+        TimePointNodeStatusEntity timePointNodeStatusEntity = node.getFirstTimePointNodeStatusEntity();
+        int ignoreSize = timePointNodeStatusEntity.getModificationsToExclude().size(); // to load the lazy collection
         return completeNodeInfo(node, new NetworkModificationNode(node.getModificationGroupUuid(),
-            node.getVariantId(),
-            new HashSet<>(node.getModificationsToExclude()), // Need to create a new set because it is a persistent set (org.hibernate.collection.internal.PersistentSet)
-            node.getLoadFlowResultUuid(),
-            node.getShortCircuitAnalysisResultUuid(),
-            node.getOneBusShortCircuitAnalysisResultUuid(),
-            node.getVoltageInitResultUuid(),
-            node.getSecurityAnalysisResultUuid(),
-            node.getSensitivityAnalysisResultUuid(),
-            node.getNonEvacuatedEnergyResultUuid(),
-            node.getDynamicSimulationResultUuid(),
-            node.getStateEstimationResultUuid(),
-            node.getNodeBuildStatus().toDto()));
+            timePointNodeStatusEntity.getVariantId(),
+            new HashSet<>(timePointNodeStatusEntity.getModificationsToExclude()), // Need to create a new set because it is a persistent set (org.hibernate.collection.internal.PersistentSet)
+            timePointNodeStatusEntity.getLoadFlowResultUuid(),
+            timePointNodeStatusEntity.getShortCircuitAnalysisResultUuid(),
+            timePointNodeStatusEntity.getOneBusShortCircuitAnalysisResultUuid(),
+            timePointNodeStatusEntity.getVoltageInitResultUuid(),
+            timePointNodeStatusEntity.getSecurityAnalysisResultUuid(),
+            timePointNodeStatusEntity.getSensitivityAnalysisResultUuid(),
+            timePointNodeStatusEntity.getNonEvacuatedEnergyResultUuid(),
+            timePointNodeStatusEntity.getDynamicSimulationResultUuid(),
+            timePointNodeStatusEntity.getStateEstimationResultUuid(),
+            timePointNodeStatusEntity.getNodeBuildStatus().toDto()));
     }
 
     @Override

@@ -120,6 +120,7 @@ public class StudyService {
     private final ActionsService actionsService;
     private final CaseService caseService;
     private final StateEstimationService stateEstimationService;
+    private final TimePointRepository timePointRepository;
 
     private final ObjectMapper objectMapper;
 
@@ -180,6 +181,7 @@ public class StudyService {
             DynamicSimulationEventService dynamicSimulationEventService,
             FilterService filterService,
             StateEstimationService stateEstimationService,
+            TimePointRepository timePointRepository,
             @Lazy StudyService studyService) {
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
@@ -212,12 +214,13 @@ public class StudyService {
         this.filterService = filterService;
         this.stateEstimationService = stateEstimationService;
         this.self = studyService;
+        this.timePointRepository = timePointRepository;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
         return StudyInfos.builder()
                 .id(entity.getId())
-                .caseFormat(entity.getCaseFormat())
+                .caseFormat(entity.getFirstTimepoint().getCaseFormat())
                 .build();
     }
 
@@ -230,7 +233,7 @@ public class StudyService {
     private static CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity) {
         return CreatedStudyBasicInfos.builder()
                 .id(entity.getId())
-                .caseFormat(entity.getCaseFormat())
+                .caseFormat(entity.getFirstTimepoint().getCaseFormat())
                 .build();
     }
 
@@ -242,7 +245,7 @@ public class StudyService {
 
     public List<UUID> getStudiesNetworkUuids() {
         return studyRepository.findAll().stream()
-                .map(StudyEntity::getNetworkUuid)
+                .map(study -> study.getFirstTimepoint().getNetworkUuid())
                 .toList();
     }
 
@@ -253,7 +256,7 @@ public class StudyService {
     public String getStudyCaseName(UUID studyUuid) {
         Objects.requireNonNull(studyUuid);
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        return study != null ? study.getCaseName() : "";
+        return study != null ? study.getFirstTimepoint().getCaseName() : "";
     }
 
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
@@ -360,7 +363,7 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public UUID getStudyCaseUuid(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getCaseUuid();
+        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getFirstTimepoint().getCaseUuid();
     }
 
     public List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
@@ -394,7 +397,7 @@ public class StudyService {
             List<NodeModificationInfos> nodesModificationInfos;
             nodesModificationInfos = networkModificationTreeService.getAllNodesModificationInfos(studyUuid);
             studyEntity.ifPresent(s -> {
-                caseUuid.set(studyEntity.get().getCaseUuid());
+                caseUuid.set(studyEntity.get().getFirstTimepoint().getCaseUuid());
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
@@ -491,10 +494,11 @@ public class StudyService {
         Objects.requireNonNull(caseUuid);
         Objects.requireNonNull(importParameters);
 
-        StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(new StudyEntity(studyUuid, networkUuid, networkId, caseFormat, caseUuid, caseName,
+        StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(new StudyEntity(studyUuid, List.of(),
                         null, null, null, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
                         loadFlowParametersUuid, shortCircuitParametersUuid, dynamicSimulationParametersEntity, voltageInitParametersUuid, securityAnalysisParametersUuid,
                         sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED, new StudyVoltageInitParametersEntity()),
+                new TimePointEntity(null, null, null, networkUuid, networkId, caseFormat, caseUuid, caseName),
                 importReportUuid);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
@@ -522,12 +526,12 @@ public class StudyService {
 
         StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
-        List<VariantInfos> networkVariants = networkStoreService.getNetworkVariants(sourceStudy.getNetworkUuid());
+        List<VariantInfos> networkVariants = networkStoreService.getNetworkVariants(sourceStudy.getFirstTimepoint().getNetworkUuid());
         List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(2).collect(Collectors.toList());
-        Network clonedNetwork = networkStoreService.cloneNetwork(sourceStudy.getNetworkUuid(), targetVariantIds);
+        Network clonedNetwork = networkStoreService.cloneNetwork(sourceStudy.getFirstTimepoint().getNetworkUuid(), targetVariantIds);
         UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
 
-        UUID clonedCaseUuid = caseService.duplicateCase(sourceStudy.getCaseUuid(), false);
+        UUID clonedCaseUuid = caseService.duplicateCase(sourceStudy.getFirstTimepoint().getCaseUuid(), false);
 
         Map<String, String> newImportParameters = Map.copyOf(sourceStudy.getImportParameters());
 
@@ -564,9 +568,13 @@ public class StudyService {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyInfos.getId())
-                .networkUuid(clonedNetworkUuid).networkId(sourceStudy.getNetworkId())
-                .caseFormat(sourceStudy.getCaseFormat()).caseUuid(clonedCaseUuid).caseName(sourceStudy.getCaseName())
-                .loadFlowParametersUuid(copiedLoadFlowParametersUuid)
+                .timePoints(List.of(
+                    TimePointEntity.builder()
+                        .networkUuid(clonedNetworkUuid).networkId(sourceStudy.getFirstTimepoint().getNetworkId())
+                        .caseFormat(sourceStudy.getFirstTimepoint().getCaseFormat()).caseUuid(clonedCaseUuid).caseName(sourceStudy.getFirstTimepoint().getCaseName())
+                        .build()
+                ))
+               .loadFlowParametersUuid(copiedLoadFlowParametersUuid)
                 .securityAnalysisParametersUuid(copiedSecurityAnalysisParametersUuid)
                 .nonEvacuatedEnergyProvider(sourceStudy.getNonEvacuatedEnergyProvider())
                 .dynamicSimulationProvider(sourceStudy.getDynamicSimulationProvider())
@@ -1035,8 +1043,8 @@ public class StudyService {
     @Transactional
     public StudyEntity updateStudyEntityNetwork(StudyEntity studyEntity, NetworkInfos networkInfos) {
         if (networkInfos != null) {
-            studyEntity.setNetworkId(networkInfos.getNetworkId());
-            studyEntity.setNetworkUuid(networkInfos.getNetworkUuid());
+            studyEntity.getFirstTimepoint().setNetworkId(networkInfos.getNetworkId());
+            studyEntity.getFirstTimepoint().setNetworkUuid(networkInfos.getNetworkUuid());
 
             studyRepository.save(studyEntity);
         }
@@ -1055,7 +1063,10 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity saveStudyThenCreateBasicTree(StudyEntity studyEntity, UUID importReportUuid) {
+    public StudyEntity saveStudyThenCreateBasicTree(StudyEntity studyEntity, TimePointEntity timePointEntity, UUID importReportUuid) {
+        studyEntity.setTimePoints(List.of(timePointEntity));
+        timePointEntity.setStudy(studyEntity);
+        timePointRepository.save(timePointEntity);
         var study = studyRepository.save(studyEntity);
 
         networkModificationTreeService.createBasicTree(study, importReportUuid);
@@ -1535,7 +1546,7 @@ public class StudyService {
         // Reset indexation status
         updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXING_ONGOING);
         try {
-            networkConversionService.reindexStudyNetworkEquipments(study.getNetworkUuid());
+            networkConversionService.reindexStudyNetworkEquipments(study.getFirstTimepoint().getNetworkUuid());
             updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXED);
         } catch (Exception e) {
             // Allow to retry indexation
@@ -1555,7 +1566,7 @@ public class StudyService {
     public StudyIndexationStatus getStudyIndexationStatus(UUID studyUuid) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         if (study.getIndexationStatus() == StudyIndexationStatus.INDEXED
-                && !networkConversionService.checkStudyIndexationStatus(study.getNetworkUuid())) {
+                && !networkConversionService.checkStudyIndexationStatus(study.getFirstTimepoint().getNetworkUuid())) {
             updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
         }
         return study.getIndexationStatus();

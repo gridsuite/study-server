@@ -84,7 +84,7 @@ public class NetworkService {
     }
 
     UUID doGetNetworkUuid(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).map(StudyEntity::getNetworkUuid).orElse(null);
+        return studyRepository.findById(studyUuid).map(study -> study.getFirstTimepoint().getNetworkUuid()).orElse(null);
     }
 
     void deleteNetwork(UUID networkUuid) {
