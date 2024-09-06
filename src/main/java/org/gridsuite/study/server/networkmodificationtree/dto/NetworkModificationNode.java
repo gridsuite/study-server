@@ -12,6 +12,7 @@ import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -54,6 +55,10 @@ public class NetworkModificationNode extends AbstractNode {
     private UUID stateEstimationResultUuid;
 
     private NodeBuildStatus nodeBuildStatus;
+
+    private Map<String, UUID> computationsReports;
+
+    private Map<UUID, UUID> modificationReports;
 
     @Override
     public NodeType getType() {

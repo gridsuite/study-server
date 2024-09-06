@@ -33,13 +33,13 @@ public class BuildInfos {
 
     private List<UUID> modificationGroupUuids = new ArrayList<>();
 
-    private List<String> reporterIds = new ArrayList<>();
+    private List<ReportInfos> reportsInfos = new ArrayList<>();
 
     private Set<UUID> modificationsToExclude = new HashSet<>();
 
-    public void insertModificationInfos(UUID modificationGroupUuid, String reporterId) {
+    public void insertModificationInfos(UUID modificationGroupUuid, ReportInfos reportInfos) {
         modificationGroupUuids.add(0, modificationGroupUuid);
-        reporterIds.add(0, reporterId);
+        reportsInfos.add(0, reportInfos);
     }
 
     public void addModificationsToExclude(Set<UUID> modificationsUuid) {

@@ -47,6 +47,12 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
     public void updateComputationResultUuid(AbstractNode node, UUID resultUuid, ComputationType computationType) {
     }
 
+    public void updateComputationReportUuid(AbstractNode node, UUID reportUuid, ComputationType computationType) {
+    }
+
+    public void setModificationReports(AbstractNode node, Map<UUID, UUID> reports) {
+    }
+
     public NodeBuildStatus getNodeBuildStatus(AbstractNode node) {
         return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
     }
@@ -57,6 +63,14 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
      * @return UUID of the computation of this type, done on this node
      */
     public UUID getComputationResultUuid(AbstractNode node, ComputationType computationType) {
+        return null;
+    }
+
+    public Map<String, UUID> getComputationReports(AbstractNode node) {
+        return null;
+    }
+
+    public Map<UUID, UUID> getModificationReports(AbstractNode node) {
         return null;
     }
 
@@ -147,6 +161,22 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
 
     public UUID getComputationResultUuid(UUID nodeUuid, ComputationType computationType) {
         return getComputationResultUuid(getNode(nodeUuid), computationType);
+    }
+
+    public Map<String, UUID> getComputationReports(UUID nodeUuid) {
+        return getComputationReports(getNode(nodeUuid));
+    }
+
+    public Map<UUID, UUID> getModificationReports(UUID nodeUuid) {
+        return getModificationReports(getNode(nodeUuid));
+    }
+
+    public void updateComputationReportUuid(UUID nodeUuid, UUID reportUuid, ComputationType computationType) {
+        updateComputationReportUuid(getNode(nodeUuid), reportUuid, computationType);
+    }
+
+    public void setModificationReports(UUID nodeUuid, Map<UUID, UUID> reports) {
+        setModificationReports(getNode(nodeUuid), reports);
     }
 
     public void updateNodeBuildStatus(UUID nodeUuid, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {

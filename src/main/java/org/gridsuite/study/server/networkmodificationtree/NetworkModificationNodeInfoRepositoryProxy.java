@@ -18,6 +18,7 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -59,7 +60,9 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getNonEvacuatedEnergyResultUuid(),
             modificationNode.getDynamicSimulationResultUuid(),
             modificationNode.getStateEstimationResultUuid(),
-            modificationNode.getNodeBuildStatus().toEntity());
+            modificationNode.getNodeBuildStatus().toEntity(),
+            modificationNode.getComputationsReports(),
+            modificationNode.getModificationReports());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
@@ -79,7 +82,9 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getNonEvacuatedEnergyResultUuid(),
             node.getDynamicSimulationResultUuid(),
             node.getStateEstimationResultUuid(),
-            node.getNodeBuildStatus().toDto()));
+            node.getNodeBuildStatus().toDto(),
+            node.getComputationReports(),
+            node.getModificationReports()));
     }
 
     @Override
@@ -113,6 +118,29 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationsUuids.forEach(networkModificationNode.getModificationsToExclude()::remove);
             updateNode(networkModificationNode);
         }
+    }
+
+    @Override
+    public void updateComputationReportUuid(AbstractNode node, UUID reportUuid, ComputationType computationType) {
+        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+        modificationNode.getComputationsReports().put(computationType.name(), reportUuid);
+        updateNode(modificationNode);
+    }
+
+    @Override
+    public Map<String, UUID> getComputationReports(AbstractNode node) {
+        return ((NetworkModificationNode) node).getComputationsReports();
+    }
+
+    @Override
+    public Map<UUID, UUID> getModificationReports(AbstractNode node) {
+        return ((NetworkModificationNode) node).getModificationReports();
+    }
+
+    @Override
+    public void setModificationReports(AbstractNode node, Map<UUID, UUID> modificationReports) {
+        ((NetworkModificationNode) node).setModificationReports(modificationReports);
+        updateNode(node);
     }
 
     @Override
