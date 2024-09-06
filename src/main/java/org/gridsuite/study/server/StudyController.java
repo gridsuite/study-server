@@ -716,8 +716,9 @@ public class StudyController {
     @Operation(summary = "stop security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has been stopped")})
     public ResponseEntity<Void> stopVoltageInit(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        voltageInitService.stopVoltageInit(studyUuid, nodeUuid);
+                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                @RequestHeader(HEADER_USER_ID) String userId) {
+        voltageInitService.stopVoltageInit(studyUuid, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
