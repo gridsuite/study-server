@@ -213,9 +213,10 @@ public class VoltageInitService {
         restTemplate.delete(voltageInitServerBaseUri + path);
     }
 
-    public void stopVoltageInit(UUID studyUuid, UUID nodeUuid) {
+    public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
+        Objects.requireNonNull(userId);
 
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.VOLTAGE_INITIALIZATION);
         if (resultUuidOpt.isEmpty()) {
@@ -228,11 +229,16 @@ public class VoltageInitService {
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/stop")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
 
-        restTemplate.put(voltageInitServerBaseUri + path, Void.class);
+        restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     private UUID getReportUuid(UUID nodeUuid) {
