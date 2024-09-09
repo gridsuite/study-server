@@ -654,7 +654,7 @@ public class SecurityAnalysisTest {
                 status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID)));
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSecurityAnalysisParametersUuid());
-
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         //get security analysis parameters but with an already registered securityAnalysisParametersUuid
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
@@ -668,6 +668,7 @@ public class SecurityAnalysisTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mnBodyJson)).andExpect(
                 status().isOk());
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID)));
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSecurityAnalysisParametersUuid());
     }
@@ -688,6 +689,7 @@ public class SecurityAnalysisTest {
                 .andExpect(status().isOk());
 
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyUuid).orElseThrow().getSecurityAnalysisParametersUuid());
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         Set<String> requests = TestUtils.getRequestsDone(1, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters")));
     }
@@ -804,34 +806,6 @@ public class SecurityAnalysisTest {
             r.getPath().matches(String.format("/v1/results/%s/n-result/csv", SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID))
                 && CSV_TRANSLATION_DTO_STRING.equals(r.getBody())
         ));
-    }
-
-    @Test
-    public void testInvalidateStatus() throws Exception {
-
-        //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
-        UUID studyUuid = studyEntity.getId();
-        UUID rootNodeUuid = getRootNode(studyUuid).getId();
-        NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
-        UUID nodeUuid = modificationNode.getId();
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-                studyUuid, nodeUuid, CONTINGENCY_LIST_NAME).header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
-
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
-        assertEquals(1, networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
-
-        // we dont care about previous messages, already tested in the others tests
-        output.clear();
-        //invalidate status
-        mockMvc.perform(put("/v1/studies/{studyUuid}/security-analysis/invalidate-status", studyUuid)
-                .header("userId", "userId")).andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=.*")));
-        Message<byte[]> securityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertNull(securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
     }
 
     private void cleanDB() {
