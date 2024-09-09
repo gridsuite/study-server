@@ -19,6 +19,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.TimePointEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.junit.platform.commons.util.StringUtils;
@@ -92,9 +93,8 @@ public final class TestUtils {
                                                UUID sensitivityParametersUuid,
                                                NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity,
                                                boolean applyModifications) {
-        return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
-            .networkId("netId")
-            .networkUuid(networkUuid)
+        return StudyEntity.builder().id(UUID.randomUUID())
+            .timePoints(List.of(TimePointEntity.builder().caseFormat(caseFormat).caseUuid(caseUuid).networkId("netId").networkUuid(networkUuid).build()))
             .loadFlowParametersUuid(loadFlowParametersUuid)
             .shortCircuitParametersUuid(shortCircuitParametersUuid)
             .voltageInitParametersUuid(voltageInitParametersUuid)
@@ -111,9 +111,7 @@ public final class TestUtils {
                                                UUID securityAnalysisParametersUuid,
                                                UUID sensitivityParametersUuid,
                                                NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {
-        return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
-                .networkId("netId")
-                .networkUuid(networkUuid)
+        return StudyEntity.builder().id(UUID.randomUUID()).timePoints(List.of(TimePointEntity.builder().caseFormat(caseFormat).caseUuid(caseUuid).networkId("netId").networkUuid(networkUuid).build()))
                 .loadFlowParametersUuid(loadFlowParametersUuid)
                 .shortCircuitParametersUuid(shortCircuitParametersUuid)
                 .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
@@ -123,10 +121,7 @@ public final class TestUtils {
     }
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat) {
-        return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
-            .caseName(caseName)
-            .networkId("netId")
-            .networkUuid(networkUuid)
+        return StudyEntity.builder().id(UUID.randomUUID()).timePoints(List.of(TimePointEntity.builder().caseFormat(caseFormat).caseUuid(caseUuid).networkId("netId").networkUuid(networkUuid).build()))
             .shortCircuitParametersUuid(UUID.randomUUID())
             .build();
     }

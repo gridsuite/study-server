@@ -7,6 +7,7 @@ import java.util.UUID;
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
  */
+
 @Repository
 public interface TimePointRepository extends JpaRepository<TimePointEntity, UUID> {
 }

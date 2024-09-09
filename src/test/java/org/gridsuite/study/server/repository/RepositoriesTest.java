@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -53,28 +54,36 @@ public class RepositoriesTest {
 
         StudyEntity studyEntity1 = studyRepository.save(StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .networkUuid(UUID.randomUUID())
-                .networkId("networkId")
-                .caseFormat("caseFormat")
-                .caseUuid(UUID.randomUUID())
+                .timePoints(
+                    List.of(TimePointEntity.builder()
+                        .networkUuid(UUID.randomUUID())
+                        .networkId("networkId")
+                        .caseFormat("caseFormat")
+                        .caseUuid(UUID.randomUUID()).build())
+                )
                 .shortCircuitParametersUuid(shortCircuitParametersUuid1)
                 .build());
 
         StudyEntity studyEntity2 = studyRepository.save(StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .networkUuid(UUID.randomUUID())
-                .networkId("networkId2")
-                .caseFormat("caseFormat2")
-                .caseUuid(UUID.randomUUID())
+                .timePoints(List.of(TimePointEntity.builder()
+                    .networkUuid(UUID.randomUUID())
+                    .networkId("networkId2")
+                    .caseFormat("caseFormat2")
+                    .caseUuid(UUID.randomUUID())
+                    .build()
+                ))
                 .shortCircuitParametersUuid(shortCircuitParametersUuid2)
                 .build());
 
         studyRepository.save(StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .networkUuid(UUID.randomUUID())
-                .networkId("networkId3")
-                .caseFormat("caseFormat3")
-                .caseUuid(UUID.randomUUID())
+                .timePoints(List.of(TimePointEntity.builder()
+                    .networkUuid(UUID.randomUUID())
+                    .networkId("networkId3")
+                    .caseFormat("caseFormat3")
+                    .caseUuid(UUID.randomUUID())
+                    .build()))
                 .shortCircuitParametersUuid(shortCircuitParametersUuid3)
                 .build());
 
@@ -107,10 +116,11 @@ public class RepositoriesTest {
         Map<String, String> importParametersExpected = Map.of("param1", "changedValue1, changedValue2", "param2", "changedValue");
         StudyEntity studyEntityToSave = StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .networkUuid(UUID.randomUUID())
-                .networkId("networkId")
-                .caseFormat("caseFormat")
-                .caseUuid(UUID.randomUUID())
+                .timePoints(List.of(TimePointEntity.builder()
+                    .networkUuid(UUID.randomUUID())
+                    .networkId("networkId")
+                    .caseFormat("caseFormat")
+                    .caseUuid(UUID.randomUUID()).build()))
                 .importParameters(importParametersExpected)
                 .build();
 

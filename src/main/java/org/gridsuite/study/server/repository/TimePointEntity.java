@@ -9,6 +9,7 @@ import java.util.UUID;
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
  */
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -26,7 +27,7 @@ public class TimePointEntity {
     @JoinColumn(name = "studyUuid")
     private StudyEntity study;
 
-    @OneToMany(orphanRemoval = true, mappedBy = "timePointId")
+    @OneToMany(orphanRemoval = true, mappedBy = "timePoint")
     private List<TimePointNodeStatusEntity> timePointNodeStatuses;
 
     @Column(name = "networkUuid", nullable = false)

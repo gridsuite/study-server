@@ -12,6 +12,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeStatusEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -115,9 +116,9 @@ class NetworkModificationUnitTest {
         NetworkModificationNodeInfoEntity node2Infos = nodesInfos.stream().filter(n -> n.getIdNode().equals(node2Uuid)).findAny().orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETUTN_NULL_MESSAGE));
         NetworkModificationNodeInfoEntity node3Infos = nodesInfos.stream().filter(n -> n.getIdNode().equals(node3Uuid)).findAny().orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETUTN_NULL_MESSAGE));
 
-        assertEquals(BuildStatus.BUILT, node1Infos.getNodeBuildStatus().getLocalBuildStatus());
-        assertEquals(BuildStatus.BUILT, node2Infos.getNodeBuildStatus().getLocalBuildStatus());
-        assertEquals(BuildStatus.NOT_BUILT, node3Infos.getNodeBuildStatus().getLocalBuildStatus());
+        assertEquals(BuildStatus.BUILT, node1Infos.getFirstTimePointNodeStatusEntity().getNodeBuildStatus().getLocalBuildStatus());
+        assertEquals(BuildStatus.BUILT, node2Infos.getFirstTimePointNodeStatusEntity().getNodeBuildStatus().getLocalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, node3Infos.getFirstTimePointNodeStatusEntity().getNodeBuildStatus().getLocalBuildStatus());
 
         studyController.unbuildNode(studyUuid, node1Uuid);
 
@@ -133,9 +134,9 @@ class NetworkModificationUnitTest {
         node2Infos = nodesInfos.stream().filter(n -> n.getIdNode().equals(node2Uuid)).findAny().orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETUTN_NULL_MESSAGE));
         node3Infos = nodesInfos.stream().filter(n -> n.getIdNode().equals(node3Uuid)).findAny().orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETUTN_NULL_MESSAGE));
 
-        assertEquals(BuildStatus.NOT_BUILT, node1Infos.getNodeBuildStatus().getLocalBuildStatus());
-        assertEquals(BuildStatus.BUILT, node2Infos.getNodeBuildStatus().getLocalBuildStatus());
-        assertEquals(BuildStatus.NOT_BUILT, node3Infos.getNodeBuildStatus().getLocalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, node1Infos.getFirstTimePointNodeStatusEntity().getNodeBuildStatus().getLocalBuildStatus());
+        assertEquals(BuildStatus.BUILT, node2Infos.getFirstTimePointNodeStatusEntity().getNodeBuildStatus().getLocalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, node3Infos.getFirstTimePointNodeStatusEntity().getNodeBuildStatus().getLocalBuildStatus());
 
         checkUpdateBuildStateMessageReceived(studyUuid, node1Uuid);
         checkUpdateModelsStatusMessagesReceived(studyUuid, node1Uuid);
@@ -187,7 +188,7 @@ class NetworkModificationUnitTest {
 
     private NodeEntity insertNode(StudyEntity study, UUID nodeId, NodeEntity parentNode, BuildStatus buildStatus) {
         NodeEntity node = nodeRepository.save(new NodeEntity(nodeId, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
-        NetworkModificationNodeInfoEntity nodeInfos = new NetworkModificationNodeInfoEntity(UUID.randomUUID(), VARIANT_1, new HashSet<>(), null, null, null, null, null, null, null, null, null, NodeBuildStatus.from(buildStatus).toEntity());
+        NetworkModificationNodeInfoEntity nodeInfos = new NetworkModificationNodeInfoEntity(UUID.randomUUID(), List.of(TimePointNodeStatusEntity.builder().variantId(VARIANT_1).modificationsToExclude(new HashSet<>()).nodeBuildStatus(NodeBuildStatus.from(buildStatus).toEntity()).build()));
         nodeInfos.setIdNode(node.getIdNode());
         networkModificationNodeInfoRepository.save(nodeInfos);
 

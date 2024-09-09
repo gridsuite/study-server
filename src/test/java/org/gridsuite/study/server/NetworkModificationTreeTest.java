@@ -36,6 +36,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.TimePointEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
@@ -318,10 +319,11 @@ public class NetworkModificationTreeTest {
     }
 
     StudyEntity createDummyStudy(UUID networkUuid) {
-        return StudyEntity.builder().id(UUID.randomUUID()).caseFormat("").caseUuid(UUID.randomUUID())
-            .caseName("caseName1")
-            .networkId("netId")
-            .networkUuid(networkUuid)
+        return StudyEntity.builder().id(UUID.randomUUID()).timePoints(List.of(TimePointEntity.builder()
+                .caseFormat("").caseUuid(UUID.randomUUID())
+                .caseName("caseName1")
+                .networkId("netId")
+                .networkUuid(networkUuid).build()))
             .shortCircuitParametersUuid(UUID.randomUUID())
             .build();
     }

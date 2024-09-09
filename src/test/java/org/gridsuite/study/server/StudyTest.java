@@ -923,7 +923,7 @@ public class StudyTest {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
         assertNotNull(studyEntity);
         UUID nonExistingCaseUuid = UUID.randomUUID();
-        studyEntity.setCaseUuid(nonExistingCaseUuid);
+        studyEntity.getFirstTimepoint().setCaseUuid(nonExistingCaseUuid);
         studyRepository.save(studyEntity);
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
@@ -1601,7 +1601,7 @@ public class StudyTest {
             numberOfRequests++;
         }
         requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + duplicatedStudy.getNetworkUuid() + "/reindex-all")).count());
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + duplicatedStudy.getFirstTimepoint().getNetworkUuid() + "/reindex-all")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getVoltageInitParametersUuid())).count());
