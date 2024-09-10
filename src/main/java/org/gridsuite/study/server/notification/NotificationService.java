@@ -71,6 +71,7 @@ public class NotificationService {
     public static final String UPDATE_TYPE_VOLTAGE_INIT_RESULT = "voltageInitResult";
     public static final String UPDATE_TYPE_VOLTAGE_INIT_STATUS = "voltageInit_status";
     public static final String UPDATE_TYPE_VOLTAGE_INIT_FAILED = "voltageInit_failed";
+    public static final String UPDATE_TYPE_VOLTAGE_INIT_CANCEL_FAILED = "voltageInit_cancel_failed";
     public static final String UPDATE_TYPE_STUDIES = "studies";
     public static final String UPDATE_TYPE_STUDY_NETWORK_RECREATION_DONE = "study_network_recreation_done";
     public static final String UPDATE_TYPE_STUDY = "study";

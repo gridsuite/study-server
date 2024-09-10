@@ -67,10 +67,9 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.IntStream;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
-import static org.gridsuite.study.server.notification.NotificationService.STUDY_ALERT;
+import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.service.VoltageInitResultConsumer.HEADER_REACTIVE_SLACKS_OVER_THRESHOLD;
 import static org.gridsuite.study.server.service.VoltageInitResultConsumer.HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
@@ -103,6 +102,8 @@ public class VoltageInitTest {
     private static final String VOLTAGE_INIT_RESULT_UUID = "1b6cc22c-3f33-11ed-b878-0242ac120002";
 
     private static final String VOLTAGE_INIT_ERROR_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
+
+    private static final String VOLTAGE_INIT_CANCEL_FAILED_UUID = "1b6cc22c-3f33-11ed-b878-0242ac120003";
 
     private static final String VOLTAGE_INIT_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
 
@@ -141,9 +142,10 @@ public class VoltageInitTest {
     private static final String VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST = "[{\"type\": \"VOLTAGE_INIT_MODIFICATION\",\"uuid\": \"254a3b85-14ad-4436-bf62-3e60af831dd1\",\"date\": \"2023-09-18T10:58:32.582239Z\",\"stashed\": false,\"generators\": [],\"transformers\": [],\"staticVarCompensators\": [],\"vscConverterStations\": [],\"shuntCompensators\": []}]";
 
     private static final String VOLTAGE_INIT_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
-    private static final String VARIANT_ID = "variant_1";
 
+    private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
+    private static final String VARIANT_ID_3 = "variant_3";
 
     private static final long TIMEOUT = 1000;
 
@@ -203,6 +205,7 @@ public class VoltageInitTest {
     private final String voltageInitResultDestination = "voltageinit.result";
     private final String voltageInitStoppedDestination = "voltageinit.stopped";
     private final String voltageInitFailedDestination = "voltageinit.failed";
+    private final String voltageInitCancelFailedDestination = "voltageinit.cancelfailed";
     private final String elementUpdateDestination = "element.update";
 
     @Before
@@ -230,6 +233,7 @@ public class VoltageInitTest {
         stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
 
         String voltageInitResultUuidStr = objectMapper.writeValueAsString(VOLTAGE_INIT_RESULT_UUID);
+        String voltageInitResultUuidStr2 = objectMapper.writeValueAsString(VOLTAGE_INIT_CANCEL_FAILED_UUID);
 
         String voltageInitErrorResultUuidStr = objectMapper.writeValueAsString(VOLTAGE_INIT_ERROR_RESULT_UUID);
 
@@ -241,7 +245,17 @@ public class VoltageInitTest {
                 String path = Objects.requireNonNull(request.getPath());
                 String method = Objects.requireNonNull(request.getMethod());
 
-                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)) {
+                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_3)) {
+                    input.send(MessageBuilder.withPayload("")
+                            .setHeader("resultUuid", VOLTAGE_INIT_CANCEL_FAILED_UUID)
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE)
+                            .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
+                            .build(), voltageInitResultDestination);
+                    return new MockResponse().setResponseCode(200)
+                            .setBody(voltageInitResultUuidStr2)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", VOLTAGE_INIT_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
@@ -284,6 +298,15 @@ public class VoltageInitTest {
                             .setHeader("resultUuid", resultUuid)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), voltageInitStoppedDestination);
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + VOLTAGE_INIT_CANCEL_FAILED_UUID + "/stop.*")) {
+                    input.send(MessageBuilder.withPayload("")
+                            .setHeader("resultUuid", VOLTAGE_INIT_CANCEL_FAILED_UUID)
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%7D")
+                            .setHeader("userId", "userId")
+                            .setHeader("message", "voltage init could not be cancel")
+                            .build(), voltageInitCancelFailedDestination);
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/invalidate-status.*")) {
@@ -502,7 +525,9 @@ public class VoltageInitTest {
         output.receive(1000);
 
         // stop voltage init analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/stop", studyNameUserIdUuid, modificationNode3Uuid)).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/stop", studyNameUserIdUuid, modificationNode3Uuid)
+                .header("userId", "userId"))
+                .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
 
@@ -522,6 +547,50 @@ public class VoltageInitTest {
         testResultCount();
         //Delete Voltage init results
         testDeleteResults(1);
+    }
+
+    @Test
+    public void testVoltageInitCancelFail() throws Exception {
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID), false);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
+                modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
+        UUID modificationNode2Uuid = modificationNode2.getId();
+
+        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid,
+                modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
+        UUID modificationNode3Uuid = modificationNode3.getId();
+
+        NetworkModificationNode modificationNode4 = createNetworkModificationNode(studyNameUserIdUuid,
+                modificationNode3Uuid, UUID.randomUUID(), VARIANT_ID_3, "node 4");
+        UUID modificationNode4Uuid = modificationNode4.getId();
+
+        //run a voltage init analysis
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run", studyNameUserIdUuid, modificationNode4Uuid)
+                        .header("userId", "userId"))
+                .andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_3)));
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
+
+        checkReactiveSlacksAlertMessagesReceived(studyNameUserIdUuid, 10.);
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+
+        // stop voltage init analysis fail
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/stop", studyNameUserIdUuid, modificationNode4Uuid)
+                        .header("userId", "userId"))
+                .andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + VOLTAGE_INIT_CANCEL_FAILED_UUID + "/stop\\?receiver=.*nodeUuid.*")));
+        checkCancelFailedMessagesReceived(studyNameUserIdUuid, modificationNode4Uuid, "userId");
     }
 
     @Test
@@ -671,6 +740,15 @@ public class VoltageInitTest {
         }
     }
 
+    private void checkCancelFailedMessagesReceived(UUID studyUuid, UUID nodeUuid, String userId) {
+        Message<byte[]> voltageInitStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
+        assertEquals(UPDATE_TYPE_VOLTAGE_INIT_CANCEL_FAILED, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(userId, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_USER_ID));
+        assertEquals("voltage init could not be cancel", voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_ERROR));
+    }
+
     private void testResultCount() throws Exception {
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", String.valueOf(VOLTAGE_INITIALIZATION))
@@ -711,7 +789,8 @@ public class VoltageInitTest {
                 status().isNoContent());
 
         // stop non existing voltage init analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/stop", studyNameUserIdUuid, modificationNode1Uuid)).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/stop", studyNameUserIdUuid, modificationNode1Uuid)
+                .header("userId", "userId")).andExpect(status().isOk());
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID voltageInitParametersUuid, boolean applyModifications) {
@@ -768,7 +847,7 @@ public class VoltageInitTest {
 
     @After
     public void tearDown() {
-        List<String> destinations = List.of(studyUpdateDestination, voltageInitResultDestination, voltageInitStoppedDestination, voltageInitFailedDestination);
+        List<String> destinations = List.of(studyUpdateDestination, voltageInitResultDestination, voltageInitStoppedDestination, voltageInitFailedDestination, voltageInitCancelFailedDestination);
 
         cleanDB();
 
