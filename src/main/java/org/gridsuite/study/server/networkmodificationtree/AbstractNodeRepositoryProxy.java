@@ -73,8 +73,8 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
     }
 
     public void createNodeInfo(AbstractNode nodeInfo) {
-        if (nodeInfo.getReportUuid() == null) {
-            nodeInfo.setReportUuid(UUID.randomUUID());
+        if (nodeInfo.getFirstTimePointNode().getReportUuid() == null) {
+            nodeInfo.getFirstTimePointNode().setReportUuid(UUID.randomUUID());
         }
         nodeInfoRepository.save(toEntity(nodeInfo));
     }
@@ -92,7 +92,6 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         node.setName(nodeInfoEntity.getName());
         node.setDescription(nodeInfoEntity.getDescription());
         node.setReadOnly(nodeInfoEntity.getReadOnly());
-        node.setReportUuid(nodeInfoEntity.getReportUuid());
         return node;
     }
 
@@ -101,7 +100,6 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         entity.setName(node.getName());
         entity.setDescription(node.getDescription());
         entity.setReadOnly(node.getReadOnly());
-        entity.setReportUuid(node.getReportUuid());
         return entity;
     }
 
@@ -138,7 +136,7 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
     }
 
     public UUID getReportUuid(UUID nodeUuid) {
-        return getNode(nodeUuid).getReportUuid();
+        return getNode(nodeUuid).getFirstTimePointNode().getReportUuid();
     }
 
     public void updateComputationResultUuid(UUID nodeUuid, UUID computationResultUuid, ComputationType computationType) {

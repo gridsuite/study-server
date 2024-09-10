@@ -34,6 +34,7 @@ import org.gridsuite.study.server.notification.dto.AlertLevel;
 import org.gridsuite.study.server.notification.dto.StudyAlert;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.TimePointNetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.*;
@@ -199,6 +200,9 @@ public class VoltageInitTest {
 
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+
+    @Autowired
+    private TimePointNetworkModificationNodeInfoRepository timePointNodeStatusRepository;
 
     //output destinations
     private final String studyUpdateDestination = "study.update";
@@ -758,7 +762,7 @@ public class VoltageInitTest {
     }
 
     private void testDeleteResults(int expectedInitialResultCount) throws Exception {
-        assertEquals(expectedInitialResultCount, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
+        assertEquals(expectedInitialResultCount, timePointNodeStatusRepository.findAllByVoltageInitResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", String.valueOf(VOLTAGE_INITIALIZATION))
                 .queryParam("dryRun", String.valueOf(false)))
@@ -767,7 +771,7 @@ public class VoltageInitTest {
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
+        assertEquals(0, timePointNodeStatusRepository.findAllByVoltageInitResultUuidNotNull().size());
     }
 
     @Test

@@ -124,6 +124,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     //TODO temporary, for now we are only working with one timepoint
     public TimePointEntity getFirstTimepoint() {
+        if (timePoints == null || timePoints.isEmpty()) {
+            return TimePointEntity.builder().build();
+        }
         return timePoints.get(0);
     }
 }

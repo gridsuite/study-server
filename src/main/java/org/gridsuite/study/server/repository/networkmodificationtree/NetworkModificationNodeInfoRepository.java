@@ -17,25 +17,8 @@ import java.util.UUID;
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
 public interface NetworkModificationNodeInfoRepository extends NodeInfoRepository<NetworkModificationNodeInfoEntity> {
-    List<NetworkModificationNodeInfoEntity> findAllByLoadFlowResultUuidNotNull();
-
-    List<NetworkModificationNodeInfoEntity> findAllByDynamicSimulationResultUuidNotNull();
-
-    List<NetworkModificationNodeInfoEntity> findAllBySecurityAnalysisResultUuidNotNull();
-
-    List<NetworkModificationNodeInfoEntity> findAllBySensitivityAnalysisResultUuidNotNull();
-
-    List<NetworkModificationNodeInfoEntity> findAllByNonEvacuatedEnergyResultUuidNotNull();
-
-    List<NetworkModificationNodeInfoEntity> findAllByShortCircuitAnalysisResultUuidNotNull();
-
-    List<NetworkModificationNodeInfoEntity> findAllByOneBusShortCircuitAnalysisResultUuidNotNull();
-
-    List<NetworkModificationNodeInfoEntity> findAllByVoltageInitResultUuidNotNull();
 
     List<NetworkModificationNodeInfoEntity> findAllByNodeStudyId(UUID studyUuid);
 
     List<AbstractNodeInfoEntity> findAllByNodeStudyIdAndName(UUID studyUuid, String name);
-
-    List<NetworkModificationNodeInfoEntity> findAllByStateEstimationResultUuidNotNull();
 }

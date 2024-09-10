@@ -2,7 +2,7 @@ package org.gridsuite.study.server.repository;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeStatusEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNetworkModificationNodeInfoEntity;
 
 import java.util.List;
 import java.util.UUID;
@@ -28,7 +28,7 @@ public class TimePointEntity {
     private StudyEntity study;
 
     @OneToMany(orphanRemoval = true, mappedBy = "timePoint")
-    private List<TimePointNodeStatusEntity> timePointNodeStatuses;
+    private List<TimePointNetworkModificationNodeInfoEntity> timePointNodeStatuses;
 
     @Column(name = "networkUuid", nullable = false)
     private UUID networkUuid;

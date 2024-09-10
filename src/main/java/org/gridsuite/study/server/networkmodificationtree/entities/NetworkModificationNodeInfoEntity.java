@@ -8,12 +8,9 @@
 package org.gridsuite.study.server.networkmodificationtree.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -24,18 +21,10 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
+@SuperBuilder
 @Table(name = "NetworkModificationNodeInfo")
 public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Column
     private UUID modificationGroupUuid;
-
-    @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo")
-    private List<TimePointNodeStatusEntity> timePointNodeStatuses;
-
-    //TODO temporary, for now we are only working with one timepoint by study
-    public TimePointNodeStatusEntity getFirstTimePointNodeStatusEntity() {
-        return timePointNodeStatuses.get(0);
-
-    }
 }

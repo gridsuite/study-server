@@ -7,17 +7,14 @@
 
 package org.gridsuite.study.server.networkmodificationtree.entities;
 
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.repository.AbstractManuallyAssignedIdentifierEntity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.MappedSuperclass;
-import jakarta.persistence.OneToOne;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -27,6 +24,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @MappedSuperclass
+@SuperBuilder
 public abstract class AbstractNodeInfoEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> {
 
     @Id
@@ -50,6 +48,15 @@ public abstract class AbstractNodeInfoEntity extends AbstractManuallyAssignedIde
     @Column
     Boolean readOnly;
 
-    @Column
-    UUID reportUuid;
+    @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo")
+    private List<TimePointNetworkModificationNodeInfoEntity> timePointNodeStatuses;
+
+    //TODO temporary, for now we are only working with one timepoint by study
+    public TimePointNetworkModificationNodeInfoEntity getFirstTimePointNodeStatusEntity() {
+        if (timePointNodeStatuses == null || timePointNodeStatuses.isEmpty()) {
+            return null;
+        }
+        return timePointNodeStatuses.get(0);
+
+    }
 }

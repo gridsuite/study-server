@@ -30,6 +30,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.TimePointNetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.*;
@@ -158,6 +159,9 @@ public class SecurityAnalysisTest {
 
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+
+    @Autowired
+    private TimePointNetworkModificationNodeInfoRepository timePointNodeStatusRepository;
 
     @Autowired
     private ReportService reportService;
@@ -372,7 +376,7 @@ public class SecurityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
 
         //Delete Security analysis results
-        assertEquals(1, networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
+        assertEquals(1, timePointNodeStatusRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", String.valueOf(SECURITY_ANALYSIS))
                 .queryParam("dryRun", String.valueOf(false)))
@@ -381,7 +385,7 @@ public class SecurityAnalysisTest {
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
-        assertEquals(0, networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
+        assertEquals(0, timePointNodeStatusRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
     }
 
     @Test

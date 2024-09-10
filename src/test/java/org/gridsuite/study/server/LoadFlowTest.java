@@ -30,7 +30,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.TimePointNetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -163,7 +163,7 @@ public class LoadFlowTest {
     @Autowired
     private ReportService reportService;
     @Autowired
-    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+    private TimePointNetworkModificationNodeInfoRepository timePointNodeStatusRepository;
 
     @Before
     public void setup() throws IOException {
@@ -587,7 +587,7 @@ public class LoadFlowTest {
     }
 
     private void testDeleteResults(int expectedInitialResultCount) throws Exception {
-        assertEquals(expectedInitialResultCount, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
+        assertEquals(expectedInitialResultCount, timePointNodeStatusRepository.findAllByLoadFlowResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", String.valueOf(LOAD_FLOW))
                         .queryParam("dryRun", String.valueOf(false)))
@@ -596,7 +596,7 @@ public class LoadFlowTest {
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
+        assertEquals(0, timePointNodeStatusRepository.findAllByLoadFlowResultUuidNotNull().size());
     }
 
     @Test

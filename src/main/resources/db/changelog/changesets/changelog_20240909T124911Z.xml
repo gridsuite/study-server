@@ -1,0 +1,20 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="lesaulnierkev (generated)" id="1725886181493-3">
+        <addColumn tableName="time_point_node_status">
+            <column name="report_uuid" type="uuid"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1725886181493-4">
+        <dropColumn columnName="REPORT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1725886181493-5">
+        <dropColumn columnName="REPORT_UUID" tableName="ROOT_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1725886181493-1">
+        <dropUniqueConstraint constraintName="UC_STUDYDYNAMIC_SIMULATION_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1725886181493-2">
+        <addUniqueConstraint columnNames="dynamic_simulation_parameters_entity_id" constraintName="UC_STUDYDYNAMIC_SIMULATION_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+</databaseChangeLog>

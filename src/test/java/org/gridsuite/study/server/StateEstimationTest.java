@@ -23,6 +23,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.TimePointNetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.*;
@@ -121,6 +122,8 @@ public class StateEstimationTest {
     private ReportService reportService;
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+    @Autowired
+    private TimePointNetworkModificationNodeInfoRepository timePointNodeStatusRepository;
 
     private class StudyNodeIds {
         StudyNodeIds(UUID sId, UUID nId) {
@@ -321,7 +324,7 @@ public class StateEstimationTest {
         runEstim(ids);
 
         // we have one Estim result
-        assertEquals(1, networkModificationNodeInfoRepository.findAllByStateEstimationResultUuidNotNull().size());
+        assertEquals(1, timePointNodeStatusRepository.findAllByStateEstimationResultUuidNotNull().size());
 
         // supervision deletion result, with dry-mode (only count)
         mockMvc.perform(delete("/v1/supervision/computation/results")
@@ -339,7 +342,7 @@ public class StateEstimationTest {
         assertTrue(requests.contains("/v1/results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
         // no more result
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
+        assertEquals(0, timePointNodeStatusRepository.findAllByLoadFlowResultUuidNotNull().size());
     }
 
     @Test

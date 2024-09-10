@@ -85,6 +85,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
+    private final TimePointService timePointService;
 
     NotificationService notificationService;
 
@@ -151,38 +152,38 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-            @Value("${non-evacuated-energy.default-provider}") String defaultNonEvacuatedEnergyProvider,
-            @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
-            StudyRepository studyRepository,
-            StudyCreationRequestRepository studyCreationRequestRepository,
-            NetworkService networkStoreService,
-            NetworkModificationService networkModificationService,
-            ReportService reportService,
-            UserAdminService userAdminService,
-            StudyInfosService studyInfosService,
-            EquipmentInfosService equipmentInfosService,
-            NetworkModificationTreeService networkModificationTreeService,
-            ObjectMapper objectMapper,
-            StudyServerExecutionService studyServerExecutionService,
-            NotificationService notificationService,
-            LoadFlowService loadflowService,
-            ShortCircuitService shortCircuitService,
-            SingleLineDiagramService singleLineDiagramService,
-            NetworkConversionService networkConversionService,
-            GeoDataService geoDataService,
-            NetworkMapService networkMapService,
-            SecurityAnalysisService securityAnalysisService,
-            ActionsService actionsService,
-            CaseService caseService,
-            SensitivityAnalysisService sensitivityAnalysisService,
-            NonEvacuatedEnergyService nonEvacuatedEnergyService,
-            DynamicSimulationService dynamicSimulationService,
-            VoltageInitService voltageInitService,
-            DynamicSimulationEventService dynamicSimulationEventService,
-            FilterService filterService,
-            StateEstimationService stateEstimationService,
-            TimePointRepository timePointRepository,
-            @Lazy StudyService studyService) {
+        @Value("${non-evacuated-energy.default-provider}") String defaultNonEvacuatedEnergyProvider,
+        @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
+        StudyRepository studyRepository,
+        StudyCreationRequestRepository studyCreationRequestRepository,
+        NetworkService networkStoreService,
+        NetworkModificationService networkModificationService,
+        ReportService reportService,
+        UserAdminService userAdminService,
+        StudyInfosService studyInfosService,
+        EquipmentInfosService equipmentInfosService,
+        NetworkModificationTreeService networkModificationTreeService,
+        ObjectMapper objectMapper,
+        StudyServerExecutionService studyServerExecutionService,
+        NotificationService notificationService,
+        LoadFlowService loadflowService,
+        ShortCircuitService shortCircuitService,
+        SingleLineDiagramService singleLineDiagramService,
+        NetworkConversionService networkConversionService,
+        GeoDataService geoDataService,
+        NetworkMapService networkMapService,
+        SecurityAnalysisService securityAnalysisService,
+        ActionsService actionsService,
+        CaseService caseService,
+        SensitivityAnalysisService sensitivityAnalysisService,
+        NonEvacuatedEnergyService nonEvacuatedEnergyService,
+        DynamicSimulationService dynamicSimulationService,
+        VoltageInitService voltageInitService,
+        DynamicSimulationEventService dynamicSimulationEventService,
+        FilterService filterService,
+        StateEstimationService stateEstimationService,
+        TimePointRepository timePointRepository,
+        @Lazy StudyService studyService, TimePointService timePointService) {
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
@@ -215,38 +216,39 @@ public class StudyService {
         this.stateEstimationService = stateEstimationService;
         this.self = studyService;
         this.timePointRepository = timePointRepository;
+        this.timePointService = timePointService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
         return StudyInfos.builder()
-                .id(entity.getId())
-                .caseFormat(entity.getFirstTimepoint().getCaseFormat())
-                .build();
+            .id(entity.getId())
+            .caseFormat(entity.getFirstTimepoint().getCaseFormat())
+            .build();
     }
 
     private static BasicStudyInfos toBasicStudyInfos(StudyCreationRequestEntity entity) {
         return BasicStudyInfos.builder()
-                .id(entity.getId())
-                .build();
+            .id(entity.getId())
+            .build();
     }
 
     private static CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity) {
         return CreatedStudyBasicInfos.builder()
-                .id(entity.getId())
-                .caseFormat(entity.getFirstTimepoint().getCaseFormat())
-                .build();
+            .id(entity.getId())
+            .caseFormat(entity.getFirstTimepoint().getCaseFormat())
+            .build();
     }
 
     public List<CreatedStudyBasicInfos> getStudies() {
         return studyRepository.findAll().stream()
-                .map(StudyService::toCreatedStudyBasicInfos)
-                .collect(Collectors.toList());
+            .map(StudyService::toCreatedStudyBasicInfos)
+            .collect(Collectors.toList());
     }
 
     public List<UUID> getStudiesNetworkUuids() {
         return studyRepository.findAll().stream()
-                .map(study -> study.getFirstTimepoint().getNetworkUuid())
-                .toList();
+            .map(study -> study.getFirstTimepoint().getNetworkUuid())
+            .toList();
     }
 
     public List<UUID> getAllOrphanIndexedEquipmentsNetworkUuids() {
@@ -261,14 +263,14 @@ public class StudyService {
 
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
         return studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos)
-                .collect(Collectors.toList());
+            .collect(Collectors.toList());
 
     }
 
     public List<BasicStudyInfos> getStudiesCreationRequests() {
         return studyCreationRequestRepository.findAll().stream()
-                .map(StudyService::toBasicStudyInfos)
-                .collect(Collectors.toList());
+            .map(StudyService::toBasicStudyInfos)
+            .collect(Collectors.toList());
     }
 
     public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean duplicateCase, String caseFormat) {
@@ -295,6 +297,7 @@ public class StudyService {
 
     /**
      * Recreates study network from <caseUuid> and <importParameters>
+     *
      * @param caseUuid
      * @param userId
      * @param studyUuid
@@ -306,6 +309,7 @@ public class StudyService {
 
     /**
      * Recreates study network from existing case and import parameters
+     *
      * @param userId
      * @param studyUuid
      */
@@ -352,7 +356,7 @@ public class StudyService {
         } finally {
             self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             LOGGER.trace("Create study '{}' from source {} : {} seconds", basicStudyInfos.getId(), sourceStudyUuid,
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
     }
 
@@ -436,29 +440,29 @@ public class StudyService {
                 startTime.set(System.nanoTime());
 
                 CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
-                                .map(NodeModificationInfos::getLoadFlowUuid).filter(Objects::nonNull).forEach(loadflowService::deleteLoadFlowResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
-                                .map(NodeModificationInfos::getSecurityAnalysisUuid).filter(Objects::nonNull).forEach(securityAnalysisService::deleteSaResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
-                                .map(NodeModificationInfos::getSensitivityAnalysisUuid).filter(Objects::nonNull).forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
-                                .map(NodeModificationInfos::getNonEvacuatedEnergyUuid).filter(Objects::nonNull).forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
-                                .map(NodeModificationInfos::getShortCircuitAnalysisUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
-                                .map(NodeModificationInfos::getOneBusShortCircuitAnalysisUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
-                                .map(NodeModificationInfos::getVoltageInitUuid).filter(Objects::nonNull).forEach(voltageInitService::deleteVoltageInitResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
-                                .map(NodeModificationInfos::getDynamicSimulationUuid).filter(Objects::nonNull).forEach(dynamicSimulationService::deleteResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
-                                .map(NodeModificationInfos::getStateEstimationUuid).filter(Objects::nonNull).forEach(stateEstimationService::deleteStateEstimationResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
-                        studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid())),
-                        studyServerExecutionService.runAsync(() -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()))
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                        .map(NodeModificationInfos::getLoadFlowUuid).filter(Objects::nonNull).forEach(loadflowService::deleteLoadFlowResult)), // TODO delete all with one request only
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                        .map(NodeModificationInfos::getSecurityAnalysisUuid).filter(Objects::nonNull).forEach(securityAnalysisService::deleteSaResult)), // TODO delete all with one request only
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                        .map(NodeModificationInfos::getSensitivityAnalysisUuid).filter(Objects::nonNull).forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)), // TODO delete all with one request only
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                        .map(NodeModificationInfos::getNonEvacuatedEnergyUuid).filter(Objects::nonNull).forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)), // TODO delete all with one request only
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                        .map(NodeModificationInfos::getShortCircuitAnalysisUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                        .map(NodeModificationInfos::getOneBusShortCircuitAnalysisUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                        .map(NodeModificationInfos::getVoltageInitUuid).filter(Objects::nonNull).forEach(voltageInitService::deleteVoltageInitResult)), // TODO delete all with one request only
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                        .map(NodeModificationInfos::getDynamicSimulationUuid).filter(Objects::nonNull).forEach(dynamicSimulationService::deleteResult)), // TODO delete all with one request only
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                        .map(NodeModificationInfos::getStateEstimationUuid).filter(Objects::nonNull).forEach(stateEstimationService::deleteStateEstimationResult)), // TODO delete all with one request only
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
+                    studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
+                    studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid())),
+                    studyServerExecutionService.runAsync(() -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()))
                 );
 
                 executeInParallel.get();
@@ -495,11 +499,11 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(new StudyEntity(studyUuid, List.of(),
-                        null, null, null, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
-                        loadFlowParametersUuid, shortCircuitParametersUuid, dynamicSimulationParametersEntity, voltageInitParametersUuid, securityAnalysisParametersUuid,
-                        sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED, new StudyVoltageInitParametersEntity()),
-                new TimePointEntity(null, null, null, networkUuid, networkId, caseFormat, caseUuid, caseName),
-                importReportUuid);
+                null, null, null, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
+                loadFlowParametersUuid, shortCircuitParametersUuid, dynamicSimulationParametersEntity, voltageInitParametersUuid, securityAnalysisParametersUuid,
+                sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED, new StudyVoltageInitParametersEntity()),
+            new TimePointEntity(null, null, null, networkUuid, networkId, caseFormat, caseUuid, caseName),
+            importReportUuid);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
@@ -556,8 +560,8 @@ public class StudyService {
         }
 
         NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos = sourceStudy.getNonEvacuatedEnergyParameters() == null ?
-                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos() :
-                NonEvacuatedEnergyService.fromEntity(sourceStudy.getNonEvacuatedEnergyParameters());
+            NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos() :
+            NonEvacuatedEnergyService.fromEntity(sourceStudy.getNonEvacuatedEnergyParameters());
 
         UUID copiedVoltageInitParametersUuid = null;
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
@@ -567,24 +571,24 @@ public class StudyService {
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudy.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
 
         StudyEntity studyEntity = StudyEntity.builder()
-                .id(studyInfos.getId())
-                .timePoints(List.of(
-                    TimePointEntity.builder()
-                        .networkUuid(clonedNetworkUuid).networkId(sourceStudy.getFirstTimepoint().getNetworkId())
-                        .caseFormat(sourceStudy.getFirstTimepoint().getCaseFormat()).caseUuid(clonedCaseUuid).caseName(sourceStudy.getFirstTimepoint().getCaseName())
-                        .build()
-                ))
-               .loadFlowParametersUuid(copiedLoadFlowParametersUuid)
-                .securityAnalysisParametersUuid(copiedSecurityAnalysisParametersUuid)
-                .nonEvacuatedEnergyProvider(sourceStudy.getNonEvacuatedEnergyProvider())
-                .dynamicSimulationProvider(sourceStudy.getDynamicSimulationProvider())
-                .dynamicSimulationParameters(DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper))
-                .shortCircuitParametersUuid(copiedShortCircuitParametersUuid)
-                .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
-                .sensitivityAnalysisParametersUuid(copiedSensitivityAnalysisParametersUuid)
-                .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
-                .importParameters(newImportParameters)
-                .build();
+            .id(studyInfos.getId())
+            .timePoints(List.of(
+                TimePointEntity.builder()
+                    .networkUuid(clonedNetworkUuid).networkId(sourceStudy.getFirstTimepoint().getNetworkId())
+                    .caseFormat(sourceStudy.getFirstTimepoint().getCaseFormat()).caseUuid(clonedCaseUuid).caseName(sourceStudy.getFirstTimepoint().getCaseName())
+                    .build()
+            ))
+            .loadFlowParametersUuid(copiedLoadFlowParametersUuid)
+            .securityAnalysisParametersUuid(copiedSecurityAnalysisParametersUuid)
+            .nonEvacuatedEnergyProvider(sourceStudy.getNonEvacuatedEnergyProvider())
+            .dynamicSimulationProvider(sourceStudy.getDynamicSimulationProvider())
+            .dynamicSimulationParameters(DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper))
+            .shortCircuitParametersUuid(copiedShortCircuitParametersUuid)
+            .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
+            .sensitivityAnalysisParametersUuid(copiedSensitivityAnalysisParametersUuid)
+            .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
+            .importParameters(newImportParameters)
+            .build();
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), UUID.randomUUID()));
 
         studyInfosService.add(createdStudyBasicInfos);
@@ -644,7 +648,7 @@ public class StudyService {
     public String getSubstationMapData(UUID studyUuid, UUID nodeUuid, String substationId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         return networkMapService.getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
-                "substations", substationId);
+            "substations", substationId);
     }
 
     public String getNetworkElementsInfos(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, String infoType, String elementType, boolean inUpstreamBuiltParentNode, List<Double> nominalVoltages) {
@@ -652,7 +656,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
         return networkMapService.getElementsInfos(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
-                substationsIds, elementType, nominalVoltages, infoType, loadFlowParameters.getDcPowerFactor());
+            substationsIds, elementType, nominalVoltages, infoType, loadFlowParameters.getDcPowerFactor());
     }
 
     public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, String elementType, InfoTypeParameters infoTypeParameters, String elementId, boolean inUpstreamBuiltParentNode) {
@@ -660,7 +664,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
         return networkMapService.getElementInfos(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
-                elementType, infoTypeParameters.getInfoType(), infoTypeParameters.getOptionalParameters().getOrDefault(QUERY_PARAM_OPERATION, null), loadFlowParameters.getDcPowerFactor(), elementId);
+            elementType, infoTypeParameters.getInfoType(), infoTypeParameters.getOptionalParameters().getOrDefault(QUERY_PARAM_OPERATION, null), loadFlowParameters.getDcPowerFactor(), elementId);
     }
 
     public String getNetworkCountries(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode) {
@@ -677,7 +681,7 @@ public class StudyService {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         String equipmentPath = "voltage-levels" + StudyConstants.DELIMITER + voltageLevelId + StudyConstants.DELIMITER + "equipments";
         return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
-                substationsIds, equipmentPath);
+            substationsIds, equipmentPath);
     }
 
     public String getHvdcLineShuntCompensators(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode, String hvdcId) {
@@ -695,7 +699,7 @@ public class StudyService {
 
     public String getAllMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
         return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuid),
-                substationsIds, "all");
+            substationsIds, "all");
     }
 
     @Transactional
@@ -739,7 +743,7 @@ public class StudyService {
 
     public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid) {
         boolean exists = networkModificationTreeService.getAllNodes(studyUuid).stream()
-                .anyMatch(nodeEntity -> nodeUuid.equals(nodeEntity.getIdNode()));
+            .anyMatch(nodeEntity -> nodeUuid.equals(nodeEntity.getIdNode()));
 
         if (!exists) {
             throw new StudyException(NODE_NOT_FOUND);
@@ -748,7 +752,7 @@ public class StudyService {
 
     public void assertIsStudyExist(UUID studyUuid) {
         boolean exists = getStudies().stream()
-                .anyMatch(study -> studyUuid.equals(study.getId()));
+            .anyMatch(study -> studyUuid.equals(study.getId()));
         if (!exists) {
             throw new StudyException(NODE_NOT_FOUND);
         }
@@ -779,7 +783,7 @@ public class StudyService {
 
     public void assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid) {
         if (!(networkModificationTreeService.getStudyRootNodeUuid(studyUuid).equals(nodeUuid)
-                || networkModificationTreeService.getNodeBuildStatus(nodeUuid).isBuilt())) {
+            || networkModificationTreeService.getNodeBuildStatus(nodeUuid).isBuilt())) {
             throw new StudyException(NODE_NOT_BUILT);
         }
     }
@@ -815,10 +819,10 @@ public class StudyService {
 
     public NonEvacuatedEnergyParametersInfos getNonEvacuatedEnergyParametersInfos(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-                .map(studyEntity -> studyEntity.getNonEvacuatedEnergyParameters() != null ?
-                        NonEvacuatedEnergyService.fromEntity(studyEntity.getNonEvacuatedEnergyParameters()) :
-                        NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos())
-                .orElse(null);
+            .map(studyEntity -> studyEntity.getNonEvacuatedEnergyParameters() != null ?
+                NonEvacuatedEnergyService.fromEntity(studyEntity.getNonEvacuatedEnergyParameters()) :
+                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos())
+            .orElse(null);
     }
 
     @Transactional
@@ -847,7 +851,7 @@ public class StudyService {
                     return loadflowService.getLoadFlowParameters(userProfileInfos.getLoadFlowParameterId()).getProvider();
                 } catch (Exception e) {
                     LOGGER.error(String.format("Could not get loadflow parameters with id '%s' from user/profile '%s/%s'. Using default provider",
-                            userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
+                        userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
                     // in case of read error (ex: wrong/dangling uuid in the profile), move on with default provider below
                 }
             }
@@ -895,8 +899,8 @@ public class StudyService {
 
     public String getDynamicSimulationProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-                .map(StudyEntity::getDynamicSimulationProvider)
-                .orElse("");
+            .map(StudyEntity::getDynamicSimulationProvider)
+            .orElse("");
     }
 
     @Transactional
@@ -951,7 +955,7 @@ public class StudyService {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
-                    StandardCharsets.UTF_8);
+                StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -961,7 +965,7 @@ public class StudyService {
 
         var runSecurityAnalysisParametersInfos = new RunSecurityAnalysisParametersInfos(study.getSecurityAnalysisParametersUuid(), study.getLoadFlowParametersUuid(), contingencyListNames);
         UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, variantId, runSecurityAnalysisParametersInfos,
-                new ReportInfos(reportUuid, nodeUuid.toString()), receiver, userId);
+            new ReportInfos(reportUuid, nodeUuid.toString()), receiver, userId);
         updateComputationResultUuid(nodeUuid, result, SECURITY_ANALYSIS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         return result;
@@ -1064,12 +1068,12 @@ public class StudyService {
 
     @Transactional
     public StudyEntity saveStudyThenCreateBasicTree(StudyEntity studyEntity, TimePointEntity timePointEntity, UUID importReportUuid) {
-        studyEntity.setTimePoints(List.of(timePointEntity));
         timePointEntity.setStudy(studyEntity);
-        timePointRepository.save(timePointEntity);
+        studyEntity.setTimePoints(List.of(timePointEntity));
         var study = studyRepository.save(studyEntity);
 
-        networkModificationTreeService.createBasicTree(study, importReportUuid);
+        networkModificationTreeService.createBasicTree(study, importReportUuid, timePointEntity);
+        timePointService.createTimePointRootNodeLink()
         return study;
     }
 
@@ -1105,7 +1109,7 @@ public class StudyService {
 
     private StudyCreationRequestEntity insertStudyCreationRequestEntity(UUID studyUuid) {
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(
-                studyUuid == null ? UUID.randomUUID() : studyUuid);
+            studyUuid == null ? UUID.randomUUID() : studyUuid);
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
     }
 
@@ -1129,7 +1133,7 @@ public class StudyService {
             } catch (Exception e) {
                 userProfileIssue = true;
                 LOGGER.error(String.format("Could not duplicate loadflow parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                        userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
+                    userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
                 // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
             }
         }
@@ -1330,8 +1334,8 @@ public class StudyService {
             updateStatuses(studyUuid, parentNodeToMoveUuid, false, true, true);
         }
         allChildren.stream()
-                .filter(childUuid -> networkModificationTreeService.getNodeBuildStatus(childUuid).isBuilt())
-                .forEach(childUuid -> updateStatuses(studyUuid, childUuid, false, true, true));
+            .filter(childUuid -> networkModificationTreeService.getNodeBuildStatus(childUuid).isBuilt())
+            .forEach(childUuid -> updateStatuses(studyUuid, childUuid, false, true, true));
 
         notificationService.emitSubtreeMoved(studyUuid, parentNodeToMoveUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -1350,18 +1354,18 @@ public class StudyService {
         }
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getReportTypesPerReport().forEach((reportId, reportTypes) -> reportTypes.forEach(t -> reportService.deleteReportByType(reportId, t)))),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getNonEvacuatedEnergyResultUuids().forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getStateEstimationResultUuids().forEach(stateEstimationService::deleteStateEstimationResult)),
-                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getReportTypesPerReport().forEach((reportId, reportTypes) -> reportTypes.forEach(t -> reportService.deleteReportByType(reportId, t)))),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getNonEvacuatedEnergyResultUuids().forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
+            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getStateEstimationResultUuids().forEach(stateEstimationService::deleteStateEstimationResult)),
+            studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
         );
         try {
             executeInParallel.get();
@@ -1374,7 +1378,7 @@ public class StudyService {
 
         if (startTime.get() != null) {
             LOGGER.trace("Invalidate node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
     }
 
@@ -1475,19 +1479,19 @@ public class StudyService {
             List<UUID> removedNodes = networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
 
             CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getNonEvacuatedEnergyResultUuids().forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getStateEstimationResultUuids().forEach(stateEstimationService::deleteStateEstimationResult)),
-                    studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds())),
-                    studyServerExecutionService.runAsync(() -> removedNodes.forEach(dynamicSimulationEventService::deleteEventsByNodeId))
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getNonEvacuatedEnergyResultUuids().forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getStateEstimationResultUuids().forEach(stateEstimationService::deleteStateEstimationResult)),
+                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds())),
+                studyServerExecutionService.runAsync(() -> removedNodes.forEach(dynamicSimulationEventService::deleteEventsByNodeId))
             );
 
             try {
@@ -1502,7 +1506,7 @@ public class StudyService {
             if (startTime.get() != null) {
                 if (LOGGER.isTraceEnabled()) {
                     LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
-                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                 }
             }
 
@@ -1524,7 +1528,7 @@ public class StudyService {
 
         if (startTime.get() != null) {
             LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId, studyUuid,
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
 
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -1566,7 +1570,7 @@ public class StudyService {
     public StudyIndexationStatus getStudyIndexationStatus(UUID studyUuid) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         if (study.getIndexationStatus() == StudyIndexationStatus.INDEXED
-                && !networkConversionService.checkStudyIndexationStatus(study.getFirstTimepoint().getNetworkUuid())) {
+            && !networkConversionService.checkStudyIndexationStatus(study.getFirstTimepoint().getNetworkUuid())) {
             updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
         }
         return study.getIndexationStatus();
@@ -1697,25 +1701,25 @@ public class StudyService {
     private void emitNetworkModificationImpacts(UUID studyUuid, UUID nodeUuid, NetworkModificationResult networkModificationResult) {
         //TODO move this / rename parent method when refactoring notifications
         networkModificationTreeService.updateNodeBuildStatus(nodeUuid,
-                NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
+            NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
 
         Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
-                networkModificationResult.getNetworkImpacts().stream()
-                        .filter(impact -> impact.isSimple() && ((SimpleElementImpact) impact).isDeletion())
-                        .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(((SimpleElementImpact) impact).getElementId(), impact.getElementType().name()))
-                        .collect(Collectors.toSet());
-
-        Set<String> impactedElementTypes = networkModificationResult.getNetworkImpacts().stream()
-                .filter(impact -> impact.isCollection())
-                .map(impact -> impact.getElementType().name())
+            networkModificationResult.getNetworkImpacts().stream()
+                .filter(impact -> impact.isSimple() && ((SimpleElementImpact) impact).isDeletion())
+                .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(((SimpleElementImpact) impact).getElementId(), impact.getElementType().name()))
                 .collect(Collectors.toSet());
 
+        Set<String> impactedElementTypes = networkModificationResult.getNetworkImpacts().stream()
+            .filter(impact -> impact.isCollection())
+            .map(impact -> impact.getElementType().name())
+            .collect(Collectors.toSet());
+
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
-                NetworkImpactsInfos.builder()
-                        .deletedEquipments(deletionsInfos)
-                        .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
-                        .impactedElementTypes(impactedElementTypes)
-                        .build()
+            NetworkImpactsInfos.builder()
+                .deletedEquipments(deletionsInfos)
+                .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
+                .impactedElementTypes(impactedElementTypes)
+                .build()
         );
     }
 
@@ -1748,12 +1752,12 @@ public class StudyService {
 
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, Optional<String> busId, String userId) {
         networkModificationTreeService.getComputationResultUuid(nodeUuid, busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS)
-                .ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
+            .ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
         final Optional<UUID> parametersUuid = studyRepository.findById(studyUuid).map(StudyEntity::getShortCircuitParametersUuid);
         final UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId.orElse(null), parametersUuid, userId);
         updateComputationResultUuid(nodeUuid, result, busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid,
-                busId.isEmpty() ? NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS : NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+            busId.isEmpty() ? NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS : NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         return result;
     }
 
@@ -1789,16 +1793,16 @@ public class StudyService {
     public StudyVoltageInitParameters getVoltageInitParameters(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return new StudyVoltageInitParameters(
-                Optional.ofNullable(studyEntity.getVoltageInitParametersUuid()).map(voltageInitService::getVoltageInitParameters).orElse(null),
-                Optional.ofNullable(studyEntity.getVoltageInitParameters()).map(StudyVoltageInitParametersEntity::shouldApplyModifications).orElse(true)
+            Optional.ofNullable(studyEntity.getVoltageInitParametersUuid()).map(voltageInitService::getVoltageInitParameters).orElse(null),
+            Optional.ofNullable(studyEntity.getVoltageInitParameters()).map(StudyVoltageInitParametersEntity::shouldApplyModifications).orElse(true)
         );
     }
 
     public boolean shouldApplyModifications(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return Optional.ofNullable(studyEntity.getVoltageInitParameters())
-                .map(StudyVoltageInitParametersEntity::shouldApplyModifications)
-                .orElse(true);
+            .map(StudyVoltageInitParametersEntity::shouldApplyModifications)
+            .orElse(true);
     }
 
     // --- Dynamic Simulation service methods BEGIN --- //
@@ -1826,8 +1830,8 @@ public class StudyService {
 
     public DynamicSimulationParametersInfos getDynamicSimulationParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-                .map(studyEntity -> studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters())
-                .orElse(null);
+            .map(studyEntity -> studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters())
+            .orElse(null);
     }
 
     @Transactional(readOnly = true)
@@ -1948,7 +1952,7 @@ public class StudyService {
     public String getNetworkElementsIds(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode, String equipmentType, List<Double> nominalVoltages) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         return networkMapService.getElementsIds(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
-                substationsIds, equipmentType, nominalVoltages);
+            substationsIds, equipmentType, nominalVoltages);
     }
 
     @Transactional(readOnly = true)
@@ -1989,7 +1993,7 @@ public class StudyService {
     public String getSensitivityAnalysisParameters(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return sensitivityAnalysisService.getSensitivityAnalysisParameters(
-                sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity));
+            sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity));
     }
 
     @Transactional
@@ -2002,8 +2006,8 @@ public class StudyService {
     @Transactional
     public void setNonEvacuatedEnergyParametersInfos(UUID studyUuid, NonEvacuatedEnergyParametersInfos parameters, String userId) {
         updateNonEvacuatedEnergyParameters(studyUuid,
-                NonEvacuatedEnergyService.toEntity(parameters != null ? parameters :
-                        NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos()));
+            NonEvacuatedEnergyService.toEntity(parameters != null ? parameters :
+                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos()));
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -2065,26 +2069,26 @@ public class StudyService {
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyStagesDefinition(nonEvacuatedEnergyParametersInfos.getStagesDefinition());
 
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyStagesSelection(nonEvacuatedEnergyParametersInfos.getStagesSelection()
-                .stream()
-                .filter(NonEvacuatedEnergyStagesSelection::isActivated)
-                .collect(Collectors.toList()));
+            .stream()
+            .filter(NonEvacuatedEnergyStagesSelection::isActivated)
+            .collect(Collectors.toList()));
 
         List<NonEvacuatedEnergyGeneratorCappingsByType> generatorsCappingsByType = nonEvacuatedEnergyParametersInfos.getGeneratorsCappings().getGenerators()
-                .stream()
-                .filter(NonEvacuatedEnergyGeneratorCappingsByType::isActivated)
-                .collect(Collectors.toList());
+            .stream()
+            .filter(NonEvacuatedEnergyGeneratorCappingsByType::isActivated)
+            .collect(Collectors.toList());
         NonEvacuatedEnergyGeneratorsCappings generatorsCappings = new NonEvacuatedEnergyGeneratorsCappings(nonEvacuatedEnergyParametersInfos.getGeneratorsCappings().getSensitivityThreshold(), generatorsCappingsByType);
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyGeneratorsCappings(generatorsCappings);
 
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyMonitoredBranches(nonEvacuatedEnergyParametersInfos.getMonitoredBranches()
-                .stream()
-                .filter(NonEvacuatedEnergyMonitoredBranches::isActivated)
-                .collect(Collectors.toList()));
+            .stream()
+            .filter(NonEvacuatedEnergyMonitoredBranches::isActivated)
+            .collect(Collectors.toList()));
 
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyContingencies(nonEvacuatedEnergyParametersInfos.getContingencies()
-                .stream()
-                .filter(NonEvacuatedEnergyContingencies::isActivated)
-                .collect(Collectors.toList()));
+            .stream()
+            .filter(NonEvacuatedEnergyContingencies::isActivated)
+            .collect(Collectors.toList()));
 
         UUID result = nonEvacuatedEnergyService.runNonEvacuatedEnergy(nodeUuid, networkUuid, variantId, reportUuid, provider, nonEvacuatedEnergyInputData, studyEntity.getLoadFlowParametersUuid(), userId);
 
@@ -2104,8 +2108,8 @@ public class StudyService {
 
     public String getNonEvacuatedEnergyProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-                .map(StudyEntity::getNonEvacuatedEnergyProvider)
-                .orElse("");
+            .map(StudyEntity::getNonEvacuatedEnergyProvider)
+            .orElse("");
     }
 
     private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid) {

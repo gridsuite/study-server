@@ -42,7 +42,7 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
         return NodeModificationInfos.builder()
             .id(node.getId())
             .variantId("")      // we will use the network initial variant
-            .reportUuid(node.getReportUuid())
+            .reportUuid(node.getFirstTimePointNode().getReportUuid())
             .build();
     }
 }

@@ -34,6 +34,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.TimePointNetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.*;
@@ -148,6 +149,9 @@ public class NonEvacuatedEnergyTest {
 
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+
+    @Autowired
+    private TimePointNetworkModificationNodeInfoRepository timePointNodeStatusRepository;
 
     @Autowired
     private ReportService reportService;
@@ -371,7 +375,7 @@ public class NonEvacuatedEnergyTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/non-evacuated-energy/results-count")));
 
         //Delete sensitivity analysis results
-        assertEquals(1, networkModificationNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull().size());
+        assertEquals(1, timePointNodeStatusRepository.findAllByNonEvacuatedEnergyResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", String.valueOf(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS))
                 .queryParam("dryRun", String.valueOf(false)))
@@ -380,7 +384,7 @@ public class NonEvacuatedEnergyTest {
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/non-evacuated-energy/results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull().size());
+        assertEquals(0, timePointNodeStatusRepository.findAllByNonEvacuatedEnergyResultUuidNotNull().size());
 
         String baseUrlWireMock = wireMock.baseUrl();
         nonEvacuatedEnergyService.setSensitivityAnalysisServerBaseUri(baseUrlWireMock);

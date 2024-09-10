@@ -14,7 +14,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeStatusEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 
 import java.util.HashSet;
@@ -48,8 +48,9 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getModificationGroupUuid(),
-            List.of(TimePointNodeStatusEntity.builder()
+        var networkModificationNodeInfoEntity = NetworkModificationNodeInfoEntity.builder()
+            .modificationGroupUuid(modificationNode.getModificationGroupUuid())
+            .timePointNodeStatuses(List.of(TimePointNetworkModificationNodeInfoEntity.builder()
                 .variantId(modificationNode.getVariantId())
                 .modificationsToExclude(modificationNode.getModificationsToExclude())
                 .shortCircuitAnalysisResultUuid(modificationNode.getShortCircuitAnalysisResultUuid())
@@ -61,14 +62,15 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
                 .nonEvacuatedEnergyResultUuid(modificationNode.getNonEvacuatedEnergyResultUuid())
                 .dynamicSimulationResultUuid(modificationNode.getDynamicSimulationResultUuid())
                 .stateEstimationResultUuid(modificationNode.getStateEstimationResultUuid())
-                .nodeBuildStatus(modificationNode.getNodeBuildStatus().toEntity()).build()));
+                .nodeBuildStatus(modificationNode.getNodeBuildStatus().toEntity()).build()))
+            .build();
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
     @Override
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
         @SuppressWarnings("unused")
-        TimePointNodeStatusEntity timePointNodeStatusEntity = node.getFirstTimePointNodeStatusEntity();
+        TimePointNetworkModificationNodeInfoEntity timePointNodeStatusEntity = node.getFirstTimePointNodeStatusEntity();
         int ignoreSize = timePointNodeStatusEntity.getModificationsToExclude().size(); // to load the lazy collection
         return completeNodeInfo(node, new NetworkModificationNode(node.getModificationGroupUuid(),
             timePointNodeStatusEntity.getVariantId(),

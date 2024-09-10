@@ -24,6 +24,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.TimePointNetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -140,6 +141,9 @@ public class ShortCircuitTest implements WithAssertions {
 
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+
+    @Autowired
+    private TimePointNetworkModificationNodeInfoRepository timePointNodeStatusRepository;
 
     @Autowired
     private ReportService reportService;
@@ -383,7 +387,7 @@ public class ShortCircuitTest implements WithAssertions {
 
         // Delete Shortcircuit results
         // In short-circuit server there is no distinction between 1-bus and all-buses, so we remove all kinds of short-circuit
-        assertEquals(1, networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
+        assertEquals(1, timePointNodeStatusRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
                 .queryParam("dryRun", String.valueOf(false)))
@@ -392,7 +396,7 @@ public class ShortCircuitTest implements WithAssertions {
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
+        assertEquals(0, timePointNodeStatusRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
     }
 
     @Test
@@ -539,7 +543,7 @@ public class ShortCircuitTest implements WithAssertions {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
-        assertEquals(1, networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
+        assertEquals(1, timePointNodeStatusRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
 
         // get one bus short circuit result
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode3Uuid)
@@ -586,7 +590,7 @@ public class ShortCircuitTest implements WithAssertions {
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
+        assertEquals(0, timePointNodeStatusRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
     }
 
     @Test

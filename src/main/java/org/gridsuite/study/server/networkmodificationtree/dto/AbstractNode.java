@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -51,8 +50,7 @@ public abstract class AbstractNode {
 
     Boolean readOnly;
 
-    @JsonIgnore
-    private UUID reportUuid;
-
     NodeType type;
+
+    public abstract AbstractTimePointNode getFirstTimePointNode();
 }

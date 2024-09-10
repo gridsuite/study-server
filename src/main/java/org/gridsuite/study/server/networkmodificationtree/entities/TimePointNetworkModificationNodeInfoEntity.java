@@ -2,6 +2,7 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.repository.TimePointEntity;
 
 import java.util.Set;
@@ -11,35 +12,18 @@ import java.util.UUID;
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
  */
 @NoArgsConstructor
-@AllArgsConstructor
 @Getter
 @Setter
 @Entity
-@Builder
-@Table(name = "timepoint")
-public class TimePointNodeStatusEntity {
-    @Id
-    @Column(name = "id")
-    private UUID id;
-
-    @ManyToOne
-    @JoinColumn(name = "nodeInfoId",
-        referencedColumnName = "idNode",
-        foreignKey = @ForeignKey)
-    private NetworkModificationNodeInfoEntity nodeInfo;
-
-    @ManyToOne
-    @JoinColumn(name = "timePointId",
-        referencedColumnName = "id",
-        foreignKey = @ForeignKey)
-    private TimePointEntity timePoint;
-
+@SuperBuilder
+@Table(name = "TimePointNetworkModificationNodeInfo")
+public class TimePointNetworkModificationNodeInfoEntity extends AbstractTimePointNodeInfoEntity<NetworkModificationNodeInfoEntity> {
     @Column
     private String variantId;
 
     @Column(name = "modificationsToExclude")
     @ElementCollection
-    @CollectionTable(foreignKey = @ForeignKey(name = "networkModificationNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "networkModificationNodeInfoEntity_modificationsToExclude_idx", columnList = "network_modification_node_info_entity_id_node")})
+    @CollectionTable(foreignKey = @ForeignKey(name = "timePointNodeStatusEntity_modificationsToExclude_fk"), indexes = {@Index(name = "timePointNodeStatusEntity_modificationsToExclude_idx", columnList = "time_point_node_status_entity_id")})
     private Set<UUID> modificationsToExclude;
 
     @Column(name = "shortCircuitAnalysisResultUuid")
