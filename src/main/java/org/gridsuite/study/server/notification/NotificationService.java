@@ -12,7 +12,6 @@ import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.notification.dto.StudyAlert;
-import org.gridsuite.study.server.notification.dto.StudyParametersInfos;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,6 +112,14 @@ public class NotificationService {
     public static final String MESSAGE_LOG = "Sending message : {}";
     public static final String DEFAULT_ERROR_MESSAGE = "Unknown error";
 
+    public static final String UPDATE_TYPE_STUDY_SECURITY_ANALYSIS_PARAMS_UPDATED = "SecurityAnalysis";
+    public static final String UPDATE_TYPE_STUDY_LOADFLOW_PARAMS_UPDATED = "LoadFlow";
+    public static final String UPDATE_TYPE_STUDY_SHORT_CIRCUIT_PARAMS_UPDATED = "ShortCircuit";
+    public static final String UPDATE_TYPE_STUDY_VOLTAGE_INIT_PARAMS_UPDATED = "VoltageInit";
+    public static final String UPDATE_TYPE_STUDY_DYNAMIC_SIMULATION_PARAMS_UPDATED = "DynamicSimulation";
+    public static final String UPDATE_TYPE_STUDY_SENSITIVITY_ANALYSIS_PARAMS_UPDATED = "SensitivityAnalysis";
+    public static final String UPDATE_TYPE_STUDY_NON_EVACUATED_ENERGY_PARAMS_UPDATED = "NonEvacuatedEnergy";
+
     public static final String STUDY_ALERT = "STUDY_ALERT";
 
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
@@ -167,16 +174,11 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyParamsChanged(UUID studyUuid, String updateType, StudyParametersInfos studyParametersInfos) {
-        //todo: update type: comment c'est géré en front?
-        try {
-            sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(studyParametersInfos))
-                   .setHeader(HEADER_STUDY_UUID, studyUuid)
-                   .setHeader(HEADER_UPDATE_TYPE, updateType)
-                   .build());
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Unable to notify on study alert", e);
-        }
+    public void emitStudyParamsChanged(UUID studyUuid, String updateType, String studyParameter) {
+        sendUpdateMessage(MessageBuilder.withPayload(studyParameter)
+               .setHeader(HEADER_STUDY_UUID, studyUuid)
+               .setHeader(HEADER_UPDATE_TYPE, updateType)
+               .build());
     }
 
     public void emitStudyCreationError(UUID studyUuid, String userId, String errorMessage) {

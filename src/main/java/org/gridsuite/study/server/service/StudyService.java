@@ -39,7 +39,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
-import org.gridsuite.study.server.notification.dto.StudyParametersInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
@@ -804,7 +803,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         createOrUpdateSecurityAnalysisParameters(studyUuid, studyEntity, parameters);
         notificationService.emitElementUpdated(studyUuid, userId);
-        notificationService.emitStudyParamsChanged(studyUuid, "study", new StudyParametersInfos("SecurityAnalysis", null));
+        notificationService.emitStudyParamsChanged(studyUuid, NotificationService.UPDATE_TYPE_STUDY, NotificationService.UPDATE_TYPE_STUDY_SECURITY_ANALYSIS_PARAMS_UPDATED);
     }
 
     public NonEvacuatedEnergyParametersInfos getNonEvacuatedEnergyParametersInfos(UUID studyUuid) {
@@ -830,7 +829,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
-        notificationService.emitStudyParamsChanged(studyUuid, "study",  new StudyParametersInfos("LoadFlow", null));
+        notificationService.emitStudyParamsChanged(studyUuid, NotificationService.UPDATE_TYPE_STUDY, NotificationService.UPDATE_TYPE_STUDY_LOADFLOW_PARAMS_UPDATED);
         return userProfileIssue;
     }
 
@@ -861,7 +860,7 @@ public class StudyService {
             loadflowService.updateLoadFlowProvider(studyEntity.getLoadFlowParametersUuid(), provider);
             invalidateLoadFlowStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-            notificationService.emitStudyParamsChanged(studyUuid, "study", new StudyParametersInfos("LoadFlow", provider));
+            notificationService.emitStudyParamsChanged(studyUuid, NotificationService.UPDATE_TYPE_STUDY, NotificationService.UPDATE_TYPE_STUDY_LOADFLOW_PARAMS_UPDATED);
 
         });
     }
@@ -933,7 +932,7 @@ public class StudyService {
             studyRepository.save(studyEntity);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
-        notificationService.emitStudyParamsChanged(studyUuid, "study", new StudyParametersInfos("SecurityAnalysis", null));
+        notificationService.emitStudyParamsChanged(studyUuid, NotificationService.UPDATE_TYPE_STUDY, NotificationService.UPDATE_TYPE_STUDY_SHORT_CIRCUIT_PARAMS_UPDATED);
 
     }
 
@@ -1781,6 +1780,8 @@ public class StudyService {
         createOrUpdateVoltageInitParameters(studyEntity, parameters.getComputationParameters());
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitStudyParamsChanged(studyUuid, NotificationService.UPDATE_TYPE_STUDY, NotificationService.UPDATE_TYPE_STUDY_VOLTAGE_INIT_PARAMS_UPDATED);
+
     }
 
     public StudyVoltageInitParameters getVoltageInitParameters(UUID studyUuid) {
@@ -1819,6 +1820,8 @@ public class StudyService {
     public void setDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersInfos dsParameter, String userId) {
         updateDynamicSimulationParameters(studyUuid, DynamicSimulationService.toEntity(dsParameter != null ? dsParameter : DynamicSimulationService.getDefaultDynamicSimulationParameters(), objectMapper));
         notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitStudyParamsChanged(studyUuid, NotificationService.UPDATE_TYPE_STUDY, NotificationService.UPDATE_TYPE_STUDY_DYNAMIC_SIMULATION_PARAMS_UPDATED);
+
     }
 
     public DynamicSimulationParametersInfos getDynamicSimulationParameters(UUID studyUuid) {
@@ -1994,6 +1997,7 @@ public class StudyService {
         createOrUpdateSensitivityAnalysisParameters(studyUuid, parameters);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitStudyParamsChanged(studyUuid, NotificationService.UPDATE_TYPE_STUDY, NotificationService.UPDATE_TYPE_STUDY_SENSITIVITY_ANALYSIS_PARAMS_UPDATED);
     }
 
     @Transactional
@@ -2002,6 +2006,8 @@ public class StudyService {
                 NonEvacuatedEnergyService.toEntity(parameters != null ? parameters :
                         NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos()));
         notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitStudyParamsChanged(studyUuid, NotificationService.UPDATE_TYPE_STUDY, NotificationService.UPDATE_TYPE_STUDY_NON_EVACUATED_ENERGY_PARAMS_UPDATED);
+
     }
 
     public void createOrUpdateSensitivityAnalysisParameters(UUID studyUuid, String parameters) {
