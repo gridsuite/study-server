@@ -803,7 +803,6 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         createOrUpdateSecurityAnalysisParameters(studyUuid, studyEntity, parameters);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
