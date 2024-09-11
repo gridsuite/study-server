@@ -656,6 +656,8 @@ public class NonEvacuatedEnergyTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(myBodyJson)).andExpect(
             status().isOk());
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/parameters", studyNameUserIdUuid)).andExpectAll(
             status().isOk(),

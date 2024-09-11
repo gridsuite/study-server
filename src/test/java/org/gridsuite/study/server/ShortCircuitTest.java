@@ -282,6 +282,7 @@ public class ShortCircuitTest implements WithAssertions {
                         .header(HEADER_USER_ID, "testUserId")
                         .content("{\"dumb\": \"json\"}").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)));
     }
 

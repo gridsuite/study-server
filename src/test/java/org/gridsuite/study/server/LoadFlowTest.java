@@ -643,6 +643,9 @@ public class LoadFlowTest {
 
         message = output.receive(TIMEOUT, elementUpdateDestination);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
     }
 
     @Test

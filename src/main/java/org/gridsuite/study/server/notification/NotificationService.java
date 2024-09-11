@@ -38,6 +38,7 @@ public class NotificationService {
     public static final String HEADER_NODES = "nodes";
     public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String HEADER_UPDATE_TYPE = "updateType";
+    public static final String HEADER_PARAMS_NAME = "paramsName";
     public static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
     public static final String HEADER_USER_ID = "userId";
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
@@ -175,10 +176,11 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyParamsChanged(UUID studyUuid, String updateType, String studyParameter) {
-        sendUpdateMessage(MessageBuilder.withPayload(studyParameter)
+    public void emitStudyParamsChanged(UUID studyUuid, String updateType, String paramsName) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
                .setHeader(HEADER_STUDY_UUID, studyUuid)
                .setHeader(HEADER_UPDATE_TYPE, updateType)
+               .setHeader(HEADER_PARAMS_NAME, paramsName)
                .build());
     }
 
