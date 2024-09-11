@@ -12,16 +12,15 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NetworkService;
-import org.gridsuite.study.server.service.NonEvacuatedEnergyService;
-import org.gridsuite.study.server.service.ReportService;
+import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -54,6 +53,8 @@ class NetworkModificationUnitTest {
     @Autowired
     NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
     @Autowired
+    RootNodeInfoRepository rootNodeInfoRepository;
+    @Autowired
     NetworkModificationTreeService networkModificationTreeService;
     @Autowired
     StudyRepository studyRepository;
@@ -65,6 +66,8 @@ class NetworkModificationUnitTest {
     NetworkStoreService networkStoreService;
     @MockBean
     NetworkService networkService;
+    @MockBean
+    NetworkModificationService networkModificationService;
 
     private static final String CASE_LOADFLOW_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
     private static final UUID CASE_LOADFLOW_UUID = UUID.fromString(CASE_LOADFLOW_UUID_STRING);
@@ -90,7 +93,7 @@ class NetworkModificationUnitTest {
         StudyEntity study = insertStudy(NETWORK_UUID, CASE_LOADFLOW_UUID);
         studyUuid = study.getId();
 
-        NodeEntity rootNode = nodeRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null));
+        NodeEntity rootNode = inserRootNode(study, UUID.randomUUID());
 
         NodeEntity node1 = insertNode(study, node1Uuid, rootNode, BuildStatus.BUILT);
         NodeEntity node2 = insertNode(study, node2Uuid, node1, BuildStatus.BUILT);
@@ -137,20 +140,55 @@ class NetworkModificationUnitTest {
         assertEquals(BuildStatus.BUILT, node2Infos.getNodeBuildStatus().getLocalBuildStatus());
         assertEquals(BuildStatus.NOT_BUILT, node3Infos.getNodeBuildStatus().getLocalBuildStatus());
 
-        checkUpdateBuildStateMessageReceived(studyUuid, node1Uuid);
+        checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid));
         checkUpdateModelsStatusMessagesReceived(studyUuid, node1Uuid);
 
         Mockito.verify(reportService).deleteReport(null);
         Mockito.verify(networkService).deleteVariants(null, List.of(VARIANT_1));
     }
 
-    private void checkUpdateBuildStateMessageReceived(UUID studyUuid, UUID nodeUuid) {
+    @Test
+    public void disabledNetworkModificationTest() {
+        List<UUID> modificationToDisabledUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+        updateNetworkModificationActivationStatus(modificationToDisabledUuids, node1Uuid, List.of(node2Uuid, node3Uuid), List.of(node1Uuid, node2Uuid), false);
+    }
+
+    @Test
+    public void enableNetworkModificationTest() {
+        List<UUID> modificationToDisabledUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+        updateNetworkModificationActivationStatus(modificationToDisabledUuids, node1Uuid, List.of(node2Uuid, node3Uuid), List.of(node1Uuid, node2Uuid), true);
+    }
+
+    private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean active) {
+        studyController.updateNetworkModificationsActivation(studyUuid, node1Uuid, networkModificationUuids, active, "userId");
+
+        checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        checkUpdateBuildStateMessageReceived(studyUuid, nodesToUnbuild);
+        checkUpdateModelsStatusMessagesReceived(studyUuid, nodeWithModification);
+        checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
+
+        NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETUTN_NULL_MESSAGE));
+        Mockito.verify(networkModificationService, Mockito.times(1)).updateModificationsActivation(node1Infos.getModificationGroupUuid(), networkModificationUuids, active);
+    }
+
+    private void checkModificationUpdatedMessageReceived(UUID studyUuid, UUID nodeUuid, List<UUID> childrenNodeUuids, String notificationType) {
         Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(messageStatus.getPayload()));
 
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(List.of(nodeUuid), headersStatus.get(NotificationService.HEADER_NODES));
+        assertEquals(nodeUuid, headersStatus.get(NotificationService.HEADER_PARENT_NODE));
+        assertEquals(childrenNodeUuids, headersStatus.get(NotificationService.HEADER_NODES));
+        assertEquals(notificationType, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
+    }
+
+    private void checkUpdateBuildStateMessageReceived(UUID studyUuid, List<UUID> nodeUuids) {
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals("", new String(messageStatus.getPayload()));
+
+        MessageHeaders headersStatus = messageStatus.getHeaders();
+        assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuids, headersStatus.get(NotificationService.HEADER_NODES));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
@@ -190,6 +228,15 @@ class NetworkModificationUnitTest {
         NetworkModificationNodeInfoEntity nodeInfos = new NetworkModificationNodeInfoEntity(UUID.randomUUID(), VARIANT_1, new HashSet<>(), null, null, null, null, null, null, null, null, null, NodeBuildStatus.from(buildStatus).toEntity());
         nodeInfos.setIdNode(node.getIdNode());
         networkModificationNodeInfoRepository.save(nodeInfos);
+
+        return node;
+    }
+
+    private NodeEntity inserRootNode(StudyEntity study, UUID nodeId) {
+        NodeEntity node = nodeRepository.save(new NodeEntity(nodeId, null, NodeType.ROOT, study, false, null));
+        RootNodeInfoEntity rootNodeInfo = new RootNodeInfoEntity();
+        rootNodeInfo.setIdNode(node.getIdNode());
+        rootNodeInfoRepository.save(rootNodeInfo);
 
         return node;
     }
