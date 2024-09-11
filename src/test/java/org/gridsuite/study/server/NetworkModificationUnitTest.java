@@ -31,15 +31,24 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.eq;
+
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
  */
@@ -67,7 +76,7 @@ class NetworkModificationUnitTest {
     @MockBean
     NetworkService networkService;
     @MockBean
-    NetworkModificationService networkModificationService;
+    RestTemplate restTemplate;
 
     private static final String CASE_LOADFLOW_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
     private static final UUID CASE_LOADFLOW_UUID = UUID.fromString(CASE_LOADFLOW_UUID_STRING);
@@ -168,7 +177,12 @@ class NetworkModificationUnitTest {
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
         NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETUTN_NULL_MESSAGE));
-        Mockito.verify(networkModificationService, Mockito.times(1)).updateModificationsActivation(node1Infos.getModificationGroupUuid(), networkModificationUuids, active);
+    // /network-modifications?uuids=4480a7b3-64d4-4063-90dc-588c4f961003&uuids=7e11d054-6a49-4854-83d3-631a7d15faef&uuids=ae593e4a-0b26-49f8-b2c4-4d6fada82e8f&uuids=450aae19-16fb-4d33-bd6a-e600c414e0a2&groupUuid=7cefcda4-bab6-4963-a238-788e6db0cfa4&active=true
+    // /network-modifications?uuids=4480a7b3-64d4-4063-90dc-588c4f961003&uuids=7e11d054-6a49-4854-83d3-631a7d15faef&uuids=ae593e4a-0b26-49f8-b2c4-4d6fada82e8f&uuids=450aae19-16fb-4d33-bd6a-e600c414e0a2&groupUuid=7cefcda4-bab6-4963-a238-788e6db0cfa4&active=true
+    Mockito.verify(restTemplate, Mockito.times(1)).exchange(
+        matches(".*network-modifications\\?" + networkModificationUuids.stream().map(uuid -> "uuids=" + uuid.toString() + "&").collect(Collectors.joining()) +
+            "groupUuid=" + node1Infos.getModificationGroupUuid().toString() + "&" +
+            "active=" + active), eq(HttpMethod.PUT), any(HttpEntity.class), eq(Void.class));
     }
 
     private void checkModificationUpdatedMessageReceived(UUID studyUuid, UUID nodeUuid, List<UUID> childrenNodeUuids, String notificationType) {

@@ -55,16 +55,18 @@ public class NetworkModificationService {
     private static final String VARIANT_ID = "variantId";
     private static final String QUERY_PARAM_ACTION = "action";
     private final NetworkService networkStoreService;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private String networkModificationServerBaseUri;
 
     @Autowired
     NetworkModificationService(RemoteServicesProperties remoteServicesProperties,
                                NetworkService networkStoreService,
+                               RestTemplate restTemplate,
                                ObjectMapper objectMapper) {
         this.networkModificationServerBaseUri = remoteServicesProperties.getServiceUri("network-modification-server");
         this.networkStoreService = networkStoreService;
+        this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
     }
 
