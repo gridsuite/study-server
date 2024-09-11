@@ -954,6 +954,95 @@ public class NetworkModificationTest {
     }
 
     @Test
+    public void testCreateStaticVarCompensator() throws Exception {
+        String userId = "userId";
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "node 1", userId);
+        UUID modificationNode1Uuid = modificationNode1.getId();
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
+                modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 2", userId);
+        UUID modificationNode2Uuid = modificationNode2.getId();
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("type", ModificationType.STATIC_VAR_COMPENSATOR_CREATION);
+        body.put("staticVarCompensatorId", "staticVarCompensatorId1");
+        body.put("staticVarCompensatorName", "staticVarCompensatorName1");
+        body.put("susceptanceMin", "200.0");
+        body.put("susceptanceMax", "100.0");
+        body.put("reactivePowerSetpoint", "20.0");
+        body.put("voltageSetpoint", "225.0");
+        body.put("voltageLevelId", "idVL1");
+        body.put("busOrBusbarSectionId", "idBus1");
+        String bodyJsonCreate = mapper.writeValueAsString(body);
+
+        // create static var compensator on root node (not allowed)
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, rootNodeUuid)
+                        .content(bodyJsonCreate).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isForbidden());
+
+        // create static var compensator on first modification node
+        UUID stubPostId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
+                        .content(bodyJsonCreate).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        checkNodesInvalidationMessagesReceived(studyNameUserIdUuid, List.of(modificationNode1Uuid));
+        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
+        wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, bodyJsonCreate, NETWORK_UUID_STRING, VARIANT_ID);
+
+        // create static var compensator on second modification node
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode2Uuid)
+                        .content(bodyJsonCreate).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
+        checkNodesInvalidationMessagesReceived(studyNameUserIdUuid, List.of(modificationNode2Uuid));
+        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
+        checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
+        wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, bodyJsonCreate, NETWORK_UUID_STRING, VARIANT_ID_2);
+
+        // update static var compensator creation
+        body.replace("staticVarCompensatorId", "staticVarCompensatorId2");
+        body.replace("staticVarCompensatorName", "staticVarCompensatorName2");
+        body.put("reactivePowerSetpoint", "50.0");
+        body.put("voltageSetpoint", "230.0");
+        UUID stubPutId = wireMockUtils.stubNetworkModificationPut(MODIFICATION_UUID);
+        String bodyJsonUpdate = mapper.writeValueAsString(body);
+        mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID)
+                        .content(bodyJsonUpdate).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
+        wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, bodyJsonUpdate);
+
+        // create static var compensator on building node
+        body.replace("staticVarCompensatorId", "staticVarCompensatorId3");
+        body.replace("staticVarCompensatorName", "staticVarCompensatorName3");
+        body.put("reactivePowerSetpoint", "50.0");
+        body.put("voltageSetpoint", "230.0");
+        String bodyJsonCreateBis = mapper.writeValueAsString(body);
+        modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
+        checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
+        output.receive(TIMEOUT, studyUpdateDestination);
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
+                        .content(bodyJsonCreateBis).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     public void testCreateLine() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
