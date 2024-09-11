@@ -15,9 +15,6 @@ import java.util.UUID;
 public class TimePointNetworkModificationNode extends AbstractTimePointNode {
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only for tests. Need to replace by @JsonIgnore when all tests are rewritten without the variantID to identify a test in the MockWebServer
-    private UUID modificationGroupUuid;
-
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only for tests. Need to replace by @JsonIgnore when all tests are rewritten without the variantID to identify a test in the MockWebServer
     private String variantId;
 
     @Builder.Default

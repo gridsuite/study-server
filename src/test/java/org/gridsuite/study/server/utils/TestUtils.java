@@ -19,7 +19,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.TimePointEntity;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.junit.platform.commons.util.StringUtils;

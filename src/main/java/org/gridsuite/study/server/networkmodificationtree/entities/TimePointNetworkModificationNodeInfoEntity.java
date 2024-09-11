@@ -3,7 +3,8 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.study.server.repository.TimePointEntity;
+import org.gridsuite.study.server.networkmodificationtree.dto.TimePointNetworkModificationNode;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
 import java.util.Set;
 import java.util.UUID;
@@ -18,6 +19,10 @@ import java.util.UUID;
 @SuperBuilder
 @Table(name = "TimePointNetworkModificationNodeInfo")
 public class TimePointNetworkModificationNodeInfoEntity extends AbstractTimePointNodeInfoEntity<NetworkModificationNodeInfoEntity> {
+    public TimePointNetworkModificationNodeInfoEntity(TimePointEntity timePoint, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity) {
+        super(timePoint, networkModificationNodeInfoEntity);
+    }
+
     @Column
     private String variantId;
 
@@ -59,4 +64,8 @@ public class TimePointNetworkModificationNodeInfoEntity extends AbstractTimePoin
         @AttributeOverride(name = "globalBuildStatus", column = @Column(name = "globalBuildStatus", nullable = false))
     })
     private NodeBuildStatusEmbeddable nodeBuildStatus;
+
+    public TimePointNetworkModificationNode toDto() {
+        return TimePointNetworkModificationNode.builder().build();
+    }
 }

@@ -17,8 +17,5 @@ import java.util.UUID;
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
 public interface NetworkModificationNodeInfoRepository extends NodeInfoRepository<NetworkModificationNodeInfoEntity> {
-
-    List<NetworkModificationNodeInfoEntity> findAllByNodeStudyId(UUID studyUuid);
-
     List<AbstractNodeInfoEntity> findAllByNodeStudyIdAndName(UUID studyUuid, String name);
 }

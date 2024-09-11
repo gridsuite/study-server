@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
 @NoArgsConstructor
 @Getter
@@ -14,4 +15,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @Table(name = "TimePointRootNodeInfo")
 public class TimePointRootNodeInfoEntity extends AbstractTimePointNodeInfoEntity<RootNodeInfoEntity> {
+    public TimePointRootNodeInfoEntity(TimePointEntity timePoint, RootNodeInfoEntity rootNodeInfo) {
+        super(timePoint, rootNodeInfo);
+    }
 }

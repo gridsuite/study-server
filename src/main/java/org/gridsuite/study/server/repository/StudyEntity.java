@@ -10,6 +10,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 
 import java.util.List;

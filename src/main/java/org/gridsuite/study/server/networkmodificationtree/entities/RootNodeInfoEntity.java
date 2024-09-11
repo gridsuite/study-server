@@ -7,12 +7,16 @@
 
 package org.gridsuite.study.server.networkmodificationtree.entities;
 
+import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
+
+import java.util.UUID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -22,5 +26,23 @@ import jakarta.persistence.Table;
 @Setter
 @Entity
 @Table(name = "RootNodeInfo")
-public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
+public class RootNodeInfoEntity extends AbstractNodeInfoEntity<TimePointRootNodeInfoEntity> {
+
+    @Override
+    public TimePointRootNodeInfoEntity getFirstTimePointNodeStatusEntity() {
+        if (timePointNodeStatuses == null || timePointNodeStatuses.isEmpty()) {
+            return null;
+        }
+        return timePointNodeStatuses.get(0);
+    }
+
+    @Override
+    public TimePointRootNodeInfoEntity toTimePointNodeInfoEntity(TimePointEntity timePoint) {
+        return new TimePointRootNodeInfoEntity(timePoint, this);
+    }
+
+    @Override
+    public NodeType getType() {
+        return NodeType.ROOT;
+    }
 }

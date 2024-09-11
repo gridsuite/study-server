@@ -1174,7 +1174,7 @@ public class StudyController {
                                                          @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
                                                          @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(studyUuid, referenceId, node, insertMode, userId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.createNode(studyUuid, referenceId, node, insertMode, userId));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/tree/nodes")

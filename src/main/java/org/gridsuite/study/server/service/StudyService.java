@@ -41,6 +41,8 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
+import org.gridsuite.study.server.repository.timepoint.TimePointRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -1073,7 +1075,6 @@ public class StudyService {
         var study = studyRepository.save(studyEntity);
 
         networkModificationTreeService.createBasicTree(study, importReportUuid, timePointEntity);
-        timePointService.createTimePointRootNodeLink()
         return study;
     }
 
@@ -1674,7 +1675,7 @@ public class StudyService {
         // recursive function to retrieve all reports from a given node up to the Root node
         Pair<String, ReportNameMatchingType> filtersParameters = getFiltersParamaters(nodeUuid, nodeOnlyReport, reportType);
         AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
-        List<Report> subReporters = reportService.getReport(nodeInfos.getReportUuid(), nodeUuid.toString(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
+        List<Report> subReporters = reportService.getReport(nodeInfos.getFirstTimePointNode().getReportUuid(), nodeUuid.toString(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
         if (subReporters.isEmpty()) {
             return subReporters;
         } else if (nodeOnlyReport) {
@@ -2159,6 +2160,11 @@ public class StudyService {
         updateComputationResultUuid(nodeUuid, result, STATE_ESTIMATION);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
         return result;
+    }
+
+    public AbstractNode createNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode, String userId) {
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return networkModificationTreeService.createNode(study, nodeId, nodeInfo, insertMode, userId);
     }
 
 }

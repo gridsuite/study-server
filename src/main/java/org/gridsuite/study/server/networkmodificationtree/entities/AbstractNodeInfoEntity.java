@@ -13,9 +13,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.repository.AbstractManuallyAssignedIdentifierEntity;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
 import java.util.List;
 import java.util.UUID;
+
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -25,7 +27,7 @@ import java.util.UUID;
 @Setter
 @MappedSuperclass
 @SuperBuilder
-public abstract class AbstractNodeInfoEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> {
+public abstract class AbstractNodeInfoEntity<N extends AbstractTimePointNodeInfoEntity<?>> extends AbstractManuallyAssignedIdentifierEntity<UUID> {
 
     @Id
     @Column(name = "idNode", insertable = false, updatable = false)
@@ -49,14 +51,12 @@ public abstract class AbstractNodeInfoEntity extends AbstractManuallyAssignedIde
     Boolean readOnly;
 
     @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo")
-    private List<TimePointNetworkModificationNodeInfoEntity> timePointNodeStatuses;
+    protected List<N> timePointNodeStatuses;
 
     //TODO temporary, for now we are only working with one timepoint by study
-    public TimePointNetworkModificationNodeInfoEntity getFirstTimePointNodeStatusEntity() {
-        if (timePointNodeStatuses == null || timePointNodeStatuses.isEmpty()) {
-            return null;
-        }
-        return timePointNodeStatuses.get(0);
+    public abstract N getFirstTimePointNodeStatusEntity();
 
-    }
+    public abstract N toTimePointNodeInfoEntity(TimePointEntity timePoint);
+
+    public abstract NodeType getType();
 }

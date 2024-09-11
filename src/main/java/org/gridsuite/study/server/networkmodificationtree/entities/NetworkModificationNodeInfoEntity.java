@@ -10,6 +10,7 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
 import java.util.UUID;
 
@@ -23,8 +24,25 @@ import java.util.UUID;
 @Entity
 @SuperBuilder
 @Table(name = "NetworkModificationNodeInfo")
-public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
+public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity<TimePointNetworkModificationNodeInfoEntity> {
+    @Override
+    public TimePointNetworkModificationNodeInfoEntity getFirstTimePointNodeStatusEntity() {
+        if (timePointNodeStatuses == null || timePointNodeStatuses.isEmpty()) {
+            return null;
+        }
+        return timePointNodeStatuses.get(0);
+    }
 
     @Column
     private UUID modificationGroupUuid;
+
+    @Override
+    public TimePointNetworkModificationNodeInfoEntity toTimePointNodeInfoEntity(TimePointEntity timePoint) {
+        return new TimePointNetworkModificationNodeInfoEntity(timePoint, this);
+    }
+
+    @Override
+    public NodeType getType() {
+        return NodeType.NETWORK_MODIFICATION;
+    }
 }

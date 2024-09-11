@@ -6,11 +6,13 @@
  */
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -22,6 +24,9 @@ import java.util.List;
 @Setter
 @EqualsAndHashCode(callSuper = true)
 public class NetworkModificationNode extends AbstractNode {
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only for tests. Need to replace by @JsonIgnore when all tests are rewritten without the variantID to identify a test in the MockWebServer
+    private UUID modificationGroupUuid;
+
     private List<TimePointNetworkModificationNode> timePointNetworkModificationNodeList;
 
     @Override

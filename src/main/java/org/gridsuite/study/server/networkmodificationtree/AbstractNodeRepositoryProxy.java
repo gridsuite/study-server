@@ -72,11 +72,11 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
     public void invalidateNodeBuildStatus(AbstractNode node, List<UUID> changedNodes) {
     }
 
-    public void createNodeInfo(AbstractNode nodeInfo) {
+    public T createNodeInfo(AbstractNode nodeInfo) {
         if (nodeInfo.getFirstTimePointNode().getReportUuid() == null) {
             nodeInfo.getFirstTimePointNode().setReportUuid(UUID.randomUUID());
         }
-        nodeInfoRepository.save(toEntity(nodeInfo));
+        return nodeInfoRepository.save(toEntity(nodeInfo));
     }
 
     public void deleteByNodeId(UUID id) {

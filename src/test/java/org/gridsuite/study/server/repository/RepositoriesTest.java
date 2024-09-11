@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.repository;
 
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.After;
 import org.junit.Test;

@@ -188,7 +188,7 @@ class NetworkModificationUnitTest {
 
     private NodeEntity insertNode(StudyEntity study, UUID nodeId, NodeEntity parentNode, BuildStatus buildStatus) {
         NodeEntity node = nodeRepository.save(new NodeEntity(nodeId, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
-        NetworkModificationNodeInfoEntity nodeInfos = new NetworkModificationNodeInfoEntity(UUID.randomUUID(), List.of(TimePointNetworkModificationNodeInfoEntity.builder().variantId(VARIANT_1).modificationsToExclude(new HashSet<>()).nodeBuildStatus(NodeBuildStatus.from(buildStatus).toEntity()).build()));
+        NetworkModificationNodeInfoEntity nodeInfos = NetworkModificationNodeInfoEntity.builder().idNode(UUID.randomUUID()).timePointNodeStatuses(List.of(TimePointNetworkModificationNodeInfoEntity.builder().variantId(VARIANT_1).modificationsToExclude(new HashSet<>()).nodeBuildStatus(NodeBuildStatus.from(buildStatus).toEntity()).build())).build();
         nodeInfos.setIdNode(node.getIdNode());
         networkModificationNodeInfoRepository.save(nodeInfos);
 

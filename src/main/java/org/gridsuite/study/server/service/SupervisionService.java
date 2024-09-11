@@ -10,7 +10,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.repository.TimePointNetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.timepoint.TimePointNetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;

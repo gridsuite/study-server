@@ -3,16 +3,21 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.study.server.repository.TimePointEntity;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
 import java.util.UUID;
 
 @NoArgsConstructor
 @Getter
 @Setter
-@Entity
 @SuperBuilder
-public abstract class AbstractTimePointNodeInfoEntity<T extends AbstractNodeInfoEntity> {
+@MappedSuperclass
+public abstract class AbstractTimePointNodeInfoEntity<T extends AbstractNodeInfoEntity<?>> {
+    public AbstractTimePointNodeInfoEntity(TimePointEntity timePoint, T nodeInfo) {
+        this.timePoint = timePoint;
+        this.nodeInfo = nodeInfo;
+    }
+
     @Id
     @Column(name = "id")
     private UUID id;

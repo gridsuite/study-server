@@ -1,8 +1,9 @@
-package org.gridsuite.study.server.repository;
+package org.gridsuite.study.server.repository.timepoint;
 
 import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
 
 import java.util.List;
 import java.util.UUID;
