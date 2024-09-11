@@ -155,13 +155,13 @@ class NetworkModificationUnitTest {
     }
 
     @Test
-    public void disabledNetworkModificationTest() {
+    void disabledNetworkModificationTest() {
         List<UUID> modificationToDisabledUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
         updateNetworkModificationActivationStatus(modificationToDisabledUuids, node1Uuid, List.of(node2Uuid, node3Uuid), List.of(node1Uuid, node2Uuid), false);
     }
 
     @Test
-    public void enableNetworkModificationTest() {
+    void enableNetworkModificationTest() {
         List<UUID> modificationToDisabledUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
         updateNetworkModificationActivationStatus(modificationToDisabledUuids, node1Uuid, List.of(node2Uuid, node3Uuid), List.of(node1Uuid, node2Uuid), true);
     }
