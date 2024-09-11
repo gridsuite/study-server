@@ -365,6 +365,30 @@ public class ConsumerService {
         }
     }
 
+    public void consumeCalculationCancelFailed(Message<String> msg, ComputationType computationType, String updateType) {
+        String receiver = msg.getHeaders().get(HEADER_RECEIVER, String.class);
+        if (!Strings.isBlank(receiver)) {
+            NodeReceiver receiverObj;
+            try {
+                receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                String errorMessage = msg.getHeaders().get(HEADER_MESSAGE, String.class);
+                String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
+                // send notification for cancel computation fail
+                notificationService.emitStudyError(
+                    studyUuid,
+                    receiverObj.getNodeUuid(),
+                    updateType,
+                    errorMessage,
+                    userId
+                );
+                LOGGER.info("{} cancellation could not be stopped for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
+            } catch (JsonProcessingException e) {
+                LOGGER.error(e.toString());
+            }
+        }
+    }
+
     public void consumeCalculationResult(Message<String> msg, ComputationType computationType) {
         Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
             .map(UUID::fromString)
@@ -514,6 +538,11 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeVoltageInitFailed() {
         return message -> consumeCalculationFailed(message, VOLTAGE_INITIALIZATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeVoltageInitCancelFailed() {
+        return message -> consumeCalculationCancelFailed(message, VOLTAGE_INITIALIZATION, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_CANCEL_FAILED);
     }
 
     @Bean
