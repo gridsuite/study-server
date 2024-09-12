@@ -875,6 +875,7 @@ public class StudyService {
             securityAnalysisService.updateSecurityAnalysisProvider(studyEntity.getSecurityAnalysisParametersUuid(), provider);
             invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+            notificationService.emitStudyParamsChanged(studyUuid, NotificationService.UPDATE_TYPE_STUDY, NotificationService.UPDATE_TYPE_STUDY_SECURITY_ANALYSIS_PARAMS_UPDATED);
         });
     }
 
@@ -902,6 +903,7 @@ public class StudyService {
             studyEntity.setDynamicSimulationProvider(provider != null ? provider : defaultDynamicSimulationProvider);
             invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+            notificationService.emitStudyParamsChanged(studyUuid, NotificationService.UPDATE_TYPE_STUDY, NotificationService.UPDATE_TYPE_STUDY_DYNAMIC_SIMULATION_PARAMS_UPDATED);
         });
     }
 
@@ -2102,6 +2104,7 @@ public class StudyService {
             studyEntity.setNonEvacuatedEnergyProvider(provider != null ? provider : defaultNonEvacuatedEnergyProvider);
             invalidateNonEvacuatedEnergyAnalysisStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
+            notificationService.emitStudyParamsChanged(studyUuid, NotificationService.UPDATE_TYPE_STUDY, NotificationService.UPDATE_TYPE_STUDY_NON_EVACUATED_ENERGY_PARAMS_UPDATED);
         });
     }
 
