@@ -1031,7 +1031,7 @@ public class StudyTest {
         AbstractNode modificationNode = rootNode.getChildren().get(0);
         NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
         NetworkModificationNode node2 = createNetworkModificationNode(studyUuid, node1.getId(), VARIANT_ID_2, "node2", userId);
-        NetworkModificationNode node3 = createNetworkModificationNode(studyUuid, modificationNodeUuid, VARIANT_ID_3, "node3", userId);
+        createNetworkModificationNode(studyUuid, modificationNodeUuid, VARIANT_ID_3, "node3", userId);
         UUID rootNodeReportId = networkModificationTreeService.getNode(rootNode.getId()).getReportUuid();
         UUID modificationNodeReportId = networkModificationTreeService.getNode(modificationNode.getId()).getReportUuid();
         UUID node1ReportId = networkModificationTreeService.getNode(node1.getId()).getReportUuid();
@@ -1053,7 +1053,7 @@ public class StudyTest {
         assertEquals(4, reportLogs.size());
         var requests = TestUtils.getRequestsDone(4, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + node2ReportId + "/logs")));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + node2ReportId + "/logs")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + node1ReportId + "/logs")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + modificationNodeReportId + "/logs")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + rootNodeReportId + "/logs")));
 
@@ -1065,7 +1065,7 @@ public class StudyTest {
         assertEquals(4, reportLogs.size());
         requests = TestUtils.getRequestsDone(4, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + node2ReportId + "/logs\\?severityLevels=WARN&message=testMsgFilter")));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + node2ReportId + "/logs\\?severityLevels=WARN&message=testMsgFilter")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + node1ReportId + "/logs\\?severityLevels=WARN&message=testMsgFilter")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + modificationNodeReportId + "/logs\\?severityLevels=WARN&message=testMsgFilter")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + rootNodeReportId + "/logs\\?severityLevels=WARN&message=testMsgFilter")));
     }
