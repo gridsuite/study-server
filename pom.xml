@@ -47,7 +47,7 @@
         <testcontainers.version>1.18.3</testcontainers.version>
         <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
         <apache.httpclient.version>5.3</apache.httpclient.version>
-        <powsybl-network-store.version>1.16.0</powsybl-network-store.version>
+        <powsybl-network-store.version>1.17.1</powsybl-network-store.version>
     </properties>
 
     <build>
