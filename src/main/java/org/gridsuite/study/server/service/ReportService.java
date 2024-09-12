@@ -82,8 +82,10 @@ public class ReportService {
         } catch (Exception e) {
             LOGGER.error("Error while deleting reports : {}", e.getMessage());
     public List<ReportLog> getReportLogs(@NonNull UUID id, String messageFilter, Set<String> severityLevels) {
-        var uriBuilder = UriComponentsBuilder.fromPath("{id}/logs")
-                .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
+        var uriBuilder = UriComponentsBuilder.fromPath("{id}/logs");
+        if (severityLevels != null && !severityLevels.isEmpty()) {
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
+        }
         if (!StringUtil.isBlank(messageFilter)) {
             uriBuilder.queryParam(QUERY_PARAM_MESSAGE_FILTER, messageFilter);
         }
