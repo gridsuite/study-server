@@ -73,6 +73,8 @@ import java.util.stream.Stream;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_OPERATION;
+import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
+import static org.gridsuite.study.server.service.StudyService.ReportType.NETWORK_MODIFICATION;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -1671,6 +1673,25 @@ public class StudyService {
     @Transactional(readOnly = true)
     public List<Report> getNodeReport(UUID nodeUuid, String reportId, Set<String> severityLevels) {
         return List.of(reportService.getReport(UUID.fromString(reportId), nodeUuid.toString(), severityLevels));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReportLog> getReportLogs(String reportId, String messageFilter, Set<String> severityLevels) {
+        return cleanReportLogs(reportService.getReportLogs(UUID.fromString(reportId), messageFilter, severityLevels));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReportLog> getParentNodesReportLogs(UUID nodeUuid, String messageFilter, Set<String> severityLevels) {
+        // recursive function to retrieve all reports logs from a given node up to the Root node
+        AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
+        List<ReportLog> reportLogs = reportService.getReportLogs(nodeInfos.getReportUuid(), messageFilter, severityLevels);
+
+        Optional<UUID> parentUuid = networkModificationTreeService.getParentNodeUuid(nodeUuid);
+        if (parentUuid.isEmpty()) {
+            return reportLogs;
+        }
+        List<ReportLog> parentReporterMessages = self.getParentNodesReportLogs(parentUuid.get(), messageFilter, severityLevels);
+        return Stream.concat(parentReporterMessages.stream(), reportLogs.stream()).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
