@@ -227,14 +227,14 @@ public class NetworkModificationService {
         }
     }
 
-    public void updateModificationsActivation(UUID groupUUid, List<UUID> modificationsUuids, boolean active) {
+    public void updateModificationsActivation(UUID groupUUid, List<UUID> modificationsUuids, boolean activated) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
             .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
             .queryParam(UUIDS, modificationsUuids)
             .queryParam(GROUP_UUID, groupUUid)
-            .queryParam(QUERY_PARAM_ACTIVE, active)
+            .queryParam(QUERY_PARAM_ACTIVE, activated)
             .buildAndExpand()
             .toUriString();
 
