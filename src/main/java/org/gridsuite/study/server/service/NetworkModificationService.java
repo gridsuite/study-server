@@ -234,7 +234,7 @@ public class NetworkModificationService {
             .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
             .queryParam(UUIDS, modificationsUuids)
             .queryParam(GROUP_UUID, groupUUid)
-            .queryParam(QUERY_PARAM_ACTIVE, activated)
+            .queryParam(QUERY_PARAM_ACTIVATED, activated)
             .buildAndExpand()
             .toUriString();
 
