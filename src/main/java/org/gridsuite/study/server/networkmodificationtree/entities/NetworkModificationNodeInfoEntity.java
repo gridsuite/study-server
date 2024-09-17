@@ -34,6 +34,7 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     protected List<TimePointNodeInfoEntity> timePointNodeInfos;
 
     //TODO temporary, for now we are only working with one timepoint by study
+    @Transient
     public TimePointNodeInfoEntity getFirstTimePointNodeStatusEntity() {
         if (timePointNodeInfos == null || timePointNodeInfos.isEmpty()) {
             return null;
@@ -43,10 +44,5 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     public TimePointNodeInfoEntity toTimePointNodeInfoEntity(TimePointEntity timePoint) {
         return new TimePointNodeInfoEntity(timePoint, this);
-    }
-
-    @Override
-    public NodeType getType() {
-        return NodeType.NETWORK_MODIFICATION;
     }
 }

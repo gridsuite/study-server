@@ -48,7 +48,7 @@ public class TimePointNodeInfoEntity {
 
     @Column(name = "modificationsToExclude")
     @ElementCollection
-    @CollectionTable(foreignKey = @ForeignKey(name = "timePointNodeStatusEntity_modificationsToExclude_fk"), indexes = {@Index(name = "timePointNodeStatusEntity_modificationsToExclude_idx", columnList = "time_point_network_modification_node_info_id")})
+    @CollectionTable(foreignKey = @ForeignKey(name = "timePointNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "time_point_node_info_entity_modifications_to_exclude_idx", columnList = "time_point_node_info_entity_id")})
     private Set<UUID> modificationsToExclude;
 
     @Column(name = "shortCircuitAnalysisResultUuid")

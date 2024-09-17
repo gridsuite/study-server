@@ -23,9 +23,4 @@ import lombok.experimental.SuperBuilder;
 @Entity
 @SuperBuilder
 @Table(name = "RootNodeInfo")
-public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
-    @Override
-    public NodeType getType() {
-        return NodeType.ROOT;
-    }
-}
+public class RootNodeInfoEntity extends AbstractNodeInfoEntity { }

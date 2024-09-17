@@ -48,6 +48,4 @@ public abstract class AbstractNodeInfoEntity extends AbstractManuallyAssignedIde
 
     @Column
     Boolean readOnly;
-
-    public abstract NodeType getType();
 }
