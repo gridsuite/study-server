@@ -155,19 +155,19 @@ class NetworkModificationUnitTest {
     }
 
     @Test
-    void disabledNetworkModificationTest() {
+    void activateNetworkModificationTest() {
         List<UUID> modificationToDisabledUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
         updateNetworkModificationActivationStatus(modificationToDisabledUuids, node1Uuid, List.of(node2Uuid, node3Uuid), List.of(node1Uuid, node2Uuid), false);
     }
 
     @Test
-    void enableNetworkModificationTest() {
+    void deactivateNetworkModificationTest() {
         List<UUID> modificationToDisabledUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
         updateNetworkModificationActivationStatus(modificationToDisabledUuids, node1Uuid, List.of(node2Uuid, node3Uuid), List.of(node1Uuid, node2Uuid), true);
     }
 
-    private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean active) {
-        studyController.updateNetworkModificationsActivation(studyUuid, node1Uuid, networkModificationUuids, active, "userId");
+    private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {
+        studyController.updateNetworkModificationsActivation(studyUuid, node1Uuid, networkModificationUuids, activated, "userId");
 
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         checkUpdateBuildStateMessageReceived(studyUuid, nodesToUnbuild);
@@ -178,7 +178,7 @@ class NetworkModificationUnitTest {
         Mockito.verify(restTemplate, Mockito.times(1)).exchange(
             matches(".*network-modifications\\?" + networkModificationUuids.stream().map(uuid -> "uuids=" + uuid.toString() + "&").collect(Collectors.joining()) +
                 "groupUuid=" + node1Infos.getModificationGroupUuid().toString() + "&" +
-                "active=" + active), eq(HttpMethod.PUT), any(HttpEntity.class), eq(Void.class));
+                "activated=" + activated), eq(HttpMethod.PUT), any(HttpEntity.class), eq(Void.class));
     }
 
     private void checkModificationUpdatedMessageReceived(UUID studyUuid, UUID nodeUuid, List<UUID> childrenNodeUuids, String notificationType) {
