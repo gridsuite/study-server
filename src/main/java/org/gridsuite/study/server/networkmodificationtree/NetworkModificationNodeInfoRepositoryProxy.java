@@ -11,7 +11,7 @@ import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 
 import java.util.HashSet;
@@ -54,7 +54,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         TimePointNetworkModificationNode timePointNodeInfo = modificationNode.getFirstTimePointNode();
         var networkModificationNodeInfoEntity = NetworkModificationNodeInfoEntity.builder()
             .modificationGroupUuid(modificationNode.getModificationGroupUuid())
-            .timePointNodeInfos(List.of(TimePointNetworkModificationNodeInfoEntity.builder()
+            .timePointNodeInfos(List.of(TimePointNodeInfoEntity.builder()
                 .variantId(timePointNodeInfo.getVariantId())
                 .modificationsToExclude(timePointNodeInfo.getModificationsToExclude())
                 .shortCircuitAnalysisResultUuid(timePointNodeInfo.getShortCircuitAnalysisResultUuid())
@@ -74,7 +74,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
         @SuppressWarnings("unused")
-        TimePointNetworkModificationNodeInfoEntity timePointNodeStatusEntity = node.getFirstTimePointNodeStatusEntity();
+        TimePointNodeInfoEntity timePointNodeStatusEntity = node.getFirstTimePointNodeStatusEntity();
         int ignoreSize = timePointNodeStatusEntity.getModificationsToExclude().size(); // to load the lazy collection
         return completeNodeInfo(node, new NetworkModificationNode(node.getModificationGroupUuid(),
             List.of(

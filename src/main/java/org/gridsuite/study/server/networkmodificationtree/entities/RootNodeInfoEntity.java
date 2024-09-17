@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -24,22 +23,7 @@ import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 @Entity
 @SuperBuilder
 @Table(name = "RootNodeInfo")
-public class RootNodeInfoEntity extends AbstractNodeInfoEntity<TimePointRootNodeInfoEntity> {
-
-    @Override
-    @Transient
-    public TimePointRootNodeInfoEntity getFirstTimePointNodeStatusEntity() {
-        if (timePointNodeInfos == null || timePointNodeInfos.isEmpty()) {
-            return null;
-        }
-        return timePointNodeInfos.get(0);
-    }
-
-    @Override
-    public TimePointRootNodeInfoEntity toTimePointNodeInfoEntity(TimePointEntity timePoint) {
-        return new TimePointRootNodeInfoEntity(timePoint, this);
-    }
-
+public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
     @Override
     public NodeType getType() {
         return NodeType.ROOT;

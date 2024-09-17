@@ -1,25 +1,25 @@
 package org.gridsuite.study.server.repository.timepoint;
 
-import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
 
 import java.util.List;
 
-public interface TimePointNetworkModificationNodeInfoRepository extends AbstractTimePointNodeInfoRepository<TimePointNetworkModificationNodeInfoEntity> {
-    List<TimePointNetworkModificationNodeInfoEntity> findAllByLoadFlowResultUuidNotNull();
+public interface TimePointNetworkModificationNodeInfoRepository extends org.springframework.data.jpa.repository.JpaRepository<TimePointNodeInfoEntity, java.util.UUID> {
+    List<TimePointNodeInfoEntity> findAllByLoadFlowResultUuidNotNull();
 
-    List<TimePointNetworkModificationNodeInfoEntity> findAllByDynamicSimulationResultUuidNotNull();
+    List<TimePointNodeInfoEntity> findAllByDynamicSimulationResultUuidNotNull();
 
-    List<TimePointNetworkModificationNodeInfoEntity> findAllBySecurityAnalysisResultUuidNotNull();
+    List<TimePointNodeInfoEntity> findAllBySecurityAnalysisResultUuidNotNull();
 
-    List<TimePointNetworkModificationNodeInfoEntity> findAllBySensitivityAnalysisResultUuidNotNull();
+    List<TimePointNodeInfoEntity> findAllBySensitivityAnalysisResultUuidNotNull();
 
-    List<TimePointNetworkModificationNodeInfoEntity> findAllByNonEvacuatedEnergyResultUuidNotNull();
+    List<TimePointNodeInfoEntity> findAllByNonEvacuatedEnergyResultUuidNotNull();
 
-    List<TimePointNetworkModificationNodeInfoEntity> findAllByShortCircuitAnalysisResultUuidNotNull();
+    List<TimePointNodeInfoEntity> findAllByShortCircuitAnalysisResultUuidNotNull();
 
-    List<TimePointNetworkModificationNodeInfoEntity> findAllByOneBusShortCircuitAnalysisResultUuidNotNull();
+    List<TimePointNodeInfoEntity> findAllByOneBusShortCircuitAnalysisResultUuidNotNull();
 
-    List<TimePointNetworkModificationNodeInfoEntity> findAllByVoltageInitResultUuidNotNull();
+    List<TimePointNodeInfoEntity> findAllByVoltageInitResultUuidNotNull();
 
-    List<TimePointNetworkModificationNodeInfoEntity> findAllByStateEstimationResultUuidNotNull();
+    List<TimePointNodeInfoEntity> findAllByStateEstimationResultUuidNotNull();
 }

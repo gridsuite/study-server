@@ -12,6 +12,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -24,21 +25,24 @@ import java.util.UUID;
 @Entity
 @SuperBuilder
 @Table(name = "NetworkModificationNodeInfo")
-public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity<TimePointNetworkModificationNodeInfoEntity> {
-    @Override
-    public TimePointNetworkModificationNodeInfoEntity getFirstTimePointNodeStatusEntity() {
+public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
+
+    @Column
+    private UUID modificationGroupUuid;
+
+    @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo")
+    protected List<TimePointNodeInfoEntity> timePointNodeInfos;
+
+    //TODO temporary, for now we are only working with one timepoint by study
+    public TimePointNodeInfoEntity getFirstTimePointNodeStatusEntity() {
         if (timePointNodeInfos == null || timePointNodeInfos.isEmpty()) {
             return null;
         }
         return timePointNodeInfos.get(0);
     }
 
-    @Column
-    private UUID modificationGroupUuid;
-
-    @Override
-    public TimePointNetworkModificationNodeInfoEntity toTimePointNodeInfoEntity(TimePointEntity timePoint) {
-        return new TimePointNetworkModificationNodeInfoEntity(timePoint, this);
+    public TimePointNodeInfoEntity toTimePointNodeInfoEntity(TimePointEntity timePoint) {
+        return new TimePointNodeInfoEntity(timePoint, this);
     }
 
     @Override

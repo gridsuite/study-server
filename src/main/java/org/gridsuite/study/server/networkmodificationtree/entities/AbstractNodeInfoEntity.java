@@ -13,9 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.repository.AbstractManuallyAssignedIdentifierEntity;
-import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
-import java.util.List;
 import java.util.UUID;
 
 
@@ -27,7 +25,7 @@ import java.util.UUID;
 @Setter
 @MappedSuperclass
 @SuperBuilder
-public abstract class AbstractNodeInfoEntity<N extends AbstractTimePointNodeInfoEntity<?>> extends AbstractManuallyAssignedIdentifierEntity<UUID> {
+public abstract class AbstractNodeInfoEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> {
 
     @Id
     @Column(name = "idNode", insertable = false, updatable = false)
@@ -50,14 +48,6 @@ public abstract class AbstractNodeInfoEntity<N extends AbstractTimePointNodeInfo
 
     @Column
     Boolean readOnly;
-
-    @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo")
-    protected List<N> timePointNodeInfos;
-
-    //TODO temporary, for now we are only working with one timepoint by study
-    public abstract N getFirstTimePointNodeStatusEntity();
-
-    public abstract N toTimePointNodeInfoEntity(TimePointEntity timePoint);
 
     public abstract NodeType getType();
 }

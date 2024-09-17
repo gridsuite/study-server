@@ -504,7 +504,7 @@ public class StudyService {
                 null, null, null, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
                 loadFlowParametersUuid, shortCircuitParametersUuid, dynamicSimulationParametersEntity, voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED, new StudyVoltageInitParametersEntity()),
-            new TimePointEntity(null, null, null, networkUuid, networkId, caseFormat, caseUuid, caseName),
+            new TimePointEntity(null, null, null, networkUuid, networkId, caseFormat, caseUuid, caseName, importReportUuid),
             importReportUuid);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);

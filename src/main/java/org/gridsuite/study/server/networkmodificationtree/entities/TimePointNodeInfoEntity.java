@@ -17,11 +17,31 @@ import java.util.UUID;
 @Setter
 @Entity
 @SuperBuilder
-@Table(name = "TimePointNetworkModificationNodeInfo")
-public class TimePointNetworkModificationNodeInfoEntity extends AbstractTimePointNodeInfoEntity<NetworkModificationNodeInfoEntity> {
-    public TimePointNetworkModificationNodeInfoEntity(TimePointEntity timePoint, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity) {
-        super(timePoint, networkModificationNodeInfoEntity);
+@Table(name = "TimePointNodeInfo")
+public class TimePointNodeInfoEntity {
+    public TimePointNodeInfoEntity(TimePointEntity timePoint, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity) {
+        this.timePoint = timePoint;
+        this.nodeInfo = networkModificationNodeInfoEntity;
     }
+
+    @Id
+    @Column(name = "id")
+    private UUID id;
+
+    @ManyToOne
+    @JoinColumn(name = "timePointId")/*,*/
+//        referencedColumnName = "id",
+//        foreignKey = @ForeignKey)
+    private TimePointEntity timePoint;
+
+    @Column
+    UUID reportUuid;
+
+    @ManyToOne
+    @JoinColumn(name = "nodeInfoId")/*,
+        referencedColumnName = "idNode",
+        foreignKey = @ForeignKey)*/
+    private NetworkModificationNodeInfoEntity nodeInfo;
 
     @Column
     private String variantId;
