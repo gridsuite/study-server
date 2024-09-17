@@ -54,7 +54,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         TimePointNetworkModificationNode timePointNodeInfo = modificationNode.getFirstTimePointNode();
         var networkModificationNodeInfoEntity = NetworkModificationNodeInfoEntity.builder()
             .modificationGroupUuid(modificationNode.getModificationGroupUuid())
-            .timePointNodeStatuses(List.of(TimePointNetworkModificationNodeInfoEntity.builder()
+            .timePointNodeInfos(List.of(TimePointNetworkModificationNodeInfoEntity.builder()
                 .variantId(timePointNodeInfo.getVariantId())
                 .modificationsToExclude(timePointNodeInfo.getModificationsToExclude())
                 .shortCircuitAnalysisResultUuid(timePointNodeInfo.getShortCircuitAnalysisResultUuid())

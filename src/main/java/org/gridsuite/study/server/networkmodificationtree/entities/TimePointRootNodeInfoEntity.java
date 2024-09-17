@@ -19,3 +19,4 @@ public class TimePointRootNodeInfoEntity extends AbstractTimePointNodeInfoEntity
         super(timePoint, rootNodeInfo);
     }
 }
+

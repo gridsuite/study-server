@@ -28,7 +28,7 @@ public class TimePointNetworkModificationNodeInfoEntity extends AbstractTimePoin
 
     @Column(name = "modificationsToExclude")
     @ElementCollection
-    @CollectionTable(foreignKey = @ForeignKey(name = "timePointNodeStatusEntity_modificationsToExclude_fk"), indexes = {@Index(name = "timePointNodeStatusEntity_modificationsToExclude_idx", columnList = "time_point_node_status_entity_id")})
+    @CollectionTable(foreignKey = @ForeignKey(name = "timePointNodeStatusEntity_modificationsToExclude_fk"), indexes = {@Index(name = "timePointNodeStatusEntity_modificationsToExclude_idx", columnList = "time_point_network_modification_node_info_id")})
     private Set<UUID> modificationsToExclude;
 
     @Column(name = "shortCircuitAnalysisResultUuid")

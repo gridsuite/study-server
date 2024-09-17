@@ -27,10 +27,10 @@ import java.util.UUID;
 public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity<TimePointNetworkModificationNodeInfoEntity> {
     @Override
     public TimePointNetworkModificationNodeInfoEntity getFirstTimePointNodeStatusEntity() {
-        if (timePointNodeStatuses == null || timePointNodeStatuses.isEmpty()) {
+        if (timePointNodeInfos == null || timePointNodeInfos.isEmpty()) {
             return null;
         }
-        return timePointNodeStatuses.get(0);
+        return timePointNodeInfos.get(0);
     }
 
     @Column

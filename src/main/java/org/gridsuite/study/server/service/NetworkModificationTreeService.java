@@ -155,7 +155,7 @@ public class NetworkModificationTreeService {
         NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationNodeInfoRepository.findById(nodeToCopyUuid).orElseThrow(() -> new StudyException(GET_MODIFICATIONS_FAILED));
         NetworkModificationNodeInfoEntity newNetworkModificationNodeInfoEntity = NetworkModificationNodeInfoEntity.builder()
             .modificationGroupUuid(newGroupUuid)
-            .timePointNodeStatuses(List.of(TimePointNetworkModificationNodeInfoEntity.builder()
+            .timePointNodeInfos(List.of(TimePointNetworkModificationNodeInfoEntity.builder()
                 .id(UUID.randomUUID())
                 .modificationsToExclude(new HashSet<>())
                 .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT).toEntity())

@@ -33,6 +33,7 @@ public abstract class AbstractNodeInfoEntity<N extends AbstractTimePointNodeInfo
     @Column(name = "idNode", insertable = false, updatable = false)
     private UUID idNode; // don't bother with getter/setter since the `idNode` reference handles everything
 
+    @Override
     public UUID getId() {
         return idNode;
     }
@@ -51,7 +52,7 @@ public abstract class AbstractNodeInfoEntity<N extends AbstractTimePointNodeInfo
     Boolean readOnly;
 
     @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo")
-    protected List<N> timePointNodeStatuses;
+    protected List<N> timePointNodeInfos;
 
     //TODO temporary, for now we are only working with one timepoint by study
     public abstract N getFirstTimePointNodeStatusEntity();
