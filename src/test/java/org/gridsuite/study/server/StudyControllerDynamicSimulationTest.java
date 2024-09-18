@@ -726,13 +726,13 @@ public class StudyControllerDynamicSimulationTest {
     }
 
     private void checkNotificationsAfterInjectingDynamicSimulationParameters(UUID studyUuid) {
-        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS and UPDATE_TYPE_STUDY from channel : studyUpdateDestination
+        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS and UPDATE_TYPE_COMPUTATION_PARAMETERS from channel : studyUpdateDestination
         Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(studyUpdateMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         studyUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // must have message HEADER_USER_ID_VALUE from channel : elementUpdateDestination
         Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);

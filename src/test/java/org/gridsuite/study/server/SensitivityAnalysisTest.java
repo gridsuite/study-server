@@ -70,6 +70,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
+import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.gridsuite.study.server.utils.TestUtils.getBinaryAsBuffer;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -723,7 +724,7 @@ public class SensitivityAnalysisTest {
 
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);
         assertEquals(studyNameUserIdUuid, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));

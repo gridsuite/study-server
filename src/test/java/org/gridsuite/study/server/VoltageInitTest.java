@@ -361,7 +361,7 @@ public class VoltageInitTest {
         assertEquals(NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
 
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);
         assertEquals(studyNameUserIdUuid, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
@@ -427,7 +427,7 @@ public class VoltageInitTest {
 
         // STUDY_CHANGED event
         output.receive(1000, studyUpdateDestination);
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
     }
 

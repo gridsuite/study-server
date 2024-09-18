@@ -8,6 +8,7 @@ package org.gridsuite.study.server.notification;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
@@ -38,7 +39,7 @@ public class NotificationService {
     public static final String HEADER_NODES = "nodes";
     public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String HEADER_UPDATE_TYPE = "updateType";
-    public static final String HEADER_PARAMS_NAME = "paramsName";
+    public static final String HEADER_COMPUTATION_TYPE = "computationType";
     public static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
     public static final String HEADER_USER_ID = "userId";
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
@@ -81,6 +82,7 @@ public class NotificationService {
     public static final String UPDATE_TYPE_STATE_ESTIMATION_FAILED = "stateEstimation_failed";
     public static final String UPDATE_TYPE_STATE_ESTIMATION_RESULT = "stateEstimationResult";
     public static final String UPDATE_TYPE_STATE_ESTIMATION_STATUS = "stateEstimation_status";
+    public static final String UPDATE_TYPE_COMPUTATION_PARAMETERS = "computationParameters";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
     public static final String MODIFICATIONS_STASHING_IN_PROGRESS = "stashingInProgress";
@@ -113,14 +115,6 @@ public class NotificationService {
     public static final String SUBTREE_CREATED = "subtreeCreated";
     public static final String MESSAGE_LOG = "Sending message : {}";
     public static final String DEFAULT_ERROR_MESSAGE = "Unknown error";
-
-    public static final String UPDATE_TYPE_STUDY_SECURITY_ANALYSIS_PARAMS_UPDATED = "SecurityAnalysis";
-    public static final String UPDATE_TYPE_STUDY_LOADFLOW_PARAMS_UPDATED = "LoadFlow";
-    public static final String UPDATE_TYPE_STUDY_SHORT_CIRCUIT_PARAMS_UPDATED = "ShortCircuit";
-    public static final String UPDATE_TYPE_STUDY_VOLTAGE_INIT_PARAMS_UPDATED = "VoltageInit";
-    public static final String UPDATE_TYPE_STUDY_DYNAMIC_SIMULATION_PARAMS_UPDATED = "DynamicSimulation";
-    public static final String UPDATE_TYPE_STUDY_SENSITIVITY_ANALYSIS_PARAMS_UPDATED = "SensitivityAnalysis";
-    public static final String UPDATE_TYPE_STUDY_NON_EVACUATED_ENERGY_PARAMS_UPDATED = "NonEvacuatedEnergy";
 
     public static final String STUDY_ALERT = "STUDY_ALERT";
 
@@ -176,11 +170,11 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyParamsChanged(UUID studyUuid, String updateType, String paramsName) {
+    public void emitStudyComputationParamsChanged(UUID studyUuid, ComputationType computationType) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                .setHeader(HEADER_STUDY_UUID, studyUuid)
-               .setHeader(HEADER_UPDATE_TYPE, updateType)
-               .setHeader(HEADER_PARAMS_NAME, paramsName)
+               .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_COMPUTATION_PARAMETERS)
+               .setHeader(HEADER_COMPUTATION_TYPE, computationType.name())
                .build());
     }
 
