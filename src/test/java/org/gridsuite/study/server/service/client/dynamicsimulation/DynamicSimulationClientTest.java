@@ -86,7 +86,7 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
                         .withHeader("Content-Type", "application/json; charset=utf-8")
                 ));
 
-        UUID resultUuid = dynamicSimulationClient.run("", "", NETWORK_UUID, VARIANT_1_ID, new ReportInfos(REPORT_UUID, REPORTER_ID.toString()), parameters, "testUserId");
+        UUID resultUuid = dynamicSimulationClient.run("", "", NETWORK_UUID, VARIANT_1_ID, new ReportInfos(REPORT_UUID, REPORTER_ID), parameters, "testUserId");
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);

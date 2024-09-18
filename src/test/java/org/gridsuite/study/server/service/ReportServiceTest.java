@@ -122,7 +122,7 @@ public class ReportServiceTest {
                     String reportUuid = Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2);
                     String nodeUuid = request.getRequestUrl().queryParameter(QUERY_PARAM_REPORT_DEFAULT_NAME);
                     return new MockResponse().setResponseCode(HttpStatus.OK.value())
-                            .setBody(mapper.writeValueAsString(List.of(getNodeReport(UUID.fromString(reportUuid), nodeUuid))))
+                            .setBody(mapper.writeValueAsString(getNodeReport(UUID.fromString(reportUuid), nodeUuid)))
                             .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 } else if (path.matches("/v1/subreports/.*\\?severityLevels=.*")) {
                     String reportId = Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2);
@@ -171,14 +171,6 @@ public class ReportServiceTest {
         List<Report> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
         });
         assertEquals(1, reports.size());
-        checkReports(reports, expectedRootReports);
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
-
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), rootNode.getId()))
-            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
-            .andReturn();
-        reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
-        });
         checkReports(reports, expectedRootReports);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
@@ -275,23 +267,6 @@ public class ReportServiceTest {
         childrenAndParentsExpectedReports.add(child1ExpectedReport);
         checkReports(child1AndParentsReports, childrenAndParentsExpectedReports);
         assertTrue(TestUtils.getRequestsDone(childrenAndParentsExpectedReports.size(), server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
-    }
-
-    @SneakyThrows
-    @Test
-    public void testSubReport() {
-        RootNode rootNode = createRoot();
-        Report expectedSubReport = getNodeReport(ROOT_NODE_REPORT_UUID, ROOT_NODE_REPORT_UUID.toString());
-
-        MvcResult mvcResult =
-                mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/subreport?reportId={id}&severityLevels=INFO&severityLevels=WARN",
-                                rootNode.getStudyId(), rootNode.getId(), ROOT_NODE_REPORT_UUID.toString()))
-                        .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
-                        .andReturn();
-        Report report = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
-        });
-        assertThat(expectedSubReport, new MatcherReport(report));
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/subreports/.*")));
     }
 
     @SneakyThrows

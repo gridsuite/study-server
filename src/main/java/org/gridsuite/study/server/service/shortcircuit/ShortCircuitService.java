@@ -89,7 +89,7 @@ public class ShortCircuitService extends AbstractComputationService {
                 .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam("reportUuid", reportUuid.toString())
-                .queryParam("reporterId", nodeUuid.toString())
+                .queryParam("nodeUuid", nodeUuid.toString())
                 .queryParam("reportType", StringUtils.isBlank(busId) ? StudyService.ReportType.SHORT_CIRCUIT.reportKey :
                         StudyService.ReportType.SHORT_CIRCUIT_ONE_BUS.reportKey)
                 .queryParamIfPresent("parametersUuid", parametersUuid);

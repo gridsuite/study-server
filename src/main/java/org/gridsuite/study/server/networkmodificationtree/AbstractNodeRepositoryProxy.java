@@ -12,8 +12,10 @@ import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeInfoRepository;
 import org.gridsuite.study.server.utils.PropertyUtils;
 
@@ -67,10 +69,14 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
     }
 
     public Map<String, UUID> getComputationReports(AbstractNode node) {
-        return null;
+        return new HashMap<>();
     }
 
     public Map<UUID, UUID> getModificationReports(AbstractNode node) {
+        return new HashMap<>();
+    }
+
+    public UUID getReportUuid(AbstractNode node) {
         return null;
     }
 
@@ -87,8 +93,11 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
     }
 
     public void createNodeInfo(AbstractNode nodeInfo) {
-        if (nodeInfo.getReportUuid() == null) {
-            nodeInfo.setReportUuid(UUID.randomUUID());
+        if (nodeInfo.getType() == NodeType.NETWORK_MODIFICATION) {
+            NetworkModificationNode node = (NetworkModificationNode) nodeInfo;
+            if (node.getModificationReports() == null) {
+                node.setModificationReports(Map.of(node.getId(), UUID.randomUUID()));
+            }
         }
         nodeInfoRepository.save(toEntity(nodeInfo));
     }
@@ -106,7 +115,6 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         node.setName(nodeInfoEntity.getName());
         node.setDescription(nodeInfoEntity.getDescription());
         node.setReadOnly(nodeInfoEntity.getReadOnly());
-        node.setReportUuid(nodeInfoEntity.getReportUuid());
         return node;
     }
 
@@ -115,7 +123,6 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         entity.setName(node.getName());
         entity.setDescription(node.getDescription());
         entity.setReadOnly(node.getReadOnly());
-        entity.setReportUuid(node.getReportUuid());
         return entity;
     }
 
@@ -151,10 +158,6 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         return getModificationGroupUuid(getNode(nodeUuid));
     }
 
-    public UUID getReportUuid(UUID nodeUuid) {
-        return getNode(nodeUuid).getReportUuid();
-    }
-
     public void updateComputationResultUuid(UUID nodeUuid, UUID computationResultUuid, ComputationType computationType) {
         updateComputationResultUuid(getNode(nodeUuid), computationResultUuid, computationType);
     }
@@ -169,6 +172,10 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
 
     public Map<UUID, UUID> getModificationReports(UUID nodeUuid) {
         return getModificationReports(getNode(nodeUuid));
+    }
+
+    public UUID getReportUuid(UUID nodeUuid) {
+        return getReportUuid(getNode(nodeUuid));
     }
 
     public void updateComputationReportUuid(UUID nodeUuid, UUID reportUuid, ComputationType computationType) {

@@ -137,7 +137,6 @@ public final class TestUtils {
             .description("")
             .modificationGroupUuid(UUID.randomUUID())
             .variantId(UUID.randomUUID().toString())
-            .reportUuid(reportUuid)
             .loadFlowResultUuid(UUID.randomUUID())
             .securityAnalysisResultUuid(UUID.randomUUID())
             .sensitivityAnalysisResultUuid(UUID.randomUUID())

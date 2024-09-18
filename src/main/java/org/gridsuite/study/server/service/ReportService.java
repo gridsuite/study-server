@@ -20,7 +20,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -68,25 +67,10 @@ public class ReportService {
         }).getBody();
     }
 
-    public Report getSubReport(@NonNull UUID id, Set<String> severityLevels) {
-        var uriBuilder = UriComponentsBuilder.fromPath("{id}")
-                .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
-        var path = uriBuilder.buildAndExpand(id).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(this.getSubReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<Report>() {
-        }).getBody();
-    }
-
-    public void deleteReport(@NonNull UUID reportUuid) {
-        Objects.requireNonNull(reportUuid);
-        var uriBuilder = UriComponentsBuilder.fromPath("{reportUuid}")
-                .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false);
-        var path = uriBuilder.buildAndExpand(reportUuid).toUriString();
-        restTemplate.delete(this.getReportsServerURI() + path);
-    }
-
     public void deleteReports(@NonNull List<UUID> reportsUuids) {
+        if (reportsUuids.isEmpty()) {
+            return;
+        }
         var path = UriComponentsBuilder.fromPath("reports").toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

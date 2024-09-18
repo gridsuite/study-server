@@ -151,7 +151,6 @@ class NetworkModificationUnitTest {
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid));
         checkUpdateModelsStatusMessagesReceived(studyUuid, node1Uuid);
 
-        Mockito.verify(reportService).deleteReport(null);
         Mockito.verify(networkService).deleteVariants(null, List.of(VARIANT_1));
     }
 

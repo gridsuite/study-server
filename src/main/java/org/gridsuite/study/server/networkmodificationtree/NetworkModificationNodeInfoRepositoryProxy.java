@@ -138,6 +138,11 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
+    public UUID getReportUuid(AbstractNode node) {
+        return ((NetworkModificationNode) node).getModificationReports().get(node.getId());
+    }
+
+    @Override
     public void setModificationReports(AbstractNode node, Map<UUID, UUID> modificationReports) {
         ((NetworkModificationNode) node).setModificationReports(modificationReports);
         updateNode(node);
@@ -201,7 +206,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
 
         modificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
         modificationNode.setVariantId(UUID.randomUUID().toString());
-        modificationNode.setReportUuid(UUID.randomUUID());
+        modificationNode.setModificationReports(Map.of(modificationNode.getId(), UUID.randomUUID()));
         updateNode(modificationNode, changedNodes);
     }
 
@@ -212,7 +217,6 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .id(networkModificationNode.getId())
             .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
             .variantId(networkModificationNode.getVariantId())
-            .reportUuid(networkModificationNode.getReportUuid())
             .loadFlowUuid(networkModificationNode.getLoadFlowResultUuid())
             .securityAnalysisUuid(networkModificationNode.getSecurityAnalysisResultUuid())
             .sensitivityAnalysisUuid(networkModificationNode.getSensitivityAnalysisResultUuid())
@@ -222,6 +226,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .voltageInitUuid(networkModificationNode.getVoltageInitResultUuid())
             .dynamicSimulationUuid(networkModificationNode.getDynamicSimulationResultUuid())
             .stateEstimationUuid(networkModificationNode.getStateEstimationResultUuid())
+            .reportUuid(networkModificationNode.getModificationReports().get(networkModificationNode.getId()))
             .build();
     }
 }

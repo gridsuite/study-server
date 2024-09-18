@@ -75,7 +75,7 @@ public class LoadFlowService extends AbstractComputationService {
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam(QUERY_PARAM_REPORT_UUID, reportUuid.toString())
-                .queryParam(QUERY_PARAM_REPORTER_ID, nodeUuid.toString())
+                .queryParam(QUERY_PARAM_NODE_UUID, nodeUuid.toString())
                 .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.LOAD_FLOW.reportKey);
         if (parametersUuid != null) {
             uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());

@@ -38,4 +38,7 @@
     <changeSet author="labidiayo (generated)" id="1725282510598-15">
         <addForeignKeyConstraint baseColumnNames="network_modification_node_info_entity_id_node" baseTableName="modification_reports" constraintName="networkModificationNodeInfoEntity_modificationReports_fk1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="network_modification_node_info" validate="true"/>
     </changeSet>
+    <changeSet author="labidiayo (generated)" id="1725282510598-16">
+        <dropColumn columnName="REPORT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
 </databaseChangeLog>

@@ -28,6 +28,8 @@ import java.util.UUID;
 public class RootNode extends AbstractNode {
     UUID studyId;
 
+    UUID reportUuid;
+
     @Override
     public NodeType getType() {
         return NodeType.ROOT;
