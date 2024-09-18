@@ -131,7 +131,7 @@ public final class TestUtils {
             .build();
     }
 
-    public static NetworkModificationNode createModificationNodeInfo(String name, UUID reportUuid) {
+    public static NetworkModificationNode createModificationNodeInfo(String name) {
         return NetworkModificationNode.builder()
             .name(name)
             .description("")

@@ -703,7 +703,7 @@ public class StudyService {
         prevResultUuidOpt.ifPresent(loadflowService::deleteLoadFlowResult);
 
         UUID lfParametersUuid = loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
-        UUID lfReportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(LOAD_FLOW, UUID.randomUUID());
+        UUID lfReportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(LOAD_FLOW.name(), UUID.randomUUID());
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, LOAD_FLOW, lfReportUuid);
         UUID result = loadflowService.runLoadFlow(studyUuid, nodeUuid, lfParametersUuid, lfReportUuid, userId, limitReduction);
 
@@ -947,7 +947,7 @@ public class StudyService {
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-        UUID saReportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(SECURITY_ANALYSIS, UUID.randomUUID());
+        UUID saReportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(SECURITY_ANALYSIS.name(), UUID.randomUUID());
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, SECURITY_ANALYSIS, saReportUuid);
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         String receiver;
@@ -1767,7 +1767,7 @@ public class StudyService {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-        UUID sensiReportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(SENSITIVITY_ANALYSIS, UUID.randomUUID());
+        UUID sensiReportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(SENSITIVITY_ANALYSIS.name(), UUID.randomUUID());
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, SENSITIVITY_ANALYSIS, sensiReportUuid);
 
         UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, sensiReportUuid, userId, study.getSensitivityAnalysisParametersUuid(), study.getLoadFlowParametersUuid());
@@ -1781,7 +1781,7 @@ public class StudyService {
         networkModificationTreeService.getComputationResultUuid(nodeUuid, busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS)
                 .ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
         final Optional<UUID> parametersUuid = studyRepository.findById(studyUuid).map(StudyEntity::getShortCircuitParametersUuid);
-        UUID scReportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(SHORT_CIRCUIT, UUID.randomUUID());
+        UUID scReportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(busId.isEmpty() ? SHORT_CIRCUIT.name() : SHORT_CIRCUIT_ONE_BUS.name(), UUID.randomUUID());
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, SHORT_CIRCUIT, scReportUuid);
         final UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId.orElse(null), parametersUuid, scReportUuid, userId);
         updateComputationResultUuid(nodeUuid, result, busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
@@ -1797,7 +1797,7 @@ public class StudyService {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(VOLTAGE_INITIALIZATION, UUID.randomUUID());
+        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(VOLTAGE_INITIALIZATION.name(), UUID.randomUUID());
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, VOLTAGE_INITIALIZATION, reportUuid);
         UUID result = voltageInitService.runVoltageInit(networkUuid, variantId, studyEntity.getVoltageInitParametersUuid(), reportUuid, nodeUuid, userId);
 
@@ -1949,7 +1949,7 @@ public class StudyService {
         if (parameters != null) {
             PropertyUtils.copyNonNullProperties(parameters, mergeParameters);
         }
-        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(DYNAMIC_SIMULATION, UUID.randomUUID());
+        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(DYNAMIC_SIMULATION.name(), UUID.randomUUID());
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, DYNAMIC_SIMULATION, reportUuid);
 
         // launch dynamic simulation
@@ -2090,7 +2090,7 @@ public class StudyService {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String provider = getNonEvacuatedEnergyProvider(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(NON_EVACUATED_ENERGY_ANALYSIS, UUID.randomUUID());
+        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(NON_EVACUATED_ENERGY_ANALYSIS.name(), UUID.randomUUID());
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, NON_EVACUATED_ENERGY_ANALYSIS, reportUuid);
 
         NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos = getNonEvacuatedEnergyParametersInfos(studyUuid);
@@ -2178,7 +2178,7 @@ public class StudyService {
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(STATE_ESTIMATION, UUID.randomUUID());
+        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(STATE_ESTIMATION.name(), UUID.randomUUID());
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, STATE_ESTIMATION, reportUuid);
         String receiver;
         try {

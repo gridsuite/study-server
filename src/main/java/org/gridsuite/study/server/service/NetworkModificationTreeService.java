@@ -307,14 +307,10 @@ public class NetworkModificationTreeService {
             deleteNodeInfos.addModificationGroupUuid(modificationGroupUuid);
 
             // delete all modification reports
-            repositories.get(nodeToDelete.getType()).getModificationReports(nodeToDelete.getIdNode()).entrySet().stream().forEach(entry -> {
-                deleteNodeInfos.addReportUuid(entry.getValue());
-            });
+            repositories.get(nodeToDelete.getType()).getModificationReports(nodeToDelete.getIdNode()).entrySet().stream().forEach(entry -> deleteNodeInfos.addReportUuid(entry.getValue()));
 
             // delete all computation reports
-            repositories.get(nodeToDelete.getType()).getComputationReports(nodeToDelete.getIdNode()).entrySet().stream().forEach(entry -> {
-                deleteNodeInfos.addReportUuid(entry.getValue());
-            });
+            repositories.get(nodeToDelete.getType()).getComputationReports(nodeToDelete.getIdNode()).entrySet().stream().forEach(entry -> deleteNodeInfos.addReportUuid(entry.getValue()));
 
             String variantId = repositories.get(nodeToDelete.getType()).getVariantId(id);
             if (!StringUtils.isBlank(variantId)) {
@@ -668,9 +664,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void setModificationReports(UUID nodeUuid, Map<UUID, UUID> modificationReports) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> {
-            repositories.get(n.getType()).setModificationReports(nodeUuid, modificationReports);
-        });
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).setModificationReports(nodeUuid, modificationReports));
     }
 
     @Transactional
@@ -760,7 +754,7 @@ public class NetworkModificationTreeService {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
             }
             if (!modificationNode.getNodeBuildStatus().isBuilt()) {
-                UUID reportUuid = getReportUuid(nodeEntity.getIdNode());
+                UUID reportUuid = self.getReportUuid(nodeEntity.getIdNode());
                 buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), new ReportInfos(reportUuid, modificationNode.getId()));
                 getBuildInfos(nodeEntity.getParentNode(), buildInfos);
             } else {
@@ -791,9 +785,7 @@ public class NetworkModificationTreeService {
                                          boolean deleteVoltageInitResults) {
         if (!invalidateOnlyChildrenBuildStatus) {
             // we want to delete associated report and variant in this case
-            repositories.get(node.getType()).getModificationReports(node.getIdNode()).entrySet().stream().forEach(entry -> {
-                invalidateNodeInfos.addReportUuid(entry.getValue());
-            });
+            repositories.get(node.getType()).getModificationReports(node.getIdNode()).entrySet().stream().forEach(entry -> invalidateNodeInfos.addReportUuid(entry.getValue()));
             invalidateNodeInfos.addVariantId(repositories.get(node.getType()).getVariantId(node.getIdNode()));
         }
 

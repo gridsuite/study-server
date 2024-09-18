@@ -52,10 +52,6 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "reports" + DELIMITER;
     }
 
-    private String getSubReportsServerURI() {
-        return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "subreports" + DELIMITER;
-    }
-
     public Report getReport(@NonNull UUID id, @NonNull String defaultName, Set<String> severityLevels) {
         var uriBuilder = UriComponentsBuilder.fromPath("{id}")
                 .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)

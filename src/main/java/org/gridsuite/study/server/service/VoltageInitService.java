@@ -241,10 +241,6 @@ public class VoltageInitService {
         restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
-    private UUID getReportUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getReportUuid(nodeUuid);
-    }
-
     public void setVoltageInitServerBaseUri(String voltageInitServerBaseUri) {
         this.voltageInitServerBaseUri = voltageInitServerBaseUri;
     }

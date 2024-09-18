@@ -2414,7 +2414,6 @@ public class NetworkModificationTest {
         NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_3, "node 3", BuildStatus.BUILT, userId);
         UUID modificationNode3Uuid = modificationNode3.getId();
 
-        //modificationNode1.setModificationReports(Map.of(modificationNode1Uuid, UUID.randomUUID()));
         modificationNode1.setSecurityAnalysisResultUuid(UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
         modificationNode1.setSensitivityAnalysisResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
         modificationNode1.setNonEvacuatedEnergyResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID));
@@ -2422,9 +2421,6 @@ public class NetworkModificationTest {
         modificationNode1.setOneBusShortCircuitAnalysisResultUuid(UUID.fromString(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
         modificationNode1.setVoltageInitResultUuid(UUID.fromString(VOLTAGE_INIT_RESULT_UUID));
         modificationNode1.setStateEstimationResultUuid(UUID.fromString(STATE_ESTIMATION_RESULT_UUID));
-
-        //modificationNode2.setReportUuid(UUID.randomUUID());
-        //modificationNode3.setReportUuid(UUID.randomUUID());
 
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
