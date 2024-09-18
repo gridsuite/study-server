@@ -25,22 +25,23 @@ public class TimePointNodeInfoEntity {
     }
 
     @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
 
     @ManyToOne
-    @JoinColumn(name = "timePointId")/*,*/
-//        referencedColumnName = "id",
-//        foreignKey = @ForeignKey)
+    @JoinColumn(name = "timePointId",
+        referencedColumnName = "id",
+        foreignKey = @ForeignKey)
     private TimePointEntity timePoint;
 
     @Column
     UUID reportUuid;
 
     @ManyToOne
-    @JoinColumn(name = "nodeInfoId")/*,
+    @JoinColumn(name = "nodeInfoId",
         referencedColumnName = "idNode",
-        foreignKey = @ForeignKey)*/
+        foreignKey = @ForeignKey)
     private NetworkModificationNodeInfoEntity nodeInfo;
 
     @Column

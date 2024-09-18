@@ -9,14 +9,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class TimePointService {
     private final TimePointNetworkModificationNodeInfoRepository timePointNetworkModificationNodeInfoRepository;
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    public TimePointService(NetworkModificationTreeService networkModificationTreeService,
-                            NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
-                            TimePointNetworkModificationNodeInfoRepository timePointNetworkModificationNodeInfoRepository) {
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
+    public TimePointService(TimePointNetworkModificationNodeInfoRepository timePointNetworkModificationNodeInfoRepository) {
         this.timePointNetworkModificationNodeInfoRepository = timePointNetworkModificationNodeInfoRepository;
     }
 

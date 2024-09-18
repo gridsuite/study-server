@@ -66,7 +66,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
                 .nonEvacuatedEnergyResultUuid(timePointNodeInfo.getNonEvacuatedEnergyResultUuid())
                 .dynamicSimulationResultUuid(timePointNodeInfo.getDynamicSimulationResultUuid())
                 .stateEstimationResultUuid(timePointNodeInfo.getStateEstimationResultUuid())
-                .nodeBuildStatus(timePointNodeInfo.getNodeBuildStatus().toEntity()).build()))
+                .nodeBuildStatus(timePointNodeInfo.getNodeBuildStatus() != null ? timePointNodeInfo.getNodeBuildStatus().toEntity() : null).build()))
             .build();
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }

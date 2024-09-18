@@ -401,8 +401,7 @@ public class NetworkModificationTreeService {
                     .build()
             ))
             .build();
-        RootNodeInfoEntity rootNodeInfoEntity = (RootNodeInfoEntity) repositories.get(NodeType.ROOT).createNodeInfo(root);
-        timePointService.createTimePointNodeLink(rootNodeInfoEntity, study.getFirstTimepoint());
+        repositories.get(NodeType.ROOT).createNodeInfo(root);
         return node;
     }
 
@@ -483,6 +482,9 @@ public class NetworkModificationTreeService {
         NetworkModificationNode modificationNode = NetworkModificationNode
             .builder()
             .name("N1")
+            .timePointNetworkModificationNodeList(
+                List.of(TimePointNetworkModificationNode.builder()
+                .build()))
             .build();
         self.createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
     }

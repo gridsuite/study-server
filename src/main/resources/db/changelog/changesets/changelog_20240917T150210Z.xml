@@ -84,9 +84,6 @@
     <changeSet author="lesaulnierkev (generated)" id="1726585358232-20">
         <addForeignKeyConstraint baseColumnNames="time_point_node_info_entity_id" baseTableName="time_point_node_info_entity_modifications_to_exclude" constraintName="timePointNodeInfoEntity_modificationsToExclude_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="time_point_node_info" validate="true"/>
     </changeSet>
-    <changeSet author="lesaulnierkev (generated)" id="1726585358232-21">
-        <dropForeignKeyConstraint baseTableName="NETWORK_MODIFICATION_NODE_INFO_ENTITY_MODIFICATIONS_TO_EXCLUDE" constraintName="NETWORKMODIFICATIONNODEINFOENTITY_MODIFICATIONSTOEXCLUDE_FK"/>
-    </changeSet>
     <changeSet author="lesaulnierkev (generated)" id="1726585358232-22">
         <dropTable tableName="NETWORK_MODIFICATION_NODE_INFO_ENTITY_MODIFICATIONS_TO_EXCLUDE"/>
     </changeSet>
