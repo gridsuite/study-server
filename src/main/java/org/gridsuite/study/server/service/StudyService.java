@@ -861,7 +861,7 @@ public class StudyService {
             loadflowService.updateLoadFlowProvider(studyEntity.getLoadFlowParametersUuid(), provider);
             invalidateLoadFlowStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-            notificationService.emitStudyComputationParamsChanged(studyUuid,LOAD_FLOW);
+            notificationService.emitStudyComputationParamsChanged(studyUuid, LOAD_FLOW);
 
         });
     }
