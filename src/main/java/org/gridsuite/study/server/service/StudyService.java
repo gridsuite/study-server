@@ -803,6 +803,7 @@ public class StudyService {
     public void setSecurityAnalysisParametersValues(UUID studyUuid, String parameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         createOrUpdateSecurityAnalysisParameters(studyUuid, studyEntity, parameters);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -1428,6 +1429,23 @@ public class StudyService {
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.stashModifications(groupId, modificationsUuids);
             networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
+            updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
+        }
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    @Transactional
+    public void updateNetworkModificationsActivation(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId, boolean activated) {
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        try {
+            if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
+                throw new StudyException(NOT_ALLOWED);
+            }
+            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            networkModificationService.updateModificationsActivation(groupId, modificationsUuids, activated);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
