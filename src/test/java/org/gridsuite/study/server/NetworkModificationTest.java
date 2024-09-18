@@ -2055,7 +2055,7 @@ public class NetworkModificationTest {
                         "action", WireMock.equalTo("MOVE"),
                         "networkUuid", WireMock.equalTo(NETWORK_UUID_STRING),
                         "reportUuid", WireMock.matching(".*"),
-                        "nodeUuid", WireMock.equalTo(modificationNode.getId().toString()),
+                        "reporterId", WireMock.equalTo(modificationNode.getId().toString()),
                         "variantId", WireMock.equalTo(VARIANT_ID),
                         "originGroupUuid", WireMock.equalTo(modificationNode.getModificationGroupUuid().toString()),
                         "build", WireMock.equalTo("false")),
@@ -2075,7 +2075,7 @@ public class NetworkModificationTest {
                         "action", WireMock.equalTo("MOVE"),
                         "networkUuid", WireMock.equalTo(NETWORK_UUID_STRING),
                         "reportUuid", WireMock.matching(".*"),
-                        "nodeUuid", WireMock.equalTo(modificationNode.getId().toString()),
+                        "reporterId", WireMock.equalTo(modificationNode.getId().toString()),
                         "variantId", WireMock.equalTo(VARIANT_ID),
                         "originGroupUuid", WireMock.equalTo(modificationNode.getModificationGroupUuid().toString()),
                         "build", WireMock.equalTo("false"),
@@ -2150,7 +2150,7 @@ public class NetworkModificationTest {
                         "action", WireMock.equalTo("COPY"),
                         "networkUuid", WireMock.equalTo(NETWORK_UUID_STRING),
                         "reportUuid", WireMock.matching(".*"),
-                        "nodeUuid", WireMock.equalTo(node1.getId().toString()),
+                        "reporterId", WireMock.equalTo(node1.getId().toString()),
                         "variantId", WireMock.equalTo(VARIANT_ID)),
                 expectedBody);
 
@@ -2188,7 +2188,7 @@ public class NetworkModificationTest {
                         "action", WireMock.equalTo("COPY"),
                         "networkUuid", WireMock.equalTo(NETWORK_UUID_STRING),
                         "reportUuid", WireMock.matching(".*"),
-                        "nodeUuid", WireMock.equalTo(node1.getId().toString()),
+                        "reporterId", WireMock.equalTo(node1.getId().toString()),
                         "variantId", WireMock.equalTo(VARIANT_ID)),
                 expectedBody);
     }
@@ -2262,7 +2262,7 @@ public class NetworkModificationTest {
                         "action", WireMock.equalTo("MOVE"),
                         "networkUuid", WireMock.equalTo(NETWORK_UUID_STRING),
                         "reportUuid", WireMock.matching(".*"),
-                        "nodeUuid", WireMock.equalTo(node1.getId().toString()),
+                        "reporterId", WireMock.equalTo(node1.getId().toString()),
                         "variantId", WireMock.equalTo(VARIANT_ID),
                         "originGroupUuid", WireMock.equalTo(node1.getModificationGroupUuid().toString()),
                         "build", WireMock.equalTo("false")),
@@ -2293,7 +2293,7 @@ public class NetworkModificationTest {
                         "action", WireMock.equalTo("MOVE"),
                         "networkUuid", WireMock.equalTo(NETWORK_UUID_STRING),
                         "reportUuid", WireMock.matching(".*"),
-                        "nodeUuid", WireMock.equalTo(node2.getId().toString()),
+                        "reporterId", WireMock.equalTo(node2.getId().toString()),
                         "variantId", WireMock.equalTo(VARIANT_ID),
                         "originGroupUuid", WireMock.equalTo(node1.getModificationGroupUuid().toString()),
                         "build", WireMock.equalTo("true")),

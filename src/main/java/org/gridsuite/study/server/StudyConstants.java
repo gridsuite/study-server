@@ -59,7 +59,7 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_REPORT_SEVERITY_LEVEL = "severityLevels";
     public static final String QUERY_PARAM_RECEIVER = "receiver";
     public static final String QUERY_PARAM_REPORT_UUID = "reportUuid";
-    public static final String QUERY_PARAM_NODE_UUID = "nodeUuid";
+    public static final String QUERY_PARAM_REPORTER_ID = "reporterId";
     public static final String QUERY_PARAM_REPORT_TYPE = "reportType";
     public static final String HEADER_RECEIVER = "receiver";
     public static final String HEADER_BUS_ID = "busId";

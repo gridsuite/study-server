@@ -51,7 +51,7 @@ public class NetworkModificationService {
     private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
     private static final String NETWORK_UUID = "networkUuid";
     private static final String REPORT_UUID = "reportUuid";
-    private static final String NODE_UUID = "nodeUuid";
+    private static final String REPORTER_ID = "reporterId";
     private static final String VARIANT_ID = "variantId";
     private static final String QUERY_PARAM_ACTION = "action";
     private final NetworkService networkStoreService;
@@ -160,7 +160,7 @@ public class NetworkModificationService {
                 .queryParam(NETWORK_UUID, networkUuid)
                 .queryParam(GROUP_UUID, groupUuid)
                 .queryParam(REPORT_UUID, reportUuid)
-                .queryParam(NODE_UUID, nodeUuid);
+                .queryParam(REPORTER_ID, nodeUuid);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -318,7 +318,7 @@ public class NetworkModificationService {
             .queryParam(QUERY_PARAM_ACTION, ModificationsActionType.MOVE.name())
             .queryParam(NETWORK_UUID, networkUuid)
             .queryParam(REPORT_UUID, nodeInfos.getReportUuid())
-            .queryParam(NODE_UUID, nodeInfos.getId())
+            .queryParam(REPORTER_ID, nodeInfos.getId())
             .queryParam(VARIANT_ID, nodeInfos.getVariantId())
             .queryParam("originGroupUuid", originGroupUuid)
             .queryParam("build", buildTargetNode);
@@ -341,7 +341,7 @@ public class NetworkModificationService {
             .queryParam(QUERY_PARAM_ACTION, action.name())
             .queryParam(NETWORK_UUID, networkUuid)
             .queryParam(REPORT_UUID, nodeInfos.getReportUuid())
-            .queryParam(NODE_UUID, nodeInfos.getId())
+            .queryParam(REPORTER_ID, nodeInfos.getId())
             .queryParam(VARIANT_ID, nodeInfos.getVariantId());
 
         HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
@@ -376,7 +376,7 @@ public class NetworkModificationService {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "duplications")
             .queryParam(NETWORK_UUID, networkUuid)
             .queryParam(REPORT_UUID, nodeInfos.getReportUuid())
-            .queryParam(NODE_UUID, nodeInfos.getId())
+            .queryParam(REPORTER_ID, nodeInfos.getId())
             .queryParam(VARIANT_ID, nodeInfos.getVariantId())
             .queryParam("duplicateFrom", originGroupUuid);
 

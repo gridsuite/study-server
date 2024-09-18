@@ -68,15 +68,19 @@ public class DynamicSimulationServiceTest {
             // take from resources/data/loadAlphaBeta.json
             new ModelInfos("LoadAlphaBeta", "LOAD", List.of(
                     new ModelVariableDefinitionInfos("load_PPu", "MW"),
-                    new ModelVariableDefinitionInfos("load_QPu", "MW")), null),
-            // take from
-            // resources/data/generatorSynchronousThreeWindingsProportionalRegulations.json
+                    new ModelVariableDefinitionInfos("load_QPu", "MW")
+            ), null),
+            // take from resources/data/generatorSynchronousThreeWindingsProportionalRegulations.json
             new ModelInfos("GeneratorSynchronousThreeWindingsProportionalRegulations", "GENERATOR", null, List.of(
                     new VariablesSetInfos("Generator", List.of(
                             new ModelVariableDefinitionInfos("generator_omegaPu", "pu"),
-                            new ModelVariableDefinitionInfos("generator_PGen", "MW"))),
+                            new ModelVariableDefinitionInfos("generator_PGen", "MW")
+                    )),
                     new VariablesSetInfos("VoltageRegulator", List.of(
-                            new ModelVariableDefinitionInfos("voltageRegulator_EfdPu", "pu"))))));
+                            new ModelVariableDefinitionInfos("voltageRegulator_EfdPu", "pu")
+                    ))
+            ))
+    );
 
     private static final String VARIANT_1_ID = "variant_1";
 
@@ -123,8 +127,7 @@ public class DynamicSimulationServiceTest {
     @Before
     public void setup() {
         // setup networkModificationTreeService mock in all normal cases
-        given(networkModificationTreeService.getComputationResultUuid(NODE_UUID, ComputationType.DYNAMIC_SIMULATION))
-                .willReturn(Optional.of(RESULT_UUID));
+        given(networkModificationTreeService.getComputationResultUuid(NODE_UUID, ComputationType.DYNAMIC_SIMULATION)).willReturn(Optional.of(RESULT_UUID));
     }
 
     @Test
@@ -134,12 +137,10 @@ public class DynamicSimulationServiceTest {
         given(networkModificationTreeService.getReportUuid(NODE_UUID)).willReturn(REPORT_UUID);
 
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.run(eq(""), any(), eq(NETWORK_UUID), eq(VARIANT_1_ID),
-                eq(new ReportInfos(REPORT_UUID, NODE_UUID)), any(), any())).willReturn(RESULT_UUID);
+        given(dynamicSimulationClient.run(eq(""), any(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(new ReportInfos(REPORT_UUID, NODE_UUID)), any(), any())).willReturn(RESULT_UUID);
 
         // call method to be tested
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", STUDY_UUID, NODE_UUID, REPORT_UUID, null,
-                "testUserId");
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", STUDY_UUID, NODE_UUID, REPORT_UUID, null, "testUserId");
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);
@@ -154,23 +155,19 @@ public class DynamicSimulationServiceTest {
         // timeseries metadata
         TimeSeriesGroupRest timeSeriesGroupMetadata = new TimeSeriesGroupRest();
         timeSeriesGroupMetadata.setId(TIME_SERIES_UUID);
-        timeSeriesGroupMetadata.setMetadatas(List.of(new TimeSeriesMetadataRest(TIME_SERIES_NAME_1),
-                new TimeSeriesMetadataRest(TIME_SERIES_NAME_2)));
+        timeSeriesGroupMetadata.setMetadatas(List.of(new TimeSeriesMetadataRest(TIME_SERIES_NAME_1), new TimeSeriesMetadataRest(TIME_SERIES_NAME_2)));
 
         given(timeSeriesClient.getTimeSeriesGroupMetadata(TIME_SERIES_UUID)).willReturn(timeSeriesGroupMetadata);
 
         // call method to be tested
-        List<TimeSeriesMetadataInfos> resultTimeSeriesMetadataList = dynamicSimulationService
-                .getTimeSeriesMetadataList(NODE_UUID);
+        List<TimeSeriesMetadataInfos> resultTimeSeriesMetadataList = dynamicSimulationService.getTimeSeriesMetadataList(NODE_UUID);
 
         // check result
         // metadata must be identical to expected
-        List<TimeSeriesMetadataInfos> expectedTimeSeriesMetadataList = timeSeriesGroupMetadata.getMetadatas().stream()
-                .map(TimeSeriesMetadataInfos::fromRest).toList();
+        List<TimeSeriesMetadataInfos> expectedTimeSeriesMetadataList = timeSeriesGroupMetadata.getMetadatas().stream().map(TimeSeriesMetadataInfos::fromRest).toList();
         String expectedTimeSeriesMetadataListJson = objectMapper.writeValueAsString(expectedTimeSeriesMetadataList);
         String resultTimeSeriesMetadataListJson = objectMapper.writeValueAsString(resultTimeSeriesMetadataList);
-        assertThat(objectMapper.readTree(resultTimeSeriesMetadataListJson))
-                .isEqualTo(objectMapper.readTree(expectedTimeSeriesMetadataListJson));
+        assertThat(objectMapper.readTree(resultTimeSeriesMetadataListJson)).isEqualTo(objectMapper.readTree(expectedTimeSeriesMetadataListJson));
     }
 
     @Test
@@ -180,10 +177,11 @@ public class DynamicSimulationServiceTest {
 
         // setup timeSeriesClient mock
         // timeseries
-        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[] {32, 64, 128, 256});
+        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{32, 64, 128, 256});
         List<TimeSeries> timeSeries = new ArrayList<>(Arrays.asList(
                 TimeSeries.createDouble(TIME_SERIES_NAME_1, index, 333.847331, 333.847321, 333.847300, 333.847259),
-                TimeSeries.createDouble(TIME_SERIES_NAME_2, index, 1.059970, 1.059970, 1.059970, 1.059970)));
+                TimeSeries.createDouble(TIME_SERIES_NAME_2, index, 1.059970, 1.059970, 1.059970, 1.059970)
+        ));
         given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID, null)).willReturn(timeSeries);
 
         // call method to be tested
@@ -201,7 +199,7 @@ public class DynamicSimulationServiceTest {
 
         // setup timeSeriesClient mock
         // create a bad type timeseries
-        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[] {102479, 102479, 102479, 104396});
+        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
         List<TimeSeries> timeSeries = List.of(TimeSeries.createString(TIMELINE_NAME, index,
                 "CLA_2_5 - CLA : order to change topology",
                 "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
@@ -224,7 +222,8 @@ public class DynamicSimulationServiceTest {
                 new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
                 new TimelineEventInfos(102479, "_BUS____2-BUS____5-1_AC", "LINE : opening both sides"),
                 new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
-                new TimelineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint"));
+                new TimelineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
+        );
 
         // convert timeline event list to StringTimeSeries
         long[] timelineIndexes = timelineEventInfosList.stream().mapToLong(event -> (long) event.time()).toArray();
@@ -235,8 +234,7 @@ public class DynamicSimulationServiceTest {
                 throw new PowsyblException("Error while serializing timeline event: " + event.toString(), e);
             }
         }).toArray(String[]::new);
-        List<TimeSeries> timelineSeries = List
-                .of(TimeSeries.createString("timeline", new IrregularTimeSeriesIndex(timelineIndexes), timelineValues));
+        List<TimeSeries> timelineSeries = List.of(TimeSeries.createString("timeline", new IrregularTimeSeriesIndex(timelineIndexes), timelineValues));
 
         given(timeSeriesClient.getTimeSeriesGroup(TIMELINE_UUID, null)).willReturn(timelineSeries);
 
@@ -255,16 +253,15 @@ public class DynamicSimulationServiceTest {
 
         // setup timeSeriesClient mock
         // --- create a bad type series --- //
-        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[] {102479, 102479, 102479, 104396});
-        List<TimeSeries> timelines = List
-                .of(TimeSeries.createDouble(TIME_SERIES_NAME_1, index, 333.847331, 333.847321, 333.847300, 333.847259));
+        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
+        List<TimeSeries> timelines = List.of(TimeSeries.createDouble(TIME_SERIES_NAME_1, index, 333.847331, 333.847321, 333.847300, 333.847259));
 
         given(timeSeriesClient.getTimeSeriesGroup(TIMELINE_UUID, null)).willReturn(timelines);
 
         // call method to be tested
-        assertThatExceptionOfType(StudyException.class)
-                .isThrownBy(() -> dynamicSimulationService.getTimelineResult(NODE_UUID))
-                .withMessage("Timelines can not be a type: %s, expected type: %s",
+        assertThatExceptionOfType(StudyException.class).isThrownBy(() ->
+            dynamicSimulationService.getTimelineResult(NODE_UUID)
+        ).withMessage("Timelines can not be a type: %s, expected type: %s",
                         timelines.get(0).getClass().getSimpleName(),
                         StringTimeSeries.class.getSimpleName());
 
@@ -273,7 +270,8 @@ public class DynamicSimulationServiceTest {
                 "CLA : order to change topology",
                 "LINE : opening both sides",
                 "CLA : order to change topology",
-                "CLA : arming by over-current constraint");
+                "CLA : arming by over-current constraint"
+        );
 
         // collect and convert timeline event list to StringTimeSeries
         long[] timelineIndexes = LongStream.range(0, timelineEventInfosList.size()).toArray();
@@ -284,16 +282,14 @@ public class DynamicSimulationServiceTest {
                 throw new PowsyblException("Error while serializing timeline event: " + event, e);
             }
         }).toArray(String[]::new);
-        timelines = List
-                .of(TimeSeries.createString("timeline", new IrregularTimeSeriesIndex(timelineIndexes), timelineValues));
+        timelines = List.of(TimeSeries.createString("timeline", new IrregularTimeSeriesIndex(timelineIndexes), timelineValues));
 
         given(timeSeriesClient.getTimeSeriesGroup(TIMELINE_UUID, null)).willReturn(timelines);
 
         // call method to be tested
-        assertThatExceptionOfType(StudyException.class)
-                .isThrownBy(() -> dynamicSimulationService.getTimelineResult(NODE_UUID))
-                .withMessage("Error while deserializing timeline event: %s",
-                        objectMapper.writeValueAsString(timelineEventInfosList.get(0)));
+        assertThatExceptionOfType(StudyException.class).isThrownBy(() ->
+            dynamicSimulationService.getTimelineResult(NODE_UUID)
+        ).withMessage("Error while deserializing timeline event: %s", objectMapper.writeValueAsString(timelineEventInfosList.get(0)));
     }
 
     @Test
@@ -330,8 +326,7 @@ public class DynamicSimulationServiceTest {
     public void testAssertDynamicSimulationRunning() {
         // setup for running node
         given(dynamicSimulationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSimulationStatus.RUNNING);
-        given(networkModificationTreeService.getComputationResultUuid(NODE_UUID_RUNNING,
-                ComputationType.DYNAMIC_SIMULATION)).willReturn(Optional.of(RESULT_UUID_RUNNING));
+        given(networkModificationTreeService.getComputationResultUuid(NODE_UUID_RUNNING, ComputationType.DYNAMIC_SIMULATION)).willReturn(Optional.of(RESULT_UUID_RUNNING));
 
         // test running
         dynamicSimulationService.assertDynamicSimulationNotRunning(NODE_UUID_RUNNING);

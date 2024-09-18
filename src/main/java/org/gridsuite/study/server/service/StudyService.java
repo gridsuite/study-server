@@ -1688,8 +1688,7 @@ public class StudyService {
     
     private List<Report> getNodeOnlyReport(UUID nodeUuid, Set<String> severityLevels) {
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
-        List<Report> subReporters = List.of(reportService.getReport(reportUuid, nodeUuid.toString(), severityLevels));
-        return subReporters.isEmpty() ? subReporters : List.of(subReporters.get(subReporters.size() - 1));
+        return List.of(reportService.getReport(reportUuid, nodeUuid.toString(), severityLevels));
     }
     
     private List<Report> getAllModificationReports(UUID nodeUuid, Set<String> severityLevels) {

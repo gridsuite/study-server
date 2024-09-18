@@ -99,7 +99,7 @@ public class StateEstimationService {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam("reportUuid", reportInfos.reportUuid().toString())
-                .queryParam("nodeUuid", reportInfos.nodeUuid())
+                .queryParam("reporterId", reportInfos.nodeUuid())
                 .queryParam("reportType", StudyService.ReportType.STATE_ESTIMATION.reportKey);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);

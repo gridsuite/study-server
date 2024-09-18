@@ -103,22 +103,18 @@ public class StudyServiceDynamicSimulationTest {
 
         // setup NetworkModificationTreeService mock
         // suppose always having an existing result in a previous run
-        given(networkModificationTreeService.getComputationResultUuid(any(UUID.class), eq(DYNAMIC_SIMULATION)))
-                .willReturn(Optional.of(RESULT_UUID));
+        given(networkModificationTreeService.getComputationResultUuid(any(UUID.class), eq(DYNAMIC_SIMULATION))).willReturn(Optional.of(RESULT_UUID));
         given(networkModificationTreeService.getVariantId(any(UUID.class))).willReturn(VARIANT_1_ID);
-        willDoNothing().given(networkModificationTreeService).updateComputationResultUuid(NODE_UUID, RESULT_UUID,
-                DYNAMIC_SIMULATION);
+        willDoNothing().given(networkModificationTreeService).updateComputationResultUuid(NODE_UUID, RESULT_UUID, DYNAMIC_SIMULATION);
 
         // setup NotificationService mock
-        willDoNothing().given(notificationService).emitStudyChanged(STUDY_UUID, NODE_UUID,
-                UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        willDoNothing().given(notificationService).emitStudyChanged(STUDY_UUID, NODE_UUID, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 
     @Test
     public void testRunDynamicSimulation() {
         // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(eq(""), eq(STUDY_UUID), eq(NODE_UUID), any(), any(), any()))
-                .willReturn(RESULT_UUID);
+        given(dynamicSimulationService.runDynamicSimulation(eq(""), eq(STUDY_UUID), eq(NODE_UUID), any(), any(), any())).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
         given(loadFlowService.getLoadFlowStatus(NODE_UUID)).willReturn(LoadFlowStatus.CONVERGED.name());
 
@@ -139,12 +135,11 @@ public class StudyServiceDynamicSimulationTest {
     public void testGetDynamicSimulationTimeSeries() throws JsonProcessingException {
         // setup
         // timeseries
-        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[] {32, 64, 128, 256});
+        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{32, 64, 128, 256});
         List<DoubleTimeSeries> timeSeries = new ArrayList<>(Arrays.asList(
-                TimeSeries.createDouble("NETWORK__BUS____2-BUS____5-1_AC_iSide2", index, 333.847331, 333.847321,
-                        333.847300, 333.847259),
-                TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970,
-                        1.059970)));
+                TimeSeries.createDouble("NETWORK__BUS____2-BUS____5-1_AC_iSide2", index, 333.847331, 333.847321, 333.847300, 333.847259),
+                TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
+        ));
 
         given(dynamicSimulationService.getTimeSeriesResult(NODE_UUID, null)).willReturn(timeSeries);
 
@@ -155,8 +150,7 @@ public class StudyServiceDynamicSimulationTest {
         String timeSeriesExpectedJson = TimeSeries.toJson(timeSeries);
         getLogger().info("Time series expected in Json = " + timeSeriesExpectedJson);
         getLogger().info("Time series result in Json = " + timeSeriesResultJson);
-        assertThat(objectMapper.readTree(timeSeriesResultJson))
-                .isEqualTo(objectMapper.readTree(timeSeriesExpectedJson));
+        assertThat(objectMapper.readTree(timeSeriesResultJson)).isEqualTo(objectMapper.readTree(timeSeriesExpectedJson));
     }
 
     @Test
@@ -167,7 +161,8 @@ public class StudyServiceDynamicSimulationTest {
                 new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
                 new TimelineEventInfos(102479, "_BUS____2-BUS____5-1_AC", "LINE : opening both sides"),
                 new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
-                new TimelineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint"));
+                new TimelineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
+        );
 
         given(dynamicSimulationService.getTimelineResult(NODE_UUID)).willReturn(timelineEventInfosList);
 

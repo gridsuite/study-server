@@ -149,7 +149,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam("reportUuid", reportInfos.reportUuid().toString())
-                .queryParam("nodeUuid", reportInfos.nodeUuid().toString())
+                .queryParam("reporterId", reportInfos.nodeUuid())
                 .queryParam("reportType", StudyService.ReportType.SECURITY_ANALYSIS.reportKey);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
