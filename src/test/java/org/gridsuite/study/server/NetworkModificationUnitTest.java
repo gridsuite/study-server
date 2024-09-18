@@ -100,7 +100,7 @@ class NetworkModificationUnitTest {
         StudyEntity study = insertStudy(NETWORK_UUID, CASE_LOADFLOW_UUID);
         studyUuid = study.getId();
 
-        NodeEntity rootNode = inserRootNode(study, UUID.randomUUID());
+        NodeEntity rootNode = insertRootNode(study, UUID.randomUUID());
 
         NodeEntity node1 = insertNode(study, node1Uuid, rootNode, BuildStatus.BUILT);
         NodeEntity node2 = insertNode(study, node2Uuid, node1, BuildStatus.BUILT);
@@ -156,14 +156,14 @@ class NetworkModificationUnitTest {
 
     @Test
     void activateNetworkModificationTest() {
-        List<UUID> modificationToDisabledUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
-        updateNetworkModificationActivationStatus(modificationToDisabledUuids, node1Uuid, List.of(node2Uuid, node3Uuid), List.of(node1Uuid, node2Uuid), false);
+        List<UUID> modificationToDeactivateUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+        updateNetworkModificationActivationStatus(modificationToDeactivateUuids, node1Uuid, List.of(node2Uuid, node3Uuid), List.of(node1Uuid, node2Uuid), false);
     }
 
     @Test
     void deactivateNetworkModificationTest() {
-        List<UUID> modificationToDisabledUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
-        updateNetworkModificationActivationStatus(modificationToDisabledUuids, node1Uuid, List.of(node2Uuid, node3Uuid), List.of(node1Uuid, node2Uuid), true);
+        List<UUID> modificationToDeactivateUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+        updateNetworkModificationActivationStatus(modificationToDeactivateUuids, node1Uuid, List.of(node2Uuid, node3Uuid), List.of(node1Uuid, node2Uuid), true);
     }
 
     private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {
@@ -242,7 +242,7 @@ class NetworkModificationUnitTest {
         return node;
     }
 
-    private NodeEntity inserRootNode(StudyEntity study, UUID nodeId) {
+    private NodeEntity insertRootNode(StudyEntity study, UUID nodeId) {
         NodeEntity node = nodeRepository.save(new NodeEntity(nodeId, null, NodeType.ROOT, study, false, null));
         RootNodeInfoEntity rootNodeInfo = new RootNodeInfoEntity();
         rootNodeInfo.setIdNode(node.getIdNode());
