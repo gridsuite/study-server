@@ -746,7 +746,11 @@ public class NetworkModificationTreeService {
         return uuids;
     }
 
-    private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {
+    private UUID getModificationReportUuid(UUID nodeUuid, UUID nodeToBuildUuid) {
+        return self.getModificationReports(nodeToBuildUuid).getOrDefault(nodeUuid, UUID.randomUUID());
+    }
+
+    private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos, UUID nodeToBuildUuid) {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
@@ -754,9 +758,9 @@ public class NetworkModificationTreeService {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
             }
             if (!modificationNode.getNodeBuildStatus().isBuilt()) {
-                UUID reportUuid = self.getReportUuid(nodeEntity.getIdNode());
+                UUID reportUuid = getModificationReportUuid(nodeEntity.getIdNode(), nodeToBuildUuid);
                 buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), new ReportInfos(reportUuid, modificationNode.getId()));
-                getBuildInfos(nodeEntity.getParentNode(), buildInfos);
+                getBuildInfos(nodeEntity.getParentNode(), buildInfos, nodeToBuildUuid);
             } else {
                 buildInfos.setOriginVariantId(self.getVariantId(nodeEntity.getIdNode()));
             }
@@ -772,7 +776,7 @@ public class NetworkModificationTreeService {
                 throw new StudyException(BAD_NODE_TYPE, "The node " + entity.getIdNode() + " is not a modification node");
             } else {
                 buildInfos.setDestinationVariantId(self.getVariantId(nodeUuid));
-                getBuildInfos(entity, buildInfos);
+                getBuildInfos(entity, buildInfos, nodeUuid);
             }
         }, () -> {
             throw new StudyException(ELEMENT_NOT_FOUND);
