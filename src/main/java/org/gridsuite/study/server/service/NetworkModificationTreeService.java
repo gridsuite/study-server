@@ -896,11 +896,24 @@ public class NetworkModificationTreeService {
             nodeRepository.updateComputationResultUuid(childUuid, null, NON_EVACUATED_ENERGY_ANALYSIS);
             nodeRepository.updateComputationResultUuid(childUuid, null, SHORT_CIRCUIT);
             nodeRepository.updateComputationResultUuid(childUuid, null, SHORT_CIRCUIT_ONE_BUS);
+            nodeRepository.updateComputationResultUuid(childUuid, null, STATE_ESTIMATION);
             if (deleteVoltageInitResults) {
                 nodeRepository.updateComputationResultUuid(childUuid, null, VOLTAGE_INITIALIZATION);
             }
-            nodeRepository.updateComputationResultUuid(childUuid, null, STATE_ESTIMATION);
-            nodeRepository.setComputationsReports(childUuid, Map.of());
+            // we want to remove all computation reports except voltage initialization if deleteVoltageInitResults is false
+            Map<String, UUID> computationReports = nodeRepository.getComputationReports(childUuid);
+
+            // Collect keys to be removed
+            List<String> keysToRemove = computationReports.entrySet().stream()
+                .filter(entry -> deleteVoltageInitResults || !VOLTAGE_INITIALIZATION.name().equals(entry.getKey()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+            // Remove the collected keys from the map
+            keysToRemove.forEach(computationReports::remove);
+
+            // Update the computation reports in the repository
+            nodeRepository.setComputationsReports(childUuid, computationReports);
         }
     }
 
