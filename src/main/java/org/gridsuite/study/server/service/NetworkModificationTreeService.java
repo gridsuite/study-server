@@ -900,6 +900,7 @@ public class NetworkModificationTreeService {
                 nodeRepository.updateComputationResultUuid(childUuid, null, VOLTAGE_INITIALIZATION);
             }
             nodeRepository.updateComputationResultUuid(childUuid, null, STATE_ESTIMATION);
+            nodeRepository.setComputationsReports(childUuid, Map.of());
         }
     }
 

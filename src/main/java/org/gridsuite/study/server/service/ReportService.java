@@ -9,6 +9,8 @@ package org.gridsuite.study.server.service;
 import lombok.NonNull;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.Report;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -36,6 +38,8 @@ public class ReportService {
     private String reportServerBaseUri;
 
     private final RestTemplate restTemplate;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReportService.class);
 
     @Autowired
     public ReportService(RemoteServicesProperties remoteServicesProperties,
@@ -72,6 +76,10 @@ public class ReportService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(reportsUuids, headers);
 
-        restTemplate.exchange(this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + path, HttpMethod.DELETE, httpEntity, Void.class);
+        try {
+            restTemplate.exchange(this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + path, HttpMethod.DELETE, httpEntity, Void.class);
+        } catch (Exception e) {
+            LOGGER.error("Error while deleting reports : {}", e.getMessage());
+        }
     }
 }

@@ -149,6 +149,12 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
+    public void setComputationsReports(AbstractNode node, Map<String, UUID> computationReports) {
+        ((NetworkModificationNode) node).setComputationsReports(computationReports);
+        updateNode(node);
+    }
+
+    @Override
     public void updateComputationResultUuid(AbstractNode node, UUID computationUuid, ComputationType computationType) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         switch (computationType) {
@@ -207,6 +213,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         modificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
         modificationNode.setVariantId(UUID.randomUUID().toString());
         modificationNode.setModificationReports(Map.of(modificationNode.getId(), UUID.randomUUID()));
+        modificationNode.setComputationsReports(Map.of());
         updateNode(modificationNode, changedNodes);
     }
 
@@ -227,6 +234,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .dynamicSimulationUuid(networkModificationNode.getDynamicSimulationResultUuid())
             .stateEstimationUuid(networkModificationNode.getStateEstimationResultUuid())
             .reportUuid(networkModificationNode.getModificationReports().get(networkModificationNode.getId()))
+            .nodeType(networkModificationNode.getType())
             .build();
     }
 }

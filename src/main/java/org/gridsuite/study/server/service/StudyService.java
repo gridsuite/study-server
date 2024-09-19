@@ -380,6 +380,24 @@ public class StudyService {
         return equipmentInfosService.searchEquipments(networkUuid, variantId, userInput, fieldSelector, equipmentType);
     }
 
+    private List<UUID> getStudyRelatedReportsUuids(List<NodeModificationInfos> nodesModificationInfos) {
+        return nodesModificationInfos.stream()
+                .flatMap(nodeInfo -> {
+                    if (nodeInfo.getNodeType() == NodeType.ROOT) {
+                        return Stream.of(nodeInfo.getReportUuid());
+                    } else {
+                        return Stream.concat(
+                                Optional.ofNullable(
+                                        networkModificationTreeService.getComputationReports(nodeInfo.getId()))
+                                        .map(Map::values).stream().flatMap(Collection::stream),
+                                Optional.ofNullable(
+                                        networkModificationTreeService.getModificationReports(nodeInfo.getId()))
+                                        .map(Map::values).stream().flatMap(Collection::stream));
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
     private Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
@@ -390,15 +408,7 @@ public class StudyService {
             List<NodeModificationInfos> nodesModificationInfos;
             nodesModificationInfos = networkModificationTreeService.getAllNodesModificationInfos(studyUuid);
             // get all reports related to the study
-            List<UUID> reportUuids = nodesModificationInfos.stream()
-                    .flatMap(nodeInfo -> Stream.concat(
-                            Optional.ofNullable(
-                                    networkModificationTreeService.getComputationReports(nodeInfo.getId()))
-                                    .map(Map::values).stream().flatMap(Collection::stream),
-                            Optional.ofNullable(
-                                    networkModificationTreeService.getModificationReports(nodeInfo.getId()))
-                                    .map(Map::values).stream().flatMap(Collection::stream)))
-                    .collect(Collectors.toList());
+            List<UUID> reportUuids = getStudyRelatedReportsUuids(nodesModificationInfos);
             studyEntity.ifPresent(s -> {
                 caseUuid.set(studyEntity.get().getCaseUuid());
                 networkModificationTreeService.doDeleteTree(studyUuid);
@@ -1670,7 +1680,7 @@ public class StudyService {
         
         if (isNonRootNodeWithComputationReportType(nodeInfos, reportType)) {
             UUID reportUuid = getReportUuidForNode(nodeUuid, reportType);
-            return List.of(reportService.getReport(reportUuid, nodeUuid.toString(), severityLevels));
+            return reportUuid != null ? List.of(reportService.getReport(reportUuid, nodeUuid.toString(), severityLevels)) : Collections.emptyList();
         } else if (nodeOnlyReport) {
             return getNodeOnlyReport(nodeUuid, severityLevels);
         } else {

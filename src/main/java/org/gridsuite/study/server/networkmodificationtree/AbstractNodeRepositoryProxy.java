@@ -55,6 +55,9 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
     public void setModificationReports(AbstractNode node, Map<UUID, UUID> reports) {
     }
 
+    public void setComputationsReports(AbstractNode node, Map<String, UUID> reports) {
+    }
+
     public NodeBuildStatus getNodeBuildStatus(AbstractNode node) {
         return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
     }
@@ -184,6 +187,10 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
 
     public void setModificationReports(UUID nodeUuid, Map<UUID, UUID> reports) {
         setModificationReports(getNode(nodeUuid), reports);
+    }
+
+    public void setComputationsReports(UUID nodeUuid, Map<String, UUID> reports) {
+        setComputationsReports(getNode(nodeUuid), reports);
     }
 
     public void updateNodeBuildStatus(UUID nodeUuid, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
