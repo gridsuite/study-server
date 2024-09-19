@@ -82,7 +82,7 @@ public class NotificationService {
     public static final String UPDATE_TYPE_STATE_ESTIMATION_FAILED = "stateEstimation_failed";
     public static final String UPDATE_TYPE_STATE_ESTIMATION_RESULT = "stateEstimationResult";
     public static final String UPDATE_TYPE_STATE_ESTIMATION_STATUS = "stateEstimation_status";
-    public static final String UPDATE_TYPE_COMPUTATION_PARAMETERS = "computationParameters";
+    public static final String UPDATE_TYPE_COMPUTATION_PARAMETERS = "computationParametersUpdated";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
     public static final String MODIFICATIONS_STASHING_IN_PROGRESS = "stashingInProgress";
@@ -170,7 +170,7 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyComputationParamsChanged(UUID studyUuid, ComputationType computationType) {
+    public void emitComputationParamsChanged(UUID studyUuid, ComputationType computationType) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                .setHeader(HEADER_STUDY_UUID, studyUuid)
                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_COMPUTATION_PARAMETERS)
