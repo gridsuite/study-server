@@ -34,7 +34,7 @@ import org.gridsuite.study.server.notification.dto.AlertLevel;
 import org.gridsuite.study.server.notification.dto.StudyAlert;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.timepoint.TimePointNetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.*;
@@ -202,7 +202,7 @@ public class VoltageInitTest {
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
     @Autowired
-    private TimePointNetworkModificationNodeInfoRepository timePointNodeStatusRepository;
+    private TimePointNodeInfoRepository timePointNodeStatusRepository;
 
     //output destinations
     private final String studyUpdateDestination = "study.update";

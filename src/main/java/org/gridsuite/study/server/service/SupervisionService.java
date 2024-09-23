@@ -10,7 +10,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
-import org.gridsuite.study.server.repository.timepoint.TimePointNetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
@@ -65,7 +65,7 @@ public class SupervisionService {
 
     private final EquipmentInfosService equipmentInfosService;
 
-    private final TimePointNetworkModificationNodeInfoRepository timePointNodeStatusRepository;
+    private final TimePointNodeInfoRepository timePointNodeStatusRepository;
 
     private final StateEstimationService stateEstimationService;
     private final Consumer consumeBuildFailed;
@@ -73,7 +73,7 @@ public class SupervisionService {
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService,
                               NetworkService networkStoreService,
-                              TimePointNetworkModificationNodeInfoRepository timePointNodeStatusRepository,
+                              TimePointNodeInfoRepository timePointNodeStatusRepository,
                               ReportService reportService,
                               LoadFlowService loadFlowService,
                               DynamicSimulationService dynamicSimulationService,

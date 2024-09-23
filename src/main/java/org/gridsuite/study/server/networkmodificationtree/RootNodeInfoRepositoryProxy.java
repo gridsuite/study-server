@@ -13,6 +13,8 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 
+import java.util.UUID;
+
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
@@ -42,7 +44,8 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
         return NodeModificationInfos.builder()
             .id(node.getId())
             .variantId("")      // we will use the network initial variant
-            .reportUuid(node.getFirstTimePointNode().getReportUuid())
+            // TODO: FIXME
+            .reportUuid(UUID.randomUUID())
             .build();
     }
 }

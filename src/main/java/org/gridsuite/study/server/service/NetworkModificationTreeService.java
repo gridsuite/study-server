@@ -17,10 +17,10 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
+import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoRepository;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -59,7 +59,7 @@ public class NetworkModificationTreeService {
 
     private final NetworkModificationService networkModificationService;
     private final NotificationService notificationService;
-    private final TimePointService timePointService;
+    private final TimePointNodeInfoRepository timePointNodeInfoRepository;
 
     private final NetworkModificationTreeService self;
 
@@ -68,14 +68,14 @@ public class NetworkModificationTreeService {
                                           NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                                           NotificationService notificationService,
                                           NetworkModificationService networkModificationService,
-                                          TimePointService timePointService,
+                                          TimePointNodeInfoRepository timePointNodeInfoRepository,
                                           @Lazy NetworkModificationTreeService networkModificationTreeService
     ) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
         this.notificationService = notificationService;
-        this.timePointService = timePointService;
+        this.timePointNodeInfoRepository = timePointNodeInfoRepository;
         repositories.put(NodeType.ROOT, new RootNodeInfoRepositoryProxy(rootNodeInfoRepository));
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
         this.self = networkModificationTreeService;
@@ -94,8 +94,7 @@ public class NetworkModificationTreeService {
             NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ? reference.getParentNode() : reference;
             NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType(), reference.getStudy(), false, null));
             nodeInfo.setId(node.getIdNode());
-            AbstractNodeInfoEntity modificationNodeInfoEntity = repositories.get(node.getType()).createNodeInfo(nodeInfo);
-            timePointService.createTimePointNodeLink(modificationNodeInfoEntity, study.getFirstTimepoint());
+            repositories.get(node.getType()).createNodeInfo(nodeInfo);
 
             if (insertMode.equals(InsertMode.BEFORE)) {
                 reference.setParentNode(node);
@@ -394,12 +393,7 @@ public class NetworkModificationTreeService {
             .id(node.getIdNode())
             .name(ROOT_NODE_NAME)
             .readOnly(true)
-            .timePointNetworkModificationNodeList(List.of(
-                TimePointRootNode.builder()
-                    .studyId(study.getId())
-                    .reportUuid(importReportUuid)
-                    .build()
-            ))
+            .studyId(study.getId())
             .build();
         repositories.get(NodeType.ROOT).createNodeInfo(root);
         return node;
@@ -420,7 +414,7 @@ public class NetworkModificationTreeService {
             .forEach(node -> fullMap.get(node.getParentNode().getIdNode()).getChildren().add(fullMap.get(node.getIdNode())));
         var root = (RootNode) fullMap.get(nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT)).findFirst().orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getIdNode());
         if (root != null) {
-            root.getFirstTimePointNode().setStudyId(studyId);
+            root.setStudyId(studyId);
         }
         return root;
     }
@@ -476,17 +470,26 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void createBasicTree(StudyEntity studyEntity, UUID importReportUuid, TimePointEntity timePointEntity) {
+    public void createBasicTree(StudyEntity studyEntity, UUID importReportUuid) {
         // create 2 nodes : root node, modification node 0
         NodeEntity rootNodeEntity = self.createRoot(studyEntity, importReportUuid);
         NetworkModificationNode modificationNode = NetworkModificationNode
             .builder()
             .name("N1")
-            .timePointNetworkModificationNodeList(
-                List.of(TimePointNetworkModificationNode.builder()
-                .build()))
             .build();
-        self.createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
+
+        NetworkModificationNode firstNode = (NetworkModificationNode) self.createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
+        NetworkModificationNodeInfoEntity firstNodeInfosEntity = networkModificationNodeInfoRepository.getReferenceById(firstNode.getId());
+        TimePointNodeInfoEntity timePointNodeInfoEntity = TimePointNodeInfoEntity.builder()
+            .variantId(FIRST_VARIANT_ID)
+            .nodeBuildStatus(new NodeBuildStatusEmbeddable(BuildStatus.BUILT, BuildStatus.BUILT))
+            // TODO: Fix if is ok
+            .reportUuid(UUID.randomUUID())
+            .modificationsToExclude(Set.of())
+            .nodeInfo(firstNodeInfosEntity)
+            .build();
+        firstNodeInfosEntity.setTimePointNodeInfos(List.of(timePointNodeInfoEntity));
+        timePointNodeInfoRepository.save(timePointNodeInfoEntity);
     }
 
     @Transactional
@@ -872,16 +875,18 @@ public class NetworkModificationTreeService {
             if (!invalidateOnlyChildrenBuildStatus) {
                 nodeRepository.invalidateNodeBuildStatus(childUuid, changedNodes);
             }
-            nodeRepository.updateComputationResultUuid(childUuid, null, LOAD_FLOW);
-            nodeRepository.updateComputationResultUuid(childUuid, null, SECURITY_ANALYSIS);
-            nodeRepository.updateComputationResultUuid(childUuid, null, SENSITIVITY_ANALYSIS);
-            nodeRepository.updateComputationResultUuid(childUuid, null, NON_EVACUATED_ENERGY_ANALYSIS);
-            nodeRepository.updateComputationResultUuid(childUuid, null, SHORT_CIRCUIT);
-            nodeRepository.updateComputationResultUuid(childUuid, null, SHORT_CIRCUIT_ONE_BUS);
+
+            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findAllByNodeInfoId(childUuid).get(0);
+            timePointNodeInfoEntity.setLoadFlowResultUuid(null);
+            timePointNodeInfoEntity.setSecurityAnalysisResultUuid(null);
+            timePointNodeInfoEntity.setSensitivityAnalysisResultUuid(null);
+            timePointNodeInfoEntity.setNonEvacuatedEnergyResultUuid(null);
+            timePointNodeInfoEntity.setShortCircuitAnalysisResultUuid(null);
+            timePointNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(null);
             if (deleteVoltageInitResults) {
-                nodeRepository.updateComputationResultUuid(childUuid, null, VOLTAGE_INITIALIZATION);
+                timePointNodeInfoEntity.setVoltageInitResultUuid(null);
             }
-            nodeRepository.updateComputationResultUuid(childUuid, null, STATE_ESTIMATION);
+            timePointNodeInfoEntity.setStateEstimationResultUuid(null);
         }
     }
 

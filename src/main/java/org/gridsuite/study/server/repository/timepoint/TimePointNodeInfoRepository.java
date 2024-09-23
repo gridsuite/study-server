@@ -1,10 +1,12 @@
 package org.gridsuite.study.server.repository.timepoint;
 
 import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.UUID;
 
-public interface TimePointNetworkModificationNodeInfoRepository extends org.springframework.data.jpa.repository.JpaRepository<TimePointNodeInfoEntity, java.util.UUID> {
+public interface TimePointNodeInfoRepository extends JpaRepository<TimePointNodeInfoEntity, UUID> {
     List<TimePointNodeInfoEntity> findAllByLoadFlowResultUuidNotNull();
 
     List<TimePointNodeInfoEntity> findAllByDynamicSimulationResultUuidNotNull();
@@ -22,4 +24,6 @@ public interface TimePointNetworkModificationNodeInfoRepository extends org.spri
     List<TimePointNodeInfoEntity> findAllByVoltageInitResultUuidNotNull();
 
     List<TimePointNodeInfoEntity> findAllByStateEstimationResultUuidNotNull();
+
+    List<TimePointNodeInfoEntity> findAllByNodeInfoId(UUID nodeInfoId);
 }

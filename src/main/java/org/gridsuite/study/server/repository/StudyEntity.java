@@ -13,6 +13,7 @@ import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEner
 import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -34,7 +35,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "id")
     private UUID id;
 
-    @OneToMany(mappedBy = "study")  // Can define 'cascade = CascadeType.ALL' here as well instead of in Product entity
+    @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)  // Can define 'cascade = CascadeType.ALL' here as well instead of in Product entity
     private List<TimePointEntity> timePoints;
 
     /**
@@ -124,11 +125,17 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     }
 
     //TODO temporary, for now we are only working with one timepoint
+    @Transient
     public TimePointEntity getFirstTimepoint() {
-        if (timePoints == null || timePoints.isEmpty()) {
-            return TimePointEntity.builder().build();
-        }
         return timePoints.get(0);
+    }
+
+    public void addTimePoint(TimePointEntity timePointEntity) {
+        if (timePoints == null) {
+            timePoints = new ArrayList<>();
+        }
+        timePointEntity.setStudy(this);
+        timePoints.add(timePointEntity);
     }
 }
 

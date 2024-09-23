@@ -3,6 +3,8 @@ spring:
     name: study-server
   main:
     allow-circular-references: true
+  jpa:
+    show-sql: true
 
   cloud:
     function:

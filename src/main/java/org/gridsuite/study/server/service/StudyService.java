@@ -494,18 +494,17 @@ public class StudyService {
                                               Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
-        UUID networkUuid = Objects.requireNonNull(networkInfos.getNetworkUuid());
-        String networkId = Objects.requireNonNull(networkInfos.getNetworkId());
+        Objects.requireNonNull(networkInfos.getNetworkUuid());
+        Objects.requireNonNull(networkInfos.getNetworkId());
         Objects.requireNonNull(caseFormat);
         Objects.requireNonNull(caseUuid);
         Objects.requireNonNull(importParameters);
 
-        StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(new StudyEntity(studyUuid, List.of(),
-                null, null, null, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
-                loadFlowParametersUuid, shortCircuitParametersUuid, dynamicSimulationParametersEntity, voltageInitParametersUuid, securityAnalysisParametersUuid,
-                sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED, new StudyVoltageInitParametersEntity()),
-            new TimePointEntity(null, null, null, networkUuid, networkId, caseFormat, caseUuid, caseName, importReportUuid),
-            importReportUuid);
+        StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(studyUuid, networkInfos, caseFormat,
+            caseUuid, caseName, loadFlowParametersUuid,
+            shortCircuitParametersUuid, dynamicSimulationParametersEntity,
+            voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
+            importParameters, importReportUuid);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
@@ -1070,12 +1069,41 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity saveStudyThenCreateBasicTree(StudyEntity studyEntity, TimePointEntity timePointEntity, UUID importReportUuid) {
-        timePointEntity.setStudy(studyEntity);
-        studyEntity.setTimePoints(List.of(timePointEntity));
-        var study = studyRepository.save(studyEntity);
+    public StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos, String caseFormat,
+                                                       UUID caseUuid, String caseName, UUID loadFlowParametersUuid,
+                                                       UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
+                                                       UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
+                                                       Map<String, String> importParameters, UUID importReportUuid) {
 
-        networkModificationTreeService.createBasicTree(study, importReportUuid, timePointEntity);
+        StudyEntity studyEntity = StudyEntity.builder()
+            .id(studyUuid)
+            .nonEvacuatedEnergyProvider(defaultNonEvacuatedEnergyProvider)
+            .dynamicSimulationProvider(defaultDynamicSimulationProvider)
+            .loadFlowParametersUuid(loadFlowParametersUuid)
+            .shortCircuitParametersUuid(shortCircuitParametersUuid)
+            .dynamicSimulationParameters(dynamicSimulationParametersEntity)
+            .voltageInitParametersUuid(voltageInitParametersUuid)
+            .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
+            .sensitivityAnalysisParametersUuid(sensitivityAnalysisParametersUuid)
+            .importParameters(importParameters)
+            .indexationStatus(StudyIndexationStatus.INDEXED)
+            .voltageInitParameters(new StudyVoltageInitParametersEntity())
+            .build();
+
+        TimePointEntity timePointEntity = TimePointEntity.builder()
+            .networkUuid(networkInfos.getNetworkUuid())
+            .networkId(networkInfos.getNetworkId())
+            .caseFormat(caseFormat)
+            .caseUuid(caseUuid)
+            .caseName(caseName)
+            .reportUuid(importReportUuid)
+            .build();
+
+        studyEntity.addTimePoint(timePointEntity);
+        var study = studyRepository.save(studyEntity);
+        timePointRepository.save(timePointEntity);
+
+        networkModificationTreeService.createBasicTree(study, importReportUuid);
         return study;
     }
 
@@ -1676,7 +1704,8 @@ public class StudyService {
         // recursive function to retrieve all reports from a given node up to the Root node
         Pair<String, ReportNameMatchingType> filtersParameters = getFiltersParamaters(nodeUuid, nodeOnlyReport, reportType);
         AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
-        List<Report> subReporters = reportService.getReport(nodeInfos.getFirstTimePointNode().getReportUuid(), nodeUuid.toString(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
+        // TODO: FIXME
+        List<Report> subReporters = reportService.getReport(/*nodeInfos.getFirstTimePointNode().getReportUuid()*/UUID.randomUUID(), nodeUuid.toString(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
         if (subReporters.isEmpty()) {
             return subReporters;
         } else if (nodeOnlyReport) {

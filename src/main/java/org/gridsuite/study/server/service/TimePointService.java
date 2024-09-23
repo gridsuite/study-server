@@ -2,16 +2,15 @@ package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
-import org.gridsuite.study.server.repository.timepoint.TimePointNetworkModificationNodeInfoRepository;
-import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoRepository;
 import org.springframework.stereotype.Service;
 
 @Service
 public class TimePointService {
-    private final TimePointNetworkModificationNodeInfoRepository timePointNetworkModificationNodeInfoRepository;
+    private final TimePointNodeInfoRepository timePointNodeInfoRepository;
 
-    public TimePointService(TimePointNetworkModificationNodeInfoRepository timePointNetworkModificationNodeInfoRepository) {
-        this.timePointNetworkModificationNodeInfoRepository = timePointNetworkModificationNodeInfoRepository;
+    public TimePointService(TimePointNodeInfoRepository timePointNodeInfoRepository) {
+        this.timePointNodeInfoRepository = timePointNodeInfoRepository;
     }
 
     // create a link between a root node and a timepoint
@@ -32,7 +31,7 @@ public class TimePointService {
 
     // create a link between a network modification node and a timepoint
     public TimePointNodeInfoEntity createTimePointNodeLink(AbstractNodeInfoEntity modificationNodeInfoEntity, TimePointEntity timePointEntity) {
-        return timePointNetworkModificationNodeInfoRepository.save(((NetworkModificationNodeInfoEntity) modificationNodeInfoEntity).toTimePointNodeInfoEntity(timePointEntity));
+        return timePointNodeInfoRepository.save(((NetworkModificationNodeInfoEntity) modificationNodeInfoEntity).toTimePointNodeInfoEntity(timePointEntity));
     }
 
     /*public TimePointNetworkModificationNodeInfoEntity createTimePointNetworkModificationNodeLink(NetworkModificationNodeInfoEntity modificationNodeInfoEntity, TimePointEntity timePointEntity) {

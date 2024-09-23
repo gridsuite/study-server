@@ -14,7 +14,7 @@ import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 
-import java.util.List;
+import java.util.UUID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -26,12 +26,7 @@ import java.util.List;
 @Setter
 @EqualsAndHashCode(callSuper = true)
 public class RootNode extends AbstractNode {
-    private List<TimePointRootNode> timePointNetworkModificationNodeList;
-
-    @Override
-    public TimePointRootNode getFirstTimePointNode() {
-        return timePointNetworkModificationNodeList.get(0);
-    }
+    UUID studyId;
 
     @Override
     public NodeType getType() {

@@ -29,7 +29,6 @@ public class NetworkModificationNode extends AbstractNode {
 
     private List<TimePointNetworkModificationNode> timePointNetworkModificationNodeList;
 
-    @Override
     public TimePointNetworkModificationNode getFirstTimePointNode() {
         return timePointNetworkModificationNodeList.get(0);
     }

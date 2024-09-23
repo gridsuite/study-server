@@ -52,5 +52,5 @@ public abstract class AbstractNode {
 
     NodeType type;
 
-    public abstract AbstractTimePointNode getFirstTimePointNode();
+
 }

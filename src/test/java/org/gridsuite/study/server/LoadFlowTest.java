@@ -30,7 +30,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.timepoint.TimePointNetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -163,7 +163,7 @@ public class LoadFlowTest {
     @Autowired
     private ReportService reportService;
     @Autowired
-    private TimePointNetworkModificationNodeInfoRepository timePointNodeStatusRepository;
+    private TimePointNodeInfoRepository timePointNodeStatusRepository;
 
     @Before
     public void setup() throws IOException {
