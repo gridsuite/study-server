@@ -307,10 +307,10 @@ public class NetworkModificationTreeService {
             deleteNodeInfos.addModificationGroupUuid(modificationGroupUuid);
 
             // delete all modification reports
-            repositories.get(nodeToDelete.getType()).getModificationReports(nodeToDelete.getIdNode()).entrySet().stream().forEach(entry -> deleteNodeInfos.addReportUuid(entry.getValue()));
+            repositories.get(nodeToDelete.getType()).getModificationReports(nodeToDelete.getIdNode()).forEach((key, value) -> deleteNodeInfos.addReportUuid(value));
 
             // delete all computation reports
-            repositories.get(nodeToDelete.getType()).getComputationReports(nodeToDelete.getIdNode()).entrySet().stream().forEach(entry -> deleteNodeInfos.addReportUuid(entry.getValue()));
+            repositories.get(nodeToDelete.getType()).getComputationReports(nodeToDelete.getIdNode()).forEach((key, value) -> deleteNodeInfos.addReportUuid(value));
 
             String variantId = repositories.get(nodeToDelete.getType()).getVariantId(id);
             if (!StringUtils.isBlank(variantId)) {
@@ -789,14 +789,14 @@ public class NetworkModificationTreeService {
                                          boolean deleteVoltageInitResults) {
         if (!invalidateOnlyChildrenBuildStatus) {
             // we want to delete associated report and variant in this case
-            repositories.get(node.getType()).getModificationReports(node.getIdNode()).entrySet().stream().forEach(entry -> invalidateNodeInfos.addReportUuid(entry.getValue()));
+            repositories.get(node.getType()).getModificationReports(node.getIdNode()).forEach((key, value) -> invalidateNodeInfos.addReportUuid(value));
             invalidateNodeInfos.addVariantId(repositories.get(node.getType()).getVariantId(node.getIdNode()));
         }
 
         // we want to delete associated computation reports exept for voltage initialization : only if deleteVoltageInitResults is true
-        repositories.get(node.getType()).getComputationReports(node.getIdNode()).entrySet().stream().forEach(entry -> {
-            if (deleteVoltageInitResults || !VOLTAGE_INITIALIZATION.name().equals(entry.getKey())) {
-                invalidateNodeInfos.addReportUuid(entry.getValue());
+        repositories.get(node.getType()).getComputationReports(node.getIdNode()).forEach((key, value) -> {
+            if (deleteVoltageInitResults || !VOLTAGE_INITIALIZATION.name().equals(key)) {
+                invalidateNodeInfos.addReportUuid(value);
             }
         });
 
@@ -900,17 +900,12 @@ public class NetworkModificationTreeService {
             if (deleteVoltageInitResults) {
                 nodeRepository.updateComputationResultUuid(childUuid, null, VOLTAGE_INITIALIZATION);
             }
-            // we want to remove all computation reports except voltage initialization if deleteVoltageInitResults is false
-            Map<String, UUID> computationReports = nodeRepository.getComputationReports(childUuid);
-
-            // Collect keys to be removed
-            List<String> keysToRemove = computationReports.entrySet().stream()
-                .filter(entry -> deleteVoltageInitResults || !VOLTAGE_INITIALIZATION.name().equals(entry.getKey()))
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
-
-            // Remove the collected keys from the map
-            keysToRemove.forEach(computationReports::remove);
+            // we want to keep only voltage initialization report if deleteVoltageInitResults is false
+            Map<String, UUID> computationReports = nodeRepository.getComputationReports(childUuid)
+                .entrySet()
+                .stream()
+                .filter(entry -> VOLTAGE_INITIALIZATION.name().equals(entry.getKey()) && !deleteVoltageInitResults)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
             // Update the computation reports in the repository
             nodeRepository.setComputationsReports(childUuid, computationReports);

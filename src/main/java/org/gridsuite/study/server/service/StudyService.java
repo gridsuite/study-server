@@ -380,7 +380,7 @@ public class StudyService {
         return equipmentInfosService.searchEquipments(networkUuid, variantId, userInput, fieldSelector, equipmentType);
     }
 
-    private List<UUID> getStudyRelatedReportsUuids(List<NodeModificationInfos> nodesModificationInfos) {
+    private List<UUID> getAllReportUuids(List<NodeModificationInfos> nodesModificationInfos) {
         return nodesModificationInfos.stream()
                 .flatMap(nodeInfo -> {
                     if (nodeInfo.getNodeType() == NodeType.ROOT) {
@@ -395,7 +395,7 @@ public class StudyService {
                                         .map(Map::values).stream().flatMap(Collection::stream));
                     }
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
@@ -408,7 +408,7 @@ public class StudyService {
             List<NodeModificationInfos> nodesModificationInfos;
             nodesModificationInfos = networkModificationTreeService.getAllNodesModificationInfos(studyUuid);
             // get all reports related to the study
-            List<UUID> reportUuids = getStudyRelatedReportsUuids(nodesModificationInfos);
+            List<UUID> reportUuids = getAllReportUuids(nodesModificationInfos);
             studyEntity.ifPresent(s -> {
                 caseUuid.set(studyEntity.get().getCaseUuid());
                 networkModificationTreeService.doDeleteTree(studyUuid);
@@ -1252,8 +1252,7 @@ public class StudyService {
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userId) {
         assertCanBuildNode(studyUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid);
-        Map<UUID, UUID> nodeUuidToReportUuid = new HashMap<>();
-        buildInfos.getReportsInfos().forEach(reportInfos -> nodeUuidToReportUuid.put(reportInfos.nodeUuid(), reportInfos.reportUuid()));
+        Map<UUID, UUID> nodeUuidToReportUuid = buildInfos.getReportsInfos().stream().collect(Collectors.toMap(ReportInfos::nodeUuid, ReportInfos::reportUuid));
         networkModificationTreeService.setModificationReports(nodeUuid, nodeUuidToReportUuid);
         networkModificationTreeService.updateNodeBuildStatus(nodeUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         try {
@@ -1787,13 +1786,14 @@ public class StudyService {
     }
 
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, Optional<String> busId, String userId) {
-        networkModificationTreeService.getComputationResultUuid(nodeUuid, busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS)
+        ComputationType computationType = busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS;
+        networkModificationTreeService.getComputationResultUuid(nodeUuid, computationType)
                 .ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
         final Optional<UUID> parametersUuid = studyRepository.findById(studyUuid).map(StudyEntity::getShortCircuitParametersUuid);
-        UUID scReportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(busId.isEmpty() ? SHORT_CIRCUIT.name() : SHORT_CIRCUIT_ONE_BUS.name(), UUID.randomUUID());
-        networkModificationTreeService.updateComputationReportUuid(nodeUuid, SHORT_CIRCUIT, scReportUuid);
+        UUID scReportUuid = networkModificationTreeService.getComputationReports(nodeUuid).getOrDefault(computationType.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, computationType, scReportUuid);
         final UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, busId.orElse(null), parametersUuid, scReportUuid, userId);
-        updateComputationResultUuid(nodeUuid, result, busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
+        updateComputationResultUuid(nodeUuid, result, computationType);
         notificationService.emitStudyChanged(studyUuid, nodeUuid,
                 busId.isEmpty() ? NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS : NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         return result;

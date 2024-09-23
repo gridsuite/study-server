@@ -213,7 +213,6 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         modificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
         modificationNode.setVariantId(UUID.randomUUID().toString());
         modificationNode.setModificationReports(Map.of(modificationNode.getId(), UUID.randomUUID()));
-        modificationNode.setComputationsReports(Map.of());
         updateNode(modificationNode, changedNodes);
     }
 
