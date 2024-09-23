@@ -35,11 +35,6 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
     }
 
     @Override
-    public String getVariantId(AbstractNode node) {
-        return "";  // we will use the network initial variant
-    }
-
-    @Override
     public NodeModificationInfos getNodeModificationInfos(AbstractNode node) {
         return NodeModificationInfos.builder()
             .id(node.getId())

@@ -40,10 +40,10 @@ public class NodeBuildStatusEmbeddable {
         return NodeBuildStatus.from(localBuildStatus, globalBuildStatus);
     }
 
-    public static NodeBuildStatusEmbeddable from(BuildStatus localBuildStatus, BuildStatus globalBuildStatus) {
+    public static NodeBuildStatusEmbeddable from(BuildStatus buildStatus) {
         return NodeBuildStatusEmbeddable.builder()
-            .localBuildStatus(localBuildStatus)
-            .globalBuildStatus(globalBuildStatus)
+            .localBuildStatus(buildStatus)
+            .globalBuildStatus(buildStatus)
             .build();
     }
 }

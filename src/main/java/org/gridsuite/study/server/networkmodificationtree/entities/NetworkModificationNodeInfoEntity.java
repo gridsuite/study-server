@@ -45,14 +45,6 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
         return timePointNodeInfos.get(0);
     }
 
-    public TimePointNodeInfoEntity toTimePointNodeInfoEntity(TimePointEntity timePoint) {
-        return TimePointNodeInfoEntity.builder()
-            .timePoint(timePoint)
-            .nodeInfo(this)
-            .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT).toEntity())
-            .build();
-    }
-
     public void addTimePointNodeInfo(TimePointNodeInfoEntity timePointNodeInfoEntity) {
         if (timePointNodeInfos == null) {
             timePointNodeInfos = new ArrayList<>();

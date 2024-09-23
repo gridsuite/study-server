@@ -18,12 +18,11 @@ public class TimePointService {
         this.timePointRepository = timePointRepository;
     }
 
-    // create a link between a network modification node and a timepoint
-    public TimePointNodeInfoEntity createTimePointNodeLink(AbstractNodeInfoEntity modificationNodeInfoEntity, TimePointEntity timePointEntity) {
-        return timePointNodeInfoRepository.save(((NetworkModificationNodeInfoEntity) modificationNodeInfoEntity).toTimePointNodeInfoEntity(timePointEntity));
-    }
-
     public UUID getTimePointNetworkUuid(UUID timePointUuid) {
         return timePointRepository.findById(timePointUuid).map(TimePointEntity::getNetworkUuid).orElse(null);
+    }
+
+    public TimePointNodeInfoEntity getTimePointNodeInfo(UUID nodeUuid, UUID timePointUuid) {
+        return timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(nodeUuid, timePointUuid);
     }
 }

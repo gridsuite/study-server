@@ -237,7 +237,7 @@ public interface DynamicSimulationService {
      * @param timeSeriesNames a given list of time-series names
      * @return a list of curves
      */
-    List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, List<String> timeSeriesNames);
+    List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, UUID timePointUuid, List<String> timeSeriesNames);
 
     /**
      * Get timeline from a given node UUID
@@ -245,14 +245,14 @@ public interface DynamicSimulationService {
      * @param nodeUuid a given node UUID
      * @return a list of {@link TimelineEventInfos}
      */
-    List<TimelineEventInfos> getTimelineResult(UUID nodeUuid);
+    List<TimelineEventInfos> getTimelineResult(UUID nodeUuid, UUID timePointUuid);
 
     /**
      * Get the current status of the simulation
      * @param nodeUuid a given node UUID
      * @return the status of the dynamic simulation
      */
-    DynamicSimulationStatus getStatus(UUID nodeUuid);
+    DynamicSimulationStatus getStatus(UUID nodeUuid, UUID timePointUuid);
 
     /**
      * invalidate status of the simulation results
@@ -280,7 +280,7 @@ public interface DynamicSimulationService {
      * @param nodeUuid a given node UUID
      * @throws StudyException with type DYNAMIC_SIMULATION_RUNNING if this node is in RUNNING status
      */
-    void assertDynamicSimulationNotRunning(UUID nodeUuid);
+    void assertDynamicSimulationNotRunning(UUID nodeUuid, UUID timePointUuid);
 
     /**
      * Get mapping names
@@ -294,7 +294,7 @@ public interface DynamicSimulationService {
      * @param nodeUuid a given node UUID
      * @return a list of time-series metadata
      */
-    List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid);
+    List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid, UUID timePointUuid);
 
     /**
      * Get models used in the given mapping

@@ -11,8 +11,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -28,11 +32,47 @@ public class NetworkModificationNode extends AbstractNode {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only for tests. Need to replace by @JsonIgnore when all tests are rewritten without the variantID to identify a test in the MockWebServer
     private UUID modificationGroupUuid;
 
-    private List<TimePointNetworkModificationNode> timePointNetworkModificationNodeList;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only for tests. Need to replace by @JsonIgnore when all tests are rewritten without the variantID to identify a test in the MockWebServer
+    private String variantId;
 
-    @JsonIgnore
-    public TimePointNetworkModificationNode getFirstTimePointNode() {
-        return timePointNetworkModificationNodeList.get(0);
+    @Builder.Default
+    private Set<UUID> modificationsToExclude = new HashSet<>();
+
+    private UUID loadFlowResultUuid;
+
+    private UUID shortCircuitAnalysisResultUuid;
+
+    private UUID oneBusShortCircuitAnalysisResultUuid;
+
+    private UUID voltageInitResultUuid;
+
+    private UUID securityAnalysisResultUuid;
+
+    private UUID sensitivityAnalysisResultUuid;
+
+    private UUID nonEvacuatedEnergyResultUuid;
+
+    private UUID dynamicSimulationResultUuid;
+
+    private UUID stateEstimationResultUuid;
+
+    private NodeBuildStatus nodeBuildStatus;
+
+    //TODO: temporary, used to keep DTO identical since we export timepoint in APIs yet
+    public static NetworkModificationNode completeDtoFromTimePointNodeInfo(NetworkModificationNode networkModificationNode, TimePointNodeInfoEntity timePointNodeInfoEntity) {
+        networkModificationNode.setModificationsToExclude(timePointNodeInfoEntity.getModificationsToExclude());
+        networkModificationNode.setLoadFlowResultUuid(timePointNodeInfoEntity.getLoadFlowResultUuid());
+        networkModificationNode.setShortCircuitAnalysisResultUuid(timePointNodeInfoEntity.getShortCircuitAnalysisResultUuid());
+        networkModificationNode.setOneBusShortCircuitAnalysisResultUuid(timePointNodeInfoEntity.getOneBusShortCircuitAnalysisResultUuid());
+        networkModificationNode.setVoltageInitResultUuid(timePointNodeInfoEntity.getVoltageInitResultUuid());
+        networkModificationNode.setSecurityAnalysisResultUuid(timePointNodeInfoEntity.getSecurityAnalysisResultUuid());
+        networkModificationNode.setSensitivityAnalysisResultUuid(timePointNodeInfoEntity.getSensitivityAnalysisResultUuid());
+        networkModificationNode.setNonEvacuatedEnergyResultUuid(timePointNodeInfoEntity.getNonEvacuatedEnergyResultUuid());
+        networkModificationNode.setDynamicSimulationResultUuid(timePointNodeInfoEntity.getDynamicSimulationResultUuid());
+        networkModificationNode.setStateEstimationResultUuid(timePointNodeInfoEntity.getStateEstimationResultUuid());
+        networkModificationNode.setNodeBuildStatus(timePointNodeInfoEntity.getNodeBuildStatus().toDto());
+        networkModificationNode.setReportUuid(timePointNodeInfoEntity.getReportUuid());
+        return networkModificationNode;
     }
 
     @Override

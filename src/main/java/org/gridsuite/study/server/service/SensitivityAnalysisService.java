@@ -109,16 +109,16 @@ public class SensitivityAnalysisService {
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getSensitivityAnalysisResult(UUID nodeUuid, String selector) {
+    public String getSensitivityAnalysisResult(UUID nodeUuid, UUID timePointUuid, String selector) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
-        if (resultUuidOpt.isEmpty()) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        if (resultUuid == null) {
             return null;
         }
 
         // initializing from uri string (not from path string) allows build() to escape selector content
         URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
-            .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuidOpt.get().toString())
+            .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuid.toString())
             .queryParam("selector", selector).build().encode().toUri();
         try {
             result = restTemplate.getForObject(uri, String.class);
@@ -132,15 +132,15 @@ public class SensitivityAnalysisService {
         return result;
     }
 
-    public byte[] exportSensitivityResultsAsCsv(UUID nodeUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
-        if (resultUuidOpt.isEmpty()) {
+    public byte[] exportSensitivityResultsAsCsv(UUID nodeUuid, UUID timePointUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        if (resultUuid == null) {
             throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
         }
 
         // initializing from uri string (not from path string) allows build() to escape selector content
         URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
-                .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuidOpt.get().toString(), "csv")
+                .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuid.toString(), "csv")
                 .build()
                 .encode()
                 .toUri();
@@ -161,16 +161,16 @@ public class SensitivityAnalysisService {
 
     }
 
-    public String getSensitivityResultsFilterOptions(UUID nodeUuid, String selector) {
+    public String getSensitivityResultsFilterOptions(UUID nodeUuid, UUID timePointUuid, String selector) {
         String options;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
-        if (resultUuidOpt.isEmpty()) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        if (resultUuid == null) {
             return null;
         }
 
         // initializing from uri string (not from path string) allows build() to escape selector content
         URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
-                .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuidOpt.get().toString(), "filter-options")
+                .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuid.toString(), "filter-options")
                 .queryParam("selector", selector).build().encode().toUri();
         try {
             options = restTemplate.getForObject(uri, String.class);
@@ -184,16 +184,16 @@ public class SensitivityAnalysisService {
         return options;
     }
 
-    public String getSensitivityAnalysisStatus(UUID nodeUuid) {
+    public String getSensitivityAnalysisStatus(UUID nodeUuid, UUID timePointUuid) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SENSITIVITY_ANALYSIS);
 
-        if (resultUuidOpt.isEmpty()) {
+        if (resultUuid == null) {
             return null;
         }
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
-            .buildAndExpand(resultUuidOpt.get()).toUriString();
+            .buildAndExpand(resultUuid).toUriString();
         try {
             result = restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
@@ -209,8 +209,8 @@ public class SensitivityAnalysisService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SENSITIVITY_ANALYSIS);
-        if (resultUuidOpt.isEmpty()) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        if (resultUuid == null) {
             return;
         }
 
@@ -222,7 +222,7 @@ public class SensitivityAnalysisService {
         }
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
-            .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
+            .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
         restTemplate.put(sensitivityAnalysisServerBaseUri + path, Void.class);
     }
@@ -261,8 +261,8 @@ public class SensitivityAnalysisService {
         return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, Integer.class);
     }
 
-    public void assertSensitivityAnalysisNotRunning(UUID nodeUuid) {
-        String sas = getSensitivityAnalysisStatus(nodeUuid);
+    public void assertSensitivityAnalysisNotRunning(UUID nodeUuid, UUID timePointUuid) {
+        String sas = getSensitivityAnalysisStatus(nodeUuid, timePointUuid);
         if (SensitivityAnalysisStatus.RUNNING.name().equals(sas)) {
             throw new StudyException(SENSITIVITY_ANALYSIS_RUNNING);
         }

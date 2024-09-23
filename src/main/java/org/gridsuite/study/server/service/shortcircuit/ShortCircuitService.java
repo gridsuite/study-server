@@ -76,8 +76,8 @@ public class ShortCircuitService extends AbstractComputationService {
 
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String busId, Optional<UUID> parametersUuid, String userId) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
-        UUID reportUuid = getReportUuid(nodeUuid);
+        String variantId = getVariantId(nodeUuid, timePointUuid);
+        UUID reportUuid = getReportUuid(nodeUuid, timePointUuid);
 
         String receiver;
         try {
@@ -113,15 +113,17 @@ public class ShortCircuitService extends AbstractComputationService {
         return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    private String getShortCircuitAnalysisResultResourcePath(UUID nodeUuid, ShortcircuitAnalysisType type) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid,
+    private String getShortCircuitAnalysisResultResourcePath(UUID nodeUuid, UUID timePointUuid, ShortcircuitAnalysisType type) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid,
                 type == ShortcircuitAnalysisType.ALL_BUSES ? ComputationType.SHORT_CIRCUIT : ComputationType.SHORT_CIRCUIT_ONE_BUS);
-
-        return resultUuidOpt.map(uuid -> UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results" + "/{resultUuid}").buildAndExpand(uuid).toUriString()).orElse(null);
+        if (resultUuid == null) {
+            return null;
+        }
+        return UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results" + "/{resultUuid}").buildAndExpand(resultUuid).toUriString();
     }
 
-    private String getShortCircuitAnalysisResultsPageResourcePath(UUID nodeUuid, ShortcircuitAnalysisType type) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, type);
+    private String getShortCircuitAnalysisResultsPageResourcePath(UUID nodeUuid, UUID timePointUuid, ShortcircuitAnalysisType type) {
+        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, timePointUuid, type);
         if (resultPath == null) {
             return null;
         }
@@ -133,22 +135,22 @@ public class ShortCircuitService extends AbstractComputationService {
         return resultPath + "/paged";
     }
 
-    public String getShortCircuitAnalysisResult(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, boolean paged, Pageable pageable) {
+    public String getShortCircuitAnalysisResult(UUID nodeUuid, UUID timePointUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, boolean paged, Pageable pageable) {
         if (paged) {
-            return getShortCircuitAnalysisResultsPage(nodeUuid, mode, type, filters, pageable);
+            return getShortCircuitAnalysisResultsPage(nodeUuid, timePointUuid, mode, type, filters, pageable);
         } else {
-            return getShortCircuitAnalysisResult(nodeUuid, mode, type);
+            return getShortCircuitAnalysisResult(nodeUuid, timePointUuid, mode, type);
         }
     }
 
-    private String getShortCircuitAnalysisCsvResultResourcePath(UUID nodeUuid, ShortcircuitAnalysisType type) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid,
+    private String getShortCircuitAnalysisCsvResultResourcePath(UUID nodeUuid, UUID timePointUuid, ShortcircuitAnalysisType type) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid,
                 type == ShortcircuitAnalysisType.ALL_BUSES ? ComputationType.SHORT_CIRCUIT : ComputationType.SHORT_CIRCUIT_ONE_BUS);
-        if (resultUuidOpt.isEmpty()) {
+        if (resultUuid == null) {
             throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
         }
         String path = DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/csv";
-        return UriComponentsBuilder.fromPath(path).buildAndExpand(resultUuidOpt.get()).toUriString();
+        return UriComponentsBuilder.fromPath(path).buildAndExpand(resultUuid).toUriString();
     }
 
     public byte[] getShortCircuitAnalysisCsvResultResource(URI resourcePath, String headersCsv) {
@@ -166,14 +168,14 @@ public class ShortCircuitService extends AbstractComputationService {
         }
     }
 
-    public byte[] getShortCircuitAnalysisCsvResult(UUID nodeUuid, ShortcircuitAnalysisType type, String headersCsv) {
-        String resultPath = getShortCircuitAnalysisCsvResultResourcePath(nodeUuid, type);
+    public byte[] getShortCircuitAnalysisCsvResult(UUID nodeUuid, UUID timePointUuid, ShortcircuitAnalysisType type, String headersCsv) {
+        String resultPath = getShortCircuitAnalysisCsvResultResourcePath(nodeUuid, timePointUuid, type);
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath);
         return getShortCircuitAnalysisCsvResultResource(builder.build().toUri(), headersCsv);
     }
 
-    public String getShortCircuitAnalysisResult(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, type);
+    public String getShortCircuitAnalysisResult(UUID nodeUuid, UUID timePointUuid, FaultResultsMode mode, ShortcircuitAnalysisType type) {
+        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, timePointUuid, type);
         if (resultPath == null) {
             return null;
         }
@@ -183,8 +185,8 @@ public class ShortCircuitService extends AbstractComputationService {
         return getShortCircuitAnalysisResource(builder.build().toUri());
     }
 
-    public String getShortCircuitAnalysisResultsPage(UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, Pageable pageable) {
-        String resultsPath = getShortCircuitAnalysisResultsPageResourcePath(nodeUuid, type);
+    public String getShortCircuitAnalysisResultsPage(UUID nodeUuid, UUID timePointUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, Pageable pageable) {
+        String resultsPath = getShortCircuitAnalysisResultsPageResourcePath(nodeUuid, timePointUuid, type);
         if (resultsPath == null) {
             return null;
         }
@@ -201,8 +203,8 @@ public class ShortCircuitService extends AbstractComputationService {
         return getShortCircuitAnalysisResource(builder.build().encode().toUri()); // need to encode because of filter JSON array
     }
 
-    public String getShortCircuitAnalysisStatus(UUID nodeUuid, ShortcircuitAnalysisType type) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, type);
+    public String getShortCircuitAnalysisStatus(UUID nodeUuid, UUID timePointUuid, ShortcircuitAnalysisType type) {
+        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, timePointUuid, type);
         if (resultPath == null) {
             return null;
         }
@@ -229,8 +231,8 @@ public class ShortCircuitService extends AbstractComputationService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SHORT_CIRCUIT);
-        if (resultUuidOpt.isEmpty()) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SHORT_CIRCUIT);
+        if (resultUuid == null) {
             return;
         }
 
@@ -242,17 +244,17 @@ public class ShortCircuitService extends AbstractComputationService {
         }
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/stop")
-                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
+                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
         restTemplate.put(shortCircuitServerBaseUri + path, Void.class);
     }
 
-    private String getVariantId(UUID nodeUuid) {
-        return networkModificationTreeService.getVariantId(nodeUuid);
+    private String getVariantId(UUID nodeUuid, UUID timePointUuid) {
+        return networkModificationTreeService.getVariantId(nodeUuid, timePointUuid);
     }
 
-    private UUID getReportUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getReportUuid(nodeUuid);
+    private UUID getReportUuid(UUID nodeUuid, UUID timePointUuid) {
+        return networkModificationTreeService.getReportUuid(nodeUuid, timePointUuid);
     }
 
     public void deleteShortCircuitAnalysisResult(UUID uuid) {
@@ -279,9 +281,9 @@ public class ShortCircuitService extends AbstractComputationService {
         return restTemplate.getForObject(shortCircuitServerBaseUri + path, Integer.class);
     }
 
-    public void assertShortCircuitAnalysisNotRunning(UUID nodeUuid) {
-        String scs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.ALL_BUSES);
-        String oneBusScs = getShortCircuitAnalysisStatus(nodeUuid, ShortcircuitAnalysisType.ONE_BUS);
+    public void assertShortCircuitAnalysisNotRunning(UUID nodeUuid, UUID timePointUuid) {
+        String scs = getShortCircuitAnalysisStatus(nodeUuid, timePointUuid, ShortcircuitAnalysisType.ALL_BUSES);
+        String oneBusScs = getShortCircuitAnalysisStatus(nodeUuid, timePointUuid, ShortcircuitAnalysisType.ONE_BUS);
         if (ShortCircuitStatus.RUNNING.name().equals(scs) || ShortCircuitStatus.RUNNING.name().equals(oneBusScs)) {
             throw new StudyException(SHORT_CIRCUIT_ANALYSIS_RUNNING);
         }

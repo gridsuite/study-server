@@ -93,8 +93,8 @@ public class NonEvacuatedEnergyService {
         this.sensitivityAnalysisServerBaseUri = sensitivityAnalysisServerBaseUri + DELIMITER;
     }
 
-    public void assertNonEvacuatedEnergyNotRunning(UUID nodeUuid) {
-        String nonEvacuatedEnergyStatus = getNonEvacuatedEnergyStatus(nodeUuid);
+    public void assertNonEvacuatedEnergyNotRunning(UUID nodeUuid, UUID timePointUuid) {
+        String nonEvacuatedEnergyStatus = getNonEvacuatedEnergyStatus(nodeUuid, timePointUuid);
         if (NonEvacuatedEnergyStatus.RUNNING.name().equals(nonEvacuatedEnergyStatus)) {
             throw new StudyException(NON_EVACUATED_ENERGY_RUNNING);
         }
@@ -140,16 +140,16 @@ public class NonEvacuatedEnergyService {
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getNonEvacuatedEnergyResult(UUID nodeUuid) {
+    public String getNonEvacuatedEnergyResult(UUID nodeUuid, UUID timePointUuid) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
-        if (resultUuidOpt.isEmpty()) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        if (resultUuid == null) {
             return null;
         }
 
         // initializing from uri string (not from path string) allows build() to escape selector content
         URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
-            .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, "non-evacuated-energy", "results", resultUuidOpt.get().toString())
+            .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, "non-evacuated-energy", "results", resultUuid.toString())
             .build().encode().toUri();
         try {
             result = restTemplate.getForObject(uri, String.class);
@@ -163,16 +163,16 @@ public class NonEvacuatedEnergyService {
         return result;
     }
 
-    public String getNonEvacuatedEnergyStatus(UUID nodeUuid) {
+    public String getNonEvacuatedEnergyStatus(UUID nodeUuid, UUID timePointUuid) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
 
-        if (resultUuidOpt.isEmpty()) {
+        if (resultUuid == null) {
             return null;
         }
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results/{resultUuid}/status")
-            .buildAndExpand(resultUuidOpt.get()).toUriString();
+            .buildAndExpand(resultUuid).toUriString();
         try {
             result = restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
@@ -188,8 +188,8 @@ public class NonEvacuatedEnergyService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
-        if (resultUuidOpt.isEmpty()) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        if (resultUuid == null) {
             return;
         }
 
@@ -201,7 +201,7 @@ public class NonEvacuatedEnergyService {
         }
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results/{resultUuid}/stop")
-            .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
+            .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
         restTemplate.put(sensitivityAnalysisServerBaseUri + path, Void.class);
     }

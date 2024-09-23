@@ -36,40 +36,18 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
 
     public abstract U toDto(T node);
 
-    public String getVariantId(AbstractNode node) {
-        return null;
-    }
-
     public UUID getModificationGroupUuid(AbstractNode node) {
         return null;
-    }
-
-    public void updateComputationResultUuid(AbstractNode node, UUID resultUuid, ComputationType computationType) {
     }
 
     public NodeBuildStatus getNodeBuildStatus(AbstractNode node) {
         return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
     }
 
-    /**
-     * @param node fetched network modification node
-     * @param computationType type of the fetched computation
-     * @return UUID of the computation of this type, done on this node
-     */
-    public UUID getComputationResultUuid(AbstractNode node, ComputationType computationType) {
-        return null;
-    }
-
     public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
     }
 
     public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationUuid) {
-    }
-
-    public void updateNodeBuildStatus(AbstractNode node, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
-    }
-
-    public void invalidateNodeBuildStatus(AbstractNode node, List<UUID> changedNodes) {
     }
 
     public T createNodeInfo(AbstractNode nodeInfo) {
@@ -124,37 +102,12 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         nodeInfoRepository.deleteByIdNodeIn(collect);
     }
 
-    public String getVariantId(UUID nodeUuid) {
-        return getVariantId(getNode(nodeUuid));
-    }
-
     public UUID getModificationGroupUuid(UUID nodeUuid) {
         return getModificationGroupUuid(getNode(nodeUuid));
     }
 
-    public UUID getReportUuid(UUID nodeUuid) {
-        //TODO: fixme
-        return UUID.randomUUID();
-    }
-
-    public void updateComputationResultUuid(UUID nodeUuid, UUID computationResultUuid, ComputationType computationType) {
-        updateComputationResultUuid(getNode(nodeUuid), computationResultUuid, computationType);
-    }
-
-    public UUID getComputationResultUuid(UUID nodeUuid, ComputationType computationType) {
-        return getComputationResultUuid(getNode(nodeUuid), computationType);
-    }
-
-    public void updateNodeBuildStatus(UUID nodeUuid, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
-        updateNodeBuildStatus(getNode(nodeUuid), nodeBuildStatus, changedNodes);
-    }
-
     public NodeBuildStatus getNodeBuildStatus(UUID nodeUuid) {
         return getNodeBuildStatus(getNode(nodeUuid));
-    }
-
-    public void invalidateNodeBuildStatus(UUID nodeUuid, List<UUID> changedNodes) {
-        invalidateNodeBuildStatus(getNode(nodeUuid), changedNodes);
     }
 
     public void handleExcludeModification(UUID nodeUuid, UUID modificationUuid, boolean active) {
