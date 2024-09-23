@@ -64,12 +64,12 @@ public class VoltageInitService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runVoltageInit(UUID networkUuid, String variantId, UUID parametersUuid, UUID nodeUuid, String userId) {
+    public UUID runVoltageInit(UUID networkUuid, String variantId, UUID parametersUuid, UUID nodeUuid, UUID timePointUuid, String userId) {
         UUID reportUuid = getReportUuid(nodeUuid);
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -214,7 +214,7 @@ public class VoltageInitService {
         restTemplate.delete(voltageInitServerBaseUri + path);
     }
 
-    public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, String userId) {
+    public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(userId);
@@ -226,7 +226,7 @@ public class VoltageInitService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }

@@ -14,6 +14,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -50,5 +51,13 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
             .nodeInfo(this)
             .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT).toEntity())
             .build();
+    }
+
+    public void addTimePointNodeInfo(TimePointNodeInfoEntity timePointNodeInfoEntity) {
+        if (timePointNodeInfos == null) {
+            timePointNodeInfos = new ArrayList<>();
+        }
+        timePointNodeInfoEntity.setNodeInfo(this);
+        timePointNodeInfos.add(timePointNodeInfoEntity);
     }
 }

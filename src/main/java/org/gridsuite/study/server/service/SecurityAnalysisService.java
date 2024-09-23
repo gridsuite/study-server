@@ -173,7 +173,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 .exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid) {
+    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid, UUID timePointUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
@@ -185,7 +185,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);

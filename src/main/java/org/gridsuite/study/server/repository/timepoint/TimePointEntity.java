@@ -5,6 +5,7 @@ import lombok.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 /**
@@ -29,7 +30,7 @@ public class TimePointEntity {
     private StudyEntity study;
 
     @OneToMany(orphanRemoval = true, mappedBy = "timePoint", cascade = CascadeType.ALL)
-    private List<TimePointNodeInfoEntity> timePointNodeStatuses;
+    private List<TimePointNodeInfoEntity> timePointNodeInfos;
 
     @Column(name = "networkUuid", nullable = false)
     private UUID networkUuid;
@@ -49,4 +50,12 @@ public class TimePointEntity {
     // reportUuid of network import
     @Column(name = "reportUuid")
     private UUID reportUuid;
+
+    public void addTimePointNodeInfo(TimePointNodeInfoEntity timePointNodeInfoEntity) {
+        if (timePointNodeInfos == null) {
+            timePointNodeInfos = new ArrayList<>();
+        }
+        timePointNodeInfoEntity.setTimePoint(this);
+        timePointNodeInfos.add(timePointNodeInfoEntity);
+    }
 }

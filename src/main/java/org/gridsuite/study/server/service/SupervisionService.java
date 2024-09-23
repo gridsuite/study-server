@@ -10,6 +10,9 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -31,6 +34,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
@@ -69,6 +73,7 @@ public class SupervisionService {
 
     private final StateEstimationService stateEstimationService;
     private final Consumer consumeBuildFailed;
+    private final StudyRepository studyRepository;
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService,
@@ -83,7 +88,7 @@ public class SupervisionService {
                               ShortCircuitService shortCircuitService,
                               VoltageInitService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
-                              StateEstimationService stateEstimationService, @Qualifier("consumeBuildFailed") Consumer consumeBuildFailed) {
+                              StateEstimationService stateEstimationService, @Qualifier("consumeBuildFailed") Consumer consumeBuildFailed, StudyRepository studyRepository) {
         this.networkStoreService = networkStoreService;
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -99,6 +104,7 @@ public class SupervisionService {
         this.equipmentInfosService = equipmentInfosService;
         this.stateEstimationService = stateEstimationService;
         this.consumeBuildFailed = consumeBuildFailed;
+        this.studyRepository = studyRepository;
     }
 
     @Transactional
@@ -277,7 +283,8 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
-        studyService.invalidateBuild(studyUuid, rootNode.getId(), false, false, true);
+        TimePointEntity timePointEntity = studyRepository.findById(studyUuid).map(StudyEntity::getFirstTimepoint).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        studyService.invalidateBuild(studyUuid, rootNode.getId(), timePointEntity.getId(), false, false, true);
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 }

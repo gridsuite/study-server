@@ -76,7 +76,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public UUID runDynamicSimulation(String provider, UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters, String userId) {
+    public UUID runDynamicSimulation(String provider, UUID studyUuid, UUID nodeUuid, UUID timePointUuid, DynamicSimulationParametersInfos parameters, String userId) {
         UUID networkUuid = networkService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
@@ -84,7 +84,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         // create receiver for getting back the notification in rabbitmq
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);

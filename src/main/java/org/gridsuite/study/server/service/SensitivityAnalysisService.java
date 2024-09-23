@@ -70,7 +70,7 @@ public class SensitivityAnalysisService {
         this.sensitivityAnalysisServerBaseUri = sensitivityAnalysisServerBaseUri + DELIMITER;
     }
 
-    public UUID runSensitivityAnalysis(UUID nodeUuid, UUID networkUuid,
+    public UUID runSensitivityAnalysis(UUID nodeUuid, UUID timePointUuid, UUID networkUuid,
                                        String variantId,
                                        UUID reportUuid,
                                        String userId,
@@ -78,7 +78,7 @@ public class SensitivityAnalysisService {
                                        UUID loadFlowParametersUuid) {
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -205,7 +205,7 @@ public class SensitivityAnalysisService {
         return result;
     }
 
-    public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid) {
+    public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, UUID timePointUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
@@ -216,7 +216,7 @@ public class SensitivityAnalysisService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }

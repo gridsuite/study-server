@@ -100,7 +100,7 @@ public class NonEvacuatedEnergyService {
         }
     }
 
-    public UUID runNonEvacuatedEnergy(UUID nodeUuid, UUID networkUuid,
+    public UUID runNonEvacuatedEnergy(UUID nodeUuid, UUID timePointUuid, UUID networkUuid,
                                       String variantId,
                                       UUID reportUuid,
                                       String provider,
@@ -109,7 +109,7 @@ public class NonEvacuatedEnergyService {
                                       String userId) {
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -184,7 +184,7 @@ public class NonEvacuatedEnergyService {
         return result;
     }
 
-    public void stopNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid) {
+    public void stopNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid, UUID timePointUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
@@ -195,7 +195,7 @@ public class NonEvacuatedEnergyService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }

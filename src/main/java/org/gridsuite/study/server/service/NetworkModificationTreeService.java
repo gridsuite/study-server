@@ -20,7 +20,9 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoRepository;
+import org.gridsuite.study.server.repository.timepoint.TimePointRepository;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -62,6 +64,7 @@ public class NetworkModificationTreeService {
     private final TimePointNodeInfoRepository timePointNodeInfoRepository;
 
     private final NetworkModificationTreeService self;
+    private final TimePointRepository timePointRepository;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
@@ -69,8 +72,8 @@ public class NetworkModificationTreeService {
                                           NotificationService notificationService,
                                           NetworkModificationService networkModificationService,
                                           TimePointNodeInfoRepository timePointNodeInfoRepository,
-                                          @Lazy NetworkModificationTreeService networkModificationTreeService
-    ) {
+                                          @Lazy NetworkModificationTreeService networkModificationTreeService,
+                                          TimePointRepository timePointRepository) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
@@ -79,6 +82,7 @@ public class NetworkModificationTreeService {
         repositories.put(NodeType.ROOT, new RootNodeInfoRepositoryProxy(rootNodeInfoRepository));
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
         this.self = networkModificationTreeService;
+        this.timePointRepository = timePointRepository;
     }
 
     @Transactional
@@ -470,7 +474,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void createBasicTree(StudyEntity studyEntity, UUID importReportUuid) {
+    public void createBasicTree(StudyEntity studyEntity, TimePointEntity firstTimePointEntity, UUID importReportUuid) {
         // create 2 nodes : root node, modification node 0
         NodeEntity rootNodeEntity = self.createRoot(studyEntity, importReportUuid);
         NetworkModificationNode modificationNode = NetworkModificationNode
@@ -486,9 +490,9 @@ public class NetworkModificationTreeService {
             // TODO: Fix if is ok
             .reportUuid(UUID.randomUUID())
             .modificationsToExclude(Set.of())
-            .nodeInfo(firstNodeInfosEntity)
             .build();
-        firstNodeInfosEntity.setTimePointNodeInfos(List.of(timePointNodeInfoEntity));
+        firstNodeInfosEntity.addTimePointNodeInfo(timePointNodeInfoEntity);
+        firstTimePointEntity.addTimePointNodeInfo(timePointNodeInfoEntity);
         timePointNodeInfoRepository.save(timePointNodeInfoEntity);
     }
 
@@ -829,14 +833,16 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void invalidateBuild(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos, boolean deleteVoltageInitResults) {
+    public void invalidateBuild(UUID nodeUuid, UUID timePointUuid, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos, boolean deleteVoltageInitResults) {
         final List<UUID> changedNodes = new ArrayList<>();
         changedNodes.add(nodeUuid);
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
-            invalidateNodeProper(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
-            invalidateChildrenBuildStatus(n, changedNodes, invalidateNodeInfos, deleteVoltageInitResults);
+            timePointRepository.findById(timePointUuid).ifPresent(tp -> {
+                invalidateNodeProper(n, tp, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
+                invalidateChildrenBuildStatus(n, tp, changedNodes, invalidateNodeInfos, deleteVoltageInitResults);
+            });
         });
 
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
@@ -844,28 +850,30 @@ public class NetworkModificationTreeService {
 
     @Transactional
     // method used when moving a node to invalidate it without impacting other nodes
-    public void invalidateBuildOfNodeOnly(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos, boolean deleteVoltageInitResults) {
+    public void invalidateBuildOfNodeOnly(UUID nodeUuid, UUID timePointUuid, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos, boolean deleteVoltageInitResults) {
         final List<UUID> changedNodes = new ArrayList<>();
         changedNodes.add(nodeUuid);
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(n ->
-            invalidateNodeProper(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults)
+            timePointRepository.findById(timePointUuid).ifPresent(tp -> {
+                invalidateNodeProper(n, tp, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
+            })
         );
 
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }
 
-    private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes, InvalidateNodeInfos invalidateNodeInfos,
+    private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, TimePointEntity timePointEntity, List<UUID> changedNodes, InvalidateNodeInfos invalidateNodeInfos,
                                                boolean deleteVoltageInitResults) {
         nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
             .forEach(child -> {
-                invalidateNodeProper(child, invalidateNodeInfos, false, changedNodes, deleteVoltageInitResults);
-                invalidateChildrenBuildStatus(child, changedNodes, invalidateNodeInfos, deleteVoltageInitResults);
+                invalidateNodeProper(child, timePointEntity, invalidateNodeInfos, false, changedNodes, deleteVoltageInitResults);
+                invalidateChildrenBuildStatus(child, timePointEntity, changedNodes, invalidateNodeInfos, deleteVoltageInitResults);
             });
     }
 
-    private void invalidateNodeProper(NodeEntity child, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
+    private void invalidateNodeProper(NodeEntity child, TimePointEntity timePointEntity, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
                                       List<UUID> changedNodes, boolean deleteVoltageInitResults) {
         UUID childUuid = child.getIdNode();
         // No need to invalidate a node with a status different of "BUILT"
@@ -876,7 +884,7 @@ public class NetworkModificationTreeService {
                 nodeRepository.invalidateNodeBuildStatus(childUuid, changedNodes);
             }
 
-            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findAllByNodeInfoId(childUuid).get(0);
+            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(childUuid, timePointEntity.getId());
             timePointNodeInfoEntity.setLoadFlowResultUuid(null);
             timePointNodeInfoEntity.setSecurityAnalysisResultUuid(null);
             timePointNodeInfoEntity.setSensitivityAnalysisResultUuid(null);
@@ -891,12 +899,12 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void updateNodeBuildStatus(UUID nodeUuid, NodeBuildStatus nodeBuildStatus) {
+    public void updateNodeBuildStatus(UUID nodeUuid, UUID timepointUuid, NodeBuildStatus nodeBuildStatus) {
         List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
+        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(nodeUuid, timepointUuid);
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
-        AbstractNodeRepositoryProxy<?, ?, ?> nodeRepositoryProxy = repositories.get(nodeEntity.getType());
-        NodeBuildStatus currentNodeStatus = nodeRepositoryProxy.getNodeBuildStatus(nodeEntity.getIdNode());
+        NodeBuildStatusEmbeddable currentNodeStatus = timePointNodeInfoEntity.getNodeBuildStatus();
 
         BuildStatus newGlobalStatus;
         BuildStatus newLocalStatus;
@@ -909,12 +917,12 @@ public class NetworkModificationTreeService {
             newLocalStatus = nodeBuildStatus.getLocalBuildStatus();
             newGlobalStatus = nodeBuildStatus.getGlobalBuildStatus();
         }
-        NodeBuildStatus newNodeStatus = NodeBuildStatus.from(newLocalStatus, newGlobalStatus);
+        NodeBuildStatusEmbeddable newNodeStatus = NodeBuildStatusEmbeddable.from(newLocalStatus, newGlobalStatus);
         if (newNodeStatus.equals(currentNodeStatus)) {
             return;
         }
 
-        nodeRepositoryProxy.updateNodeBuildStatus(nodeUuid, newNodeStatus, changedNodes);
+        timePointNodeInfoEntity.setNodeBuildStatus(newNodeStatus);
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes);
     }
 

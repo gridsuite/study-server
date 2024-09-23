@@ -248,9 +248,9 @@ public class NetworkModificationService {
         }
     }
 
-    void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull BuildInfos buildInfos) {
+    void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID timePointUuid, @NonNull BuildInfos buildInfos) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String receiver = buildReceiver(nodeUuid);
+        String receiver = buildReceiver(nodeUuid, timePointUuid);
 
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "build");
         var path = uriComponentsBuilder
@@ -266,8 +266,8 @@ public class NetworkModificationService {
         restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, Void.class);
     }
 
-    public void stopBuild(@NonNull UUID nodeUuid) {
-        String receiver = buildReceiver(nodeUuid);
+    public void stopBuild(@NonNull UUID nodeUuid, @NonNull UUID timePointUuid) {
+        String receiver = buildReceiver(nodeUuid, timePointUuid);
         var path = UriComponentsBuilder.fromPath("build/stop")
             .queryParam(QUERY_PARAM_RECEIVER, receiver)
             .build()
@@ -367,10 +367,10 @@ public class NetworkModificationService {
             }).getBody();
     }
 
-    private String buildReceiver(UUID nodeUuid) {
+    private String buildReceiver(UUID nodeUuid, UUID timePointUuid) {
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);

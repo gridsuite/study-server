@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -29,6 +30,7 @@ public class NetworkModificationNode extends AbstractNode {
 
     private List<TimePointNetworkModificationNode> timePointNetworkModificationNodeList;
 
+    @JsonIgnore
     public TimePointNetworkModificationNode getFirstTimePointNode() {
         return timePointNetworkModificationNodeList.get(0);
     }

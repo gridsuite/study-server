@@ -627,7 +627,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow has been stopped")})
     public ResponseEntity<Void> stopLoadFlow(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        loadflowService.stopLoadFlow(studyUuid, nodeUuid);
+        loadflowService.stopLoadFlow(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
         return ResponseEntity.ok().build();
     }
 
@@ -649,7 +649,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis has been stopped")})
     public ResponseEntity<Void> stopShortCircuitAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        shortCircuitService.stopShortCircuitAnalysis(studyUuid, nodeUuid);
+        shortCircuitService.stopShortCircuitAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
         return ResponseEntity.ok().build();
     }
 
@@ -718,7 +718,7 @@ public class StudyController {
     public ResponseEntity<Void> stopVoltageInit(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        voltageInitService.stopVoltageInit(studyUuid, nodeUuid, userId);
+        voltageInitService.stopVoltageInit(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), userId);
         return ResponseEntity.ok().build();
     }
 
@@ -799,7 +799,7 @@ public class StudyController {
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         List<String> nonNullcontingencyListNames = contingencyListNames != null ? contingencyListNames : Collections.emptyList();
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid, userId);
+        studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1027,7 +1027,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
     public ResponseEntity<Void> stopSecurityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        securityAnalysisService.stopSecurityAnalysis(studyUuid, nodeUuid);
+        securityAnalysisService.stopSecurityAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
         return ResponseEntity.ok().build();
     }
 
@@ -1323,7 +1323,7 @@ public class StudyController {
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
     public ResponseEntity<Void> stopBuild(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.stopBuild(nodeUuid);
+        studyService.stopBuild(studyUuid, nodeUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -1467,7 +1467,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has been stopped")})
     public ResponseEntity<Void> stopSensitivityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        sensitivityAnalysisService.stopSensitivityAnalysis(studyUuid, nodeUuid);
+        sensitivityAnalysisService.stopSensitivityAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
         return ResponseEntity.ok().build();
     }
 
@@ -1812,7 +1812,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy has been stopped")})
     public ResponseEntity<Void> stopNonEvacuatedEnergy(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        nonEvacuatedEnergyService.stopNonEvacuatedEnergy(studyUuid, nodeUuid);
+        nonEvacuatedEnergyService.stopNonEvacuatedEnergy(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
         return ResponseEntity.ok().build();
     }
 
@@ -1948,7 +1948,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation has been stopped")})
     public ResponseEntity<Void> stopStateEstimation(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        stateEstimationService.stopStateEstimation(studyUuid, nodeUuid);
+        stateEstimationService.stopStateEstimation(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
         return ResponseEntity.ok().build();
     }
 }

@@ -60,14 +60,14 @@ public class LoadFlowService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID parametersUuid, String userId, Float limitReduction) {
+    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, UUID parametersUuid, String userId, Float limitReduction) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
         UUID reportUuid = getReportUuid(nodeUuid);
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -157,7 +157,7 @@ public class LoadFlowService extends AbstractComputationService {
         return getLoadFlowResultOrStatus(nodeUuid, null, null, "/status");
     }
 
-    public void stopLoadFlow(UUID studyUuid, UUID nodeUuid) {
+    public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID timePointUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
@@ -168,7 +168,7 @@ public class LoadFlowService extends AbstractComputationService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }

@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.networkmodificationtree.entities;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -23,6 +24,7 @@ import jakarta.persistence.Enumerated;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 @Embeddable
 public class NodeBuildStatusEmbeddable {
 
@@ -36,5 +38,12 @@ public class NodeBuildStatusEmbeddable {
 
     public NodeBuildStatus toDto() {
         return NodeBuildStatus.from(localBuildStatus, globalBuildStatus);
+    }
+
+    public static NodeBuildStatusEmbeddable from(BuildStatus localBuildStatus, BuildStatus globalBuildStatus) {
+        return NodeBuildStatusEmbeddable.builder()
+            .localBuildStatus(localBuildStatus)
+            .globalBuildStatus(globalBuildStatus)
+            .build();
     }
 }

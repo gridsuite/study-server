@@ -106,7 +106,7 @@ public class ConsumerService {
 
                     LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
 
-                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(),
+                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getTimePointUuid(),
                             NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
 
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
@@ -130,7 +130,7 @@ public class ConsumerService {
 
                     LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
 
-                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), NodeBuildStatus.from(BuildStatus.NOT_BUILT));
+                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getTimePointUuid(), NodeBuildStatus.from(BuildStatus.NOT_BUILT));
 
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
@@ -154,7 +154,7 @@ public class ConsumerService {
 
                     LOGGER.info("Build failed for node '{}'", receiverObj.getNodeUuid());
 
-                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), NodeBuildStatus.from(BuildStatus.NOT_BUILT));
+                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getTimePointUuid(), NodeBuildStatus.from(BuildStatus.NOT_BUILT));
 
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());

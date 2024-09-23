@@ -13,10 +13,6 @@ import java.util.UUID;
 @NoArgsConstructor
 @Setter
 public abstract class AbstractTimePointNode {
-    private NetworkModificationNode node;
-
-    private TimePoint timePoint;
-
     @JsonIgnore
     private UUID reportUuid;
 }
