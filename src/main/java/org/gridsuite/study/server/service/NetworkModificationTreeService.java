@@ -978,7 +978,6 @@ public class NetworkModificationTreeService {
                                       List<UUID> changedNodes, boolean deleteVoltageInitResults) {
         UUID childUuid = child.getIdNode();
         // No need to invalidate a node with a status different of "BUILT"
-        AbstractNodeRepositoryProxy<?, ?, ?> nodeRepository = repositories.get(child.getType());
         TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(childUuid, timePointEntity.getId());
         if (timePointNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
             fillInvalidateNodeInfos(child, timePointEntity.getId(), invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, deleteVoltageInitResults);
@@ -1098,13 +1097,24 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void handleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).handleExcludeModification(nodeUuid, modificationUUid, active));
+    public void handleExcludeModification(UUID nodeUuid, UUID timePointUuid, UUID modificationUuid, boolean active) {
+        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid);
+        if (timePointNodeInfoEntity.getModificationsToExclude() == null) {
+            timePointNodeInfoEntity.setModificationsToExclude(new HashSet<>());
+        }
+        if (!active) {
+            timePointNodeInfoEntity.getModificationsToExclude().add(modificationUuid);
+        } else {
+            timePointNodeInfoEntity.getModificationsToExclude().remove(modificationUuid);
+        }
     }
 
     @Transactional
-    public void removeModificationsToExclude(UUID nodeUuid, List<UUID> modificationUUid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).removeModificationsToExclude(nodeUuid, modificationUUid));
+    public void removeModificationsToExclude(UUID nodeUuid, UUID timePointUuid, List<UUID> modificationUuids) {
+        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid);
+        if (timePointNodeInfoEntity.getModificationsToExclude() != null) {
+            modificationUuids.forEach(timePointNodeInfoEntity.getModificationsToExclude()::remove);
+        }
     }
 
     @Transactional
@@ -1159,5 +1169,9 @@ public class NetworkModificationTreeService {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
         // perform N queries, but it's fast: 25 ms for 400 nodes
         return nodes.stream().filter(n -> getNodeBuildStatus(n.getIdNode(), timePointUuid).isBuilt()).count();
+    }
+
+    public Optional<NetworkModificationNodeInfoEntity> getNetworkModificationNodeInfoEntity(UUID nodeId) {
+        return networkModificationNodeInfoRepository.findById(nodeId);
     }
 }

@@ -33,6 +33,7 @@ import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParamete
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -1443,7 +1444,7 @@ public class StudyService {
         if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
-        networkModificationTreeService.handleExcludeModification(nodeUuid, modificationUuid, active);
+        networkModificationTreeService.handleExcludeModification(nodeUuid, getStudyFirstTimePointUuid(studyUuid), modificationUuid, active);
         updateStatuses(studyUuid, nodeUuid, getStudyFirstTimePointUuid(studyUuid), false);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
@@ -1459,7 +1460,7 @@ public class StudyService {
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.deleteModifications(groupId, modificationsUuids);
             if (modificationsUuids != null) {
-                networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
+                networkModificationTreeService.removeModificationsToExclude(nodeUuid, getStudyFirstTimePointUuid(studyUuid), modificationsUuids);
             }
             updateStatuses(studyUuid, nodeUuid, getStudyFirstTimePointUuid(studyUuid), false, false, false);
         } finally {
@@ -1478,7 +1479,7 @@ public class StudyService {
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.stashModifications(groupId, modificationsUuids);
-            networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
+            networkModificationTreeService.removeModificationsToExclude(nodeUuid, getStudyFirstTimePointUuid(studyUuid), modificationsUuids);
             updateStatuses(studyUuid, nodeUuid, getStudyFirstTimePointUuid(studyUuid), false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -1513,7 +1514,7 @@ public class StudyService {
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.restoreModifications(groupId, modificationsUuids);
-            networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
+            networkModificationTreeService.removeModificationsToExclude(nodeUuid, getStudyFirstTimePointUuid(studyUuid), modificationsUuids);
             updateStatuses(studyUuid, nodeUuid, getStudyFirstTimePointUuid(studyUuid), false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -1656,9 +1657,10 @@ public class StudyService {
         try {
             checkStudyContainsNode(studyUuid, targetNodeUuid);
             UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
-            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(targetNodeUuid);
+            NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(targetNodeUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(targetNodeUuid, getStudyFirstTimePointUuid(studyUuid));
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, nodeInfos, buildTargetNode);
+            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, networkModificationNodeInfoEntity, timePointNodeInfoEntity, buildTargetNode);
             if (!targetNodeBelongsToSourceNodeSubTree) {
                 // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
                 networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, targetNodeUuid, getStudyFirstTimePointUuid(studyUuid), modificationResult));
@@ -1684,9 +1686,10 @@ public class StudyService {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
-            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
+            NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nodeUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, getStudyFirstTimePointUuid(studyUuid));
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModifications(modificationUuidList, networkUuid, nodeInfos, action);
+            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModifications(modificationUuidList, networkUuid, networkModificationNodeInfoEntity, timePointNodeInfoEntity, action);
             // invalidate the whole subtree except the target node (we have built this node during the duplication)
             networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, getStudyFirstTimePointUuid(studyUuid), modificationResult));
             updateStatuses(studyUuid, nodeUuid, getStudyFirstTimePointUuid(studyUuid), true, true, true);
@@ -2040,9 +2043,10 @@ public class StudyService {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
-            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
+            NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nodeUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, getStudyFirstTimePointUuid(studyUuid));
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.duplicateModificationsInGroup(voltageInitModificationsGroupUuid, networkUuid, nodeInfos);
+            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.duplicateModificationsInGroup(voltageInitModificationsGroupUuid, networkUuid, networkModificationNodeInfoEntity, timePointNodeInfoEntity);
 
             voltageInitService.resetModificationsGroupUuid(nodeUuid, getStudyFirstTimePointUuid(studyUuid));
 
