@@ -6,15 +6,15 @@ spring:
 
   cloud:
     function:
-      definition: "consumeSaResult;consumeSaStopped;consumeSaFailed;\
+      definition: "consumeSaResult;consumeSaStopped;consumeSaFailed;consumeSaCancelFailed;\
       consumeDsResult;consumeDsStopped;consumeDsFailed;\
       consumeBuildResult;consumeBuildStopped;consumeBuildFailed;\
       consumeCaseImportSucceeded;consumeCaseImportFailed;\
-      consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;\
-      consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;\
+      consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeSensitivityAnalysisCancelFailed;\
+      consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeShortCircuitAnalysisCancelFailed;\
       consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeVoltageInitCancelFailed;\
-      consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed;\
-      consumeNonEvacuatedEnergyResult;consumeNonEvacuatedEnergyStopped;consumeNonEvacuatedEnergyFailed;\
+      consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed;consumeLoadFlowCancelFailed;\
+      consumeNonEvacuatedEnergyResult;consumeNonEvacuatedEnergyStopped;consumeNonEvacuatedEnergyFailed;consumeNonEvacuatedEnergyCancelFailed;\
       consumeStateEstimationResult;consumeStateEstimationStopped;consumeStateEstimationFailed"
     stream:
       bindings:
@@ -28,6 +28,9 @@ spring:
         consumeSaStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.stopped
           group: studySaStoppedGroup
+        consumeSaCancelFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.cancelfailed
+          group: studySaCancelFailedGroup
         consumeSaFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.failed
           group: studySaFailedGroup
@@ -58,6 +61,9 @@ spring:
         consumeLoadFlowFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.failed
           group: studyLoadFlowFailedGroup
+        consumeLoadFlowCancelFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.cancelfailed
+          group: studyLoadFlowCancelFailedGroup
         consumeSensitivityAnalysisResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.result
           group: studySensitivityAnalysisResultGroup
@@ -67,6 +73,9 @@ spring:
         consumeSensitivityAnalysisFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.failed
           group: studySensitivityAnalysisFailedGroup
+        consumeSensitivityAnalysisCancelFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.cancelfailed
+          group: studySensitivityAnalysisCancelFailedGroup
         consumeNonEvacuatedEnergyResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.result
           group: studyNonEvacuatedEnergyResultGroup
@@ -76,6 +85,9 @@ spring:
         consumeNonEvacuatedEnergyFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.failed
           group: studyNonEvacuatedEnergyFailedGroup
+        consumeNonEvacuatedEnergyCancelFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.cancelfailed
+          group: studyNonEvacuatedEnergyCancelFailedGroup
         consumeShortCircuitAnalysisResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.result
           group: studyShortCircuitAnalysisResultGroup
@@ -85,6 +97,9 @@ spring:
         consumeShortCircuitAnalysisFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.failed
           group: studyShortCircuitAnalysisFailedGroup
+        consumeShortCircuitAnalysisCancelFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.cancelfailed
+          group: studyShortCircuitAnalysisCancelFailedGroup
         consumeVoltageInitResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.result
           group: studyVoltageInitResultGroup

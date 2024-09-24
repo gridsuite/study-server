@@ -184,7 +184,7 @@ public class NonEvacuatedEnergyService {
         return result;
     }
 
-    public void stopNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid) {
+    public void stopNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
@@ -203,7 +203,11 @@ public class NonEvacuatedEnergyService {
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results/{resultUuid}/stop")
             .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
 
-        restTemplate.put(sensitivityAnalysisServerBaseUri + path, Void.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     public void invalidateNonEvacuatedEnergyStatus(List<UUID> uuids) {
