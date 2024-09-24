@@ -118,18 +118,19 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public AbstractNode createNodeThenLinkItToTimepoints(StudyEntity study, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode, String userId) {
+    public NetworkModificationNode createNodeThenLinkItToTimepoints(StudyEntity study, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode, String userId) {
         // create new node
-        AbstractNode newNode = createNode(study, nodeId, nodeInfo, insertMode, userId);
+        //TODO: check if is ok
+        NetworkModificationNode newNode = (NetworkModificationNode) createNode(study, nodeId, nodeInfo, insertMode, userId);
 
         // then link it to existing timepoints by creating TimePointNodeInfoEntity
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
         timePointRepository.findAllByStudyId(study.getId()).forEach(timePointEntity -> {
             TimePointNodeInfoEntity newTimePointNodeInfoEntity = TimePointNodeInfoEntity.builder()
-                .variantId(FIRST_VARIANT_ID)
-                .nodeBuildStatus(new NodeBuildStatusEmbeddable(BuildStatus.BUILT, BuildStatus.BUILT))
+                .variantId(newNode.getVariantId())
+                .nodeBuildStatus(newNode.getNodeBuildStatus().toEntity())
                 // TODO: Fix if is ok
-                .reportUuid(UUID.randomUUID())
+                .reportUuid(newNode.getReportUuid())
                 .modificationsToExclude(Set.of())
                 .build();
             newNodeInfoEntity.addTimePointNodeInfo(newTimePointNodeInfoEntity);

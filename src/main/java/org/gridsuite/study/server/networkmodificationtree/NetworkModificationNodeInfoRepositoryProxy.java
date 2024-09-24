@@ -16,6 +16,7 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -29,19 +30,18 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public NetworkModificationNodeInfoEntity createNodeInfo(AbstractNode nodeInfo) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) nodeInfo;
-//        TimePointNetworkModificationNode timePointNodeInfo = networkModificationNode.getFirstTimePointNode();
-//        if (Objects.isNull(timePointNodeInfo.getNodeBuildStatus())) {
-//            timePointNodeInfo.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
-//        }
+        if (Objects.isNull(networkModificationNode.getNodeBuildStatus())) {
+            networkModificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
+        }
         if (networkModificationNode.getModificationGroupUuid() == null) {
             networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
         }
-//        if (timePointNodeInfo.getVariantId() == null) {
-//            timePointNodeInfo.setVariantId(UUID.randomUUID().toString());
-//        }
-//        if (timePointNodeInfo.getReportUuid() == null) {
-//            timePointNodeInfo.setReportUuid(UUID.randomUUID());
-//        }
+        if (networkModificationNode.getVariantId() == null) {
+            networkModificationNode.setVariantId(UUID.randomUUID().toString());
+        }
+        if (networkModificationNode.getReportUuid() == null) {
+            networkModificationNode.setReportUuid(UUID.randomUUID());
+        }
         return super.createNodeInfo(networkModificationNode);
     }
 
