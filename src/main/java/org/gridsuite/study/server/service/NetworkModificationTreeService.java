@@ -508,7 +508,7 @@ public class NetworkModificationTreeService {
             .name("N1")
             .build();
 
-        NetworkModificationNode firstNode = (NetworkModificationNode) self.createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
+        NetworkModificationNode firstNode = (NetworkModificationNode) createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
         NetworkModificationNodeInfoEntity firstNodeInfosEntity = networkModificationNodeInfoRepository.getReferenceById(firstNode.getId());
         TimePointNodeInfoEntity timePointNodeInfoEntity = TimePointNodeInfoEntity.builder()
             .variantId(FIRST_VARIANT_ID)
@@ -1027,6 +1027,10 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public NodeBuildStatus getNodeBuildStatus(UUID nodeUuid, UUID timePointUuid) {
+        NodeEntity nodeEntity = nodesRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+        if (nodeEntity.getType().equals(NodeType.ROOT)) {
+            return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
+        }
         return getNodeBuildStatus(timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid));
     }
 

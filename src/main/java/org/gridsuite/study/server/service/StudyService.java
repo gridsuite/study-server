@@ -37,6 +37,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -758,8 +759,7 @@ public class StudyService {
     }
 
     public void assertIsStudyExist(UUID studyUuid) {
-        boolean exists = getStudies().stream()
-            .anyMatch(study -> studyUuid.equals(study.getId()));
+        boolean exists = studyRepository.existsById(studyUuid);
         if (!exists) {
             throw new StudyException(NODE_NOT_FOUND);
         }
@@ -1498,7 +1498,7 @@ public class StudyService {
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.updateModificationsActivation(groupId, modificationsUuids, activated);
-            updateStatuses(studyUuid, nodeUuid, false);
+            updateStatuses(studyUuid, nodeUuid, getStudyFirstTimePointUuid(studyUuid), false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1729,12 +1729,12 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<Report> getParentNodesReport(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType, Set<String> severityLevels) {
+    public List<Report> getParentNodesReport(UUID nodeUuid, UUID timePointUuid, boolean nodeOnlyReport, ReportType reportType, Set<String> severityLevels) {
         // recursive function to retrieve all reports from a given node up to the Root node
         Pair<String, ReportNameMatchingType> filtersParameters = getFiltersParamaters(nodeUuid, nodeOnlyReport, reportType);
-        AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
+        TimePointNodeInfoEntity timePointNodeInfo = timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid);
         // TODO: FIXME
-        List<Report> subReporters = reportService.getReport(/*nodeInfos.getFirstTimePointNode().getReportUuid()*/UUID.randomUUID(), nodeUuid.toString(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
+        List<Report> subReporters = reportService.getReport(timePointNodeInfo.getReportUuid(), nodeUuid.toString(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
         if (subReporters.isEmpty()) {
             return subReporters;
         } else if (nodeOnlyReport) {
@@ -1748,7 +1748,7 @@ public class StudyService {
             if (parentUuid.isEmpty()) {
                 return subReporters;
             }
-            List<Report> parentReporters = self.getParentNodesReport(parentUuid.get(), false, reportType, severityLevels);
+            List<Report> parentReporters = self.getParentNodesReport(parentUuid.get(), timePointUuid, false, reportType, severityLevels);
             return Stream.concat(parentReporters.stream(), subReporters.stream()).collect(Collectors.toList());
         }
     }

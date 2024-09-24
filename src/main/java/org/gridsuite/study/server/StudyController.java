@@ -1040,7 +1040,7 @@ public class StudyController {
                                                                     @Parameter(description = "The report Type") @RequestParam(name = "reportType") StudyService.ReportType reportType,
                                                                     @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReport(nodeUuid, nodeOnlyReport, reportType, severityLevels));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReport(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), nodeOnlyReport, reportType, severityLevels));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report", produces = MediaType.APPLICATION_JSON_VALUE)
