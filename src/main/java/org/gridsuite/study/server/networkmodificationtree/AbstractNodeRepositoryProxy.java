@@ -40,10 +40,6 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         return null;
     }
 
-    public NodeBuildStatus getNodeBuildStatus(AbstractNode node) {
-        return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
-    }
-
     public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
     }
 
@@ -104,10 +100,6 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
 
     public UUID getModificationGroupUuid(UUID nodeUuid) {
         return getModificationGroupUuid(getNode(nodeUuid));
-    }
-
-    public NodeBuildStatus getNodeBuildStatus(UUID nodeUuid) {
-        return getNodeBuildStatus(getNode(nodeUuid));
     }
 
     public void handleExcludeModification(UUID nodeUuid, UUID modificationUuid, boolean active) {

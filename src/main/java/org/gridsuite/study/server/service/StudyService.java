@@ -42,6 +42,7 @@ import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
+import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoRepository;
 import org.gridsuite.study.server.repository.timepoint.TimePointRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
@@ -88,6 +89,7 @@ public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
     private final TimePointService timePointService;
+    private final TimePointNodeInfoRepository timePointNodeInfoRepository;
 
     NotificationService notificationService;
 
@@ -185,7 +187,7 @@ public class StudyService {
         FilterService filterService,
         StateEstimationService stateEstimationService,
         TimePointRepository timePointRepository,
-        @Lazy StudyService studyService, TimePointService timePointService) {
+        @Lazy StudyService studyService, TimePointService timePointService, TimePointNodeInfoRepository timePointNodeInfoRepository) {
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
@@ -219,6 +221,7 @@ public class StudyService {
         this.self = studyService;
         this.timePointRepository = timePointRepository;
         this.timePointService = timePointService;
+        this.timePointNodeInfoRepository = timePointNodeInfoRepository;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -376,10 +379,10 @@ public class StudyService {
         return studyInfosService.search(query);
     }
 
-    private UUID getNodeUuidToSearchIn(UUID initialNodeUuid, boolean inUpstreamBuiltParentNode) {
+    private UUID getNodeUuidToSearchIn(UUID initialNodeUuid, UUID timePointUuid, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = initialNodeUuid;
         if (inUpstreamBuiltParentNode) {
-            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuiltUuid(initialNodeUuid);
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuiltUuid(initialNodeUuid, timePointUuid);
         }
         return nodeUuidToSearchIn;
     }
@@ -387,7 +390,7 @@ public class StudyService {
     public List<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
                                                  @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
                                                  boolean inUpstreamBuiltParentNode) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
         UUID networkUuid = timePointService.getTimePointNetworkUuid(getStudyFirstTimePointUuid(studyUuid));
         String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn, getStudyFirstTimePointUuid(studyUuid));
         return equipmentInfosService.searchEquipments(networkUuid, variantId, userInput, fieldSelector, equipmentType);
@@ -648,13 +651,13 @@ public class StudyService {
     }
 
     public String getSubstationMapData(UUID studyUuid, UUID nodeUuid, String substationId, boolean inUpstreamBuiltParentNode) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+       UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
         return networkMapService.getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, getStudyFirstTimePointUuid(studyUuid)),
             "substations", substationId);
     }
 
     public String getNetworkElementsInfos(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, String infoType, String elementType, boolean inUpstreamBuiltParentNode, List<Double> nominalVoltages) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
         return networkMapService.getElementsInfos(timePointService.getTimePointNetworkUuid(getStudyFirstTimePointUuid(studyUuid)), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, getStudyFirstTimePointUuid(studyUuid)),
@@ -662,7 +665,7 @@ public class StudyService {
     }
 
     public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, String elementType, InfoTypeParameters infoTypeParameters, String elementId, boolean inUpstreamBuiltParentNode) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
         return networkMapService.getElementInfos(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, getStudyFirstTimePointUuid(studyUuid)),
@@ -670,24 +673,24 @@ public class StudyService {
     }
 
     public String getNetworkCountries(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
         return networkMapService.getCountries(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, getStudyFirstTimePointUuid(studyUuid)));
     }
 
     public String getNetworkNominalVoltages(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
         return networkMapService.getNominalVoltages(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, getStudyFirstTimePointUuid(studyUuid)));
     }
 
     public String getVoltageLevelEquipments(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode, String voltageLevelId) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
         String equipmentPath = "voltage-levels" + StudyConstants.DELIMITER + voltageLevelId + StudyConstants.DELIMITER + "equipments";
         return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, getStudyFirstTimePointUuid(studyUuid)),
             substationsIds, equipmentPath);
     }
 
     public String getHvdcLineShuntCompensators(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode, String hvdcId) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn, getStudyFirstTimePointUuid(studyUuid));
         return networkMapService.getHvdcLineShuntCompensators(networkUuid, variantId, hvdcId);
@@ -707,8 +710,8 @@ public class StudyService {
     @Transactional
     public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, String userId, Float limitReduction) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, getStudyUuidFromNodeUuid(studyUuid), LOAD_FLOW);
-        if(prevResultUuid != null) {
+        UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, getStudyFirstTimePointUuid(studyUuid), LOAD_FLOW);
+        if (prevResultUuid != null) {
             loadflowService.deleteLoadFlowResult(prevResultUuid);
         }
 
@@ -778,16 +781,18 @@ public class StudyService {
     }
 
     private void assertNoNodeIsBuilding(UUID studyUuid) {
-        networkModificationTreeService.getAllNodes(studyUuid).stream().forEach(node -> {
-            if (networkModificationTreeService.getNodeBuildStatus(node.getIdNode()).isBuilding()) {
-                throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
-            }
-        });
+        networkModificationTreeService.getAllNodes(studyUuid).forEach(node ->
+            timePointNodeInfoRepository.findAllByNodeInfoId(node.getIdNode()).forEach(tpNodeInfo -> {
+                if (networkModificationTreeService.getNodeBuildStatus(tpNodeInfo).isBuilding()) {
+                    throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
+                }
+            })
+        );
     }
 
     public void assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid) {
         if (!(networkModificationTreeService.getStudyRootNodeUuid(studyUuid).equals(nodeUuid)
-            || networkModificationTreeService.getNodeBuildStatus(nodeUuid).isBuilt())) {
+            || networkModificationTreeService.getNodeBuildStatus(nodeUuid, getStudyFirstTimePointUuid(studyUuid)).isBuilt())) {
             throw new StudyException(NODE_NOT_BUILT);
         }
     }
@@ -1265,12 +1270,12 @@ public class StudyService {
     }
 
     public List<IdentifiableInfos> getVoltageLevelBuses(UUID studyUuid, UUID nodeUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
         return getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuidToSearchIn, voltageLevelId, "configured-buses");
     }
 
     public List<IdentifiableInfos> getVoltageLevelBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
         return getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuidToSearchIn, voltageLevelId, "busbar-sections");
     }
 
@@ -1294,7 +1299,7 @@ public class StudyService {
     private void assertCanBuildNode(@NonNull UUID studyUuid, @NonNull String userId) {
         // check restrictions on node builds number
         userAdminService.getUserMaxAllowedBuilds(userId).ifPresent(maxBuilds -> {
-            long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid);
+            long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, getStudyFirstTimePointUuid(studyUuid));
             if (nbBuiltNodes >= maxBuilds) {
                 throw new StudyException(MAX_NODE_BUILDS_EXCEEDED, "max allowed built nodes : " + maxBuilds);
             }
@@ -1366,12 +1371,12 @@ public class StudyService {
         }
         networkModificationTreeService.moveStudySubtree(parentNodeToMoveUuid, referenceNodeUuid);
 
-        if (networkModificationTreeService.getNodeBuildStatus(parentNodeToMoveUuid).isBuilt()) {
+        if (networkModificationTreeService.getNodeBuildStatus(parentNodeToMoveUuid, getStudyFirstTimePointUuid(studyUuid)).isBuilt()) {
 
             updateStatuses(studyUuid, parentNodeToMoveUuid, getStudyFirstTimePointUuid(studyUuid), false, true, true);
         }
         allChildren.stream()
-            .filter(childUuid -> networkModificationTreeService.getNodeBuildStatus(childUuid).isBuilt())
+            .filter(childUuid -> networkModificationTreeService.getNodeBuildStatus(childUuid, getStudyFirstTimePointUuid(studyUuid)).isBuilt())
             .forEach(childUuid -> updateStatuses(studyUuid, childUuid, getStudyFirstTimePointUuid(studyUuid), false, true, true));
 
         notificationService.emitSubtreeMoved(studyUuid, parentNodeToMoveUuid, referenceNodeUuid);
@@ -1997,7 +2002,7 @@ public class StudyService {
     // --- Dynamic Simulation service methods END --- //
 
     public String getNetworkElementsIds(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode, String equipmentType, List<Double> nominalVoltages) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
         return networkMapService.getElementsIds(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, getStudyFirstTimePointUuid(studyUuid)),
             substationsIds, equipmentType, nominalVoltages);
     }
@@ -2174,7 +2179,7 @@ public class StudyService {
     }
 
     public String evaluateFilter(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode, String filter) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
         return filterService.evaluateFilter(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, getStudyFirstTimePointUuid(studyUuid)), filter);
     }
 
@@ -2214,7 +2219,7 @@ public class StudyService {
 
     public AbstractNode createNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode, String userId) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        return networkModificationTreeService.createNode(study, nodeId, nodeInfo, insertMode, userId);
+        return networkModificationTreeService.createNodeThenLinkItToTimepoints(study, nodeId, nodeInfo, insertMode, userId);
     }
 
     //TODO: temporary method, once frontend had been implemented, each operation will need to target a specific timepoint UUID, here we manually target the first one
