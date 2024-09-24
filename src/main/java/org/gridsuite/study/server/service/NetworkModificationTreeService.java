@@ -668,8 +668,7 @@ public class NetworkModificationTreeService {
     public UUID getReportUuid(UUID nodeUuid, UUID timePointUuid) {
         NodeEntity nodeEntity = nodesRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
         if (nodeEntity.getType().equals(NodeType.ROOT)) {
-            //TODO: fix exception thrown
-            return timePointRepository.findById(timePointUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND)).getReportUuid();
+            return timePointRepository.findById(timePointUuid).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND)).getReportUuid();
         } else {
             return timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid).getReportUuid();
         }

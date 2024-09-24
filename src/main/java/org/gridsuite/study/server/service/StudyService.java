@@ -1733,9 +1733,8 @@ public class StudyService {
     public List<Report> getParentNodesReport(UUID nodeUuid, UUID timePointUuid, boolean nodeOnlyReport, ReportType reportType, Set<String> severityLevels) {
         // recursive function to retrieve all reports from a given node up to the Root node
         Pair<String, ReportNameMatchingType> filtersParameters = getFiltersParamaters(nodeUuid, nodeOnlyReport, reportType);
-        TimePointNodeInfoEntity timePointNodeInfo = timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid);
-        // TODO: FIXME
-        List<Report> subReporters = reportService.getReport(timePointNodeInfo.getReportUuid(), nodeUuid.toString(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
+        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid, timePointUuid);
+        List<Report> subReporters = reportService.getReport(reportUuid, nodeUuid.toString(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
         if (subReporters.isEmpty()) {
             return subReporters;
         } else if (nodeOnlyReport) {
