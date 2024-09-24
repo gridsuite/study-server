@@ -193,6 +193,10 @@ public class NonEvacuatedEnergyService {
             return;
         }
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
@@ -202,10 +206,6 @@ public class NonEvacuatedEnergyService {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results/{resultUuid}/stop")
             .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
 
         restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
