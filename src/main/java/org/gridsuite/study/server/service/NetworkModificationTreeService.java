@@ -87,8 +87,25 @@ public class NetworkModificationTreeService {
         this.timePointService = timePointService;
     }
 
+    private NodeEntity createNetworkmodificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
+        NodeEntity newNode = nodesRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
+        if (networkModificationNode.getModificationGroupUuid() == null) {
+            networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
+        }
+
+        networkModificationNodeInfoRepository.save(
+            NetworkModificationNodeInfoEntity.builder()
+                .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
+                .idNode(newNode.getIdNode())
+                .name(networkModificationNode.getName())
+                .description(networkModificationNode.getDescription())
+                .build()
+        );
+        return newNode;
+    }
+
     // TODO test if studyUuid exist and have a node <nodeId>
-    private AbstractNode createNode(StudyEntity study, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode, String userId) {
+    private NetworkModificationNode createNode(StudyEntity study, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
         Optional<NodeEntity> referenceNode = nodesRepository.findById(nodeId);
         return referenceNode.map(reference -> {
             assertNodeNameNotExist(study.getId(), nodeInfo.getName());
@@ -97,9 +114,8 @@ public class NetworkModificationTreeService {
                 throw new StudyException(NOT_ALLOWED);
             }
             NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ? reference.getParentNode() : reference;
-            NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType(), reference.getStudy(), false, null));
+            NodeEntity node = createNetworkmodificationNode(study, parent, nodeInfo);
             nodeInfo.setId(node.getIdNode());
-            repositories.get(node.getType()).createNodeInfo(nodeInfo);
 
             if (insertMode.equals(InsertMode.BEFORE)) {
                 reference.setParentNode(node);
@@ -118,19 +134,19 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public NetworkModificationNode createNodeThenLinkItToTimepoints(StudyEntity study, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode, String userId) {
+    public NetworkModificationNode createNodeThenLinkItToTimepoints(StudyEntity study, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
         // create new node
         //TODO: check if is ok
-        NetworkModificationNode newNode = (NetworkModificationNode) createNode(study, nodeId, nodeInfo, insertMode, userId);
+        NetworkModificationNode newNode = createNode(study, nodeId, nodeInfo, insertMode, userId);
 
         // then link it to existing timepoints by creating TimePointNodeInfoEntity
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
         timePointRepository.findAllByStudyId(study.getId()).forEach(timePointEntity -> {
             TimePointNodeInfoEntity newTimePointNodeInfoEntity = TimePointNodeInfoEntity.builder()
-                .variantId(newNode.getVariantId())
-                .nodeBuildStatus(newNode.getNodeBuildStatus().toEntity())
+                .variantId(UUID.randomUUID().toString())
+                .nodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT))
                 // TODO: Fix if is ok
-                .reportUuid(newNode.getReportUuid())
+                .reportUuid(UUID.randomUUID())
                 .modificationsToExclude(Set.of())
                 .build();
             newNodeInfoEntity.addTimePointNodeInfo(newTimePointNodeInfoEntity);
@@ -141,15 +157,15 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
+    public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, UUID timePointUuid, InsertMode insertMode) {
         NodeEntity anchorNode = nodesRepository.findById(anchorNodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         NodeEntity parent = insertMode == InsertMode.BEFORE ? anchorNode.getParentNode() : anchorNode;
-        UUID newNodeUUID = duplicateNode(nodeToCopyUuid, anchorNodeUuid, insertMode);
+        UUID newNodeUUID = duplicateNode(nodeToCopyUuid, anchorNodeUuid, timePointUuid, insertMode);
         notificationService.emitNodeInserted(anchorNode.getStudy().getId(), parent.getIdNode(), newNodeUUID, insertMode, anchorNodeUuid);
         return newNodeUUID;
     }
 
-    private UUID duplicateNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
+    private UUID duplicateNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, UUID timePointUuid, InsertMode insertMode) {
         Optional<NodeEntity> anchorNodeOpt = nodesRepository.findById(anchorNodeUuid);
         NodeEntity anchorNodeEntity = anchorNodeOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
         if (insertMode.equals(InsertMode.BEFORE) && anchorNodeEntity.getType().equals(NodeType.ROOT)) {
@@ -180,34 +196,40 @@ public class NetworkModificationTreeService {
 
         //And the modification node info
         NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationNodeInfoRepository.findById(nodeToCopyUuid).orElseThrow(() -> new StudyException(GET_MODIFICATIONS_FAILED));
+        TimePointEntity timePointEntity = timePointRepository.findById(timePointUuid).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
+        UUID studyUuid = anchorNodeEntity.getStudy().getId();
         NetworkModificationNodeInfoEntity newNetworkModificationNodeInfoEntity = NetworkModificationNodeInfoEntity.builder()
             .modificationGroupUuid(newGroupUuid)
-            .timePointNodeInfos(List.of(TimePointNodeInfoEntity.builder()
-                .id(UUID.randomUUID())
-                .modificationsToExclude(new HashSet<>())
-                .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT).toEntity())
-                .build()))
+            .name(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()))
+            .description(networkModificationNodeInfoEntity.getDescription())
+            .idNode(node.getIdNode())
             .build();
 
-        UUID studyUuid = anchorNodeEntity.getStudy().getId();
-        newNetworkModificationNodeInfoEntity.setName(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()));
-        newNetworkModificationNodeInfoEntity.setDescription(networkModificationNodeInfoEntity.getDescription());
-        newNetworkModificationNodeInfoEntity.setIdNode(node.getIdNode());
-        newNetworkModificationNodeInfoEntity.getFirstTimePointNodeStatusEntity().setReportUuid(newReportUuid);
+        TimePointNodeInfoEntity timePointNodeInfoEntity = TimePointNodeInfoEntity.builder()
+            .variantId(UUID.randomUUID().toString())
+            .nodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT))
+            .reportUuid(newReportUuid)
+            .modificationsToExclude(new HashSet<>())
+            .build();
+        newNetworkModificationNodeInfoEntity.addTimePointNodeInfo(timePointNodeInfoEntity);
+        timePointEntity.addTimePointNodeInfo(timePointNodeInfoEntity);
+
+        timePointNodeInfoRepository.save(timePointNodeInfoEntity);
+        timePointRepository.save(timePointEntity);
         networkModificationNodeInfoRepository.save(newNetworkModificationNodeInfoEntity);
 
         return node.getIdNode();
     }
 
     @Transactional
-    public UUID duplicateStudySubtree(UUID parentNodeToCopyUuid, UUID anchorNodeUuid, Set<UUID> newlyCreatedNodes) {
+    public UUID duplicateStudySubtree(UUID parentNodeToCopyUuid, UUID anchorNodeUuid, UUID timePointUuid, Set<UUID> newlyCreatedNodes) {
         List<NodeEntity> children = getChildrenByParentUuid(parentNodeToCopyUuid);
-        UUID newParentUuid = duplicateNode(parentNodeToCopyUuid, anchorNodeUuid, InsertMode.CHILD);
+        UUID newParentUuid = duplicateNode(parentNodeToCopyUuid, anchorNodeUuid, timePointUuid, InsertMode.CHILD);
         newlyCreatedNodes.add(newParentUuid);
 
         children.forEach(child -> {
             if (!newlyCreatedNodes.contains(child.getIdNode())) {
-                self.duplicateStudySubtree(child.getIdNode(), newParentUuid, newlyCreatedNodes);
+                self.duplicateStudySubtree(child.getIdNode(), newParentUuid, timePointUuid, newlyCreatedNodes);
             }
         });
         return newParentUuid;
@@ -509,7 +531,7 @@ public class NetworkModificationTreeService {
             .name("N1")
             .build();
 
-        NetworkModificationNode firstNode = (NetworkModificationNode) createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
+        NetworkModificationNode firstNode = createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
         NetworkModificationNodeInfoEntity firstNodeInfosEntity = networkModificationNodeInfoRepository.getReferenceById(firstNode.getId());
         TimePointNodeInfoEntity timePointNodeInfoEntity = TimePointNodeInfoEntity.builder()
             .variantId(FIRST_VARIANT_ID)
@@ -624,7 +646,7 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public UUID getModificationGroupUuid(UUID nodeUuid) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(nodeUuid)).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+        return networkModificationNodeInfoRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND)).getModificationGroupUuid();
     }
 
     // Return json string because modification dtos are not available here

@@ -1182,7 +1182,7 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The node has been added"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public ResponseEntity<AbstractNode> createNode(@RequestBody AbstractNode node,
+    public ResponseEntity<NetworkModificationNode> createNode(@RequestBody NetworkModificationNode node,
                                                          @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                          @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
                                                          @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode,

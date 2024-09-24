@@ -32,10 +32,7 @@ import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitPar
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
-import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -1237,9 +1234,10 @@ public class StudyService {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
+            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, getStudyFirstTimePointUuid(studyUuid));
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
-            String variantId = nodeInfos.getVariantId();
-            UUID reportUuid = nodeInfos.getReportUuid();
+            String variantId = timePointNodeInfoEntity.getVariantId();
+            UUID reportUuid = timePointNodeInfoEntity.getReportUuid();
 
             Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModification(studyUuid, createModificationAttributes, groupUuid, variantId, reportUuid, nodeInfos.getId().toString());
             updateNode(studyUuid, nodeUuid, networkModificationResult);
@@ -1320,7 +1318,7 @@ public class StudyService {
     public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         checkStudyContainsNode(sourceStudyUuid, nodeToCopyUuid);
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
-        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
+        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, getStudyFirstTimePointUuid(targetStudyUuid), insertMode);
         boolean invalidateBuild = networkModificationTreeService.hasModifications(nodeToCopyUuid, false);
         updateStatuses(targetStudyUuid, duplicatedNodeUuid, getStudyFirstTimePointUuid(targetStudyUuid), true, invalidateBuild, true);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
@@ -1355,7 +1353,7 @@ public class StudyService {
         checkStudyContainsNode(sourceStudyUuid, parentNodeToCopyUuid);
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
 
-        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudySubtree(parentNodeToCopyUuid, referenceNodeUuid, new HashSet<>());
+        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudySubtree(parentNodeToCopyUuid, referenceNodeUuid, getStudyFirstTimePointUuid(targetStudyUuid), new HashSet<>());
         notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
@@ -2234,7 +2232,7 @@ public class StudyService {
         return result;
     }
 
-    public AbstractNode createNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode, String userId) {
+    public NetworkModificationNode createNode(UUID studyUuid, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return networkModificationTreeService.createNodeThenLinkItToTimepoints(study, nodeId, nodeInfo, insertMode, userId);
     }

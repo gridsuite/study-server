@@ -33,7 +33,7 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @Column
     private UUID modificationGroupUuid;
 
-    @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo")
+    @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo", cascade = CascadeType.ALL)
     protected List<TimePointNodeInfoEntity> timePointNodeInfos;
 
     //TODO temporary, for now we are only working with one timepoint by study
