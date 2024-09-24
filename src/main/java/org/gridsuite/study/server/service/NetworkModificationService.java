@@ -55,16 +55,18 @@ public class NetworkModificationService {
     private static final String VARIANT_ID = "variantId";
     private static final String QUERY_PARAM_ACTION = "action";
     private final NetworkService networkStoreService;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private String networkModificationServerBaseUri;
 
     @Autowired
     NetworkModificationService(RemoteServicesProperties remoteServicesProperties,
                                NetworkService networkStoreService,
+                               RestTemplate restTemplate,
                                ObjectMapper objectMapper) {
         this.networkModificationServerBaseUri = remoteServicesProperties.getServiceUri("network-modification-server");
         this.networkStoreService = networkStoreService;
+        this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
     }
 
@@ -213,6 +215,28 @@ public class NetworkModificationService {
                 .queryParam(QUERY_PARAM_STASHED, true)
                 .buildAndExpand()
                 .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
+        try {
+            restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
+        }
+    }
+
+    public void updateModificationsActivation(UUID groupUUid, List<UUID> modificationsUuids, boolean activated) {
+        Objects.requireNonNull(groupUUid);
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder
+            .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
+            .queryParam(UUIDS, modificationsUuids)
+            .queryParam(GROUP_UUID, groupUUid)
+            .queryParam(QUERY_PARAM_ACTIVATED, activated)
+            .buildAndExpand()
+            .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
