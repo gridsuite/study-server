@@ -1068,7 +1068,7 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report/logs", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get the report logs of the given node and all its parents")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report logs lin"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report logs of the node and all its parent"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<List<ReportLog>> getParentNodesReportLogs(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                     @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                     @Parameter(description = "the message filter") @RequestParam(name = "message", required = false) String messageFilter,
