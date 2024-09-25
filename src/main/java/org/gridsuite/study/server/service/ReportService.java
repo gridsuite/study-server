@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.service;
 
 import lombok.NonNull;
+import org.apache.poi.util.StringUtil;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.dto.ReportLog;
@@ -81,6 +82,9 @@ public class ReportService {
             restTemplate.exchange(this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + path, HttpMethod.DELETE, httpEntity, Void.class);
         } catch (Exception e) {
             LOGGER.error("Error while deleting reports : {}", e.getMessage());
+        }
+    }
+
     public List<ReportLog> getReportLogs(@NonNull UUID id, String messageFilter, Set<String> severityLevels) {
         var uriBuilder = UriComponentsBuilder.fromPath("{id}/logs");
         if (severityLevels != null && !severityLevels.isEmpty()) {
@@ -94,8 +98,5 @@ public class ReportService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReportLog>>() {
         }).getBody();
-    }
-
-        }
     }
 }
