@@ -225,9 +225,10 @@ public class ShortCircuitService extends AbstractComputationService {
         return result;
     }
 
-    public void stopShortCircuitAnalysis(UUID studyUuid, UUID nodeUuid) {
+    public void stopShortCircuitAnalysis(UUID studyUuid, UUID nodeUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
+        Objects.requireNonNull(userId);
 
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SHORT_CIRCUIT);
         if (resultUuidOpt.isEmpty()) {
@@ -244,7 +245,11 @@ public class ShortCircuitService extends AbstractComputationService {
                 .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/stop")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
 
-        restTemplate.put(shortCircuitServerBaseUri + path, Void.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     private String getVariantId(UUID nodeUuid) {
