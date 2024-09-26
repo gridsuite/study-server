@@ -306,7 +306,9 @@ public class NonEvacuatedEnergyTest {
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/non-evacuated-energy/results/%s/status", resultUuid)));
 
         // stop sensitivity analysis non evacuated energy
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/stop", studyUuid, nodeUuid)).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/stop", studyUuid, nodeUuid)
+                .header(HEADER_USER_ID, "userId"))
+                .andExpect(status().isOk());
 
         sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));

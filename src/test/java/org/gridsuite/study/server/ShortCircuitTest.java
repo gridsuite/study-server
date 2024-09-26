@@ -356,7 +356,9 @@ public class ShortCircuitTest implements WithAssertions {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
 
         // stop short circuit analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode3Uuid)).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode3Uuid)
+                .header(HEADER_USER_ID, "userId"))
+                .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
@@ -491,7 +493,9 @@ public class ShortCircuitTest implements WithAssertions {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
 
         // stop short circuit analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)
+                .header(HEADER_USER_ID, "userId"))
+                .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
@@ -662,7 +666,9 @@ public class ShortCircuitTest implements WithAssertions {
                 status().isNoContent());
 
         // stop non-existing short circuit analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)
+                .header(HEADER_USER_ID, "userId"))
+                .andExpect(status().isOk());
     }
 
     @Test

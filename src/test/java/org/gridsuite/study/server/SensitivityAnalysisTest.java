@@ -353,7 +353,9 @@ public class SensitivityAnalysisTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/results/" + resultUuid + "/csv")));
         // stop sensitivity analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/stop", studyUuid, nodeUuid)).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/stop", studyUuid, nodeUuid)
+                .header(HEADER_USER_ID, "userId"))
+                .andExpect(status().isOk());
 
         sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
