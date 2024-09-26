@@ -148,7 +148,7 @@ public class NetworkModificationService {
                                                                   String createModificationAttributes,
                                                                   UUID groupUuid,
                                                                   String variantId, UUID reportUuid,
-                                                                  String reporterId) {
+                                                                  UUID nodeUuid) {
         Optional<NetworkModificationResult> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createModificationAttributes);
@@ -160,7 +160,7 @@ public class NetworkModificationService {
                 .queryParam(NETWORK_UUID, networkUuid)
                 .queryParam(GROUP_UUID, groupUuid)
                 .queryParam(REPORT_UUID, reportUuid)
-                .queryParam(REPORTER_ID, reporterId);
+                .queryParam(REPORTER_ID, nodeUuid);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }

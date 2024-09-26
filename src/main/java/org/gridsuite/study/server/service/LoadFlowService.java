@@ -60,10 +60,9 @@ public class LoadFlowService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID parametersUuid, String userId, Float limitReduction) {
+    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID parametersUuid, UUID reportUuid, String userId, Float limitReduction) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
-        UUID reportUuid = getReportUuid(nodeUuid);
 
         String receiver;
         try {
@@ -196,10 +195,6 @@ public class LoadFlowService extends AbstractComputationService {
 
     private String getVariantId(UUID nodeUuid) {
         return networkModificationTreeService.getVariantId(nodeUuid);
-    }
-
-    private UUID getReportUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getReportUuid(nodeUuid);
     }
 
     public void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {

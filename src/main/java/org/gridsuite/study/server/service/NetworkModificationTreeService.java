@@ -162,13 +162,15 @@ public class NetworkModificationTreeService {
                 null,
                 null,
                 null,
-                NodeBuildStatus.from(BuildStatus.NOT_BUILT).toEntity()
+                NodeBuildStatus.from(BuildStatus.NOT_BUILT).toEntity(),
+                new HashMap<>(),
+                new HashMap<>()
         );
         UUID studyUuid = anchorNodeEntity.getStudy().getId();
         newNetworkModificationNodeInfoEntity.setName(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()));
         newNetworkModificationNodeInfoEntity.setDescription(networkModificationNodeInfoEntity.getDescription());
         newNetworkModificationNodeInfoEntity.setIdNode(node.getIdNode());
-        newNetworkModificationNodeInfoEntity.setReportUuid(newReportUuid);
+        newNetworkModificationNodeInfoEntity.setModificationReports(new HashMap<>(Map.of(node.getIdNode(), newReportUuid)));
         networkModificationNodeInfoRepository.save(newNetworkModificationNodeInfoEntity);
 
         return node.getIdNode();
@@ -304,10 +306,11 @@ public class NetworkModificationTreeService {
             UUID modificationGroupUuid = repositories.get(nodeToDelete.getType()).getModificationGroupUuid(id);
             deleteNodeInfos.addModificationGroupUuid(modificationGroupUuid);
 
-            UUID reportUuid = repositories.get(nodeToDelete.getType()).getReportUuid(id);
-            if (reportUuid != null) {
-                deleteNodeInfos.addReportUuid(reportUuid);
-            }
+            // delete all modification reports
+            repositories.get(nodeToDelete.getType()).getModificationReports(nodeToDelete.getIdNode()).forEach((key, value) -> deleteNodeInfos.addReportUuid(value));
+
+            // delete all computation reports
+            repositories.get(nodeToDelete.getType()).getComputationReports(nodeToDelete.getIdNode()).forEach((key, value) -> deleteNodeInfos.addReportUuid(value));
 
             String variantId = repositories.get(nodeToDelete.getType()).getVariantId(id);
             if (!StringUtils.isBlank(variantId)) {
@@ -453,7 +456,6 @@ public class NetworkModificationTreeService {
                 UUID modificationGroupToDuplicateId = model.getModificationGroupUuid();
                 model.setModificationGroupUuid(newModificationGroupId);
                 model.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
-                model.setReportUuid(newReportUuid);
                 model.setLoadFlowResultUuid(null);
                 model.setSecurityAnalysisResultUuid(null);
                 model.setSensitivityAnalysisResultUuid(null);
@@ -462,6 +464,8 @@ public class NetworkModificationTreeService {
                 model.setOneBusShortCircuitAnalysisResultUuid(null);
                 model.setVoltageInitResultUuid(null);
                 model.setStateEstimationResultUuid(null);
+                model.setModificationReports(new HashMap<>(Map.of(model.getId(), newReportUuid)));
+                model.setComputationsReports(new HashMap<>());
 
                 nextParentId = self.createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD, null).getId();
                 networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId);
@@ -648,6 +652,26 @@ public class NetworkModificationTreeService {
         }
     }
 
+    @Transactional
+    public void updateComputationReportUuid(UUID nodeUuid, ComputationType computationType, UUID reportUuid) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateComputationReportUuid(nodeUuid, reportUuid, computationType));
+    }
+
+    @Transactional
+    public Map<String, UUID> getComputationReports(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getComputationReports(nodeUuid)).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+    }
+
+    @Transactional
+    public void setModificationReports(UUID nodeUuid, Map<UUID, UUID> modificationReports) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).setModificationReports(nodeUuid, modificationReports));
+    }
+
+    @Transactional
+    public Map<UUID, UUID> getModificationReports(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getModificationReports(nodeUuid)).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+    }
+
     private void restoreNodeChildren(UUID studyId, UUID parentNodeId) {
         nodesRepository.findAllByParentNodeIdNode(parentNodeId).forEach(nodeEntity -> {
             NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeEntity.getIdNode()).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
@@ -722,7 +746,11 @@ public class NetworkModificationTreeService {
         return uuids;
     }
 
-    private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {
+    private UUID getModificationReportUuid(UUID nodeUuid, UUID nodeToBuildUuid) {
+        return self.getModificationReports(nodeToBuildUuid).getOrDefault(nodeUuid, UUID.randomUUID());
+    }
+
+    private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos, UUID nodeToBuildUuid) {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
@@ -730,8 +758,9 @@ public class NetworkModificationTreeService {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
             }
             if (!modificationNode.getNodeBuildStatus().isBuilt()) {
-                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), modificationNode.getId().toString());
-                getBuildInfos(nodeEntity.getParentNode(), buildInfos);
+                UUID reportUuid = getModificationReportUuid(nodeEntity.getIdNode(), nodeToBuildUuid);
+                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), new ReportInfos(reportUuid, modificationNode.getId()));
+                getBuildInfos(nodeEntity.getParentNode(), buildInfos, nodeToBuildUuid);
             } else {
                 buildInfos.setOriginVariantId(self.getVariantId(nodeEntity.getIdNode()));
             }
@@ -747,8 +776,7 @@ public class NetworkModificationTreeService {
                 throw new StudyException(BAD_NODE_TYPE, "The node " + entity.getIdNode() + " is not a modification node");
             } else {
                 buildInfos.setDestinationVariantId(self.getVariantId(nodeUuid));
-                buildInfos.setReportUuid(self.getReportUuid(nodeUuid));
-                getBuildInfos(entity, buildInfos);
+                getBuildInfos(entity, buildInfos, nodeUuid);
             }
         }, () -> {
             throw new StudyException(ELEMENT_NOT_FOUND);
@@ -759,66 +787,60 @@ public class NetworkModificationTreeService {
 
     private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
                                          boolean deleteVoltageInitResults) {
-        UUID reportUuid = repositories.get(node.getType()).getReportUuid(node.getIdNode());
-        List<StudyService.ReportType> reportTypes = new ArrayList<>();
-
         if (!invalidateOnlyChildrenBuildStatus) {
             // we want to delete associated report and variant in this case
-            invalidateNodeInfos.addReportUuid(reportUuid);
+            repositories.get(node.getType()).getModificationReports(node.getIdNode()).forEach((key, value) -> invalidateNodeInfos.addReportUuid(value));
             invalidateNodeInfos.addVariantId(repositories.get(node.getType()).getVariantId(node.getIdNode()));
         }
+
+        // we want to delete associated computation reports exept for voltage initialization : only if deleteVoltageInitResults is true
+        repositories.get(node.getType()).getComputationReports(node.getIdNode()).forEach((key, value) -> {
+            if (deleteVoltageInitResults || !VOLTAGE_INITIALIZATION.name().equals(key)) {
+                invalidateNodeInfos.addReportUuid(value);
+            }
+        });
 
         UUID loadFlowResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), LOAD_FLOW);
         if (loadFlowResultUuid != null) {
             invalidateNodeInfos.addLoadFlowResultUuid(loadFlowResultUuid);
-            reportTypes.add(StudyService.ReportType.LOAD_FLOW);
         }
 
         UUID securityAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SECURITY_ANALYSIS);
         if (securityAnalysisResultUuid != null) {
             invalidateNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
-            reportTypes.add(StudyService.ReportType.SECURITY_ANALYSIS);
         }
 
         UUID sensitivityAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SENSITIVITY_ANALYSIS);
         if (sensitivityAnalysisResultUuid != null) {
             invalidateNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
-            reportTypes.add(StudyService.ReportType.SENSITIVITY_ANALYSIS);
         }
 
         UUID nonEvacuatedEnergyResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), NON_EVACUATED_ENERGY_ANALYSIS);
         if (nonEvacuatedEnergyResultUuid != null) {
             invalidateNodeInfos.addNonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid);
-            reportTypes.add(StudyService.ReportType.NON_EVACUATED_ENERGY_ANALYSIS);
         }
 
         UUID shortCircuitAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SHORT_CIRCUIT);
         if (shortCircuitAnalysisResultUuid != null) {
             invalidateNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
-            reportTypes.add(StudyService.ReportType.SHORT_CIRCUIT);
         }
 
         UUID oneBusShortCircuitAnalysisResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), SHORT_CIRCUIT_ONE_BUS);
         if (oneBusShortCircuitAnalysisResultUuid != null) {
             invalidateNodeInfos.addOneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid);
-            reportTypes.add(StudyService.ReportType.SHORT_CIRCUIT_ONE_BUS);
         }
 
         if (deleteVoltageInitResults) {
             UUID voltageInitResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), VOLTAGE_INITIALIZATION);
             if (voltageInitResultUuid != null) {
                 invalidateNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
-                reportTypes.add(StudyService.ReportType.VOLTAGE_INITIALIZATION);
             }
         }
 
         UUID stateEstimationResultUuid = repositories.get(node.getType()).getComputationResultUuid(node.getIdNode(), STATE_ESTIMATION);
         if (stateEstimationResultUuid != null) {
             invalidateNodeInfos.addStateEstimationResultUuid(stateEstimationResultUuid);
-            reportTypes.add(StudyService.ReportType.STATE_ESTIMATION);
         }
-
-        invalidateNodeInfos.addReportTypes(reportUuid, reportTypes);
     }
 
     @Transactional
@@ -874,10 +896,19 @@ public class NetworkModificationTreeService {
             nodeRepository.updateComputationResultUuid(childUuid, null, NON_EVACUATED_ENERGY_ANALYSIS);
             nodeRepository.updateComputationResultUuid(childUuid, null, SHORT_CIRCUIT);
             nodeRepository.updateComputationResultUuid(childUuid, null, SHORT_CIRCUIT_ONE_BUS);
+            nodeRepository.updateComputationResultUuid(childUuid, null, STATE_ESTIMATION);
             if (deleteVoltageInitResults) {
                 nodeRepository.updateComputationResultUuid(childUuid, null, VOLTAGE_INITIALIZATION);
             }
-            nodeRepository.updateComputationResultUuid(childUuid, null, STATE_ESTIMATION);
+            // we want to keep only voltage initialization report if deleteVoltageInitResults is false
+            Map<String, UUID> computationReports = nodeRepository.getComputationReports(childUuid)
+                .entrySet()
+                .stream()
+                .filter(entry -> VOLTAGE_INITIALIZATION.name().equals(entry.getKey()) && !deleteVoltageInitResults)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+            // Update the computation reports in the repository
+            nodeRepository.setComputationsReports(childUuid, computationReports);
         }
     }
 

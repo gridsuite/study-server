@@ -16,7 +16,7 @@ import java.util.UUID;
 @Schema(description = "Report infos")
 public record ReportInfos(
     UUID reportUuid,
-    String reporterId
+    UUID nodeUuid
 ) {
 
 }

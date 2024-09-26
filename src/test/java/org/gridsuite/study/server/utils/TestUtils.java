@@ -131,13 +131,12 @@ public final class TestUtils {
             .build();
     }
 
-    public static NetworkModificationNode createModificationNodeInfo(String name, UUID reportUuid) {
+    public static NetworkModificationNode createModificationNodeInfo(String name) {
         return NetworkModificationNode.builder()
             .name(name)
             .description("")
             .modificationGroupUuid(UUID.randomUUID())
             .variantId(UUID.randomUUID().toString())
-            .reportUuid(reportUuid)
             .loadFlowResultUuid(UUID.randomUUID())
             .securityAnalysisResultUuid(UUID.randomUUID())
             .sensitivityAnalysisResultUuid(UUID.randomUUID())

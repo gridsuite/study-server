@@ -264,7 +264,7 @@ public class StudyControllerDynamicSimulationTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), any(), any());
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), any(), any(), any());
 
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
@@ -331,7 +331,7 @@ public class StudyControllerDynamicSimulationTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), any(), any());
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), any(), any(), any());
 
         MvcResult result;
         // --- call endpoint to be tested --- //
@@ -407,7 +407,7 @@ public class StudyControllerDynamicSimulationTest {
 
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), any(), any());
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), any(), any(), any());
 
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run

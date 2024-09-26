@@ -49,7 +49,4 @@ public abstract class AbstractNodeInfoEntity extends AbstractManuallyAssignedIde
 
     @Column
     Boolean readOnly;
-
-    @Column
-    UUID reportUuid;
 }

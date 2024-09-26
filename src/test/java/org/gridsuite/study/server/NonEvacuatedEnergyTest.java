@@ -243,7 +243,7 @@ public class NonEvacuatedEnergyTest {
                 } else if (path.matches("/v1/non-evacuated-energy/results")) {
                     return new MockResponse().setResponseCode(200).addHeader("Content-Type",
                         "application/json; charset=utf-8");
-                } else if (path.matches("/v1/treereports")) {
+                } else if (path.matches("/v1/reports")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/supervision/non-evacuated-energy/results-count")) {
@@ -381,7 +381,7 @@ public class NonEvacuatedEnergyTest {
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/non-evacuated-energy/results"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         assertEquals(0, networkModificationNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull().size());
 
         String baseUrlWireMock = wireMock.baseUrl();

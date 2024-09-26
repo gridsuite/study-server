@@ -228,7 +228,7 @@ public interface DynamicSimulationService {
      * @param userId id of user
      * @return the UUID of the dynamic simulation
      */
-    UUID runDynamicSimulation(String provider, UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters, String userId);
+    UUID runDynamicSimulation(String provider, UUID studyUuid, UUID nodeUuid, UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId);
 
     /**
      * Get a list of curves from a given node UUID

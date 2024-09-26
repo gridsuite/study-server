@@ -55,12 +55,8 @@ public final class StudyConstants {
     public static final String REPORT_UUID = "reportUuid";
     public static final String UUIDS = "uuids";
     public static final String QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND = "errorOnGroupNotFound";
-    public static final String QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND = "errorOnReportNotFound";
-    public static final String QUERY_PARAM_REPORT_TYPE_FILTER = "reportTypeFilter";
     public static final String QUERY_PARAM_REPORT_DEFAULT_NAME = "defaultName";
     public static final String QUERY_PARAM_REPORT_SEVERITY_LEVEL = "severityLevels";
-    public static final String QUERY_PARAM_REPORT_NAME_FILTER = "reportNameFilter";
-    public static final String QUERY_PARAM_REPORT_NAME_MATCHING_TYPE = "reportNameMatchingType";
     public static final String QUERY_PARAM_RECEIVER = "receiver";
     public static final String QUERY_PARAM_REPORT_UUID = "reportUuid";
     public static final String QUERY_PARAM_REPORTER_ID = "reporterId";

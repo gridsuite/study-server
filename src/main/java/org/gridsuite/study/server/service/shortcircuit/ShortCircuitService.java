@@ -74,10 +74,9 @@ public class ShortCircuitService extends AbstractComputationService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String busId, Optional<UUID> parametersUuid, String userId) {
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String busId, Optional<UUID> parametersUuid, UUID reportUuid, String userId) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
-        UUID reportUuid = getReportUuid(nodeUuid);
 
         String receiver;
         try {
@@ -254,10 +253,6 @@ public class ShortCircuitService extends AbstractComputationService {
 
     private String getVariantId(UUID nodeUuid) {
         return networkModificationTreeService.getVariantId(nodeUuid);
-    }
-
-    private UUID getReportUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getReportUuid(nodeUuid);
     }
 
     public void deleteShortCircuitAnalysisResult(UUID uuid) {

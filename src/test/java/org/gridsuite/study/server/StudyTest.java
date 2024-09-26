@@ -451,7 +451,7 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/reports/.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(mapper.writeValueAsString(List.of(REPORT_TEST)))
+                    return new MockResponse().setResponseCode(200).setBody(mapper.writeValueAsString(REPORT_TEST))
                         .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     // need asynchronous run to get study creation requests
@@ -613,9 +613,10 @@ public class StudyTest {
 
                     case "/v1/reports/" + NETWORK_UUID_STRING:
                         return new MockResponse().setResponseCode(200)
-                            .setBody(mapper.writeValueAsString(List.of(REPORT_TEST)))
+                            .setBody(mapper.writeValueAsString(REPORT_TEST))
                             .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-
+                    case "/v1/reports":
+                        return new MockResponse().setResponseCode(200);
                     case "/v1/export/formats":
                         return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -878,9 +879,8 @@ public class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(7, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(6, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getVoltageInitParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getLoadFlowParametersUuid())));
@@ -908,9 +908,8 @@ public class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(2, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
@@ -933,9 +932,8 @@ public class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(6, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(5, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + nonExistingCaseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/.*"))); // x 3
     }
@@ -1824,7 +1822,7 @@ public class StudyTest {
         cutAndPasteNode(study1Uuid, emptyNode, node1.getId(), InsertMode.BEFORE, 1, userId);
 
         Set<String> request = TestUtils.getRequestsDone(1, server);
-        assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports/.*")));
+        assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports")));
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNode.getId()).getGlobalBuildStatus());
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node1.getId()).getGlobalBuildStatus());
@@ -1844,8 +1842,8 @@ public class StudyTest {
 
         cutAndPasteNode(study1Uuid, notEmptyNode, node1.getId(), InsertMode.BEFORE, 1, userId);
 
-        Set<String> request = TestUtils.getRequestsDone(3, server);
-        assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports/.*")));
+        Set<String> request = TestUtils.getRequestsDone(2, server);
+        assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports")));
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(notEmptyNode.getId()).getGlobalBuildStatus());
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(node1.getId()).getGlobalBuildStatus());
@@ -1932,8 +1930,8 @@ public class StudyTest {
         checkSubtreeMovedMessageSent(study1Uuid, emptyNode.getId(), node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
-        var request = TestUtils.getRequestsDone(2, server);
-        assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports/.*")));
+        var request = TestUtils.getRequestsDone(1, server);
+        assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports")));
 
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node1.getId()).getGlobalBuildStatus());
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNode.getId()).getGlobalBuildStatus());
@@ -2100,7 +2098,7 @@ public class StudyTest {
         // Invalidation node 3
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId()).getGlobalBuildStatus());
         Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
 
         // add modification on node "node2"
         String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
@@ -2475,7 +2473,7 @@ public class StudyTest {
         requests = TestUtils.getRequestsWithBodyDone(4, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
         assertEquals(2, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/indexed-equipments")).count());
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
 
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(study1Uuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
