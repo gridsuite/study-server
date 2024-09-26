@@ -155,38 +155,38 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        @Value("${non-evacuated-energy.default-provider}") String defaultNonEvacuatedEnergyProvider,
-        @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
-        StudyRepository studyRepository,
-        StudyCreationRequestRepository studyCreationRequestRepository,
-        NetworkService networkStoreService,
-        NetworkModificationService networkModificationService,
-        ReportService reportService,
-        UserAdminService userAdminService,
-        StudyInfosService studyInfosService,
-        EquipmentInfosService equipmentInfosService,
-        NetworkModificationTreeService networkModificationTreeService,
-        ObjectMapper objectMapper,
-        StudyServerExecutionService studyServerExecutionService,
-        NotificationService notificationService,
-        LoadFlowService loadflowService,
-        ShortCircuitService shortCircuitService,
-        SingleLineDiagramService singleLineDiagramService,
-        NetworkConversionService networkConversionService,
-        GeoDataService geoDataService,
-        NetworkMapService networkMapService,
-        SecurityAnalysisService securityAnalysisService,
-        ActionsService actionsService,
-        CaseService caseService,
-        SensitivityAnalysisService sensitivityAnalysisService,
-        NonEvacuatedEnergyService nonEvacuatedEnergyService,
-        DynamicSimulationService dynamicSimulationService,
-        VoltageInitService voltageInitService,
-        DynamicSimulationEventService dynamicSimulationEventService,
-        FilterService filterService,
-        StateEstimationService stateEstimationService,
-        TimePointRepository timePointRepository,
-        @Lazy StudyService studyService, TimePointService timePointService, TimePointNodeInfoRepository timePointNodeInfoRepository) {
+            @Value("${non-evacuated-energy.default-provider}") String defaultNonEvacuatedEnergyProvider,
+            @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
+            StudyRepository studyRepository,
+            StudyCreationRequestRepository studyCreationRequestRepository,
+            NetworkService networkStoreService,
+            NetworkModificationService networkModificationService,
+            ReportService reportService,
+            UserAdminService userAdminService,
+            StudyInfosService studyInfosService,
+            EquipmentInfosService equipmentInfosService,
+            NetworkModificationTreeService networkModificationTreeService,
+            ObjectMapper objectMapper,
+            StudyServerExecutionService studyServerExecutionService,
+            NotificationService notificationService,
+            LoadFlowService loadflowService,
+            ShortCircuitService shortCircuitService,
+            SingleLineDiagramService singleLineDiagramService,
+            NetworkConversionService networkConversionService,
+            GeoDataService geoDataService,
+            NetworkMapService networkMapService,
+            SecurityAnalysisService securityAnalysisService,
+            ActionsService actionsService,
+            CaseService caseService,
+            SensitivityAnalysisService sensitivityAnalysisService,
+            NonEvacuatedEnergyService nonEvacuatedEnergyService,
+            DynamicSimulationService dynamicSimulationService,
+            VoltageInitService voltageInitService,
+            DynamicSimulationEventService dynamicSimulationEventService,
+            FilterService filterService,
+            StateEstimationService stateEstimationService,
+            TimePointRepository timePointRepository,
+            @Lazy StudyService studyService, TimePointService timePointService, TimePointNodeInfoRepository timePointNodeInfoRepository) {
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
@@ -232,8 +232,8 @@ public class StudyService {
 
     private static BasicStudyInfos toBasicStudyInfos(StudyCreationRequestEntity entity) {
         return BasicStudyInfos.builder()
-            .id(entity.getId())
-            .build();
+                .id(entity.getId())
+                .build();
     }
 
     private static CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity) {
@@ -245,8 +245,8 @@ public class StudyService {
 
     public List<CreatedStudyBasicInfos> getStudies() {
         return studyRepository.findAll().stream()
-            .map(StudyService::toCreatedStudyBasicInfos)
-            .collect(Collectors.toList());
+                .map(StudyService::toCreatedStudyBasicInfos)
+                .collect(Collectors.toList());
     }
 
     public List<UUID> getStudiesNetworkUuids() {
@@ -267,14 +267,14 @@ public class StudyService {
 
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
         return studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos)
-            .collect(Collectors.toList());
+                .collect(Collectors.toList());
 
     }
 
     public List<BasicStudyInfos> getStudiesCreationRequests() {
         return studyCreationRequestRepository.findAll().stream()
-            .map(StudyService::toBasicStudyInfos)
-            .collect(Collectors.toList());
+                .map(StudyService::toBasicStudyInfos)
+                .collect(Collectors.toList());
     }
 
     public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean duplicateCase, String caseFormat) {
@@ -301,7 +301,6 @@ public class StudyService {
 
     /**
      * Recreates study network from <caseUuid> and <importParameters>
-     *
      * @param caseUuid
      * @param userId
      * @param studyUuid
@@ -313,7 +312,6 @@ public class StudyService {
 
     /**
      * Recreates study network from existing case and import parameters
-     *
      * @param userId
      * @param studyUuid
      */
@@ -360,7 +358,7 @@ public class StudyService {
         } finally {
             self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             LOGGER.trace("Create study '{}' from source {} : {} seconds", basicStudyInfos.getId(), sourceStudyUuid,
-                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
     }
 
@@ -566,8 +564,8 @@ public class StudyService {
         }
 
         NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos = sourceStudy.getNonEvacuatedEnergyParameters() == null ?
-            NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos() :
-            NonEvacuatedEnergyService.fromEntity(sourceStudy.getNonEvacuatedEnergyParameters());
+                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos() :
+                NonEvacuatedEnergyService.fromEntity(sourceStudy.getNonEvacuatedEnergyParameters());
 
         UUID copiedVoltageInitParametersUuid = null;
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
@@ -752,7 +750,7 @@ public class StudyService {
 
     public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid) {
         boolean exists = networkModificationTreeService.getAllNodes(studyUuid).stream()
-            .anyMatch(nodeEntity -> nodeUuid.equals(nodeEntity.getIdNode()));
+                .anyMatch(nodeEntity -> nodeUuid.equals(nodeEntity.getIdNode()));
 
         if (!exists) {
             throw new StudyException(NODE_NOT_FOUND);
@@ -830,10 +828,10 @@ public class StudyService {
 
     public NonEvacuatedEnergyParametersInfos getNonEvacuatedEnergyParametersInfos(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-            .map(studyEntity -> studyEntity.getNonEvacuatedEnergyParameters() != null ?
-                NonEvacuatedEnergyService.fromEntity(studyEntity.getNonEvacuatedEnergyParameters()) :
-                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos())
-            .orElse(null);
+                .map(studyEntity -> studyEntity.getNonEvacuatedEnergyParameters() != null ?
+                        NonEvacuatedEnergyService.fromEntity(studyEntity.getNonEvacuatedEnergyParameters()) :
+                        NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos())
+                .orElse(null);
     }
 
     @Transactional
@@ -862,7 +860,7 @@ public class StudyService {
                     return loadflowService.getLoadFlowParameters(userProfileInfos.getLoadFlowParameterId()).getProvider();
                 } catch (Exception e) {
                     LOGGER.error(String.format("Could not get loadflow parameters with id '%s' from user/profile '%s/%s'. Using default provider",
-                        userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
+                            userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
                     // in case of read error (ex: wrong/dangling uuid in the profile), move on with default provider below
                 }
             }
@@ -910,8 +908,8 @@ public class StudyService {
 
     public String getDynamicSimulationProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-            .map(StudyEntity::getDynamicSimulationProvider)
-            .orElse("");
+                .map(StudyEntity::getDynamicSimulationProvider)
+                .orElse("");
     }
 
     @Transactional
@@ -1150,7 +1148,7 @@ public class StudyService {
 
     private StudyCreationRequestEntity insertStudyCreationRequestEntity(UUID studyUuid) {
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(
-            studyUuid == null ? UUID.randomUUID() : studyUuid);
+                studyUuid == null ? UUID.randomUUID() : studyUuid);
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
     }
 
@@ -1174,7 +1172,7 @@ public class StudyService {
             } catch (Exception e) {
                 userProfileIssue = true;
                 LOGGER.error(String.format("Could not duplicate loadflow parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
+                        userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
                 // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
             }
         }
@@ -1421,7 +1419,7 @@ public class StudyService {
 
         if (startTime.get() != null) {
             LOGGER.trace("Invalidate node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
-                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
     }
 
@@ -1539,19 +1537,19 @@ public class StudyService {
             List<UUID> removedNodes = networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
 
             CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
-                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
-                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
-                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
-                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
-                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getNonEvacuatedEnergyResultUuids().forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)),
-                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
-                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
-                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
-                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
-                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getStateEstimationResultUuids().forEach(stateEstimationService::deleteStateEstimationResult)),
-                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds())),
-                studyServerExecutionService.runAsync(() -> removedNodes.forEach(dynamicSimulationEventService::deleteEventsByNodeId))
+                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
+                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
+                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
+                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
+                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
+                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getNonEvacuatedEnergyResultUuids().forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)),
+                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
+                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
+                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
+                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
+                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getStateEstimationResultUuids().forEach(stateEstimationService::deleteStateEstimationResult)),
+                    studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds())),
+                    studyServerExecutionService.runAsync(() -> removedNodes.forEach(dynamicSimulationEventService::deleteEventsByNodeId))
             );
 
             try {
@@ -1566,7 +1564,7 @@ public class StudyService {
             if (startTime.get() != null) {
                 if (LOGGER.isTraceEnabled()) {
                     LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
-                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                 }
             }
 
@@ -1588,7 +1586,7 @@ public class StudyService {
 
         if (startTime.get() != null) {
             LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId, studyUuid,
-                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
 
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -1766,22 +1764,22 @@ public class StudyService {
             NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
 
         Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
-            networkModificationResult.getNetworkImpacts().stream()
-                .filter(impact -> impact.isSimple() && ((SimpleElementImpact) impact).isDeletion())
-                .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(((SimpleElementImpact) impact).getElementId(), impact.getElementType().name()))
-                .collect(Collectors.toSet());
+                networkModificationResult.getNetworkImpacts().stream()
+                        .filter(impact -> impact.isSimple() && ((SimpleElementImpact) impact).isDeletion())
+                        .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(((SimpleElementImpact) impact).getElementId(), impact.getElementType().name()))
+                        .collect(Collectors.toSet());
 
         Set<String> impactedElementTypes = networkModificationResult.getNetworkImpacts().stream()
-            .filter(impact -> impact.isCollection())
-            .map(impact -> impact.getElementType().name())
-            .collect(Collectors.toSet());
+                .filter(impact -> impact.isCollection())
+                .map(impact -> impact.getElementType().name())
+                .collect(Collectors.toSet());
 
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
-            NetworkImpactsInfos.builder()
-                .deletedEquipments(deletionsInfos)
-                .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
-                .impactedElementTypes(impactedElementTypes)
-                .build()
+                NetworkImpactsInfos.builder()
+                        .deletedEquipments(deletionsInfos)
+                        .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
+                        .impactedElementTypes(impactedElementTypes)
+                        .build()
         );
     }
 
@@ -1862,16 +1860,16 @@ public class StudyService {
     public StudyVoltageInitParameters getVoltageInitParameters(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return new StudyVoltageInitParameters(
-            Optional.ofNullable(studyEntity.getVoltageInitParametersUuid()).map(voltageInitService::getVoltageInitParameters).orElse(null),
-            Optional.ofNullable(studyEntity.getVoltageInitParameters()).map(StudyVoltageInitParametersEntity::shouldApplyModifications).orElse(true)
+                Optional.ofNullable(studyEntity.getVoltageInitParametersUuid()).map(voltageInitService::getVoltageInitParameters).orElse(null),
+                Optional.ofNullable(studyEntity.getVoltageInitParameters()).map(StudyVoltageInitParametersEntity::shouldApplyModifications).orElse(true)
         );
     }
 
     public boolean shouldApplyModifications(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return Optional.ofNullable(studyEntity.getVoltageInitParameters())
-            .map(StudyVoltageInitParametersEntity::shouldApplyModifications)
-            .orElse(true);
+                .map(StudyVoltageInitParametersEntity::shouldApplyModifications)
+                .orElse(true);
     }
 
     // --- Dynamic Simulation service methods BEGIN --- //
@@ -1899,8 +1897,8 @@ public class StudyService {
 
     public DynamicSimulationParametersInfos getDynamicSimulationParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-            .map(studyEntity -> studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters())
-            .orElse(null);
+                .map(studyEntity -> studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters())
+                .orElse(null);
     }
 
     @Transactional(readOnly = true)
@@ -2065,7 +2063,7 @@ public class StudyService {
     public String getSensitivityAnalysisParameters(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return sensitivityAnalysisService.getSensitivityAnalysisParameters(
-            sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity));
+                sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity));
     }
 
     @Transactional
@@ -2078,8 +2076,8 @@ public class StudyService {
     @Transactional
     public void setNonEvacuatedEnergyParametersInfos(UUID studyUuid, NonEvacuatedEnergyParametersInfos parameters, String userId) {
         updateNonEvacuatedEnergyParameters(studyUuid,
-            NonEvacuatedEnergyService.toEntity(parameters != null ? parameters :
-                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos()));
+                NonEvacuatedEnergyService.toEntity(parameters != null ? parameters :
+                        NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos()));
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -2143,26 +2141,26 @@ public class StudyService {
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyStagesDefinition(nonEvacuatedEnergyParametersInfos.getStagesDefinition());
 
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyStagesSelection(nonEvacuatedEnergyParametersInfos.getStagesSelection()
-            .stream()
-            .filter(NonEvacuatedEnergyStagesSelection::isActivated)
-            .collect(Collectors.toList()));
+                .stream()
+                .filter(NonEvacuatedEnergyStagesSelection::isActivated)
+                .collect(Collectors.toList()));
 
         List<NonEvacuatedEnergyGeneratorCappingsByType> generatorsCappingsByType = nonEvacuatedEnergyParametersInfos.getGeneratorsCappings().getGenerators()
-            .stream()
-            .filter(NonEvacuatedEnergyGeneratorCappingsByType::isActivated)
-            .collect(Collectors.toList());
+                .stream()
+                .filter(NonEvacuatedEnergyGeneratorCappingsByType::isActivated)
+                .collect(Collectors.toList());
         NonEvacuatedEnergyGeneratorsCappings generatorsCappings = new NonEvacuatedEnergyGeneratorsCappings(nonEvacuatedEnergyParametersInfos.getGeneratorsCappings().getSensitivityThreshold(), generatorsCappingsByType);
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyGeneratorsCappings(generatorsCappings);
 
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyMonitoredBranches(nonEvacuatedEnergyParametersInfos.getMonitoredBranches()
-            .stream()
-            .filter(NonEvacuatedEnergyMonitoredBranches::isActivated)
-            .collect(Collectors.toList()));
+                .stream()
+                .filter(NonEvacuatedEnergyMonitoredBranches::isActivated)
+                .collect(Collectors.toList()));
 
         nonEvacuatedEnergyInputData.setNonEvacuatedEnergyContingencies(nonEvacuatedEnergyParametersInfos.getContingencies()
-            .stream()
-            .filter(NonEvacuatedEnergyContingencies::isActivated)
-            .collect(Collectors.toList()));
+                .stream()
+                .filter(NonEvacuatedEnergyContingencies::isActivated)
+                .collect(Collectors.toList()));
 
         UUID result = nonEvacuatedEnergyService.runNonEvacuatedEnergy(nodeUuid, getStudyFirstTimePointUuid(studyUuid), networkUuid, variantId, reportUuid, provider, nonEvacuatedEnergyInputData, studyEntity.getLoadFlowParametersUuid(), userId);
 
@@ -2182,8 +2180,8 @@ public class StudyService {
 
     public String getNonEvacuatedEnergyProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-            .map(StudyEntity::getNonEvacuatedEnergyProvider)
-            .orElse("");
+                .map(StudyEntity::getNonEvacuatedEnergyProvider)
+                .orElse("");
     }
 
     private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid) {

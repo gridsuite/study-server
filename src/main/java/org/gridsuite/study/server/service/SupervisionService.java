@@ -72,7 +72,7 @@ public class SupervisionService {
     private final TimePointNodeInfoRepository timePointNodeStatusRepository;
 
     private final StateEstimationService stateEstimationService;
-    private final Consumer consumeBuildFailed;
+
     private final StudyRepository studyRepository;
 
     public SupervisionService(StudyService studyService,
@@ -88,7 +88,8 @@ public class SupervisionService {
                               ShortCircuitService shortCircuitService,
                               VoltageInitService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
-                              StateEstimationService stateEstimationService, @Qualifier("consumeBuildFailed") Consumer consumeBuildFailed, StudyRepository studyRepository) {
+                              StateEstimationService stateEstimationService,
+                              StudyRepository studyRepository) {
         this.networkStoreService = networkStoreService;
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -103,7 +104,6 @@ public class SupervisionService {
         this.voltageInitService = voltageInitService;
         this.equipmentInfosService = equipmentInfosService;
         this.stateEstimationService = stateEstimationService;
-        this.consumeBuildFailed = consumeBuildFailed;
         this.studyRepository = studyRepository;
     }
 
@@ -240,6 +240,7 @@ public class SupervisionService {
         shortCircuitService.deleteShortCircuitAnalysisResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SHORT_CIRCUIT, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         // return distinct processed nodes count
+        //TODO: now each node can have multiple results, should we keep using distinct on idNode ?
         return (int) Stream.concat(allBusesTimePointNodeStatusEntities.stream(), oneBusTimePointNodeStatusEntities.stream())
                 .map(timePointNodeStatusEntity -> timePointNodeStatusEntity.getNodeInfo().getNode().getIdNode())
                 .distinct()
@@ -262,7 +263,7 @@ public class SupervisionService {
     private Map<UUID, String> formatSubreportMap(String subReporterKey, List<TimePointNodeInfoEntity> timePointNodeStatuses) {
         return timePointNodeStatuses.stream().collect(Collectors.toMap(
             TimePointNodeInfoEntity::getReportUuid,
-            timePointNodeStatus -> timePointNodeStatus.getId() + "@" + subReporterKey)
+            timePointNodeInfo -> timePointNodeInfo.getNodeInfo().getId() + "@" + subReporterKey)
         );
     }
 
