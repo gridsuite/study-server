@@ -35,7 +35,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "id")
     private UUID id;
 
-    @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)  // Can define 'cascade = CascadeType.ALL' here as well instead of in Product entity
+    @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TimePointEntity> timePoints;
 
     /**

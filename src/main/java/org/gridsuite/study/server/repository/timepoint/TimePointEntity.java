@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2024, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package org.gridsuite.study.server.repository.timepoint;
 
 import jakarta.persistence.*;
@@ -8,10 +14,10 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
  */
-
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -47,7 +53,7 @@ public class TimePointEntity {
     @Column(name = "caseName", nullable = false)
     private String caseName;
 
-    // reportUuid of network import
+    // reportUuid of network import, root node one
     @Column(name = "reportUuid")
     private UUID reportUuid;
 

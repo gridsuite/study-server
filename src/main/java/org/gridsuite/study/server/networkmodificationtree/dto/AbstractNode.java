@@ -55,5 +55,4 @@ public abstract class AbstractNode {
     private UUID reportUuid;
 
     NodeType type;
-
 }

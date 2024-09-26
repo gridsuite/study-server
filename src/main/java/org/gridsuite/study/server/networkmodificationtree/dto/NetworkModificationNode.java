@@ -55,7 +55,7 @@ public class NetworkModificationNode extends AbstractNode {
 
     private NodeBuildStatus nodeBuildStatus;
 
-    //TODO: temporary, used to keep DTO identical since we don't export timepoints in APIs yet
+    //TODO: temporary, used to keep nodeDTO identical since we don't export timepoints in APIs yet, once timepoints are exported, result uuid won't be stored in nodeDto
     public static NetworkModificationNode completeDtoFromTimePointNodeInfo(NetworkModificationNode networkModificationNode, TimePointNodeInfoEntity timePointNodeInfoEntity) {
         networkModificationNode.setModificationsToExclude(timePointNodeInfoEntity.getModificationsToExclude());
         networkModificationNode.setLoadFlowResultUuid(timePointNodeInfoEntity.getLoadFlowResultUuid());

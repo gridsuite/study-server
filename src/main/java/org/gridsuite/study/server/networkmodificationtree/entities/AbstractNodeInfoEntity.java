@@ -16,7 +16,6 @@ import org.gridsuite.study.server.repository.AbstractManuallyAssignedIdentifierE
 
 import java.util.UUID;
 
-
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  */
@@ -31,7 +30,6 @@ public abstract class AbstractNodeInfoEntity extends AbstractManuallyAssignedIde
     @Column(name = "idNode", insertable = false, updatable = false)
     private UUID idNode; // don't bother with getter/setter since the `idNode` reference handles everything
 
-    @Override
     public UUID getId() {
         return idNode;
     }

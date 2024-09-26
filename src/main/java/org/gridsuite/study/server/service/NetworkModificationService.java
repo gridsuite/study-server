@@ -153,8 +153,6 @@ public class NetworkModificationService {
         Optional<NetworkModificationResult> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createModificationAttributes);
-        //TODO: to remove
-        Objects.requireNonNull(variantId);
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
 

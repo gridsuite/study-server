@@ -57,16 +57,16 @@ public class CaseService {
      */
     public void disableCaseExpiration(UUID caseUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/disableExpiration")
-            .buildAndExpand(caseUuid)
-            .toUriString();
+                .buildAndExpand(caseUuid)
+                .toUriString();
 
         restTemplate.exchange(caseServerBaseUri + path, HttpMethod.PUT, null, Void.class, caseUuid);
     }
 
     public void deleteCase(UUID caseUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}")
-            .buildAndExpand(caseUuid)
-            .toUriString();
+                .buildAndExpand(caseUuid)
+                .toUriString();
 
         try {
             restTemplate.exchange(caseServerBaseUri + path, HttpMethod.DELETE, null, Void.class, caseUuid);
@@ -77,10 +77,10 @@ public class CaseService {
 
     public UUID duplicateCase(UUID caseUuid, Boolean withExpiration) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases")
-            .queryParam("duplicateFrom", caseUuid)
-            .queryParam("withExpiration", withExpiration)
-            .buildAndExpand(caseUuid)
-            .toUriString();
+                .queryParam("duplicateFrom", caseUuid)
+                .queryParam("withExpiration", withExpiration)
+                .buildAndExpand(caseUuid)
+                .toUriString();
 
         return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.POST, null, UUID.class, caseUuid).getBody();
     }
