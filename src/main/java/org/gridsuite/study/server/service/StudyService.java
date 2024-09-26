@@ -1669,11 +1669,6 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<Report> getNodeReport(UUID nodeUuid, String reportId, Set<String> severityLevels) {
-        return List.of(reportService.getReport(UUID.fromString(reportId), nodeUuid.toString(), severityLevels));
-    }
-
-    @Transactional(readOnly = true)
     public List<ReportLog> getReportLogs(String reportId, String messageFilter, Set<String> severityLevels) {
         return reportService.getReportLogs(UUID.fromString(reportId), messageFilter, severityLevels);
     }
