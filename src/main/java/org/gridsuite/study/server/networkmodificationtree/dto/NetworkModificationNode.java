@@ -6,16 +6,13 @@
  */
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
-import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 

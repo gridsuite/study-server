@@ -653,7 +653,7 @@ public class StudyService {
     }
 
     public String getSubstationMapData(UUID studyUuid, UUID nodeUuid, String substationId, boolean inUpstreamBuiltParentNode) {
-       UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
         return networkMapService.getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, getStudyFirstTimePointUuid(studyUuid)),
             "substations", substationId);
     }
@@ -1313,8 +1313,8 @@ public class StudyService {
         emitAllComputationStatusChanged(studyUuid, nodeUuid);
     }
 
-    public void stopBuild(UUID studyUuid, @NonNull UUID nodeUuid) {
-        networkModificationService.stopBuild(nodeUuid, getStudyFirstTimePointUuid(studyUuid));
+    public void stopBuild(@NonNull UUID nodeUuid, UUID timePointUuid) {
+        networkModificationService.stopBuild(nodeUuid, timePointUuid);
     }
 
     @Transactional
@@ -1799,7 +1799,7 @@ public class StudyService {
         Objects.requireNonNull(nodeUuid);
 
         UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, getStudyFirstTimePointUuid(studyUuid), SENSITIVITY_ANALYSIS);
-        if(prevResultUuid != null) {
+        if (prevResultUuid != null) {
             sensitivityAnalysisService.deleteSensitivityAnalysisResult(prevResultUuid);
         }
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
@@ -1816,7 +1816,7 @@ public class StudyService {
 
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, Optional<String> busId, String userId) {
         UUID shortCircuitResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, getStudyFirstTimePointUuid(studyUuid), busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
-        if(shortCircuitResultUuid != null) {
+        if (shortCircuitResultUuid != null) {
             shortCircuitService.deleteShortCircuitAnalysisResult(shortCircuitResultUuid);
         }
 
@@ -1830,7 +1830,7 @@ public class StudyService {
 
     public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, String userId) {
         UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, getStudyFirstTimePointUuid(studyUuid), VOLTAGE_INITIALIZATION);
-        if(prevResultUuid != null) {
+        if (prevResultUuid != null) {
             voltageInitService.deleteVoltageInitResult(prevResultUuid);
         }
 
@@ -1968,7 +1968,7 @@ public class StudyService {
 
         // clean previous result if exist
         UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, getStudyFirstTimePointUuid(studyUuid), DYNAMIC_SIMULATION);
-        if(prevResultUuid != null) {
+        if (prevResultUuid != null) {
             dynamicSimulationService.deleteResult(prevResultUuid);
         }
 
@@ -2124,7 +2124,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, getStudyFirstTimePointUuid(studyUuid), NON_EVACUATED_ENERGY_ANALYSIS);
 
-        if(prevResultUuid != null) {
+        if (prevResultUuid != null) {
             nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResult(prevResultUuid);
         }
 
@@ -2227,7 +2227,7 @@ public class StudyService {
         }
 
         UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, getStudyUuidFromNodeUuid(studyUuid), STATE_ESTIMATION);
-        if(prevResultUuid != null ) {
+        if (prevResultUuid != null) {
             stateEstimationService.deleteStateEstimationResult(prevResultUuid);
         }
 

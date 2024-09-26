@@ -7,13 +7,10 @@
 
 package org.gridsuite.study.server.networkmodificationtree;
 
-import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
-
-import java.util.UUID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -32,15 +29,5 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
     @Override
     public RootNode toDto(RootNodeInfoEntity node) {
         return completeNodeInfo(node, new RootNode(null));
-    }
-
-    @Override
-    public NodeModificationInfos getNodeModificationInfos(AbstractNode node) {
-        return NodeModificationInfos.builder()
-            .id(node.getId())
-            .variantId("")      // we will use the network initial variant
-            // TODO: FIXME
-            .reportUuid(UUID.randomUUID())
-            .build();
     }
 }

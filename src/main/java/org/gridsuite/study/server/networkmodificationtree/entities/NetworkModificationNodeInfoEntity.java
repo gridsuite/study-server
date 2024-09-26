@@ -10,9 +10,6 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -31,7 +31,6 @@ import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;

@@ -7,16 +7,11 @@
 
 package org.gridsuite.study.server.networkmodificationtree;
 
-import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -28,48 +23,11 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public NetworkModificationNodeInfoEntity createNodeInfo(AbstractNode nodeInfo) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) nodeInfo;
-        if (Objects.isNull(networkModificationNode.getNodeBuildStatus())) {
-            networkModificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
-        }
-        if (networkModificationNode.getModificationGroupUuid() == null) {
-            networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
-        }
-        if (networkModificationNode.getVariantId() == null) {
-            networkModificationNode.setVariantId(UUID.randomUUID().toString());
-        }
-        if (networkModificationNode.getReportUuid() == null) {
-            networkModificationNode.setReportUuid(UUID.randomUUID());
-        }
-        return super.createNodeInfo(networkModificationNode);
-    }
-
-    @Override
     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         var networkModificationNodeInfoEntity = NetworkModificationNodeInfoEntity.builder()
             .modificationGroupUuid(modificationNode.getModificationGroupUuid())
             .build();
-//        networkModificationNodeInfoEntity.setTimePointNodeInfos(
-//            List.of(TimePointNodeInfoEntity.builder()
-//                .variantId(timePointNodeInfo.getVariantId())
-//                .modificationsToExclude(timePointNodeInfo.getModificationsToExclude())
-//                .shortCircuitAnalysisResultUuid(timePointNodeInfo.getShortCircuitAnalysisResultUuid())
-//                .oneBusShortCircuitAnalysisResultUuid(timePointNodeInfo.getOneBusShortCircuitAnalysisResultUuid())
-//                .loadFlowResultUuid(timePointNodeInfo.getLoadFlowResultUuid())
-//                .voltageInitResultUuid(timePointNodeInfo.getVoltageInitResultUuid())
-//                .securityAnalysisResultUuid(timePointNodeInfo.getSecurityAnalysisResultUuid())
-//                .sensitivityAnalysisResultUuid(timePointNodeInfo.getSensitivityAnalysisResultUuid())
-//                .nonEvacuatedEnergyResultUuid(timePointNodeInfo.getNonEvacuatedEnergyResultUuid())
-//                .dynamicSimulationResultUuid(timePointNodeInfo.getDynamicSimulationResultUuid())
-//                .stateEstimationResultUuid(timePointNodeInfo.getStateEstimationResultUuid())
-//                .reportUuid(timePointNodeInfo.getReportUuid())
-//                .nodeBuildStatus(timePointNodeInfo.getNodeBuildStatus() != null ? timePointNodeInfo.getNodeBuildStatus().toEntity() : null)
-//                .nodeInfo(networkModificationNodeInfoEntity)
-//                .build()
-//            )
-//        );
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
@@ -87,48 +45,5 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public UUID getModificationGroupUuid(AbstractNode node) {
         return ((NetworkModificationNode) node).getModificationGroupUuid();
-    }
-
-    @Override
-    public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        if (networkModificationNode.getModificationsToExclude() == null) {
-            networkModificationNode.setModificationsToExclude(new HashSet<>());
-        }
-        if (!active) {
-            networkModificationNode.getModificationsToExclude().add(modificationUuid);
-        } else {
-            networkModificationNode.getModificationsToExclude().remove(modificationUuid);
-        }
-        updateNode(networkModificationNode);
-    }
-
-    @Override
-    public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationsUuids) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        if (networkModificationNode.getModificationsToExclude() != null) {
-            modificationsUuids.forEach(networkModificationNode.getModificationsToExclude()::remove);
-            updateNode(networkModificationNode);
-        }
-    }
-
-    @Override
-    public NodeModificationInfos getNodeModificationInfos(AbstractNode node) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        return NodeModificationInfos.builder()
-            .id(networkModificationNode.getId())
-            .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
-            .variantId(networkModificationNode.getVariantId())
-            .reportUuid(networkModificationNode.getReportUuid())
-            .loadFlowUuid(networkModificationNode.getLoadFlowResultUuid())
-            .securityAnalysisUuid(networkModificationNode.getSecurityAnalysisResultUuid())
-            .sensitivityAnalysisUuid(networkModificationNode.getSensitivityAnalysisResultUuid())
-            .nonEvacuatedEnergyUuid(networkModificationNode.getNonEvacuatedEnergyResultUuid())
-            .shortCircuitAnalysisUuid(networkModificationNode.getShortCircuitAnalysisResultUuid())
-            .oneBusShortCircuitAnalysisUuid(networkModificationNode.getOneBusShortCircuitAnalysisResultUuid())
-            .voltageInitUuid(networkModificationNode.getVoltageInitResultUuid())
-            .dynamicSimulationUuid(networkModificationNode.getDynamicSimulationResultUuid())
-            .stateEstimationUuid(networkModificationNode.getStateEstimationResultUuid())
-            .build();
     }
 }

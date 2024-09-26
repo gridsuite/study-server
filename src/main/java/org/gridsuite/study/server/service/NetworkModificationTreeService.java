@@ -679,7 +679,10 @@ public class NetworkModificationTreeService {
         List<NodeModificationInfos> nodesModificationInfos = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.forEach(n -> {
-            NodeModificationInfos nodeModificationInfos = repositories.get(n.getType()).getNodeModificationInfos(n.getIdNode());
+            NodeModificationInfos nodeModificationInfos = NodeModificationInfos.builder()
+                .id(n.getIdNode())
+                .modificationGroupUuid(getModificationGroupUuid(n.getIdNode()))
+                .build();
             if (nodeModificationInfos != null) {
                 nodesModificationInfos.add(nodeModificationInfos);
             }

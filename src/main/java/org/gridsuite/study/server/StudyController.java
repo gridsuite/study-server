@@ -1336,7 +1336,7 @@ public class StudyController {
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
     public ResponseEntity<Void> stopBuild(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.stopBuild(studyUuid, nodeUuid);
+        studyService.stopBuild(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
         return ResponseEntity.ok().build();
     }
 

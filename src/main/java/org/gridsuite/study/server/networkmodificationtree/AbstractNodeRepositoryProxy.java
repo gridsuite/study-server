@@ -8,11 +8,7 @@
 package org.gridsuite.study.server.networkmodificationtree;
 
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeInfoRepository;
 import org.gridsuite.study.server.utils.PropertyUtils;
@@ -40,14 +36,8 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         return null;
     }
 
-    public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
-    }
-
-    public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationUuid) {
-    }
-
-    public T createNodeInfo(AbstractNode nodeInfo) {
-        return nodeInfoRepository.save(toEntity(nodeInfo));
+    public void createNodeInfo(AbstractNode nodeInfo) {
+        nodeInfoRepository.save(toEntity(nodeInfo));
     }
 
     public void deleteByNodeId(UUID id) {
@@ -104,13 +94,5 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
 
     public Boolean isReadOnly(UUID nodeUuid) {
         return getNode(nodeUuid).getReadOnly();
-    }
-
-    public NodeModificationInfos getNodeModificationInfos(AbstractNode node) {
-        return null;
-    }
-
-    public NodeModificationInfos getNodeModificationInfos(UUID nodeUuid) {
-        return getNodeModificationInfos(getNode(nodeUuid));
     }
 }
