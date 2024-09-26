@@ -48,7 +48,6 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-//        TimePointNetworkModificationNode timePointNodeInfo = modificationNode.getFirstTimePointNode();
         var networkModificationNodeInfoEntity = NetworkModificationNodeInfoEntity.builder()
             .modificationGroupUuid(modificationNode.getModificationGroupUuid())
             .build();

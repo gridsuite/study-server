@@ -3,8 +3,6 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.TimePointNetworkModificationNode;
 import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
 import java.util.Set;
@@ -86,19 +84,4 @@ public class TimePointNodeInfoEntity {
         @AttributeOverride(name = "globalBuildStatus", column = @Column(name = "globalBuildStatus", nullable = false))
     })
     private NodeBuildStatusEmbeddable nodeBuildStatus;
-
-    public TimePointNetworkModificationNode toDto() {
-        return TimePointNetworkModificationNode.builder()
-            .reportUuid(reportUuid)
-            .variantId(variantId)
-            .dynamicSimulationResultUuid(dynamicSimulationResultUuid)
-            .loadFlowResultUuid(loadFlowResultUuid)
-            .modificationsToExclude(modificationsToExclude)
-            //TODO fixme
-            .nodeBuildStatus(NodeBuildStatus.from(nodeBuildStatus.getLocalBuildStatus()))
-            .nonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid)
-            .oneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid)
-            //TODO to complete
-            .build();
-    }
 }

@@ -6,6 +6,7 @@ import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoReposito
 import org.gridsuite.study.server.repository.timepoint.TimePointRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -24,5 +25,9 @@ public class TimePointService {
 
     public TimePointNodeInfoEntity getTimePointNodeInfo(UUID nodeUuid, UUID timePointUuid) {
         return timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(nodeUuid, timePointUuid);
+    }
+
+    public List<TimePointNodeInfoEntity> getAllNodeTimePointNodeInfos(List<UUID> nodeUuids) {
+        return timePointNodeInfoRepository.findAllByNodeInfoIdIn(nodeUuids);
     }
 }

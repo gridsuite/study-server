@@ -984,7 +984,6 @@ public class NetworkModificationTreeService {
                 invalidateNodeBuildStatus(childUuid, timePointNodeInfoEntity, changedNodes);
             }
 
-
             timePointNodeInfoEntity.setLoadFlowResultUuid(null);
             timePointNodeInfoEntity.setSecurityAnalysisResultUuid(null);
             timePointNodeInfoEntity.setSensitivityAnalysisResultUuid(null);
@@ -1114,15 +1113,6 @@ public class NetworkModificationTreeService {
         if (timePointNodeInfoEntity.getModificationsToExclude() != null) {
             modificationUuids.forEach(timePointNodeInfoEntity.getModificationsToExclude()::remove);
         }
-    }
-
-    @Transactional
-    public NodeModificationInfos getNodeModificationInfos(UUID nodeUuid) {
-        NodeModificationInfos nodeModificationInfos = nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNodeModificationInfos(nodeUuid)).orElse(null);
-        if (nodeModificationInfos == null) {
-            throw new StudyException(ELEMENT_NOT_FOUND);
-        }
-        return nodeModificationInfos;
     }
 
     @Transactional(readOnly = true)

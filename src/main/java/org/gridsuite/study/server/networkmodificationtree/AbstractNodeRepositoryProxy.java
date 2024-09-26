@@ -102,14 +102,6 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         return getModificationGroupUuid(getNode(nodeUuid));
     }
 
-    public void handleExcludeModification(UUID nodeUuid, UUID modificationUuid, boolean active) {
-        handleExcludeModification(getNode(nodeUuid), modificationUuid, active);
-    }
-
-    public void removeModificationsToExclude(UUID nodeUuid, List<UUID> modificationUuid) {
-        removeModificationsToExclude(getNode(nodeUuid), modificationUuid);
-    }
-
     public Boolean isReadOnly(UUID nodeUuid) {
         return getNode(nodeUuid).getReadOnly();
     }
