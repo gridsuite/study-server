@@ -1669,8 +1669,21 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<Report> getNodeReport(UUID nodeUuid, String reportId, Set<String> severityLevels) {
-        return List.of(reportService.getReport(UUID.fromString(reportId), nodeUuid.toString(), severityLevels));
+    public List<ReportLog> getReportLogs(String reportId, String messageFilter, Set<String> severityLevels) {
+        return reportService.getReportLogs(UUID.fromString(reportId), messageFilter, severityLevels);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReportLog> getParentNodesReportLogs(UUID nodeUuid, String messageFilter, Set<String> severityLevels) {
+        List<UUID> nodeIds = nodesTree(nodeUuid);
+        List<ReportLog> reportLogs = new ArrayList<>();
+        Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid);
+
+        for (UUID nodeId : nodeIds) {
+            UUID reportId = modificationReportsMap.getOrDefault(nodeId, networkModificationTreeService.getReportUuid(nodeId));
+            reportLogs.addAll(reportService.getReportLogs(reportId, messageFilter, severityLevels));
+        }
+        return reportLogs;
     }
 
     @Transactional(readOnly = true)
@@ -1704,7 +1717,7 @@ public class StudyService {
         List<UUID> nodeIds = nodesTree(nodeUuid);
         List<Report> modificationReports = new ArrayList<>();
         Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid);
-        
+
         for (UUID nodeId : nodeIds) {
             UUID reportId = modificationReportsMap.getOrDefault(nodeId, networkModificationTreeService.getReportUuid(nodeId));
             modificationReports.add(reportService.getReport(reportId, nodeId.toString(), severityLevels));

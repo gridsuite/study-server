@@ -25,7 +25,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.utils.MatcherReport;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -56,7 +55,6 @@ import static org.junit.Assert.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -267,23 +265,6 @@ public class ReportServiceTest {
         childrenAndParentsExpectedReports.add(child1ExpectedReport);
         checkReports(child1AndParentsReports, childrenAndParentsExpectedReports);
         assertTrue(TestUtils.getRequestsDone(childrenAndParentsExpectedReports.size(), server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
-    }
-
-    @SneakyThrows
-    @Test
-    public void testNodeReport() {
-        RootNode rootNode = createRoot();
-        Report expectedReport = getNodeReport(ROOT_NODE_REPORT_UUID, rootNode.getId().toString());
-
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report?reportId={id}&reportType=NETWORK_MODIFICATION",
-                                rootNode.getStudyId(), rootNode.getId(), ROOT_NODE_REPORT_UUID.toString()))
-                        .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
-                        .andReturn();
-        List<Report> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
-        });
-        assertEquals(1, reports.size());
-        assertThat(reports.get(0), new MatcherReport(expectedReport));
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
 
     private Report getNodeReport(UUID reportUuid, String nodeUuid) {
