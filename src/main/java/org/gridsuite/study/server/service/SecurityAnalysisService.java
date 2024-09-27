@@ -173,9 +173,10 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 .exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid) {
+    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
+        Objects.requireNonNull(userId);
 
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
 
@@ -195,7 +196,11 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
 
-        restTemplate.put(securityAnalysisServerBaseUri + path, Void.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID nodeUuid) {

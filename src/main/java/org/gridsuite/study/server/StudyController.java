@@ -626,8 +626,9 @@ public class StudyController {
     @Operation(summary = "stop loadflow on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow has been stopped")})
     public ResponseEntity<Void> stopLoadFlow(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        loadflowService.stopLoadFlow(studyUuid, nodeUuid);
+                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                             @RequestHeader(HEADER_USER_ID) String userId) {
+        loadflowService.stopLoadFlow(studyUuid, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -648,8 +649,9 @@ public class StudyController {
     @Operation(summary = "stop security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis has been stopped")})
     public ResponseEntity<Void> stopShortCircuitAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        shortCircuitService.stopShortCircuitAnalysis(studyUuid, nodeUuid);
+                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                         @RequestHeader(HEADER_USER_ID) String userId) {
+        shortCircuitService.stopShortCircuitAnalysis(studyUuid, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1026,8 +1028,9 @@ public class StudyController {
     @Operation(summary = "stop security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
     public ResponseEntity<Void> stopSecurityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        securityAnalysisService.stopSecurityAnalysis(studyUuid, nodeUuid);
+                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                     @RequestHeader(HEADER_USER_ID) String userId) {
+        securityAnalysisService.stopSecurityAnalysis(studyUuid, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1480,8 +1483,9 @@ public class StudyController {
     @Operation(summary = "stop sensitivity analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has been stopped")})
     public ResponseEntity<Void> stopSensitivityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        sensitivityAnalysisService.stopSensitivityAnalysis(studyUuid, nodeUuid);
+                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                        @RequestHeader(HEADER_USER_ID) String userId) {
+        sensitivityAnalysisService.stopSensitivityAnalysis(studyUuid, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1825,8 +1829,9 @@ public class StudyController {
     @Operation(summary = "stop sensitivity analysis non evacuated energy on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy has been stopped")})
     public ResponseEntity<Void> stopNonEvacuatedEnergy(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        nonEvacuatedEnergyService.stopNonEvacuatedEnergy(studyUuid, nodeUuid);
+                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                       @RequestHeader(HEADER_USER_ID) String userId) {
+        nonEvacuatedEnergyService.stopNonEvacuatedEnergy(studyUuid, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
