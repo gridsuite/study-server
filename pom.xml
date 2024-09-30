@@ -82,6 +82,12 @@
     <dependencyManagement>
         <dependencies>
             <!-- overrides of imports -->
+            <!-- FIXME: powsybl-ws-commons version is overridden. To be removed at next gridsuite-dependencies.version upgrade -->
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-ws-commons</artifactId>
+                <version>1.15.0</version>
+            </dependency>
 
             <!-- imports -->
             <dependency>
