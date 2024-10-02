@@ -85,7 +85,8 @@ public final class TestUtils {
         }).collect(Collectors.toSet());
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat,
+    //TODO: WHY is casename now mandatory ? there was @NotNull before as well
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String caseName,
                                                UUID loadFlowParametersUuid,
                                                UUID shortCircuitParametersUuid,
                                                UUID voltageInitParametersUuid,
@@ -93,8 +94,7 @@ public final class TestUtils {
                                                UUID sensitivityParametersUuid,
                                                NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity,
                                                boolean applyModifications) {
-        return StudyEntity.builder().id(UUID.randomUUID())
-            .timePoints(List.of(TimePointEntity.builder().caseFormat(caseFormat).caseUuid(caseUuid).networkId("netId").networkUuid(networkUuid).build()))
+        StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
             .loadFlowParametersUuid(loadFlowParametersUuid)
             .shortCircuitParametersUuid(shortCircuitParametersUuid)
             .voltageInitParametersUuid(voltageInitParametersUuid)
@@ -103,27 +103,36 @@ public final class TestUtils {
             .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
             .voltageInitParameters(new StudyVoltageInitParametersEntity(applyModifications))
             .build();
+        TimePointEntity timePointEntity = TimePointEntity.builder().caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId("netId").networkUuid(networkUuid).build();
+        studyEntity.addTimePoint(timePointEntity);
+
+        return studyEntity;
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String caseName,
+    public static StudyEntity createDummyStudy(UUID networkUuid, String networkId, UUID caseUuid, String caseFormat, String caseName, UUID reportUuid,
                                                UUID loadFlowParametersUuid,
                                                UUID shortCircuitParametersUuid,
                                                UUID securityAnalysisParametersUuid,
                                                UUID sensitivityParametersUuid,
                                                NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {
-        return StudyEntity.builder().id(UUID.randomUUID())
+        StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
                 .loadFlowParametersUuid(loadFlowParametersUuid)
                 .shortCircuitParametersUuid(shortCircuitParametersUuid)
                 .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
                 .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
                 .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
                 .build();
+        studyEntity.addTimePoint(TimePointEntity.builder().caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build());
+        return studyEntity;
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat) {
-        return StudyEntity.builder().id(UUID.randomUUID()).timePoints(List.of(TimePointEntity.builder().caseFormat(caseFormat).caseUuid(caseUuid).networkId("netId").networkUuid(networkUuid).build()))
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, UUID reportUuid) {
+        StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
             .shortCircuitParametersUuid(UUID.randomUUID())
             .build();
+        studyEntity.addTimePoint(TimePointEntity.builder().caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId("netId").networkUuid(networkUuid).reportUuid(reportUuid).build());
+
+        return studyEntity;
     }
 
     public static NetworkModificationNode createModificationNodeInfo(String name, UUID reportUuid) {

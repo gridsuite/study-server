@@ -47,6 +47,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -105,11 +106,11 @@ public class SupervisionControllerTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, String caseName) {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, caseName, "");
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, caseName, "", UUID.randomUUID());
         studyEntity.setId(STUDY_UUID);
         studyEntity.setIndexationStatus(StudyIndexationStatus.INDEXED);
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity, null);
+        networkModificationTreeService.createRoot(studyEntity);
         return study;
     }
 
@@ -120,7 +121,8 @@ public class SupervisionControllerTest {
         network.getIdentifiables().forEach(idable -> equipmentInfosService.addEquipmentInfos(toEquipmentInfos(idable)));
 
         when(networkStoreService.getNetworkUuid(STUDY_UUID)).thenReturn(NETWORK_UUID);
-        when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
+        //TODO: removing it still works, check if it's normal
+//        when(networkModificationTreeService.getVariantId(NODE_UUID, any())).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
         when(networkModificationTreeService.getStudyTree(STUDY_UUID)).thenReturn(RootNode.builder().studyId(STUDY_UUID).id(NODE_UUID).build());
         when(networkConversionService.checkStudyIndexationStatus(NETWORK_UUID)).thenReturn(true);
     }

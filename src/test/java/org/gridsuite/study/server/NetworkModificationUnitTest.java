@@ -230,10 +230,8 @@ class NetworkModificationUnitTest {
 
     private StudyEntity insertStudy(UUID networkUuid, UUID caseUuid) {
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", "",
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", UUID.randomUUID(),
             UUID.randomUUID(), null, null, null, defaultNonEvacuatedEnergyParametersEntity);
-        TimePointEntity timePoint = TimePointEntity.builder().caseFormat("").caseName("").caseUuid(caseUuid).networkId("netId").networkUuid(networkUuid).build();
-        studyEntity.addTimePoint(timePoint);
         return studyRepository.save(studyEntity);
     }
 

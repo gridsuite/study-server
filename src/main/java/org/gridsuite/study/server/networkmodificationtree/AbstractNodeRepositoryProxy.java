@@ -93,6 +93,6 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
     }
 
     public Boolean isReadOnly(UUID nodeUuid) {
-        return getNode(nodeUuid).getReadOnly();
+        return nodeInfoRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(StudyException.Type.NODE_NOT_FOUND)).getReadOnly();
     }
 }

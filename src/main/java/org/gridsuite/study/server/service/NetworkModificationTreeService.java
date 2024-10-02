@@ -139,12 +139,20 @@ public class NetworkModificationTreeService {
         //TODO: check if is ok
         NetworkModificationNode newNode = createNode(study, nodeId, nodeInfo, insertMode, userId);
 
+        //TODO: make it cleaner
+        if (Objects.isNull(nodeInfo.getNodeBuildStatus())) {
+            nodeInfo.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
+        }
+        if (nodeInfo.getVariantId() == null) {
+            nodeInfo.setVariantId(UUID.randomUUID().toString());
+        }
+
         // then link it to existing timepoints by creating TimePointNodeInfoEntity
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
         timePointRepository.findAllByStudyId(study.getId()).forEach(timePointEntity -> {
             TimePointNodeInfoEntity newTimePointNodeInfoEntity = TimePointNodeInfoEntity.builder()
-                .variantId(UUID.randomUUID().toString())
-                .nodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT))
+                .nodeBuildStatus(nodeInfo.getNodeBuildStatus().toEntity())
+                .variantId(nodeInfo.getVariantId())
                 // TODO: Fix if is ok
                 .reportUuid(UUID.randomUUID())
                 .modificationsToExclude(Set.of())
@@ -788,8 +796,8 @@ public class NetworkModificationTreeService {
     }
 
     public UUID getComputationResultUuid(UUID nodeUuid, UUID timePointUuid, ComputationType computationType) {
-        NodeEntity nodeEntity = nodesRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
-        if (nodeEntity.getType().equals(NodeType.ROOT)) {
+        Optional<NodeEntity> nodeEntity = nodesRepository.findById(nodeUuid);
+        if (nodeEntity.isEmpty() || nodeEntity.get().getType().equals(NodeType.ROOT)) {
             return null;
         }
 
