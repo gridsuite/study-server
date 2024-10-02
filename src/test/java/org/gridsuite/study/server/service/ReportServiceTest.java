@@ -20,7 +20,6 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.Report;
-import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 import org.gridsuite.study.server.repository.timepoint.TimePointRepository;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;

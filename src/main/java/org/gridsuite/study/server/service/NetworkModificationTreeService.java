@@ -696,8 +696,7 @@ public class NetworkModificationTreeService {
 
                     nodesModificationInfos.add(nodeModificationInfos);
                 });
-            }
-            else {
+            } else {
                 timePointNodeInfoRepository.findAllByNodeInfoId(n.getIdNode()).forEach(
                     tpNodeInfo -> {
                         NodeModificationInfos nodeModificationInfos = NodeModificationInfos.builder()
