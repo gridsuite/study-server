@@ -12,6 +12,7 @@ import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.notification.dto.StudyAlert;
+import org.gridsuite.study.server.notification.dto.StudyParametersInfos;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -164,6 +165,19 @@ public class NotificationService {
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .build());
+    }
+
+    @PostCompletion
+    public void emitStudyParamsChanged(UUID studyUuid, String updateType, StudyParametersInfos studyParametersInfos) {
+        //todo: update type: comment c'est géré en front?
+        try {
+            sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(studyParametersInfos))
+                   .setHeader(HEADER_STUDY_UUID, studyUuid)
+                   .setHeader(HEADER_UPDATE_TYPE, updateType)
+                   .build());
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Unable to notify on study alert", e);
+        }
     }
 
     public void emitStudyCreationError(UUID studyUuid, String userId, String errorMessage) {

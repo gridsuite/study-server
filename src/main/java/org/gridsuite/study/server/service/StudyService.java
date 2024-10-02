@@ -40,6 +40,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
+import org.gridsuite.study.server.notification.dto.StudyParametersInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
@@ -822,6 +823,7 @@ public class StudyService {
         createOrUpdateSecurityAnalysisParameters(studyUuid, studyEntity, parameters);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitStudyParamsChanged(studyUuid, "study", new StudyParametersInfos("SecurityAnalysis", null));
     }
 
     public NonEvacuatedEnergyParametersInfos getNonEvacuatedEnergyParametersInfos(UUID studyUuid) {
@@ -847,6 +849,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitStudyParamsChanged(studyUuid, "study",  new StudyParametersInfos("LoadFlow", null));
         return userProfileIssue;
     }
 
@@ -877,6 +880,8 @@ public class StudyService {
             loadflowService.updateLoadFlowProvider(studyEntity.getLoadFlowParametersUuid(), provider);
             invalidateLoadFlowStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+            notificationService.emitStudyParamsChanged(studyUuid, "study", new StudyParametersInfos("LoadFlow", provider));
+
         });
     }
 
@@ -947,6 +952,8 @@ public class StudyService {
             studyRepository.save(studyEntity);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitStudyParamsChanged(studyUuid, "study", new StudyParametersInfos("SecurityAnalysis", null));
+
     }
 
     @Transactional
