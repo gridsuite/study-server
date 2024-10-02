@@ -1957,18 +1957,18 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters, String userId) {
+    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, DynamicSimulationParametersInfos parameters, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
         // pre-condition check
-        String lfStatus = loadflowService.getLoadFlowStatus(nodeUuid, getStudyFirstTimePointUuid(studyUuid));
+        String lfStatus = loadflowService.getLoadFlowStatus(nodeUuid, timePointUuid);
         if (!LoadFlowStatus.CONVERGED.name().equals(lfStatus)) {
             throw new StudyException(NOT_ALLOWED, "Load flow must run successfully before running dynamic simulation");
         }
 
         // clean previous result if exist
-        UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, getStudyFirstTimePointUuid(studyUuid), DYNAMIC_SIMULATION);
+        UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, DYNAMIC_SIMULATION);
         if (prevResultUuid != null) {
             dynamicSimulationService.deleteResult(prevResultUuid);
         }
@@ -1992,10 +1992,10 @@ public class StudyService {
         }
 
         // launch dynamic simulation
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyUuid), studyUuid, nodeUuid, getStudyFirstTimePointUuid(studyUuid), mergeParameters, userId);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyUuid), studyUuid, nodeUuid, timePointUuid, mergeParameters, userId);
 
         // update result uuid and notification
-        updateComputationResultUuid(nodeUuid, getStudyFirstTimePointUuid(studyUuid), resultUuid, DYNAMIC_SIMULATION);
+        updateComputationResultUuid(nodeUuid, timePointUuid, resultUuid, DYNAMIC_SIMULATION);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
 
         return resultUuid;

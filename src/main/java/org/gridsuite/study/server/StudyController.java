@@ -1602,7 +1602,7 @@ public class StudyController {
                                                      @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runDynamicSimulation(studyUuid, nodeUuid, parameters, userId);
+        studyService.runDynamicSimulation(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), parameters, userId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 
