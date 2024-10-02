@@ -105,13 +105,13 @@ public final class TestUtils {
             .build();
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat,
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String caseName,
                                                UUID loadFlowParametersUuid,
                                                UUID shortCircuitParametersUuid,
                                                UUID securityAnalysisParametersUuid,
                                                UUID sensitivityParametersUuid,
                                                NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {
-        return StudyEntity.builder().id(UUID.randomUUID()).timePoints(List.of(TimePointEntity.builder().caseFormat(caseFormat).caseUuid(caseUuid).networkId("netId").networkUuid(networkUuid).build()))
+        return StudyEntity.builder().id(UUID.randomUUID())
                 .loadFlowParametersUuid(loadFlowParametersUuid)
                 .shortCircuitParametersUuid(shortCircuitParametersUuid)
                 .securityAnalysisParametersUuid(securityAnalysisParametersUuid)

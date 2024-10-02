@@ -34,7 +34,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
         @SuppressWarnings("unused")
-        TimePointNodeInfoEntity timePointNodeStatusEntity = node.getFirstTimePointNodeStatusEntity();
+        TimePointNodeInfoEntity timePointNodeStatusEntity = node.getFirstTimePointNodeInfosEntity();
         int ignoreSize = timePointNodeStatusEntity.getModificationsToExclude().size(); // to load the lazy collection
         return completeNodeInfo(node,
             NetworkModificationNode.completeDtoFromTimePointNodeInfo(

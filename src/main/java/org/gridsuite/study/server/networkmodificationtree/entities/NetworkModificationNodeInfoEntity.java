@@ -35,7 +35,7 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     //TODO temporary, for now we are only working with one timepoint by study
     @Transient
-    public TimePointNodeInfoEntity getFirstTimePointNodeStatusEntity() {
+    public TimePointNodeInfoEntity getFirstTimePointNodeInfosEntity() {
         if (timePointNodeInfos == null || timePointNodeInfos.isEmpty()) {
             return null;
         }

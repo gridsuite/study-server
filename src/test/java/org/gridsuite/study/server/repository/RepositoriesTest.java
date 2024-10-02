@@ -53,17 +53,18 @@ public class RepositoriesTest {
         UUID shortCircuitParametersUuid2 = UUID.randomUUID();
         UUID shortCircuitParametersUuid3 = UUID.randomUUID();
 
-        StudyEntity studyEntity1 = studyRepository.save(StudyEntity.builder()
+        StudyEntity studyEntity = StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .timePoints(
-                    List.of(TimePointEntity.builder()
-                        .networkUuid(UUID.randomUUID())
-                        .networkId("networkId")
-                        .caseFormat("caseFormat")
-                        .caseUuid(UUID.randomUUID()).build())
-                )
                 .shortCircuitParametersUuid(shortCircuitParametersUuid1)
-                .build());
+                .build();
+        TimePointEntity timePointEntity1 = TimePointEntity.builder()
+            .networkUuid(UUID.randomUUID())
+            .networkId("networkId")
+            .caseFormat("caseFormat")
+            .caseName("caseName1")
+            .caseUuid(UUID.randomUUID()).build();
+        studyEntity.addTimePoint(timePointEntity1);
+        StudyEntity studyEntity1 = studyRepository.save(studyEntity);
 
         StudyEntity studyEntity2 = studyRepository.save(StudyEntity.builder()
                 .id(UUID.randomUUID())
@@ -71,22 +72,26 @@ public class RepositoriesTest {
                     .networkUuid(UUID.randomUUID())
                     .networkId("networkId2")
                     .caseFormat("caseFormat2")
+                    .caseName("caseName2")
                     .caseUuid(UUID.randomUUID())
                     .build()
                 ))
                 .shortCircuitParametersUuid(shortCircuitParametersUuid2)
                 .build());
 
-        studyRepository.save(StudyEntity.builder()
-                .id(UUID.randomUUID())
-                .timePoints(List.of(TimePointEntity.builder()
-                    .networkUuid(UUID.randomUUID())
-                    .networkId("networkId3")
-                    .caseFormat("caseFormat3")
-                    .caseUuid(UUID.randomUUID())
-                    .build()))
-                .shortCircuitParametersUuid(shortCircuitParametersUuid3)
-                .build());
+        StudyEntity studyEntity3 = StudyEntity.builder()
+            .id(UUID.randomUUID())
+            .shortCircuitParametersUuid(shortCircuitParametersUuid3)
+            .build();
+        TimePointEntity timePointEntity3 = TimePointEntity.builder()
+            .networkUuid(UUID.randomUUID())
+            .networkId("networkId3")
+            .caseFormat("caseFormat3")
+            .caseName("caseName3")
+            .caseUuid(UUID.randomUUID())
+            .build();
+        studyEntity3.addTimePoint(timePointEntity3);
+        studyRepository.save(studyEntity3);
 
         assertThat(studyEntity1).as("studyEntity1").extracting(StudyEntity::getId).isNotNull();
         assertThat(studyEntity2).as("studyEntity2").extracting(StudyEntity::getId).isNotNull();
@@ -121,6 +126,7 @@ public class RepositoriesTest {
                     .networkUuid(UUID.randomUUID())
                     .networkId("networkId")
                     .caseFormat("caseFormat")
+                    .caseName("caseName")
                     .caseUuid(UUID.randomUUID()).build()))
                 .importParameters(importParametersExpected)
                 .build();

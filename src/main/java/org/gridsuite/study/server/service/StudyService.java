@@ -236,16 +236,17 @@ public class StudyService {
                 .build();
     }
 
-    private static CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity) {
+    private CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity) {
+        TimePointEntity firstTimePointEntity = timePointRepository.findAllByStudyId(entity.getId()).stream().findFirst().orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
         return CreatedStudyBasicInfos.builder()
             .id(entity.getId())
-            .caseFormat(entity.getFirstTimepoint().getCaseFormat())
+            .caseFormat(firstTimePointEntity.getCaseFormat())
             .build();
     }
 
     public List<CreatedStudyBasicInfos> getStudies() {
         return studyRepository.findAll().stream()
-                .map(StudyService::toCreatedStudyBasicInfos)
+                .map(this::toCreatedStudyBasicInfos)
                 .collect(Collectors.toList());
     }
 
@@ -266,7 +267,7 @@ public class StudyService {
     }
 
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
-        return studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos)
+        return studyRepository.findAllById(uuids).stream().map(this::toCreatedStudyBasicInfos)
                 .collect(Collectors.toList());
 
     }
@@ -384,12 +385,12 @@ public class StudyService {
         return nodeUuidToSearchIn;
     }
 
-    public List<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
+    public List<EquipmentInfos> searchEquipments(@NonNull UUID nodeUuid, @NonNull UUID timePointUuid, @NonNull String userInput,
                                                  @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
                                                  boolean inUpstreamBuiltParentNode) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, getStudyFirstTimePointUuid(studyUuid), inUpstreamBuiltParentNode);
-        UUID networkUuid = timePointService.getTimePointNetworkUuid(getStudyFirstTimePointUuid(studyUuid));
-        String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn, getStudyFirstTimePointUuid(studyUuid));
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, timePointUuid, inUpstreamBuiltParentNode);
+        UUID networkUuid = timePointService.getTimePointNetworkUuid(timePointUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn, timePointUuid);
         return equipmentInfosService.searchEquipments(networkUuid, variantId, userInput, fieldSelector, equipmentType);
     }
 
@@ -507,7 +508,7 @@ public class StudyService {
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
             importParameters, importReportUuid);
 
-        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudiesChanged(studyUuid, userId);
@@ -516,9 +517,11 @@ public class StudyService {
     }
 
     public CreatedStudyBasicInfos updateStudyNetwork(StudyEntity studyEntity, String userId, NetworkInfos networkInfos) {
-        self.updateStudyEntityNetwork(studyEntity, networkInfos);
+        timePointRepository.findAllByStudyId(studyEntity.getId()).forEach(tp -> {
+            self.updateStudyEntityNetwork(tp, networkInfos);
+        });
 
-        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudyNetworkRecreationDone(studyEntity.getId(), userId);
@@ -595,7 +598,7 @@ public class StudyService {
             .reportUuid(UUID.randomUUID())
             .build();
         newStudyEntity.addTimePoint(newTimePointEntity);
-        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(newStudyEntity, sourceStudy.getId()));
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(insertDuplicatedStudy(newStudyEntity, sourceStudy.getId()));
 
         studyInfosService.add(createdStudyBasicInfos);
         notificationService.emitStudiesChanged(studyInfos.getId(), userId);
@@ -765,6 +768,7 @@ public class StudyService {
         }
     }
 
+    @Transactional
     public void assertCanModifyNode(UUID studyUuid, UUID nodeUuid) {
         assertIsNodeNotReadOnly(nodeUuid);
         assertNoBuildNoComputation(studyUuid, nodeUuid);
@@ -1057,15 +1061,13 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity updateStudyEntityNetwork(StudyEntity studyEntity, NetworkInfos networkInfos) {
+    public void updateStudyEntityNetwork(TimePointEntity timePointEntity, NetworkInfos networkInfos) {
         if (networkInfos != null) {
-            studyEntity.getFirstTimepoint().setNetworkId(networkInfos.getNetworkId());
-            studyEntity.getFirstTimepoint().setNetworkUuid(networkInfos.getNetworkUuid());
+            timePointEntity.setNetworkId(networkInfos.getNetworkId());
+            timePointEntity.setNetworkUuid(networkInfos.getNetworkUuid());
 
-            studyRepository.save(studyEntity);
+            timePointRepository.save(timePointEntity);
         }
-
-        return studyEntity;
     }
 
     private StudyEntity updateStudyIndexationStatus(StudyEntity studyEntity, StudyIndexationStatus indexationStatus) {
