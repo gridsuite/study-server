@@ -36,10 +36,9 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         @SuppressWarnings("unused")
         TimePointNodeInfoEntity timePointNodeStatusEntity = node.getFirstTimePointNodeInfosEntity();
         int ignoreSize = timePointNodeStatusEntity.getModificationsToExclude().size(); // to load the lazy collection
-        return completeNodeInfo(node,
-            NetworkModificationNode.completeDtoFromTimePointNodeInfo(
-                NetworkModificationNode.builder().modificationGroupUuid(node.getModificationGroupUuid()).build(),
-                timePointNodeStatusEntity));
+        NetworkModificationNode networkModificationNode = NetworkModificationNode.builder().modificationGroupUuid(node.getModificationGroupUuid()).build();
+        networkModificationNode.completeDtoFromTimePointNodeInfo(timePointNodeStatusEntity);
+        return completeNodeInfo(node, networkModificationNode);
     }
 
     @Override

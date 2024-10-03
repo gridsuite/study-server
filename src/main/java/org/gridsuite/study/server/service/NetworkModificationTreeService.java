@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.service;
 
+import co.elastic.clients.elasticsearch.nodes.info.NodeInfo;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
@@ -32,6 +33,7 @@ import jakarta.persistence.EntityNotFoundException;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -153,6 +155,15 @@ public class NetworkModificationTreeService {
             TimePointNodeInfoEntity newTimePointNodeInfoEntity = TimePointNodeInfoEntity.builder()
                 .nodeBuildStatus(nodeInfo.getNodeBuildStatus().toEntity())
                 .variantId(nodeInfo.getVariantId())
+                .dynamicSimulationResultUuid(nodeInfo.getDynamicSimulationResultUuid())
+                .loadFlowResultUuid(nodeInfo.getLoadFlowResultUuid())
+                .nonEvacuatedEnergyResultUuid(nodeInfo.getNonEvacuatedEnergyResultUuid())
+                .securityAnalysisResultUuid(nodeInfo.getSecurityAnalysisResultUuid())
+                .sensitivityAnalysisResultUuid(nodeInfo.getSensitivityAnalysisResultUuid())
+                .oneBusShortCircuitAnalysisResultUuid(nodeInfo.getOneBusShortCircuitAnalysisResultUuid())
+                .shortCircuitAnalysisResultUuid(nodeInfo.getShortCircuitAnalysisResultUuid())
+                .stateEstimationResultUuid(nodeInfo.getStateEstimationResultUuid())
+                .voltageInitResultUuid(nodeInfo.getVoltageInitResultUuid())
                 // TODO: Fix if is ok
                 .reportUuid(UUID.randomUUID())
                 .modificationsToExclude(Set.of())
@@ -467,9 +478,15 @@ public class NetworkModificationTreeService {
         if (nodes.isEmpty()) {
             throw new StudyException(ELEMENT_NOT_FOUND);
         }
-        Map<UUID, AbstractNode> fullMap = new HashMap<>();
-        repositories.forEach((key, repository) ->
-            fullMap.putAll(repository.getAll(nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()))));
+        TimePointEntity timePointEntity = timePointRepository.findAllByStudyId(studyId).stream().findFirst().orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
+
+        List<AbstractNode> allNodeInfos = new ArrayList<>();
+        repositories.forEach((key, repository) -> {
+            allNodeInfos.addAll(repository.getAll(
+                nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet())));
+        });
+        completeNodeInfos(allNodeInfos, timePointEntity);
+        Map<UUID, AbstractNode> fullMap = allNodeInfos.stream().collect(Collectors.toMap(AbstractNode::getId, Function.identity()));
 
         nodes.stream()
             .filter(n -> n.getParentNode() != null)
@@ -481,12 +498,28 @@ public class NetworkModificationTreeService {
         return root;
     }
 
+    private void completeNodeInfos(List<AbstractNode> nodes, TimePointEntity timePointEntity) {
+        nodes.forEach(nodeInfo -> {
+            if (nodeInfo instanceof RootNode rootNode) {
+                rootNode.setReportUuid(timePointEntity.getReportUuid());
+            } else {
+                ((NetworkModificationNode) nodeInfo).completeDtoFromTimePointNodeInfo(timePointService.getTimePointNodeInfo(nodeInfo.getId(), timePointEntity.getId()));
+            }
+        });
+    }
+
     @Transactional
-    public NetworkModificationNode getStudySubtree(UUID studyId, UUID parentNodeUuid) {
+    public NetworkModificationNode getStudySubtree(UUID studyId, UUID timePointUuid, UUID parentNodeUuid) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
-        Map<UUID, AbstractNode> fullMap = new HashMap<>();
-        repositories.forEach((key, repository) ->
-            fullMap.putAll(repository.getAll(nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()))));
+        TimePointEntity timePointEntity = timePointRepository.findById(timePointUuid).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
+
+        List<AbstractNode> allNodeInfos = new ArrayList<>();
+        repositories.forEach((key, repository) -> {
+            allNodeInfos.addAll(repository.getAll(
+                nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet())));
+        });
+        completeNodeInfos(allNodeInfos, timePointEntity);
+        Map<UUID, AbstractNode> fullMap = allNodeInfos.stream().collect(Collectors.toMap(AbstractNode::getId, Function.identity()));
 
         nodes.stream()
             .filter(n -> n.getParentNode() != null)
@@ -554,12 +587,53 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void updateNode(UUID studyUuid, AbstractNode node, String userId) {
+    public void updateNode(UUID studyUuid, NetworkModificationNode node, String userId) {
         NetworkModificationNodeInfoEntity networkModificationNode = networkModificationNodeInfoRepository.findById(node.getId()).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
         if (!networkModificationNode.getName().equals(node.getName())) {
             assertNodeNameNotExist(studyUuid, node.getName());
         }
-        repositories.get(node.getType()).updateNode(node);
+
+        TimePointNodeInfoEntity timePointNodeInfoEntity = networkModificationNode.getFirstTimePointNodeInfosEntity();
+        if (node.getVoltageInitResultUuid() != null) {
+            timePointNodeInfoEntity.setVoltageInitResultUuid(node.getVoltageInitResultUuid());
+        }
+        if (node.getOneBusShortCircuitAnalysisResultUuid() != null) {
+            timePointNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(node.getOneBusShortCircuitAnalysisResultUuid());
+        }
+        if (node.getShortCircuitAnalysisResultUuid() != null) {
+            timePointNodeInfoEntity.setShortCircuitAnalysisResultUuid(node.getShortCircuitAnalysisResultUuid());
+        }
+        if (node.getSecurityAnalysisResultUuid() != null) {
+            timePointNodeInfoEntity.setSecurityAnalysisResultUuid(node.getSecurityAnalysisResultUuid());
+        }
+        if (node.getStateEstimationResultUuid() != null) {
+            timePointNodeInfoEntity.setStateEstimationResultUuid(node.getStateEstimationResultUuid());
+        }
+        if (node.getNonEvacuatedEnergyResultUuid() != null) {
+            timePointNodeInfoEntity.setNonEvacuatedEnergyResultUuid(node.getNonEvacuatedEnergyResultUuid());
+        }
+        if (node.getSensitivityAnalysisResultUuid() != null) {
+            timePointNodeInfoEntity.setSensitivityAnalysisResultUuid(node.getSensitivityAnalysisResultUuid());
+        }
+        if (node.getLoadFlowResultUuid() != null) {
+            timePointNodeInfoEntity.setLoadFlowResultUuid(node.getLoadFlowResultUuid());
+        }
+        if (node.getNodeBuildStatus() != null) {
+            timePointNodeInfoEntity.setNodeBuildStatus(node.getNodeBuildStatus().toEntity());
+        }
+        if (node.getVariantId() != null) {
+            timePointNodeInfoEntity.setVariantId(node.getVariantId());
+        }
+        if (node.getReadOnly() != null) {
+            timePointNodeInfoEntity.setReportUuid(node.getReportUuid());
+        }
+        if (node.getName() != null) {
+            networkModificationNode.setName(node.getName());
+        }
+        if (node.getDescription() != null) {
+            networkModificationNode.setDescription(node.getDescription());
+        }
+
         if (isRenameNode(node)) {
             notificationService.emitNodeRenamed(self.getStudyUuidForNodeId(node.getId()), node.getId());
         } else {
@@ -1197,7 +1271,7 @@ public class NetworkModificationTreeService {
         return nodes.stream().filter(n -> getNodeBuildStatus(n.getIdNode(), timePointUuid).isBuilt()).count();
     }
 
-    public Optional<NetworkModificationNodeInfoEntity> getNetworkModificationNodeInfoEntity(UUID nodeId) {
-        return networkModificationNodeInfoRepository.findById(nodeId);
+    public NetworkModificationNodeInfoEntity getNetworkModificationNodeInfoEntity(UUID nodeId) {
+        return networkModificationNodeInfoRepository.findById(nodeId).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 }

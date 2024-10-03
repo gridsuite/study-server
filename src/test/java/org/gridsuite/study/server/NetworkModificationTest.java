@@ -405,6 +405,7 @@ public class NetworkModificationTest {
     @Test
     public void testBuildFailed() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_2_STRING), CASE_2_UUID, "UCTE");
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
 
@@ -412,25 +413,27 @@ public class NetworkModificationTest {
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid,
                 modificationGroupUuid1, "variant_1", "node 1", USER_ID);
 
-        testBuildFailedWithNodeUuid(studyUuid, modificationNode.getId());
+        testBuildFailedWithNodeUuid(studyUuid, modificationNode.getId(), timePointUuid);
     }
 
     @Test
     public void testBuildError() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_3_STRING), CASE_3_UUID, "UCTE");
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         UUID modificationGroupUuid1 = UUID.randomUUID();
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid,
                 modificationGroupUuid1, "variant_1", "node 1", USER_ID);
 
-        testBuildErrorWithNodeUuid(studyUuid, modificationNode.getId());
+        testBuildErrorWithNodeUuid(studyUuid, modificationNode.getId(), timePointUuid);
     }
 
     @Test
     public void testBuildQuotaExceeded() throws Exception {
         String userId = USER_ID_QUOTA_EXCEEDED;
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         UUID modificationGroupUuid1 = UUID.randomUUID();
@@ -441,7 +444,7 @@ public class NetworkModificationTest {
                 modificationNode1.getId(), modificationGroupUuid2, "variant_2", "node 2", userId);
 
         // build modificationNode1: ok
-        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode1.getId(), userId, userProfileQuotaExceededStubId);
+        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode1.getId(), timePointUuid, userId, userProfileQuotaExceededStubId);
 
         // build modificationNode2: cannot be done cause quota is 1 build max (err 403)
         MvcResult result = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyNameUserIdUuid, modificationNode2.getId())
@@ -457,6 +460,7 @@ public class NetworkModificationTest {
     public void testBuildNoQuotaInProfile() throws Exception {
         String userId = USER_ID_NO_QUOTA;
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         UUID modificationGroupUuid1 = UUID.randomUUID();
@@ -464,13 +468,14 @@ public class NetworkModificationTest {
                 modificationGroupUuid1, "variant_1", "node 1", userId);
 
         // build modificationNode1: ok
-        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode1.getId(), userId, userProfileNoQuotaStubId);
+        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode1.getId(), timePointUuid, userId, userProfileNoQuotaStubId);
     }
 
     @Test
     public void testBuildNoProfile() throws Exception {
         String userId = USER_ID_NO_PROFILE;
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         UUID modificationGroupUuid1 = UUID.randomUUID();
@@ -478,13 +483,14 @@ public class NetworkModificationTest {
                 modificationGroupUuid1, "variant_1", "node 1", userId);
 
         // build modificationNode1: ok
-        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode1.getId(), userId, userNoProfileStubId);
+        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode1.getId(), timePointUuid, userId, userNoProfileStubId);
     }
 
     @Test
     public void testBuild() throws Exception {
         String userId = USER_ID;
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         UUID modificationGroupUuid1 = UUID.randomUUID();
@@ -517,7 +523,7 @@ public class NetworkModificationTest {
           modificationNode5
          */
 
-        BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(modificationNode5.getId());
+        BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(modificationNode5.getId(), timePointUuid);
         assertNull(buildInfos.getOriginVariantId());  // previous built node is root node
         assertEquals("variant_5", buildInfos.getDestinationVariantId());
         assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4, modificationGroupUuid5), buildInfos.getModificationGroupUuids());
@@ -527,7 +533,7 @@ public class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
 
-        buildInfos = networkModificationTreeService.getBuildInfos(modificationNode4.getId());
+        buildInfos = networkModificationTreeService.getBuildInfos(modificationNode4.getId(), timePointUuid);
         assertEquals("variant_3", buildInfos.getOriginVariantId()); // variant to clone is variant associated to node
                                                                     // modificationNode3
         assertEquals("variant_4", buildInfos.getDestinationVariantId());
@@ -547,11 +553,11 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
 
         // build modificationNode2 and stop build
-        testBuildAndStopWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId(), userId, userProfileQuotaStubId);
+        testBuildAndStopWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId(), timePointUuid, userId, userProfileQuotaStubId);
 
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode3.getId()).getGlobalBuildStatus());
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode4.getId()).getGlobalBuildStatus());
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode5.getId()).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode3.getId(), timePointUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode4.getId(), timePointUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode5.getId(), timePointUuid).getGlobalBuildStatus());
 
         modificationNode3.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));  // mark node modificationNode3 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
@@ -559,15 +565,16 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
 
         // build modificationNode3 and stop build
-        testBuildAndStopWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId(), userId, userProfileQuotaStubId);
+        testBuildAndStopWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId(), timePointUuid, userId, userProfileQuotaStubId);
 
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode4.getId()).getGlobalBuildStatus());
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode5.getId()).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode4.getId(), timePointUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode5.getId(), timePointUuid).getGlobalBuildStatus());
     }
 
     @Test
     public void testLocalBuildValue() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         String userId = "userId";
@@ -610,7 +617,7 @@ public class NetworkModificationTest {
         checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(modificationNodeUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(modificationNodeUuid, timePointUuid).getGlobalBuildStatus());
         wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING);
 
         // Build second node is OK
@@ -628,12 +635,12 @@ public class NetworkModificationTest {
         checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNode2Uuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(modificationNode2Uuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(modificationNode2Uuid, timePointUuid).getGlobalBuildStatus());
         wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING);
 
         //Build modification node 2, local status should be BUILT and computed one should be BUILT_WITH_ERRORS
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode2Uuid).getLocalBuildStatus());
-        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(modificationNode2Uuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode2Uuid, timePointUuid).getLocalBuildStatus());
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(modificationNode2Uuid, timePointUuid).getGlobalBuildStatus());
     }
 
     @Test
@@ -644,6 +651,7 @@ public class NetworkModificationTest {
         String userId = "userId";
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -733,10 +741,10 @@ public class NetworkModificationTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
 
         // modificationNode2 is still built
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode1Uuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode1Uuid, timePointUuid).getGlobalBuildStatus());
 
         // modificationNode2 is now invalid
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode2Uuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode2Uuid, timePointUuid).getGlobalBuildStatus());
     }
 
     @Test
@@ -2402,6 +2410,7 @@ public class NetworkModificationTest {
     public void testNodesInvalidation() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1", BuildStatus.BUILT, userId);
@@ -2473,7 +2482,7 @@ public class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode3Uuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode3Uuid, timePointUuid).getGlobalBuildStatus());
         wireMockUtils.verifyNetworkModificationPost(stubUuid, jsonCreateLoadInfos, NETWORK_UUID_STRING);
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
@@ -2543,6 +2552,7 @@ public class NetworkModificationTest {
     @Test
     public void testUpdateOfBuildStatus() {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         String userId = "userId";
@@ -2564,7 +2574,7 @@ public class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNodeUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNodeUuid, timePointUuid).getGlobalBuildStatus());
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING, VARIANT_ID);
 
         // Mark the node status as built
@@ -2589,7 +2599,7 @@ public class NetworkModificationTest {
         checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNodeUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNodeUuid, timePointUuid).getGlobalBuildStatus());
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING, VARIANT_ID);
 
         // Built with warnings
@@ -2606,7 +2616,7 @@ public class NetworkModificationTest {
         checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getNodeBuildStatus(modificationNodeUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getNodeBuildStatus(modificationNodeUuid, timePointUuid).getGlobalBuildStatus());
         wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING);
 
         // Built with errors
@@ -2623,11 +2633,11 @@ public class NetworkModificationTest {
         checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(modificationNodeUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(modificationNodeUuid, timePointUuid).getGlobalBuildStatus());
         wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING);
     }
 
-    private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid, String userId, UUID profileStubId) throws Exception {
+    private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String userId, UUID profileStubId) throws Exception {
         // build node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid)
                         .header(USER_ID_HEADER, userId))
@@ -2652,10 +2662,10 @@ public class NetworkModificationTest {
         wireMockUtils.verifyGetRequest(profileStubId, "/v1/users/" + userId + "/profile/max-builds", Map.of());
         wireMockUtils.verifyPostRequest(buildOkStubId, "/v1/networks/" + NETWORK_UUID_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
 
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, timePointUuid).getGlobalBuildStatus());
     }
 
-    private void testBuildAndStopWithNodeUuid(UUID studyUuid, UUID nodeUuid, String userId, UUID profileStubId) throws Exception {
+    private void testBuildAndStopWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String userId, UUID profileStubId) throws Exception {
         // build node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid)
                         .header(USER_ID_HEADER, userId))
@@ -2679,9 +2689,9 @@ public class NetworkModificationTest {
 
         wireMockUtils.verifyPostRequest(buildOkStubId, "/v1/networks/" + NETWORK_UUID_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
         wireMockUtils.verifyGetRequest(profileStubId, "/v1/users/" + userId + "/profile/max-builds", Map.of());
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid).getGlobalBuildStatus());  // node is built
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, timePointUuid).getGlobalBuildStatus());  // node is built
 
-        networkModificationTreeService.updateNodeBuildStatus(nodeUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
+        networkModificationTreeService.updateNodeBuildStatus(nodeUuid, timePointUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
 
         // stop build
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build/stop", studyUuid, nodeUuid))
@@ -2696,13 +2706,13 @@ public class NetworkModificationTest {
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_CANCELLED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid).getGlobalBuildStatus()); // node is not built
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, timePointUuid).getGlobalBuildStatus()); // node is not built
 
         wireMockUtils.verifyPutRequest(buildStopStubId, "/v1/build/stop", true, Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")), null);
     }
 
     // builds on network 2 will fail
-    private void testBuildFailedWithNodeUuid(UUID studyUuid, UUID nodeUuid) throws Exception {
+    private void testBuildFailedWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID timePointUuid) throws Exception {
         // build node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid)
                         .header(USER_ID_HEADER, USER_ID))
@@ -2728,11 +2738,11 @@ public class NetworkModificationTest {
         wireMockUtils.verifyPostRequest(buildFailedStubId, "/v1/networks/" + NETWORK_UUID_2_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
         wireMockUtils.verifyGetRequest(userProfileQuotaStubId, "/v1/users/" + USER_ID + "/profile/max-builds", Map.of());
 
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid).getGlobalBuildStatus());  // node is not built
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, timePointUuid).getGlobalBuildStatus());  // node is not built
     }
 
     // builds on network 3 will throw an error on networkmodificationservice call
-    private void testBuildErrorWithNodeUuid(UUID studyUuid, UUID nodeUuid) throws Exception {
+    private void testBuildErrorWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID timePointUuid) throws Exception {
         // build node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid)
                         .header(USER_ID_HEADER, USER_ID))
@@ -2751,7 +2761,7 @@ public class NetworkModificationTest {
         wireMockUtils.verifyPostRequest(buildErrorStubId, "/v1/networks/" + NETWORK_UUID_3_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
         wireMockUtils.verifyGetRequest(userProfileQuotaStubId, "/v1/users/" + USER_ID + "/profile/max-builds", Map.of());
 
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid).getGlobalBuildStatus());  // node is not built
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, timePointUuid).getGlobalBuildStatus());  // node is not built
     }
 
     private void checkEquipmentCreatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
@@ -2895,9 +2905,9 @@ public class NetworkModificationTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat) {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, caseFormat, UUID.randomUUID(), null, null, null, null);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, caseFormat, "", null, UUID.randomUUID(), null, null, null, null);
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity, null);
+        networkModificationTreeService.createRoot(studyEntity);
         return study;
     }
 

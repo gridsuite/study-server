@@ -74,8 +74,8 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         nodeInfoRepository.save(entity);
     }
 
-    public Map<UUID, U> getAll(Collection<UUID> ids) {
-        return nodeInfoRepository.findAllById(ids).stream().map(this::toDto).collect(Collectors.toMap(U::getId, Function.identity()));
+    public List<U> getAll(Collection<UUID> ids) {
+        return nodeInfoRepository.findAllById(ids).stream().map(this::toDto).toList();
     }
 
     public List<U> getAllInOrder(List<UUID> ids) {

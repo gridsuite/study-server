@@ -1254,7 +1254,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The study or the parent node not found")})
     public ResponseEntity<NetworkModificationNode> getNetworkModificationSubtree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                  @Parameter(description = "parent node uuid") @RequestParam(value = "parentNodeUuid") UUID parentNodeUuid) {
-        NetworkModificationNode parentNode = networkModificationTreeService.getStudySubtree(studyUuid, parentNodeUuid);
+        NetworkModificationNode parentNode = networkModificationTreeService.getStudySubtree(studyUuid, studyService.getStudyFirstTimePointUuid(studyUuid), parentNodeUuid);
         return parentNode != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(parentNode)
                 : ResponseEntity.notFound().build();
@@ -1265,7 +1265,7 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "the node has been updated"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public ResponseEntity<Void> updateNode(@RequestBody AbstractNode node,
+    public ResponseEntity<Void> updateNode(@RequestBody NetworkModificationNode node,
                                                  @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
         networkModificationTreeService.updateNode(studyUuid, node, userId);

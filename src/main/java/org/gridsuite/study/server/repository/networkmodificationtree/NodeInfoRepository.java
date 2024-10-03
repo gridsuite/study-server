@@ -8,6 +8,7 @@
 package org.gridsuite.study.server.repository.networkmodificationtree;
 
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.NoRepositoryBean;
 
@@ -23,4 +24,6 @@ public interface NodeInfoRepository<T extends AbstractNodeInfoEntity> extends Jp
     void deleteByIdNodeIn(Collection<UUID> ids);
 
     List<T> findAllByNodeStudyId(UUID studyId);
+
+    List<T> findAllByIdIn(List<UUID> ids);
 }

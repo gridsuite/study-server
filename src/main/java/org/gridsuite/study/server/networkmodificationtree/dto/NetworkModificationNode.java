@@ -56,20 +56,19 @@ public class NetworkModificationNode extends AbstractNode {
     private NodeBuildStatus nodeBuildStatus;
 
     //TODO: temporary, used to keep nodeDTO identical since we don't export timepoints in APIs yet, once timepoints are exported, result uuid won't be stored in nodeDto
-    public static NetworkModificationNode completeDtoFromTimePointNodeInfo(NetworkModificationNode networkModificationNode, TimePointNodeInfoEntity timePointNodeInfoEntity) {
-        networkModificationNode.setModificationsToExclude(timePointNodeInfoEntity.getModificationsToExclude());
-        networkModificationNode.setLoadFlowResultUuid(timePointNodeInfoEntity.getLoadFlowResultUuid());
-        networkModificationNode.setShortCircuitAnalysisResultUuid(timePointNodeInfoEntity.getShortCircuitAnalysisResultUuid());
-        networkModificationNode.setOneBusShortCircuitAnalysisResultUuid(timePointNodeInfoEntity.getOneBusShortCircuitAnalysisResultUuid());
-        networkModificationNode.setVoltageInitResultUuid(timePointNodeInfoEntity.getVoltageInitResultUuid());
-        networkModificationNode.setSecurityAnalysisResultUuid(timePointNodeInfoEntity.getSecurityAnalysisResultUuid());
-        networkModificationNode.setSensitivityAnalysisResultUuid(timePointNodeInfoEntity.getSensitivityAnalysisResultUuid());
-        networkModificationNode.setNonEvacuatedEnergyResultUuid(timePointNodeInfoEntity.getNonEvacuatedEnergyResultUuid());
-        networkModificationNode.setDynamicSimulationResultUuid(timePointNodeInfoEntity.getDynamicSimulationResultUuid());
-        networkModificationNode.setStateEstimationResultUuid(timePointNodeInfoEntity.getStateEstimationResultUuid());
-        networkModificationNode.setNodeBuildStatus(timePointNodeInfoEntity.getNodeBuildStatus().toDto());
-        networkModificationNode.setReportUuid(timePointNodeInfoEntity.getReportUuid());
-        return networkModificationNode;
+    public void completeDtoFromTimePointNodeInfo(TimePointNodeInfoEntity timePointNodeInfoEntity) {
+        this.setModificationsToExclude(timePointNodeInfoEntity.getModificationsToExclude());
+        this.setLoadFlowResultUuid(timePointNodeInfoEntity.getLoadFlowResultUuid());
+        this.setShortCircuitAnalysisResultUuid(timePointNodeInfoEntity.getShortCircuitAnalysisResultUuid());
+        this.setOneBusShortCircuitAnalysisResultUuid(timePointNodeInfoEntity.getOneBusShortCircuitAnalysisResultUuid());
+        this.setVoltageInitResultUuid(timePointNodeInfoEntity.getVoltageInitResultUuid());
+        this.setSecurityAnalysisResultUuid(timePointNodeInfoEntity.getSecurityAnalysisResultUuid());
+        this.setSensitivityAnalysisResultUuid(timePointNodeInfoEntity.getSensitivityAnalysisResultUuid());
+        this.setNonEvacuatedEnergyResultUuid(timePointNodeInfoEntity.getNonEvacuatedEnergyResultUuid());
+        this.setDynamicSimulationResultUuid(timePointNodeInfoEntity.getDynamicSimulationResultUuid());
+        this.setStateEstimationResultUuid(timePointNodeInfoEntity.getStateEstimationResultUuid());
+        this.setNodeBuildStatus(timePointNodeInfoEntity.getNodeBuildStatus().toDto());
+        this.setReportUuid(timePointNodeInfoEntity.getReportUuid());
     }
 
     @Override
