@@ -212,13 +212,13 @@ public class SensitivityAnalysisTest {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", resultUuid)
                         .setHeader(HEADER_USER_ID, "testUserId")
-                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                         .build(), sensitivityAnalysisResultDestination);
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/run-and-save.*")) {
                     input.send(MessageBuilder.withPayload("")
-                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                         .setHeader(HEADER_USER_ID, "testUserId")
                         .build(), sensitivityAnalysisFailedDestination);
                     return new MockResponse().setResponseCode(200).setBody("\"" + SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"")
@@ -234,7 +234,7 @@ public class SensitivityAnalysisTest {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_3 + ".*") ? SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID : SENSITIVITY_ANALYSIS_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", resultUuid)
-                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                         .build(), sensitivityAnalysisStoppedDestination);
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -459,6 +459,7 @@ public class SensitivityAnalysisTest {
     @SneakyThrows
     public void testGetSensitivityResultWithWrongId() {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         UUID notFoundSensitivityUuid = UUID.randomUUID();
         UUID studyUuid = studyEntity.getId();
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
@@ -473,9 +474,9 @@ public class SensitivityAnalysisTest {
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNodeUuid = modificationNode1.getId();
-        networkModificationTreeService.updateComputationResultUuid(modificationNodeUuid, notFoundSensitivityUuid, SENSITIVITY_ANALYSIS);
-        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, SENSITIVITY_ANALYSIS).isPresent());
-        assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, SENSITIVITY_ANALYSIS).get());
+        networkModificationTreeService.updateComputationResultUuid(modificationNodeUuid, timePointUuid, notFoundSensitivityUuid, SENSITIVITY_ANALYSIS);
+        assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, timePointUuid, SENSITIVITY_ANALYSIS));
+        assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, timePointUuid, SENSITIVITY_ANALYSIS));
 
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid))
                 .willReturn(WireMock.notFound()));
@@ -495,14 +496,15 @@ public class SensitivityAnalysisTest {
     public void testResetUuidResultWhenSAFailed() {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
-        String resultUuidJson = mapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
+        String resultUuidJson = mapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), timePointUuid));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, SENSITIVITY_ANALYSIS);
-        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), SENSITIVITY_ANALYSIS).isPresent());
-        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), SENSITIVITY_ANALYSIS).get());
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), timePointUuid, resultUuid, SENSITIVITY_ANALYSIS);
+        assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, SENSITIVITY_ANALYSIS));
+        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, SENSITIVITY_ANALYSIS));
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
@@ -512,7 +514,7 @@ public class SensitivityAnalysisTest {
         studyService.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId(), "testUserId");
 
         // Test reset uuid result in the database
-        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), SENSITIVITY_ANALYSIS).isEmpty());
+        assertNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, SENSITIVITY_ANALYSIS));
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -574,10 +576,10 @@ public class SensitivityAnalysisTest {
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", UUID.randomUUID(), null, null, SENSITIVITY_ANALYSIS_PARAMETERS_UUID,
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null, UUID.randomUUID(), null, null, SENSITIVITY_ANALYSIS_PARAMETERS_UUID,
                                                              defaultNonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity, null);
+        networkModificationTreeService.createRoot(studyEntity);
         return study;
     }
 

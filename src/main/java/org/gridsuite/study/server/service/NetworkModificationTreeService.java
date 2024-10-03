@@ -124,7 +124,7 @@ public class NetworkModificationTreeService {
                     .filter(n -> !n.getIdNode().equals(node.getIdNode()))
                     .forEach(child -> child.setParentNode(node));
             }
-            notificationService.emitNodeInserted(self.getStudyUuidForNodeId(nodeId), parent.getIdNode(), node.getIdNode(), insertMode, nodeId);
+            notificationService.emitNodeInserted(study.getId(), parent.getIdNode(), node.getIdNode(), insertMode, nodeId);
             // userId is null when creating initial nodes, we don't need to send element update notifications in this case
             if (userId != null) {
                 notificationService.emitElementUpdated(study.getId(), userId);

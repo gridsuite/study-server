@@ -2210,7 +2210,7 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runStateEstimation(UUID studyUuid, UUID nodeUuid, String userId) {
+    public UUID runStateEstimation(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         if (studyRepository.findById(studyUuid).isEmpty()) {
@@ -2218,22 +2218,22 @@ public class StudyService {
         }
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, getStudyFirstTimePointUuid(studyUuid));
-        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid, getStudyFirstTimePointUuid(studyUuid));
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, timePointUuid);
+        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid, timePointUuid);
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, getStudyFirstTimePointUuid(studyUuid))), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
 
-        UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, getStudyUuidFromNodeUuid(studyUuid), STATE_ESTIMATION);
+        UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, STATE_ESTIMATION);
         if (prevResultUuid != null) {
             stateEstimationService.deleteStateEstimationResult(prevResultUuid);
         }
 
         UUID result = stateEstimationService.runStateEstimation(networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid.toString()), receiver, userId);
-        updateComputationResultUuid(nodeUuid, getStudyFirstTimePointUuid(studyUuid), result, STATE_ESTIMATION);
+        updateComputationResultUuid(nodeUuid, timePointUuid, result, STATE_ESTIMATION);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
         return result;
     }

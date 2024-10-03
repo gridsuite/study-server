@@ -201,14 +201,14 @@ public class NonEvacuatedEnergyTest {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", resultUuid)
                         .setHeader(HEADER_USER_ID, "userId")
-                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                         .build(), nonEvacuatedEnergyResultDestination);
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/non-evacuated-energy.*")) {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader(HEADER_USER_ID, "userId")
-                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                         .build(), nonEvacuatedEnergyFailedDestination);
                     return new MockResponse().setResponseCode(200).setBody("\"" + NON_EVACUATED_ENERGY_ERROR_NODE_RESULT_UUID + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -222,7 +222,7 @@ public class NonEvacuatedEnergyTest {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_3 + ".*") ? NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID : NON_EVACUATED_ENERGY_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", resultUuid)
-                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                         .build(), nonEvacuatedEnergyStoppedDestination);
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -402,6 +402,7 @@ public class NonEvacuatedEnergyTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID notFoundSensitivityUuid = UUID.randomUUID();
         UUID studyUuid = studyEntity.getId();
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/result", studyUuid, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent()).andReturn();
@@ -412,9 +413,9 @@ public class NonEvacuatedEnergyTest {
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNodeUuid = modificationNode1.getId();
-        networkModificationTreeService.updateComputationResultUuid(modificationNodeUuid, notFoundSensitivityUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
-        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS).isPresent());
-        assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS).get());
+        networkModificationTreeService.updateComputationResultUuid(modificationNodeUuid, timePointUuid, notFoundSensitivityUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, timePointUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS));
+        assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, timePointUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS));
 
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/non-evacuated-energy/results/" + notFoundSensitivityUuid))
                 .willReturn(WireMock.notFound()));
@@ -429,14 +430,15 @@ public class NonEvacuatedEnergyTest {
     public void testResetUuidResultWhenNonEvacuatedEnergyFailed() {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
-        String resultUuidJson = mapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
+        String resultUuidJson = mapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), timePointUuid));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
-        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.NON_EVACUATED_ENERGY_ANALYSIS).isPresent());
-        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.NON_EVACUATED_ENERGY_ANALYSIS).get());
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), timePointUuid, resultUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS));
+        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS));
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
@@ -449,7 +451,7 @@ public class NonEvacuatedEnergyTest {
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_FAILED, updateType);
-        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.NON_EVACUATED_ENERGY_ANALYSIS).isEmpty());
+        assertNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS));
     }
 
     @Test
@@ -512,19 +514,19 @@ public class NonEvacuatedEnergyTest {
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
         NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", UUID.randomUUID(), null, null, null,
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null, UUID.randomUUID(), null, null, null,
                                                              nonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity, null);
+        networkModificationTreeService.createRoot(studyEntity);
         return study;
     }
 
     private StudyEntity insertDummyStudyWithSpecificParams(UUID networkUuid, UUID caseUuid) {
         NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", UUID.randomUUID(), null, null, null,
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null, UUID.randomUUID(), null, null, null,
                                                              nonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity, null);
+        networkModificationTreeService.createRoot(studyEntity);
         return study;
     }
 

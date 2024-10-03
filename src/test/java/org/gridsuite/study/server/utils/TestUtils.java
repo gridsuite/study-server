@@ -86,7 +86,7 @@ public final class TestUtils {
     }
 
     //TODO: WHY is casename now mandatory ? there was @NotNull before as well
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String caseName,
+    public static StudyEntity createDummyStudy(UUID networkUuid, String networkId, UUID caseUuid, String caseFormat, String caseName, UUID importReportUuid,
                                                UUID loadFlowParametersUuid,
                                                UUID shortCircuitParametersUuid,
                                                UUID voltageInitParametersUuid,
@@ -103,7 +103,7 @@ public final class TestUtils {
             .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
             .voltageInitParameters(new StudyVoltageInitParametersEntity(applyModifications))
             .build();
-        TimePointEntity timePointEntity = TimePointEntity.builder().caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId("netId").networkUuid(networkUuid).build();
+        TimePointEntity timePointEntity = TimePointEntity.builder().caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(importReportUuid).build();
         studyEntity.addTimePoint(timePointEntity);
 
         return studyEntity;

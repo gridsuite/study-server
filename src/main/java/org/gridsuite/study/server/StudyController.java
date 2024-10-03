@@ -1929,7 +1929,7 @@ public class StudyController {
                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runStateEstimation(studyUuid, nodeUuid, userId);
+        studyService.runStateEstimation(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), userId);
         return ResponseEntity.ok().build();
     }
 
