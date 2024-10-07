@@ -1190,9 +1190,7 @@ public class NetworkModificationTest {
         mockMvc.perform(delete(URI_NETWORK_MODIF, studyUuid1, modificationNode.getId())
                         .queryParam("uuids", node3.getId().toString())
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().isForbidden());
-        checkEquipmentDeletingMessagesReceived(studyUuid1, modificationNode.getId());
-        checkEquipmentDeletingFinishedMessagesReceived(studyUuid1, modificationNode.getId());
+                .andExpect(status().isNotFound());
 
         UUID modificationUuid = UUID.randomUUID();
         mockMvc.perform(delete(URI_NETWORK_MODIF, studyUuid, modificationNode.getId())
@@ -2111,9 +2109,7 @@ public class NetworkModificationTest {
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
                         studyNameUserIdUuid1, modificationNodeUuid, modification1, modification2).header(USER_ID_HEADER, "userId"))
-                .andExpect(status().isForbidden());
-        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
-        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
+                .andExpect(status().isNotFound());
     }
 
     @Test

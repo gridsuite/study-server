@@ -6,10 +6,7 @@
  */
 package org.gridsuite.study.server.networkmodificationtree.entities;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 
@@ -26,6 +23,7 @@ import jakarta.persistence.Enumerated;
 @NoArgsConstructor
 @Builder
 @Embeddable
+@EqualsAndHashCode
 public class NodeBuildStatusEmbeddable {
 
     @Column(name = "buildStatusLocal", nullable = false)

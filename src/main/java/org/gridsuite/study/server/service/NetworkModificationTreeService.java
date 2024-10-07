@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.service;
 
-import co.elastic.clients.elasticsearch.nodes.info.NodeInfo;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
@@ -68,6 +67,7 @@ public class NetworkModificationTreeService {
     private final NetworkModificationTreeService self;
     private final TimePointRepository timePointRepository;
     private final TimePointService timePointService;
+    private final RootNodeInfoRepository rootNodeInfoRepository;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
@@ -87,6 +87,7 @@ public class NetworkModificationTreeService {
         this.self = networkModificationTreeService;
         this.timePointRepository = timePointRepository;
         this.timePointService = timePointService;
+        this.rootNodeInfoRepository = rootNodeInfoRepository;
     }
 
     private NodeEntity createNetworkmodificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
@@ -367,7 +368,7 @@ public class NetworkModificationTreeService {
                 throw new StudyException(CANT_DELETE_ROOT_NODE);
             }
 
-            UUID modificationGroupUuid = repositories.get(nodeToDelete.getType()).getModificationGroupUuid(id);
+            UUID modificationGroupUuid = self.getModificationGroupUuid(id);
             deleteNodeInfos.addModificationGroupUuid(modificationGroupUuid);
 
             //get all timepointnodeinfo info linked to node
@@ -462,13 +463,14 @@ public class NetworkModificationTreeService {
     @Transactional
     public NodeEntity createRoot(StudyEntity study) {
         NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null));
-        RootNode root = RootNode.builder()
-            .id(node.getIdNode())
-            .name(ROOT_NODE_NAME)
-            .readOnly(true)
-            .studyId(study.getId())
-            .build();
-        repositories.get(NodeType.ROOT).createNodeInfo(root);
+        rootNodeInfoRepository.save(
+            RootNodeInfoEntity.builder()
+                .idNode(node.getIdNode())
+                .name(ROOT_NODE_NAME)
+                .readOnly(true)
+                .build()
+        );
+
         return node;
     }
 
@@ -565,7 +567,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void createBasicTree(StudyEntity studyEntity, TimePointEntity firstTimePointEntity) {
-        // create 2 nodes : root node, modification node 0
+        // create 2 nodes : root node, modification node N1
         NodeEntity rootNodeEntity = self.createRoot(studyEntity);
         NetworkModificationNode modificationNode = NetworkModificationNode
             .builder()
@@ -577,7 +579,6 @@ public class NetworkModificationTreeService {
         TimePointNodeInfoEntity timePointNodeInfoEntity = TimePointNodeInfoEntity.builder()
             .variantId(FIRST_VARIANT_ID)
             .nodeBuildStatus(new NodeBuildStatusEmbeddable(BuildStatus.BUILT, BuildStatus.BUILT))
-            // TODO: Fix if is ok
             .reportUuid(UUID.randomUUID())
             .modificationsToExclude(Set.of())
             .build();
@@ -593,7 +594,7 @@ public class NetworkModificationTreeService {
             assertNodeNameNotExist(studyUuid, node.getName());
         }
 
-        TimePointNodeInfoEntity timePointNodeInfoEntity = networkModificationNode.getFirstTimePointNodeInfosEntity();
+        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findAllByNodeInfoId(networkModificationNode.getId()).stream().findFirst().orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
         if (node.getVoltageInitResultUuid() != null) {
             timePointNodeInfoEntity.setVoltageInitResultUuid(node.getVoltageInitResultUuid());
         }
@@ -624,7 +625,7 @@ public class NetworkModificationTreeService {
         if (node.getVariantId() != null) {
             timePointNodeInfoEntity.setVariantId(node.getVariantId());
         }
-        if (node.getReadOnly() != null) {
+        if (node.getReportUuid() != null) {
             timePointNodeInfoEntity.setReportUuid(node.getReportUuid());
         }
         if (node.getName() != null) {

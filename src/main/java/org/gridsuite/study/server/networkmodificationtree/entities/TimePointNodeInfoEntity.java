@@ -25,10 +25,6 @@ import java.util.UUID;
 @SuperBuilder
 @Table(name = "TimePointNodeInfo")
 public class TimePointNodeInfoEntity {
-    public TimePointNodeInfoEntity(TimePointEntity timePoint, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity) {
-        this.timePoint = timePoint;
-        this.nodeInfo = networkModificationNodeInfoEntity;
-    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

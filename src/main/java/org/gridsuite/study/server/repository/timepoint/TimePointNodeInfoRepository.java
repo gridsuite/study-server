@@ -36,7 +36,5 @@ public interface TimePointNodeInfoRepository extends JpaRepository<TimePointNode
 
     List<TimePointNodeInfoEntity> findAllByNodeInfoId(UUID nodeInfoId);
 
-    List<TimePointNodeInfoEntity> findAllByNodeInfoIdIn(List<UUID> nodeInfoIds);
-
     TimePointNodeInfoEntity findByNodeInfoIdAndTimePointId(UUID nodeInfoId, UUID timePointId);
 }

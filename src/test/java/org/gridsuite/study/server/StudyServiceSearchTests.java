@@ -13,7 +13,6 @@ import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.TimePointService;
 import org.junit.After;
@@ -99,24 +98,24 @@ public class StudyServiceSearchTests {
 
         // Search with node of initial variant
         Set<EquipmentInfos> hits = new HashSet<>();
-        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID,"id_g1", EquipmentInfosService.FieldSelector.ID, null, false));
+        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID, "id_g1", EquipmentInfosService.FieldSelector.ID, null, false));
         assertEquals(1, hits.size());
         assertTrue(hits.contains(generatorInfos));
 
         hits.clear();
-        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID,"id_l", EquipmentInfosService.FieldSelector.ID, null, false));
+        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID, "id_l", EquipmentInfosService.FieldSelector.ID, null, false));
         assertEquals(2, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
 
         // Search with node of new variant
         hits.clear();
-        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID,"id_g1", EquipmentInfosService.FieldSelector.ID, null, false));
+        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID, "id_g1", EquipmentInfosService.FieldSelector.ID, null, false));
         assertEquals(1, hits.size());
         assertTrue(hits.contains(generatorInfos));
 
         hits.clear();
-        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID,"id_l", EquipmentInfosService.FieldSelector.ID, null, false));
+        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID, "id_l", EquipmentInfosService.FieldSelector.ID, null, false));
         assertEquals(2, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
@@ -129,12 +128,12 @@ public class StudyServiceSearchTests {
 
         // Search new equipments with node of initial variant
         hits.clear();
-        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID,"id_new", EquipmentInfosService.FieldSelector.ID, null, false));
+        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID, "id_new", EquipmentInfosService.FieldSelector.ID, null, false));
         assertEquals(0, hits.size());
 
         // Search all equipments with node of initial variant
         hits.clear();
-        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID,"id_", EquipmentInfosService.FieldSelector.ID, null, false));
+        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID, "id_", EquipmentInfosService.FieldSelector.ID, null, false));
         assertEquals(4, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
@@ -143,14 +142,14 @@ public class StudyServiceSearchTests {
 
         // Search new equipments with node of new variant
         hits.clear();
-        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID,"id_new", EquipmentInfosService.FieldSelector.ID, null, false));
+        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID, "id_new", EquipmentInfosService.FieldSelector.ID, null, false));
         assertEquals(2, hits.size());
         assertTrue(hits.contains(newGeneratorInfos));
         assertTrue(hits.contains(newLineInfos));
 
         // Search all equipments with node of new variant
         hits.clear();
-        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID,"id_", EquipmentInfosService.FieldSelector.ID, null, false));
+        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID, "id_", EquipmentInfosService.FieldSelector.ID, null, false));
         assertEquals(6, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
@@ -165,48 +164,48 @@ public class StudyServiceSearchTests {
 
         // Search 2wt with node of initial variant
         hits.clear();
-        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID,"id_tw1", EquipmentInfosService.FieldSelector.ID, null, false));
+        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID, "id_tw1", EquipmentInfosService.FieldSelector.ID, null, false));
         assertEquals(1, hits.size());
         assertTrue(hits.contains(twInfos));
 
         // Search specific load with node of initial variant
         hits.clear();
-        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID,"loadId1", EquipmentInfosService.FieldSelector.ID, "LOAD", false));
+        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID, "loadId1", EquipmentInfosService.FieldSelector.ID, "LOAD", false));
         assertEquals(1, hits.size());
         assertTrue(hits.contains(load1Infos));
 
         // Search lines with node of initial variant
         hits.clear();
-        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID,"id", EquipmentInfosService.FieldSelector.ID, "LINE", false));
+        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID, "id", EquipmentInfosService.FieldSelector.ID, "LINE", false));
         assertEquals(2, hits.size());
         assertTrue(hits.contains(line1Infos));
 
         // Search lines with node of new variant
         hits.clear();
-        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID,"id", EquipmentInfosService.FieldSelector.ID, "LINE", false));
+        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID, "id", EquipmentInfosService.FieldSelector.ID, "LINE", false));
         assertEquals(3, hits.size());
         assertTrue(hits.contains(newLineInfos));
 
         // Search specific load with the wrong type -> expect no result
         hits.clear();
-        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID,"loadId2", EquipmentInfosService.FieldSelector.ID, "LINE", false));
+        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID, "loadId2", EquipmentInfosService.FieldSelector.ID, "LINE", false));
         assertEquals(0, hits.size());
 
         // Search both loads
         hits.clear();
-        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID,"loadId", EquipmentInfosService.FieldSelector.ID, "LOAD", false));
+        hits.addAll(studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID, "loadId", EquipmentInfosService.FieldSelector.ID, "LOAD", false));
         assertEquals(2, hits.size());
         assertTrue(hits.contains(load2Infos));
         assertTrue(hits.contains(load1Infos));
 
         // Search 2wt with node of new variant
         hits.clear();
-        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID,"id_tw1", EquipmentInfosService.FieldSelector.ID, null, false));
+        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID, "id_tw1", EquipmentInfosService.FieldSelector.ID, null, false));
         assertEquals(0, hits.size());
 
         // Search all equipments with node of new variant
         hits.clear();
-        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID,"id_", EquipmentInfosService.FieldSelector.ID, null, false));
+        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID, "id_", EquipmentInfosService.FieldSelector.ID, null, false));
         assertEquals(5, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
@@ -216,7 +215,7 @@ public class StudyServiceSearchTests {
 
         // Search all equipments with node of new variant
         hits.clear();
-        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID,"id_", EquipmentInfosService.FieldSelector.ID, null, true));
+        hits.addAll(studyService.searchEquipments(VARIANT_NODE_UUID, TIMEPOINT_UUID, "id_", EquipmentInfosService.FieldSelector.ID, null, true));
         assertEquals(5, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
@@ -249,7 +248,7 @@ public class StudyServiceSearchTests {
         equipmentInfosService.addEquipmentInfos(loadInfos2);
 
         // Searching for the third version of the equipment and validating its presence in the results.
-        list = studyService.searchEquipments(VARIANT_NODE_UUID_2, TIMEPOINT_UUID,"loadId1", EquipmentInfosService.FieldSelector.ID, null, false);
+        list = studyService.searchEquipments(VARIANT_NODE_UUID_2, TIMEPOINT_UUID, "loadId1", EquipmentInfosService.FieldSelector.ID, null, false);
         assertEquals(1, list.size());
         assertTrue(list.contains(loadInfos2));
 

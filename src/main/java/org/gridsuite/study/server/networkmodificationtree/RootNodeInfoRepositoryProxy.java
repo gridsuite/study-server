@@ -7,7 +7,6 @@
 
 package org.gridsuite.study.server.networkmodificationtree;
 
-import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
@@ -18,12 +17,6 @@ import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInf
 public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<RootNodeInfoEntity, RootNodeInfoRepository, RootNode> {
     public RootNodeInfoRepositoryProxy(RootNodeInfoRepository rootNodeInfoRepository) {
         super(rootNodeInfoRepository);
-    }
-
-    @Override
-    public RootNodeInfoEntity toEntity(AbstractNode node) {
-        var rootNodeInfoEntity = new RootNodeInfoEntity();
-        return completeEntityNodeInfo(node, rootNodeInfoEntity);
     }
 
     @Override

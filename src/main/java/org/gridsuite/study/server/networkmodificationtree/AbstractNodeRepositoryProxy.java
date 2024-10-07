@@ -11,11 +11,8 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeInfoRepository;
-import org.gridsuite.study.server.utils.PropertyUtils;
 
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -28,17 +25,7 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         this.nodeInfoRepository = nodeInfoRepository;
     }
 
-    public abstract T toEntity(AbstractNode node);
-
     public abstract U toDto(T node);
-
-    public UUID getModificationGroupUuid(AbstractNode node) {
-        return null;
-    }
-
-    public void createNodeInfo(AbstractNode nodeInfo) {
-        nodeInfoRepository.save(toEntity(nodeInfo));
-    }
 
     public void deleteByNodeId(UUID id) {
         nodeInfoRepository.deleteById(id);
@@ -56,24 +43,6 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         return node;
     }
 
-    protected T completeEntityNodeInfo(AbstractNode node, T entity) {
-        entity.setIdNode(node.getId());
-        entity.setName(node.getName());
-        entity.setDescription(node.getDescription());
-        entity.setReadOnly(node.getReadOnly());
-        return entity;
-    }
-
-    public void updateNode(AbstractNode node, String... authorizedNullProperties) {
-        U persistedNode = getNode(node.getId());
-        /* using only DTO values not jpa Entity */
-        PropertyUtils.copyNonNullProperties(node, persistedNode, authorizedNullProperties);
-
-        T entity = toEntity(persistedNode);
-        entity.markNotNew();
-        nodeInfoRepository.save(entity);
-    }
-
     public List<U> getAll(Collection<UUID> ids) {
         return nodeInfoRepository.findAllById(ids).stream().map(this::toDto).toList();
     }
@@ -86,10 +55,6 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
 
     public void deleteAll(Set<UUID> collect) {
         nodeInfoRepository.deleteByIdNodeIn(collect);
-    }
-
-    public UUID getModificationGroupUuid(UUID nodeUuid) {
-        return getModificationGroupUuid(getNode(nodeUuid));
     }
 
     public Boolean isReadOnly(UUID nodeUuid) {

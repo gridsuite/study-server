@@ -231,6 +231,9 @@ public class StudyTest {
     private StudyInfosService studyInfosService;
 
     @Autowired
+    private StudyService studyService;
+
+    @Autowired
     private ObjectMapper mapper;
 
     private ObjectWriter objectWriter;
@@ -268,6 +271,8 @@ public class StudyTest {
     private boolean indexed = false;
     @Autowired
     private TimePointRepository timePointRepository;
+    @Autowired
+    private TimePointService timePointService;
 
     private static EquipmentInfos toEquipmentInfos(Line line) {
         return EquipmentInfos.builder()
@@ -1608,7 +1613,9 @@ public class StudyTest {
             numberOfRequests++;
         }
         requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + duplicatedStudy.getFirstTimepoint().getNetworkUuid() + "/reindex-all")).count());
+
+        TimePointEntity timePointEntity = timePointRepository.findAllByStudyId(duplicatedStudy.getId()).stream().findFirst().orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + timePointEntity.getNetworkUuid() + "/reindex-all")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getVoltageInitParametersUuid())).count());
@@ -2067,7 +2074,7 @@ public class StudyTest {
                 .andExpect(status().isForbidden());
 
         // Test Built status when duplicating an empty node
-        UUID timePointUuid = studyRepository.findById(study1Uuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getFirstTimepoint().getId();
+        UUID timePointUuid = studyService.getStudyFirstTimePointUuid(study1Uuid);
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId(), timePointUuid).getGlobalBuildStatus());
         duplicateNode(study1Uuid, study1Uuid, emptyNode, node3.getId(), InsertMode.BEFORE, userId);
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId(), timePointUuid).getGlobalBuildStatus());
