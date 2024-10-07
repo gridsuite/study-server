@@ -11,6 +11,8 @@ import lombok.Getter;
 
 import java.util.UUID;
 
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
@@ -42,4 +44,6 @@ public class NodeModificationInfos {
     private UUID dynamicSimulationUuid;
 
     private UUID stateEstimationUuid;
+
+    private NodeType nodeType;
 }

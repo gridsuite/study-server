@@ -60,10 +60,9 @@ public class LoadFlowService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID parametersUuid, String userId, Float limitReduction) {
+    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID parametersUuid, UUID reportUuid, String userId, Float limitReduction) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
-        UUID reportUuid = getReportUuid(nodeUuid);
 
         String receiver;
         try {
@@ -157,9 +156,10 @@ public class LoadFlowService extends AbstractComputationService {
         return getLoadFlowResultOrStatus(nodeUuid, null, null, "/status");
     }
 
-    public void stopLoadFlow(UUID studyUuid, UUID nodeUuid) {
+    public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
+        Objects.requireNonNull(userId);
 
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
         if (resultUuidOpt.isEmpty()) {
@@ -176,7 +176,11 @@ public class LoadFlowService extends AbstractComputationService {
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/stop")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
 
-        restTemplate.put(loadFlowServerBaseUri + path, Void.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     public void invalidateLoadFlowStatus(List<UUID> uuids) {
@@ -191,10 +195,6 @@ public class LoadFlowService extends AbstractComputationService {
 
     private String getVariantId(UUID nodeUuid) {
         return networkModificationTreeService.getVariantId(nodeUuid);
-    }
-
-    private UUID getReportUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getReportUuid(nodeUuid);
     }
 
     public void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {

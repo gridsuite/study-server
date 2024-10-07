@@ -1,0 +1,44 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="labidiayo (generated)" id="1725282510598-10">
+        <createTable tableName="computation_reports">
+            <column name="network_modification_node_info_entity_id_node" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="computation_reportsPK"/>
+            </column>
+            <column name="computation_reports" type="UUID"/>
+            <column name="computation_reports_key" type="VARCHAR(255)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="computation_reportsPK"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1725282510598-11">
+        <createIndex indexName="networkModificationNodeInfoEntity_computationReports_idx1" tableName="computation_reports">
+            <column name="network_modification_node_info_entity_id_node"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1725282510598-12">
+        <addForeignKeyConstraint baseColumnNames="network_modification_node_info_entity_id_node" baseTableName="computation_reports" constraintName="networkModificationNodeInfoEntity_computationReports_fk1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="network_modification_node_info" validate="true"/>
+    </changeSet>
+        <changeSet author="labidiayo (generated)" id="1725282510598-13">
+        <createTable tableName="modification_reports">
+            <column name="network_modification_node_info_entity_id_node" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="modification_reportsPK"/>
+            </column>
+            <column name="modification_reports" type="UUID"/>
+            <column name="modification_reports_key" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="modification_reportsPK"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1725282510598-14">
+        <createIndex indexName="networkModificationNodeInfoEntity_modificationReports_idx1" tableName="modification_reports">
+            <column name="network_modification_node_info_entity_id_node"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1725282510598-15">
+        <addForeignKeyConstraint baseColumnNames="network_modification_node_info_entity_id_node" baseTableName="modification_reports" constraintName="networkModificationNodeInfoEntity_modificationReports_fk1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="network_modification_node_info" validate="true"/>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1725282510598-16">
+        <dropColumn columnName="REPORT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+</databaseChangeLog>

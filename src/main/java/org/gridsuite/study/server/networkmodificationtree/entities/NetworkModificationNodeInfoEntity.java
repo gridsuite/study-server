@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -71,4 +72,16 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
         @AttributeOverride(name = "globalBuildStatus", column = @Column(name = "globalBuildStatus", nullable = false))
     })
     private NodeBuildStatusEmbeddable nodeBuildStatus;
+
+    @ElementCollection
+    @CollectionTable(name = "computationReports",
+            indexes = {@Index(name = "networkModificationNodeInfoEntity_computationReports_idx1", columnList = "network_modification_node_info_entity_id_node")},
+            foreignKey = @ForeignKey(name = "networkModificationNodeInfoEntity_computationReports_fk1"))
+    private Map<String, UUID> computationReports;
+
+    @ElementCollection
+    @CollectionTable(name = "modificationReports",
+            indexes = {@Index(name = "networkModificationNodeInfoEntity_modificationReports_idx1", columnList = "network_modification_node_info_entity_id_node")},
+            foreignKey = @ForeignKey(name = "networkModificationNodeInfoEntity_modificationReports_fk1"))
+    private Map<UUID, UUID> modificationReports;
 }

@@ -9,12 +9,8 @@ package org.gridsuite.study.server.dto;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.gridsuite.study.server.service.StudyService;
-
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -28,8 +24,6 @@ public class InvalidateNodeInfos {
     private UUID networkUuid;
 
     private List<UUID> reportUuids = new ArrayList<>();
-
-    private Map<UUID, List<StudyService.ReportType>> reportTypesPerReport = new HashMap<>();
 
     private List<String> variantIds = new ArrayList<>();
 
@@ -50,13 +44,6 @@ public class InvalidateNodeInfos {
 
     public void addReportUuid(UUID reportUuid) {
         reportUuids.add(reportUuid);
-    }
-
-    public void addReportTypes(UUID reportUuid, List<StudyService.ReportType> reportTypes) {
-        if (!reportTypes.isEmpty() && !getReportUuids().contains(reportUuid)) {
-            // no need to remove some report parts if we remove the whole report
-            reportTypesPerReport.put(reportUuid, reportTypes);
-        }
     }
 
     public void addVariantId(String variantId) {

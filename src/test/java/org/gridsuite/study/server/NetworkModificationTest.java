@@ -29,6 +29,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
@@ -290,8 +291,10 @@ public class NetworkModificationTest {
 
                 if (path.matches("/v1/reports/.*")) {
                     return new MockResponse().setResponseCode(200)
-                        .setBody(mapper.writeValueAsString(REPORT_TEST))
-                        .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                            .setBody(mapper.writeValueAsString(REPORT_TEST))
+                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                } else if (path.matches("/v1/reports")) {
+                    return new MockResponse().setResponseCode(200);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
                     return new MockResponse().setResponseCode(200).addHeader("Content-Type",
                         "application/json; charset=utf-8");
@@ -730,7 +733,7 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubId, bodyJson, NETWORK_UUID_STRING, VARIANT_ID);
 
         Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
 
         // modificationNode2 is still built
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode1Uuid).getGlobalBuildStatus());
@@ -2411,7 +2414,6 @@ public class NetworkModificationTest {
         NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_3, "node 3", BuildStatus.BUILT, userId);
         UUID modificationNode3Uuid = modificationNode3.getId();
 
-        modificationNode1.setReportUuid(UUID.randomUUID());
         modificationNode1.setSecurityAnalysisResultUuid(UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
         modificationNode1.setSensitivityAnalysisResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
         modificationNode1.setNonEvacuatedEnergyResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID));
@@ -2419,9 +2421,6 @@ public class NetworkModificationTest {
         modificationNode1.setOneBusShortCircuitAnalysisResultUuid(UUID.fromString(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
         modificationNode1.setVoltageInitResultUuid(UUID.fromString(VOLTAGE_INIT_RESULT_UUID));
         modificationNode1.setStateEstimationResultUuid(UUID.fromString(STATE_ESTIMATION_RESULT_UUID));
-
-        modificationNode2.setReportUuid(UUID.randomUUID());
-        modificationNode3.setReportUuid(UUID.randomUUID());
 
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
@@ -2444,8 +2443,8 @@ public class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
         wireMockUtils.verifyNetworkModificationPut(stubUuid, MODIFICATION_UUID, generatorAttributesUpdated);
-        var requests = TestUtils.getRequestsWithBodyDone(17, server);
-        assertEquals(3, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
+        var requests = TestUtils.getRequestsWithBodyDone(15, server);
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/non-evacuated-energy/results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID)));
@@ -2477,7 +2476,7 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPost(stubUuid, jsonCreateLoadInfos, NETWORK_UUID_STRING);
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
     }
 
     @Test
@@ -2489,8 +2488,6 @@ public class NetworkModificationTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1", BuildStatus.BUILT, userId);
         UUID modificationNode1Uuid = modificationNode1.getId();
         // In this node, let's say we have all computations results
-        final UUID reportUuid = UUID.randomUUID();
-        modificationNode1.setReportUuid(reportUuid);
         modificationNode1.setLoadFlowResultUuid(LOADFLOW_RESULT_UUID);
         modificationNode1.setSecurityAnalysisResultUuid(UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
         modificationNode1.setSensitivityAnalysisResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
@@ -2499,6 +2496,16 @@ public class NetworkModificationTest {
         modificationNode1.setOneBusShortCircuitAnalysisResultUuid(UUID.fromString(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
         modificationNode1.setVoltageInitResultUuid(UUID.fromString(VOLTAGE_INIT_RESULT_UUID));
         modificationNode1.setStateEstimationResultUuid(UUID.fromString(STATE_ESTIMATION_RESULT_UUID));
+        modificationNode1.setComputationsReports(Map.of(
+                ComputationType.LOAD_FLOW.name(), UUID.randomUUID(),
+                ComputationType.SECURITY_ANALYSIS.name(), UUID.randomUUID(),
+                ComputationType.SENSITIVITY_ANALYSIS.name(), UUID.randomUUID(),
+                ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name(), UUID.randomUUID(),
+                ComputationType.SHORT_CIRCUIT.name(), UUID.randomUUID(),
+                ComputationType.SHORT_CIRCUIT_ONE_BUS.name(), UUID.randomUUID(),
+                ComputationType.VOLTAGE_INITIALIZATION.name(), UUID.randomUUID(),
+                ComputationType.STATE_ESTIMATION.name(), UUID.randomUUID()
+        ));
 
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
@@ -2527,16 +2534,14 @@ public class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubId, bodyJson, NETWORK_UUID_STRING, VARIANT_ID);
 
-        var requests = TestUtils.getRequestsDone(24, server); // 3 x 8 computations
+        var requests = TestUtils.getRequestsDone(17, server); // 3 x 8 computations
         List.of(LOADFLOW_RESULT_UUID, SECURITY_ANALYSIS_RESULT_UUID, SENSITIVITY_ANALYSIS_RESULT_UUID, SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID,
                 SHORTCIRCUIT_ANALYSIS_RESULT_UUID, ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID, VOLTAGE_INIT_RESULT_UUID, STATE_ESTIMATION_RESULT_UUID).forEach(uuid -> {
                     assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid)));
                     assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid + "/status")));
                 });
         // requests for computation sub-report deletion
-        List.of("LoadFlow", "SecurityAnalysis", "SensitivityAnalysis", "NonEvacuatedEnergyAnalysis", "AllBusesShortCircuitAnalysis", "OneBusShortCircuitAnalysis", "VoltageInit", "StateEstimation").forEach(reportType -> {
-            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports/" + reportUuid + "?errorOnReportNotFound=false&reportTypeFilter=" + reportType)));
-        });
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports")));
     }
 
     @SneakyThrows

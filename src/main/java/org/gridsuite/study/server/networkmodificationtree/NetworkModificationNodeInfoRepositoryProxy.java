@@ -18,6 +18,7 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -59,7 +60,9 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getNonEvacuatedEnergyResultUuid(),
             modificationNode.getDynamicSimulationResultUuid(),
             modificationNode.getStateEstimationResultUuid(),
-            modificationNode.getNodeBuildStatus().toEntity());
+            modificationNode.getNodeBuildStatus().toEntity(),
+            modificationNode.getComputationsReports(),
+            modificationNode.getModificationReports());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
@@ -79,7 +82,9 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getNonEvacuatedEnergyResultUuid(),
             node.getDynamicSimulationResultUuid(),
             node.getStateEstimationResultUuid(),
-            node.getNodeBuildStatus().toDto()));
+            node.getNodeBuildStatus().toDto(),
+            node.getComputationReports(),
+            node.getModificationReports()));
     }
 
     @Override
@@ -113,6 +118,40 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationsUuids.forEach(networkModificationNode.getModificationsToExclude()::remove);
             updateNode(networkModificationNode);
         }
+    }
+
+    @Override
+    public void updateComputationReportUuid(AbstractNode node, UUID reportUuid, ComputationType computationType) {
+        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+        modificationNode.getComputationsReports().put(computationType.name(), reportUuid);
+        updateNode(modificationNode);
+    }
+
+    @Override
+    public Map<String, UUID> getComputationReports(AbstractNode node) {
+        return ((NetworkModificationNode) node).getComputationsReports();
+    }
+
+    @Override
+    public Map<UUID, UUID> getModificationReports(AbstractNode node) {
+        return ((NetworkModificationNode) node).getModificationReports();
+    }
+
+    @Override
+    public UUID getReportUuid(AbstractNode node) {
+        return ((NetworkModificationNode) node).getModificationReports().get(node.getId());
+    }
+
+    @Override
+    public void setModificationReports(AbstractNode node, Map<UUID, UUID> modificationReports) {
+        ((NetworkModificationNode) node).setModificationReports(modificationReports);
+        updateNode(node);
+    }
+
+    @Override
+    public void setComputationsReports(AbstractNode node, Map<String, UUID> computationReports) {
+        ((NetworkModificationNode) node).setComputationsReports(computationReports);
+        updateNode(node);
     }
 
     @Override
@@ -173,7 +212,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
 
         modificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
         modificationNode.setVariantId(UUID.randomUUID().toString());
-        modificationNode.setReportUuid(UUID.randomUUID());
+        modificationNode.setModificationReports(Map.of(modificationNode.getId(), UUID.randomUUID()));
         updateNode(modificationNode, changedNodes);
     }
 
@@ -184,7 +223,6 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .id(networkModificationNode.getId())
             .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
             .variantId(networkModificationNode.getVariantId())
-            .reportUuid(networkModificationNode.getReportUuid())
             .loadFlowUuid(networkModificationNode.getLoadFlowResultUuid())
             .securityAnalysisUuid(networkModificationNode.getSecurityAnalysisResultUuid())
             .sensitivityAnalysisUuid(networkModificationNode.getSensitivityAnalysisResultUuid())
@@ -194,6 +232,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .voltageInitUuid(networkModificationNode.getVoltageInitResultUuid())
             .dynamicSimulationUuid(networkModificationNode.getDynamicSimulationResultUuid())
             .stateEstimationUuid(networkModificationNode.getStateEstimationResultUuid())
+            .reportUuid(networkModificationNode.getModificationReports().get(networkModificationNode.getId()))
+            .nodeType(networkModificationNode.getType())
             .build();
     }
 }

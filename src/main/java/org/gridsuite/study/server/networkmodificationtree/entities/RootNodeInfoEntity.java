@@ -11,6 +11,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.UUID;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
@@ -23,4 +26,6 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "RootNodeInfo")
 public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
+    @Column
+    private UUID reportUuid;
 }

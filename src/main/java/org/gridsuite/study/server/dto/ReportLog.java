@@ -6,18 +6,14 @@
  */
 package org.gridsuite.study.server.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
+import org.gridsuite.study.server.StudyConstants;
 
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-@Schema(description = "Report infos")
-public record ReportInfos(
-    UUID reportUuid,
-    UUID nodeUuid
-) {
+public record ReportLog(String message, Set<StudyConstants.Severity> severity, UUID parentId) {
 
 }
-
