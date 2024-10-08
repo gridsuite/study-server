@@ -2078,6 +2078,7 @@ public class StudyService {
         return networkModificationService.getModifications(voltageInitModificationsGroupUuid, false, false);
     }
 
+    @Transactional
     public void copyVoltageInitModifications(UUID studyUuid, UUID nodeUuid, String userId) {
         // get modifications group uuid associated to voltage init results
         UUID voltageInitModificationsGroupUuid = voltageInitService.getModificationsGroupUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid));

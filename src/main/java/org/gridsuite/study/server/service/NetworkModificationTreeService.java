@@ -147,6 +147,9 @@ public class NetworkModificationTreeService {
         if (nodeInfo.getVariantId() == null) {
             nodeInfo.setVariantId(UUID.randomUUID().toString());
         }
+        if (nodeInfo.getModificationReports() == null) {
+            nodeInfo.setModificationReports(new HashMap<>(Map.of(newNode.getId(), UUID.randomUUID())));
+        }
 
         // then link it to existing timepoints by creating TimePointNodeInfoEntity
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
@@ -576,7 +579,7 @@ public class NetworkModificationTreeService {
         TimePointNodeInfoEntity timePointNodeInfoEntity = TimePointNodeInfoEntity.builder()
             .variantId(FIRST_VARIANT_ID)
             .nodeBuildStatus(new NodeBuildStatusEmbeddable(BuildStatus.BUILT, BuildStatus.BUILT))
-            .modificationReports(Map.of(firstNode.getId(), UUID.randomUUID()))
+            .modificationReports(new HashMap<>(Map.of(firstNode.getId(), UUID.randomUUID())))
             .modificationsToExclude(Set.of())
             .build();
         firstNodeInfosEntity.addTimePointNodeInfo(timePointNodeInfoEntity);
@@ -1106,9 +1109,8 @@ public class NetworkModificationTreeService {
                                       List<UUID> changedNodes, boolean deleteVoltageInitResults) {
         UUID childUuid = child.getIdNode();
         // No need to invalidate a node with a status different of "BUILT"
-        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(childUuid, timePointEntity.getId()).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
-
         if (self.getNodeBuildStatus(childUuid, timePointEntity.getId()).isBuilt()) {
+            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(childUuid, timePointEntity.getId()).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
             fillInvalidateNodeInfos(child, timePointEntity.getId(), invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, deleteVoltageInitResults);
             if (!invalidateOnlyChildrenBuildStatus) {
                 invalidateNodeBuildStatus(childUuid, timePointNodeInfoEntity, changedNodes);
@@ -1144,7 +1146,7 @@ public class NetworkModificationTreeService {
 
         timePointNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
         timePointNodeInfoEntity.setVariantId(UUID.randomUUID().toString());
-        timePointNodeInfoEntity.setModificationReports(Map.of(nodeUuid, UUID.randomUUID()));
+        timePointNodeInfoEntity.setModificationReports(new HashMap<>(Map.of(nodeUuid, UUID.randomUUID())));
         changedNodes.add(nodeUuid);
     }
 

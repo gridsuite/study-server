@@ -163,7 +163,7 @@ public class SupervisionService {
         List<UUID> reportsToDelete = new ArrayList<>();
         timePointNodeInfoEntities.forEach(timePointNodeInfo -> {
             timePointNodeInfo.setLoadFlowResultUuid(null);
-            timePointNodeInfo.getComputationReports().get(ComputationType.LOAD_FLOW.name());
+            reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.LOAD_FLOW.name()));
             timePointNodeInfo.getComputationReports().remove(ComputationType.LOAD_FLOW.name());
         });
         reportService.deleteReports(reportsToDelete);
@@ -189,8 +189,8 @@ public class SupervisionService {
         List<TimePointNodeInfoEntity> timePointNodeInfoEntities = timePointNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull();
         List<UUID> reportsToDelete = new ArrayList<>();
         timePointNodeInfoEntities.forEach(timePointNodeInfo -> {
-            timePointNodeInfo.setLoadFlowResultUuid(null);
-            timePointNodeInfo.getComputationReports().get(ComputationType.SECURITY_ANALYSIS.name());
+            timePointNodeInfo.setSecurityAnalysisResultUuid(null);
+            reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.SECURITY_ANALYSIS.name()));
             timePointNodeInfo.getComputationReports().remove(ComputationType.SECURITY_ANALYSIS.name());
         });
         reportService.deleteReports(reportsToDelete);
@@ -205,8 +205,8 @@ public class SupervisionService {
         List<TimePointNodeInfoEntity> timePointNodeInfoEntities = timePointNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull();
         List<UUID> reportsToDelete = new ArrayList<>();
         timePointNodeInfoEntities.forEach(timePointNodeInfo -> {
-            timePointNodeInfo.setLoadFlowResultUuid(null);
-            timePointNodeInfo.getComputationReports().get(ComputationType.SENSITIVITY_ANALYSIS.name());
+            timePointNodeInfo.setSensitivityAnalysisResultUuid(null);
+            reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.SENSITIVITY_ANALYSIS.name()));
             timePointNodeInfo.getComputationReports().remove(ComputationType.SENSITIVITY_ANALYSIS.name());
         });
         reportService.deleteReports(reportsToDelete);
@@ -223,8 +223,8 @@ public class SupervisionService {
         List<TimePointNodeInfoEntity> timePointNodeInfoEntities = timePointNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull();
         List<UUID> reportsToDelete = new ArrayList<>();
         timePointNodeInfoEntities.forEach(timePointNodeInfo -> {
-            timePointNodeInfo.setLoadFlowResultUuid(null);
-            timePointNodeInfo.getComputationReports().get(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name());
+            timePointNodeInfo.setNonEvacuatedEnergyResultUuid(null);
+            reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name()));
             timePointNodeInfo.getComputationReports().remove(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name());
         });
         reportService.deleteReports(reportsToDelete);
@@ -242,8 +242,8 @@ public class SupervisionService {
         if (!allBusesTimePointNodeInfoEntities.isEmpty()) {
             List<UUID> reportsToDelete = new ArrayList<>();
             allBusesTimePointNodeInfoEntities.forEach(timePointNodeInfo -> {
-                timePointNodeInfo.setLoadFlowResultUuid(null);
-                timePointNodeInfo.getComputationReports().get(ComputationType.SHORT_CIRCUIT.name());
+                timePointNodeInfo.setShortCircuitAnalysisResultUuid(null);
+                reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.SHORT_CIRCUIT.name()));
                 timePointNodeInfo.getComputationReports().remove(ComputationType.SHORT_CIRCUIT.name());
             });
             reportService.deleteReports(reportsToDelete);
@@ -253,8 +253,8 @@ public class SupervisionService {
         if (!oneBusTimePointNodeInfoEntities.isEmpty()) {
             List<UUID> reportsToDelete = new ArrayList<>();
             oneBusTimePointNodeInfoEntities.forEach(timePointNodeInfo -> {
-                timePointNodeInfo.setLoadFlowResultUuid(null);
-                timePointNodeInfo.getComputationReports().get(ComputationType.SHORT_CIRCUIT_ONE_BUS.name());
+                timePointNodeInfo.setOneBusShortCircuitAnalysisResultUuid(null);
+                reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.SHORT_CIRCUIT_ONE_BUS.name()));
                 timePointNodeInfo.getComputationReports().remove(ComputationType.SHORT_CIRCUIT_ONE_BUS.name());
             });
             reportService.deleteReports(reportsToDelete);
@@ -277,8 +277,8 @@ public class SupervisionService {
         if (!timePointNodeInfoEntities.isEmpty()) {
             List<UUID> reportsToDelete = new ArrayList<>();
             timePointNodeInfoEntities.forEach(timePointNodeInfo -> {
-                timePointNodeInfo.setLoadFlowResultUuid(null);
-                timePointNodeInfo.getComputationReports().get(ComputationType.VOLTAGE_INITIALIZATION.name());
+                timePointNodeInfo.setVoltageInitResultUuid(null);
+                reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.VOLTAGE_INITIALIZATION.name()));
                 timePointNodeInfo.getComputationReports().remove(ComputationType.VOLTAGE_INITIALIZATION.name());
             });
             reportService.deleteReports(reportsToDelete);
@@ -294,8 +294,8 @@ public class SupervisionService {
         List<TimePointNodeInfoEntity> timePointNodeInfoEntities = timePointNodeInfoRepository.findAllByStateEstimationResultUuidNotNull();
         List<UUID> reportsToDelete = new ArrayList<>();
         timePointNodeInfoEntities.forEach(timePointNodeInfo -> {
-            timePointNodeInfo.setLoadFlowResultUuid(null);
-            timePointNodeInfo.getComputationReports().get(ComputationType.STATE_ESTIMATION.name());
+            timePointNodeInfo.setStateEstimationResultUuid(null);
+            reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.STATE_ESTIMATION.name()));
             timePointNodeInfo.getComputationReports().remove(ComputationType.STATE_ESTIMATION.name());
         });
         reportService.deleteReports(reportsToDelete);

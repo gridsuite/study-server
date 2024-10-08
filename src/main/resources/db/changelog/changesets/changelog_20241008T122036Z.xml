@@ -1,0 +1,78 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-15">
+        <dropForeignKeyConstraint baseTableName="COMPUTATION_REPORTS" constraintName="NETWORKMODIFICATIONNODEINFOENTITY_COMPUTATIONREPORTS_FK1"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-16">
+        <dropForeignKeyConstraint baseTableName="MODIFICATION_REPORTS" constraintName="NETWORKMODIFICATIONNODEINFOENTITY_MODIFICATIONREPORTS_FK1"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-1">
+        <dropPrimaryKey tableName="computation_reports"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-3">
+        <dropPrimaryKey tableName="modification_reports"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-18">
+        <dropColumn columnName="network_modification_node_info_entity_id_node" tableName="computation_reports"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-19">
+        <dropColumn columnName="network_modification_node_info_entity_id_node" tableName="modification_reports"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-7">
+        <addColumn tableName="computation_reports">
+            <column name="time_point_node_info_entity_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-8">
+        <addColumn tableName="modification_reports">
+            <column name="time_point_node_info_entity_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-9">
+        <createIndex indexName="IX_computation_reportsPK" tableName="computation_reports" unique="true">
+            <column name="time_point_node_info_entity_id"/>
+            <column name="computation_reports_key"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-10">
+        <createIndex indexName="IX_modification_reportsPK" tableName="modification_reports" unique="true">
+            <column name="time_point_node_info_entity_id"/>
+            <column name="modification_reports_key"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-11">
+        <createIndex indexName="time_point_node_info_entity_computationReports_idx1" tableName="computation_reports">
+            <column name="time_point_node_info_entity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-12">
+        <createIndex indexName="time_point_node_info_entity_modificationReports_idx1" tableName="modification_reports">
+            <column name="time_point_node_info_entity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-13">
+        <addForeignKeyConstraint baseColumnNames="time_point_node_info_entity_id" baseTableName="computation_reports" constraintName="timePointNodeInfoEntity_computationReports_fk1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="time_point_node_info" validate="true"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-14">
+        <addForeignKeyConstraint baseColumnNames="time_point_node_info_entity_id" baseTableName="modification_reports" constraintName="timePointNodeInfoEntity_modificationReports_fk1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="time_point_node_info" validate="true"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-17">
+        <dropColumn columnName="REPORT_UUID" tableName="TIME_POINT_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-2">
+        <addPrimaryKey columnNames="time_point_node_info_entity_id, computation_reports_key" constraintName="computation_reportsPK" tableName="computation_reports"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-4">
+        <addPrimaryKey columnNames="time_point_node_info_entity_id, modification_reports_key" constraintName="modification_reportsPK" tableName="modification_reports"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-5">
+        <dropUniqueConstraint constraintName="UC_STUDYDYNAMIC_SIMULATION_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1728390061991-6">
+        <addUniqueConstraint columnNames="dynamic_simulation_parameters_entity_id" constraintName="UC_STUDYDYNAMIC_SIMULATION_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+</databaseChangeLog>

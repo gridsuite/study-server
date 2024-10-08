@@ -641,7 +641,7 @@ public class StudyController {
             @RequestParam(value = "busId", required = false) Optional<String> busId,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runShortCircuit(studyUuid, nodeUuid, studyService.getStudyUuidFromNodeUuid(studyUuid), busId, userId);
+        studyService.runShortCircuit(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), busId, userId);
         return ResponseEntity.ok().build();
     }
 
