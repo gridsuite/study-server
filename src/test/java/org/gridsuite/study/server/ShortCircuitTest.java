@@ -62,6 +62,7 @@ import java.util.*;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
+import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.gridsuite.study.server.utils.TestUtils.getBinaryAsBuffer;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -286,6 +287,7 @@ public class ShortCircuitTest implements WithAssertions {
                         .header(HEADER_USER_ID, "testUserId")
                         .content("{\"dumb\": \"json\"}").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)));
     }
 
