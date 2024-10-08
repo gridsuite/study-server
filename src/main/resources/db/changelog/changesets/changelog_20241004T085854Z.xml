@@ -1,0 +1,47 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="souissimai (generated)" id="1728032348565-10">
+        <createTable tableName="time_point">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="time_pointPK"/>
+            </column>
+            <column name="case_format" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="case_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="case_uuid" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_uuid" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="study_uuid" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728032348565-11">
+        <createTable tableName="time_point_node_info">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="time_point_node_infoPK"/>
+            </column>
+            <column name="node_info_id" type="UUID"/>
+            <column name="time_point_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="souissimai (generated)" id="1728032348565-15">
+        <addForeignKeyConstraint baseColumnNames="node_info_id" baseTableName="time_point_node_info" constraintName="FK40i207mmx5ep57g7xnrv16t0a" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="network_modification_node_info" validate="true"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728032348565-16">
+        <addForeignKeyConstraint baseColumnNames="study_uuid" baseTableName="time_point" constraintName="FKc0x0spv4eajo2ri2nomlxp9uv" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="study" validate="true"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728032348565-17">
+        <addForeignKeyConstraint baseColumnNames="time_point_id" baseTableName="time_point_node_info" constraintName="fk_time_point_node_info" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="time_point" validate="true"/>
+    </changeSet>
+</databaseChangeLog>

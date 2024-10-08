@@ -48,43 +48,14 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getModificationGroupUuid(),
-            modificationNode.getVariantId(),
-            modificationNode.getModificationsToExclude(),
-            modificationNode.getShortCircuitAnalysisResultUuid(),
-            modificationNode.getOneBusShortCircuitAnalysisResultUuid(),
-            modificationNode.getLoadFlowResultUuid(),
-            modificationNode.getVoltageInitResultUuid(),
-            modificationNode.getSecurityAnalysisResultUuid(),
-            modificationNode.getSensitivityAnalysisResultUuid(),
-            modificationNode.getNonEvacuatedEnergyResultUuid(),
-            modificationNode.getDynamicSimulationResultUuid(),
-            modificationNode.getStateEstimationResultUuid(),
-            modificationNode.getNodeBuildStatus().toEntity(),
-            modificationNode.getComputationsReports(),
-            modificationNode.getModificationReports());
+        var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity();
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
     @Override
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
-        @SuppressWarnings("unused")
-        int ignoreSize = node.getModificationsToExclude().size(); // to load the lazy collection
-        return completeNodeInfo(node, new NetworkModificationNode(node.getModificationGroupUuid(),
-            node.getVariantId(),
-            new HashSet<>(node.getModificationsToExclude()), // Need to create a new set because it is a persistent set (org.hibernate.collection.internal.PersistentSet)
-            node.getLoadFlowResultUuid(),
-            node.getShortCircuitAnalysisResultUuid(),
-            node.getOneBusShortCircuitAnalysisResultUuid(),
-            node.getVoltageInitResultUuid(),
-            node.getSecurityAnalysisResultUuid(),
-            node.getSensitivityAnalysisResultUuid(),
-            node.getNonEvacuatedEnergyResultUuid(),
-            node.getDynamicSimulationResultUuid(),
-            node.getStateEstimationResultUuid(),
-            node.getNodeBuildStatus().toDto(),
-            node.getComputationReports(),
-            node.getModificationReports()));
+
+        return null;
     }
 
     @Override

@@ -1,0 +1,78 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="souissimai (generated)" id="1727965089820-10">
+        <createTable tableName="time_point_node_info">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="time_point_node_infoPK"/>
+            </column>
+            <column name="time_point_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-11">
+        <createTable tableName="timepoint">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="timepointPK"/>
+            </column>
+            <column name="case_format" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="case_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="case_uuid" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_uuid" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="study_uuid" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-12">
+        <addUniqueConstraint columnNames="non_evacuated_energy_parameters_id" constraintName="UC_NON_EVACUATED_ENERGY_PARAMETERSNON_EVACUATED_ENERGY_PARAMETE" tableName="non_evacuated_energy_parameters"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-13">
+        <addUniqueConstraint columnNames="dynamic_simulation_parameters_entity_id" constraintName="UC_STUDYDYNAMIC_SIMULATION_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-14">
+        <addUniqueConstraint columnNames="non_evacuated_energy_parameters_entity_id" constraintName="UC_STUDYNON_EVACUATED_ENERGY_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-15">
+        <addForeignKeyConstraint baseColumnNames="study_uuid" baseTableName="timepoint" constraintName="FKgjbrcsrnadr5r0elym5xt7u1q" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="study" validate="true"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-16">
+        <addForeignKeyConstraint baseColumnNames="time_point_id" baseTableName="time_point_node_info" constraintName="fk_timepoint_node_info" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="timepoint" validate="true"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-1">
+        <modifyDataType columnName="import_parameters" newDataType="varchar(255)" tableName="import_parameters"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-2">
+        <dropDefaultValue columnDataType="boolean" columnName="stashed" tableName="node"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-3">
+        <dropDefaultValue columnDataType="boolean" columnName="stashed" tableName="node"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-4">
+        <dropUniqueConstraint constraintName="UC_NON_EVACUATED_ENERGY_PARAMETERSNON_EVACUATED_ENERGY_PARAMETE" tableName="non_evacuated_energy_parameters"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-5">
+        <addUniqueConstraint columnNames="non_evacuated_energy_parameters_id" constraintName="UC_NON_EVACUATED_ENERGY_PARAMETERSNON_EVACUATED_ENERGY_PARAMETE" tableName="non_evacuated_energy_parameters"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-6">
+        <dropUniqueConstraint constraintName="UC_STUDYNON_EVACUATED_ENERGY_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-7">
+        <addUniqueConstraint columnNames="non_evacuated_energy_parameters_entity_id" constraintName="UC_STUDYNON_EVACUATED_ENERGY_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-8">
+        <dropUniqueConstraint constraintName="UC_STUDYDYNAMIC_SIMULATION_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1727965089820-9">
+        <addUniqueConstraint columnNames="dynamic_simulation_parameters_entity_id" constraintName="UC_STUDYDYNAMIC_SIMULATION_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+</databaseChangeLog>

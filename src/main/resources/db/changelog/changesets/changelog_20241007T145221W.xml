@@ -1,0 +1,39 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="souissimai (generated)" id="1728314725870-10">
+        <addUniqueConstraint columnNames="non_evacuated_energy_parameters_id" constraintName="UC_NON_EVACUATED_ENERGY_PARAMETERSNON_EVACUATED_ENERGY_PARAMETE" tableName="non_evacuated_energy_parameters"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728314725870-11">
+        <addUniqueConstraint columnNames="dynamic_simulation_parameters_entity_id" constraintName="UC_STUDYDYNAMIC_SIMULATION_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>F
+    <changeSet author="souissimai (generated)" id="1728314725870-12">
+        <addUniqueConstraint columnNames="non_evacuated_energy_parameters_entity_id" constraintName="UC_STUDYNON_EVACUATED_ENERGY_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728314725870-1">
+        <modifyDataType columnName="import_parameters" newDataType="varchar(255)" tableName="import_parameters"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728314725870-2">
+        <dropDefaultValue columnDataType="boolean" columnName="stashed" tableName="node"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728314725870-3">
+        <dropDefaultValue columnDataType="boolean" columnName="stashed" tableName="node"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728314725870-4">
+        <dropUniqueConstraint constraintName="UC_NON_EVACUATED_ENERGY_PARAMETERSNON_EVACUATED_ENERGY_PARAMETE" tableName="non_evacuated_energy_parameters"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728314725870-5">
+        <addUniqueConstraint columnNames="non_evacuated_energy_parameters_id" constraintName="UC_NON_EVACUATED_ENERGY_PARAMETERSNON_EVACUATED_ENERGY_PARAMETE" tableName="non_evacuated_energy_parameters"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728314725870-6">
+        <dropUniqueConstraint constraintName="UC_STUDYDYNAMIC_SIMULATION_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728314725870-7">
+        <addUniqueConstraint columnNames="dynamic_simulation_parameters_entity_id" constraintName="UC_STUDYDYNAMIC_SIMULATION_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728314725870-8">
+        <dropUniqueConstraint constraintName="UC_STUDYNON_EVACUATED_ENERGY_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728314725870-9">
+        <addUniqueConstraint columnNames="non_evacuated_energy_parameters_entity_id" constraintName="UC_STUDYNON_EVACUATED_ENERGY_PARAMETERS_ENTITY_ID_COL" tableName="study"/>
+    </changeSet>
+</databaseChangeLog>

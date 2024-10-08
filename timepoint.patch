@@ -1,0 +1,648 @@
+diff --git a/src/main/java/org/gridsuite/study/server/networkmodificationtree/NetworkModificationNodeInfoRepositoryProxy.java b/src/main/java/org/gridsuite/study/server/networkmodificationtree/NetworkModificationNodeInfoRepositoryProxy.java
+index 23aa5e9..f825ebd 100644
+--- a/src/main/java/org/gridsuite/study/server/networkmodificationtree/NetworkModificationNodeInfoRepositoryProxy.java
++++ b/src/main/java/org/gridsuite/study/server/networkmodificationtree/NetworkModificationNodeInfoRepositoryProxy.java
+@@ -48,43 +48,14 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
+     @Override
+     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
+         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+-        var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getModificationGroupUuid(),
+-            modificationNode.getVariantId(),
+-            modificationNode.getModificationsToExclude(),
+-            modificationNode.getShortCircuitAnalysisResultUuid(),
+-            modificationNode.getOneBusShortCircuitAnalysisResultUuid(),
+-            modificationNode.getLoadFlowResultUuid(),
+-            modificationNode.getVoltageInitResultUuid(),
+-            modificationNode.getSecurityAnalysisResultUuid(),
+-            modificationNode.getSensitivityAnalysisResultUuid(),
+-            modificationNode.getNonEvacuatedEnergyResultUuid(),
+-            modificationNode.getDynamicSimulationResultUuid(),
+-            modificationNode.getStateEstimationResultUuid(),
+-            modificationNode.getNodeBuildStatus().toEntity(),
+-            modificationNode.getComputationsReports(),
+-            modificationNode.getModificationReports());
++        var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity();
+         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
+     }
+ 
+     @Override
+     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
+-        @SuppressWarnings("unused")
+-        int ignoreSize = node.getModificationsToExclude().size(); // to load the lazy collection
+-        return completeNodeInfo(node, new NetworkModificationNode(node.getModificationGroupUuid(),
+-            node.getVariantId(),
+-            new HashSet<>(node.getModificationsToExclude()), // Need to create a new set because it is a persistent set (org.hibernate.collection.internal.PersistentSet)
+-            node.getLoadFlowResultUuid(),
+-            node.getShortCircuitAnalysisResultUuid(),
+-            node.getOneBusShortCircuitAnalysisResultUuid(),
+-            node.getVoltageInitResultUuid(),
+-            node.getSecurityAnalysisResultUuid(),
+-            node.getSensitivityAnalysisResultUuid(),
+-            node.getNonEvacuatedEnergyResultUuid(),
+-            node.getDynamicSimulationResultUuid(),
+-            node.getStateEstimationResultUuid(),
+-            node.getNodeBuildStatus().toDto(),
+-            node.getComputationReports(),
+-            node.getModificationReports()));
++
++        return null;
+     }
+ 
+     @Override
+diff --git a/src/main/java/org/gridsuite/study/server/networkmodificationtree/entities/NetworkModificationNodeInfoEntity.java b/src/main/java/org/gridsuite/study/server/networkmodificationtree/entities/NetworkModificationNodeInfoEntity.java
+index ed2b2ae..0ee56b4 100644
+--- a/src/main/java/org/gridsuite/study/server/networkmodificationtree/entities/NetworkModificationNodeInfoEntity.java
++++ b/src/main/java/org/gridsuite/study/server/networkmodificationtree/entities/NetworkModificationNodeInfoEntity.java
+@@ -13,6 +13,7 @@ import lombok.Getter;
+ import lombok.NoArgsConstructor;
+ import lombok.Setter;
+ 
++import java.util.List;
+ import java.util.Map;
+ import java.util.Set;
+ import java.util.UUID;
+@@ -25,20 +26,21 @@ import java.util.UUID;
+ @Getter
+ @Setter
+ @Entity
+-@Table(name = "NetworkModificationNodeInfo  ")
++@Table(name = "NetworkModificationNodeInfo")
+ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
+ 
+     @Column
+     private UUID modificationGroupUuid;
+ 
++    // One NetworkModificationNodeInfo can have multiple TimePointNodeInfo entries
++    @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo", cascade = CascadeType.ALL)
++    protected List<TimePointNodeInfoEntity> timePointNodeInfos;
++
++    // all those columns will be moved to TimePointNodeInfoEntity MAISSA
++    // moved columns
+     @Column
+     private String variantId;
+ 
+-    @Column(name = "modificationsToExclude")
+-    @ElementCollection
+-    @CollectionTable(foreignKey = @ForeignKey(name = "networkModificationNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "networkModificationNodeInfoEntity_modificationsToExclude_idx", columnList = "network_modification_node_info_entity_id_node")})
+-    private Set<UUID> modificationsToExclude;
+-
+     @Column(name = "shortCircuitAnalysisResultUuid")
+     private UUID shortCircuitAnalysisResultUuid;
+ 
+@@ -73,6 +75,11 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
+     })
+     private NodeBuildStatusEmbeddable nodeBuildStatus;
+ 
++    @Column(name = "modificationsToExclude")
++    @ElementCollection
++    @CollectionTable(foreignKey = @ForeignKey(name = "networkModificationNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "networkModificationNodeInfoEntity_modificationsToExclude_idx", columnList = "network_modification_node_info_entity_id_node")})
++    private Set<UUID> modificationsToExclude;
++
+     @ElementCollection
+     @CollectionTable(name = "computationReports",
+             indexes = {@Index(name = "networkModificationNodeInfoEntity_computationReports_idx1", columnList = "network_modification_node_info_entity_id_node")},
+diff --git a/src/main/java/org/gridsuite/study/server/networkmodificationtree/entities/TimePointNodeInfoEntity.java b/src/main/java/org/gridsuite/study/server/networkmodificationtree/entities/TimePointNodeInfoEntity.java
+index 2165837..817f9e1 100644
+--- a/src/main/java/org/gridsuite/study/server/networkmodificationtree/entities/TimePointNodeInfoEntity.java
++++ b/src/main/java/org/gridsuite/study/server/networkmodificationtree/entities/TimePointNodeInfoEntity.java
+@@ -8,12 +8,11 @@
+ package org.gridsuite.study.server.networkmodificationtree.entities;
+ 
+ import jakarta.persistence.*;
+-import lombok.Getter;
+-import lombok.NoArgsConstructor;
+-import lombok.Setter;
++import lombok.*;
+ import lombok.experimental.SuperBuilder;
+ import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
+ 
++import java.util.Map;
+ import java.util.Set;
+ import java.util.UUID;
+ 
+@@ -27,31 +26,25 @@ import java.util.UUID;
+ @SuperBuilder
+ @Table(name = "TimePointNodeInfo")
+ public class TimePointNodeInfoEntity {
+-    public TimePointNodeInfoEntity(TimePointEntity timePoint, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity) {
+-        this.timePoint = timePoint;
+-        this.nodeInfo = networkModificationNodeInfoEntity;
+-    }
+ 
+     @Id
+     @GeneratedValue(strategy = GenerationType.AUTO)
+     @Column(name = "id")
+     private UUID id;
+ 
++    // One TimePoint can have multiple NodeInfo entries
+     @ManyToOne
+-    @JoinColumn(name = "timePointId",
+-        referencedColumnName = "id",
+-        foreignKey = @ForeignKey)
++    @JoinColumn(name = "timePointId", nullable = false, foreignKey = @ForeignKey(name = "fk_time_point_node_info"))
+     private TimePointEntity timePoint;
+ 
+-    @Column
+-    UUID reportUuid;
+-
++    // Many TimePointNodeInfo entries can belong to one NetworkModificationNodeInfo
+     @ManyToOne
+     @JoinColumn(name = "nodeInfoId",
+         referencedColumnName = "idNode",
+         foreignKey = @ForeignKey)
+     private NetworkModificationNodeInfoEntity nodeInfo;
+ 
++    //columns moved from to TimePointNodeInfoEntity
+     @Column
+     private String variantId;
+ 
+@@ -93,4 +86,16 @@ public class TimePointNodeInfoEntity {
+         @AttributeOverride(name = "globalBuildStatus", column = @Column(name = "globalBuildStatus", nullable = false))
+     })
+     private NodeBuildStatusEmbeddable nodeBuildStatus;
++
++    @ElementCollection
++    @CollectionTable(name = "computationReports",
++            indexes = {@Index(name = "timePointNodeInfoEntity_computationReports_idx1", columnList = "time_point_node_info_entity_id")},
++            foreignKey = @ForeignKey(name = "timePointNodeInfoEntity_computationReports_fk1"))
++    private Map<String, UUID> computationReports;
++
++    @ElementCollection
++    @CollectionTable(name = "modificationReports",
++            indexes = {@Index(name = "timePointNodeInfoEntity_modificationReports_idx1", columnList = "time_point_node_info_entity_id")},
++            foreignKey = @ForeignKey(name = "timePointNodeInfoEntity_modificationReports_fk1"))
++    private Map<UUID, UUID> modificationReports;
+ }
+diff --git a/src/main/java/org/gridsuite/study/server/repository/StudyEntity.java b/src/main/java/org/gridsuite/study/server/repository/StudyEntity.java
+index 7887720..d8f23f2 100644
+--- a/src/main/java/org/gridsuite/study/server/repository/StudyEntity.java
++++ b/src/main/java/org/gridsuite/study/server/repository/StudyEntity.java
+@@ -10,8 +10,10 @@ import jakarta.persistence.*;
+ import lombok.*;
+ import org.gridsuite.study.server.dto.StudyIndexationStatus;
+ import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
++import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
+ import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
+ 
++import java.util.List;
+ import java.util.Map;
+ import java.util.UUID;
+ 
+@@ -32,21 +34,26 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID>
+     @Column(name = "id")
+     private UUID id;
+ 
+-    @Column(name = "networkUuid", nullable = false)
++// TO DROP those columns  ==> moved from StudyEntity  to TimePointEntity  MAISSA
++    @Column(name = "networkUuid", nullable = false) //this  MAISSA
+     private UUID networkUuid;
+ 
+-    @Column(name = "networkId", nullable = false)
++    @Column(name = "networkId", nullable = false) //this  MAISSA
+     private String networkId;
+ 
+-    @Column(name = "caseFormat", nullable = false)
++    @Column(name = "caseFormat", nullable = false) //this  MAISSA
+     private String caseFormat;
+ 
+-    @Column(name = "caseUuid", nullable = false)
++    @Column(name = "caseUuid", nullable = false) //this  MAISSA
+     private UUID caseUuid;
+ 
+-    @Column(name = "caseName", nullable = false)
++    @Column(name = "caseName", nullable = false) //this  MAISSA
+     private String caseName;
+ 
++    //add relation study _ timepoint
++    @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true) //, fetch = FetchType.LAZY) // fetch not necessary?
++    private List<TimePointEntity> timePoints;
++
+     /**
+      * @deprecated to remove when the data is migrated into the loadflow-server
+      */
+@@ -117,9 +124,10 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID>
+             foreignKey = @ForeignKey(name = "studyEntity_importParameters_fk1"))
+     private Map<String, String> importParameters;
+ 
++// TO DROP those columns  ==> moved from StudyEntity  to TimePointEntity  MAISSA NOOOT MOVED
+     @Enumerated(EnumType.STRING)
+     @Builder.Default
+-    private StudyIndexationStatus indexationStatus = StudyIndexationStatus.NOT_INDEXED;
++    private StudyIndexationStatus indexationStatus = StudyIndexationStatus.NOT_INDEXED; //this  MAISSA
+ 
+     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+     @JoinColumn(name = "study_voltage_init_parameters_id",
+diff --git a/src/main/java/org/gridsuite/study/server/repository/timepoint/TimePointEntity.java b/src/main/java/org/gridsuite/study/server/repository/timepoint/TimePointEntity.java
+index 2855002..727d338 100644
+--- a/src/main/java/org/gridsuite/study/server/repository/timepoint/TimePointEntity.java
++++ b/src/main/java/org/gridsuite/study/server/repository/timepoint/TimePointEntity.java
+@@ -4,13 +4,14 @@
+  * License, v. 2.0. If a copy of the MPL was not distributed with this
+  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+  */
+-package org.gridsuite.study.server.timepoint;
++package org.gridsuite.study.server.repository.timepoint;
+ 
+ import jakarta.persistence.*;
+ import lombok.*;
+-import org.gridsuite.study.server.dto.StudyIndexationStatus;
++import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
+ import org.gridsuite.study.server.repository.StudyEntity;
+ 
++import java.util.List;
+ import java.util.UUID;
+ 
+ /**
+@@ -22,15 +23,26 @@ import java.util.UUID;
+ @Setter
+ @Entity
+ @Builder
+-@Table(name = "timepoint")
++@Table(name = "timePoint")
+ public class TimePointEntity {
+     @Id
+     @GeneratedValue(strategy = GenerationType.AUTO)
+     @Column(name = "id")
+     private UUID id;
+ 
+-    //added columns  ==> moved from StudyEntity  to TimePointEntity  MAISSA
+-    @Column(name = "networkUuid", nullable = false) //this  MAISSA
++    // many to one : one study can be related to many timepoints MAISSA
++    //@ManyToOne(fetch = FetchType.LAZY) to add ? MAISSA
++    //    @JoinColumn(name = "studyUuid", foreignKey = @ForeignKey(name = "time_point_entity_fk"))
++    @ManyToOne
++    @JoinColumn(name = "studyUuid")
++    private StudyEntity study;
++
++    // One TimePoint can have multiple TimePointNodeInfo entries
++    @OneToMany(mappedBy = "timePoint", cascade = CascadeType.ALL, orphanRemoval = true)
++    private List<TimePointNodeInfoEntity> timePointNodeInfos;
++
++    //added column  ==> moved from StudyEntity  to TimePointEntity  MAISSA
++    @Column(name = "networkUuid", nullable = false)
+     private UUID networkUuid;
+ 
+     @Column(name = "networkId", nullable = false) //this  MAISSA
+@@ -44,15 +56,11 @@ public class TimePointEntity {
+ 
+     @Column(name = "caseName", nullable = false) //this  MAISSA
+     private String caseName;
+-    //added column  ==> moved from StudyEntity  to TimePointEntity  MAISSA
+-
+-    @Enumerated(EnumType.STRING)
+-    @Builder.Default
+-    private StudyIndexationStatus indexationStatus = StudyIndexationStatus.NOT_INDEXED; //this  MAISSA
+-
+-// many to one : one study can be related to many timepoints
+-    @ManyToOne(fetch = FetchType.LAZY)
+-    @JoinColumn(name = "study_id", foreignKey = @ForeignKey(name = "time_point_entity_fk"))
+-    private StudyEntity study;
+ 
++    // reportUuid of network import, root node one
++    @Column(name = "reportUuid")
++    private UUID reportUuid;
++    //@Enumerated(EnumType.STRING)
++    //@Builder.Default
++    //private StudyIndexationStatus indexationStatus = StudyIndexationStatus.NOT_INDEXED; //this  MAISSA SHOULD NOT MOVE IT
+ }
+diff --git a/src/main/java/org/gridsuite/study/server/service/NetworkModificationTreeService.java b/src/main/java/org/gridsuite/study/server/service/NetworkModificationTreeService.java
+index e4e50c8..78053d4 100644
+--- a/src/main/java/org/gridsuite/study/server/service/NetworkModificationTreeService.java
++++ b/src/main/java/org/gridsuite/study/server/service/NetworkModificationTreeService.java
+@@ -149,28 +149,11 @@ public class NetworkModificationTreeService {
+ 
+         //And the modification node info
+         NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationNodeInfoRepository.findById(nodeToCopyUuid).orElseThrow(() -> new StudyException(GET_MODIFICATIONS_FAILED));
+-        NetworkModificationNodeInfoEntity newNetworkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(
+-                newGroupUuid,
+-                UUID.randomUUID().toString(),
+-                new HashSet<>(),
+-                null,
+-                null,
+-                null,
+-                null,
+-                null,
+-                null,
+-                null,
+-                null,
+-                null,
+-                NodeBuildStatus.from(BuildStatus.NOT_BUILT).toEntity(),
+-                new HashMap<>(),
+-                new HashMap<>()
+-        );
++        NetworkModificationNodeInfoEntity newNetworkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity();
+         UUID studyUuid = anchorNodeEntity.getStudy().getId();
+         newNetworkModificationNodeInfoEntity.setName(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()));
+         newNetworkModificationNodeInfoEntity.setDescription(networkModificationNodeInfoEntity.getDescription());
+         newNetworkModificationNodeInfoEntity.setIdNode(node.getIdNode());
+-        newNetworkModificationNodeInfoEntity.setModificationReports(new HashMap<>(Map.of(node.getIdNode(), newReportUuid)));
+         networkModificationNodeInfoRepository.save(newNetworkModificationNodeInfoEntity);
+ 
+         return node.getIdNode();
+diff --git a/src/main/java/org/gridsuite/study/server/service/StudyService.java b/src/main/java/org/gridsuite/study/server/service/StudyService.java
+index 67f9b7f..70522a8 100644
+--- a/src/main/java/org/gridsuite/study/server/service/StudyService.java
++++ b/src/main/java/org/gridsuite/study/server/service/StudyService.java
+@@ -507,10 +507,7 @@ public class StudyService {
+         Objects.requireNonNull(caseUuid);
+         Objects.requireNonNull(importParameters);
+ 
+-        StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(new StudyEntity(studyUuid, networkUuid, networkId, caseFormat, caseUuid, caseName,
+-                        null, null, null, defaultNonEvacuatedEnergyProvider, defaultDynamicSimulationProvider,
+-                        loadFlowParametersUuid, shortCircuitParametersUuid, dynamicSimulationParametersEntity, voltageInitParametersUuid, securityAnalysisParametersUuid,
+-                        sensitivityAnalysisParametersUuid, null, importParameters, StudyIndexationStatus.INDEXED, new StudyVoltageInitParametersEntity()),
++        StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(new StudyEntity(),
+                 importReportUuid);
+ 
+         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(studyEntity);
+diff --git a/src/main/java/org/gridsuite/study/server/service/SupervisionService.java b/src/main/java/org/gridsuite/study/server/service/SupervisionService.java
+index 47f907f..9c822f3 100644
+--- a/src/main/java/org/gridsuite/study/server/service/SupervisionService.java
++++ b/src/main/java/org/gridsuite/study/server/service/SupervisionService.java
+@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service;
+ import org.gridsuite.study.server.StudyException;
+ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+-import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
+ import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+@@ -26,7 +25,6 @@ import java.util.List;
+ import java.util.UUID;
+ import java.util.concurrent.TimeUnit;
+ import java.util.concurrent.atomic.AtomicReference;
+-import java.util.stream.Stream;
+ 
+ import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
+ 
+@@ -156,8 +154,7 @@ public class SupervisionService {
+         List<UUID> reportsToDelete = new ArrayList<>();
+         nodes.forEach(node -> {
+             node.setLoadFlowResultUuid(null);
+-            reportsToDelete.add(node.getComputationReports().get(ComputationType.LOAD_FLOW.name()));
+-            node.getComputationReports().remove(ComputationType.LOAD_FLOW.name());
++
+         });
+         reportService.deleteReports(reportsToDelete);
+         loadFlowService.deleteLoadFlowResults();
+@@ -183,8 +180,7 @@ public class SupervisionService {
+         List<UUID> reportsToDelete = new ArrayList<>();
+         nodes.forEach(node -> {
+             node.setSecurityAnalysisResultUuid(null);
+-            reportsToDelete.add(node.getComputationReports().get(ComputationType.SECURITY_ANALYSIS.name()));
+-            node.getComputationReports().remove(ComputationType.SECURITY_ANALYSIS.name());
++
+         });
+         reportService.deleteReports(reportsToDelete);
+         securityAnalysisService.deleteSecurityAnalysisResults();
+@@ -199,8 +195,7 @@ public class SupervisionService {
+         List<UUID> reportsToDelete = new ArrayList<>();
+         nodes.forEach(node -> {
+             node.setSensitivityAnalysisResultUuid(null);
+-            reportsToDelete.add(node.getComputationReports().get(ComputationType.SENSITIVITY_ANALYSIS.name()));
+-            node.getComputationReports().remove(ComputationType.SENSITIVITY_ANALYSIS.name());
++
+         });
+         reportService.deleteReports(reportsToDelete);
+         sensitivityAnalysisService.deleteSensitivityAnalysisResults();
+@@ -218,8 +213,7 @@ public class SupervisionService {
+         List<UUID> reportsToDelete = new ArrayList<>();
+         nodes.forEach(node -> {
+             node.setNonEvacuatedEnergyResultUuid(null);
+-            reportsToDelete.add(node.getComputationReports().get(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name()));
+-            node.getComputationReports().remove(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name());
++
+         });
+         reportService.deleteReports(reportsToDelete);
+         nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResults();
+@@ -233,33 +227,12 @@ public class SupervisionService {
+         startTime.set(System.nanoTime());
+         // Reset result uuid and remove logs, for all-buses computations, then for 1-bus ones
+         List<NetworkModificationNodeInfoEntity> allBusesNodes = networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
+-        if (!allBusesNodes.isEmpty()) {
+-            List<UUID> reportsToDelete = new ArrayList<>();
+-            allBusesNodes.forEach(node -> {
+-                node.setShortCircuitAnalysisResultUuid(null);
+-                reportsToDelete.add(node.getComputationReports().get(ComputationType.SHORT_CIRCUIT.name()));
+-                node.getComputationReports().remove(ComputationType.SHORT_CIRCUIT.name());
+-            });
+-            reportService.deleteReports(reportsToDelete);
+-        }
+-        List<NetworkModificationNodeInfoEntity> oneBusNodes = networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull();
+-        if (!oneBusNodes.isEmpty()) {
+-            List<UUID> reportsToDelete = new ArrayList<>();
+-            oneBusNodes.forEach(node -> {
+-                node.setOneBusShortCircuitAnalysisResultUuid(null);
+-                reportsToDelete.add(node.getComputationReports().get(ComputationType.SHORT_CIRCUIT_ONE_BUS.name()));
+-                node.getComputationReports().remove(ComputationType.SHORT_CIRCUIT_ONE_BUS.name());
+-            });
+-            reportService.deleteReports(reportsToDelete);
+-        }
++
+         // Then delete all results (1-bus and all-buses), cause short-circuit-server cannot make the difference
+         shortCircuitService.deleteShortCircuitAnalysisResults();
+         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SHORT_CIRCUIT, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+         // return distinct processed nodes count
+-        return (int) Stream.concat(allBusesNodes.stream(), oneBusNodes.stream())
+-                .map(AbstractNodeInfoEntity::getId)
+-                .distinct()
+-                .count();
++        return null;
+     }
+ 
+     private Integer deleteVoltageInitResults() {
+@@ -270,8 +243,7 @@ public class SupervisionService {
+             List<UUID> reportsToDelete = new ArrayList<>();
+             nodes.forEach(node -> {
+                 node.setVoltageInitResultUuid(null);
+-                reportsToDelete.add(node.getComputationReports().get(ComputationType.VOLTAGE_INITIALIZATION.name()));
+-                node.getComputationReports().remove(ComputationType.VOLTAGE_INITIALIZATION.name());
++
+             });
+             reportService.deleteReports(reportsToDelete);
+         }
+@@ -287,8 +259,7 @@ public class SupervisionService {
+         List<UUID> reportsToDelete = new ArrayList<>();
+         nodes.forEach(node -> {
+             node.setStateEstimationResultUuid(null);
+-            reportsToDelete.add(node.getComputationReports().get(ComputationType.STATE_ESTIMATION.name()));
+-            node.getComputationReports().remove(ComputationType.STATE_ESTIMATION.name());
++
+         });
+         reportService.deleteReports(reportsToDelete);
+         stateEstimationService.deleteStateEstimationResults();
+diff --git a/src/main/resources/db/changelog/changesets/migrationDataTimePoint.sql b/src/main/resources/db/changelog/changesets/migrationDataTimePoint.sql
+index 8c943cb..9e1a4d4 100644
+--- a/src/main/resources/db/changelog/changesets/migrationDataTimePoint.sql
++++ b/src/main/resources/db/changelog/changesets/migrationDataTimePoint.sql
+@@ -1,19 +1,96 @@
+--- Start a transaction to ensure data integrity
+-BEGIN;
+--- Step 1: Insert data from study to timepoint
+-INSERT INTO timepoint (id, network_uuid, network_id, case_format, case_uuid, case_name, study_uuid)
++-- Migrating data into the time_point table, making sure we don't insert duplicates
++INSERT INTO time_point (
++    id,                  -- UUID (Primary Key) for the time_point table
++    case_format,         -- Case format from the study
++    case_name,           -- Case name from the study
++    case_uuid,           -- UUID associated with the case from the study
++    network_id,          -- Network ID from the study
++    network_uuid,        -- UUID associated with the network from the study
++    report_uuid,         -- UUID from the root_node_info (report)
++    study_uuid           -- UUID associated with the study (foreign key to study table)
++)
+ SELECT
+-    gen_random_uuid(),
+-    network_uuid,
+-    network_id,
+-    case_format,
+-    case_uuid,
+-    case_name,
+-    id AS study_uuid
++    gen_random_uuid(),   -- Generate a new unique UUID for the time_point row
++    s.case_format,       -- Retrieve case_format from the study table
++    s.case_name,         -- Retrieve case_name from the study table
++    s.case_uuid,         -- Retrieve case_uuid from the study table
++    s.network_id,        -- Retrieve network_id from the study table
++    s.network_uuid,      -- Retrieve network_uuid from the study table
++    r.report_uuid,       -- Retrieve report_uuid from root_node_info, linked by node
++    s.id AS study_uuid   -- Use the study ID as study_uuid (foreign key)
+ FROM
+-    study;
++    study s              -- Start from the study table
++        JOIN node n ON n.study_id = s.id            -- Join with node table based on study_id
++        JOIN root_node_info r ON r.id_node = n.id_node  -- Join with root_node_info based on node_id
++WHERE
++    n.type = 'ROOT'       -- Ensure we only consider root nodes (type = 'ROOT')
++  AND NOT EXISTS (        -- Prevent duplicates: check if a time_point entry with the same study_uuid already exists
++    SELECT 1
++    FROM time_point tp
++    WHERE tp.study_uuid = s.id
++);
+ 
+--- Step 2: Drop the columns from the study table
++-- Migrating data into the time_point_node_info table, ensuring no duplicate rows are inserted
++INSERT INTO time_point_node_info (
++    id,                              -- UUID (Primary Key) for time_point_node_info
++    time_point_id,                    -- Foreign Key, linked to the time_point table
++    node_info_id,                     -- Foreign Key, linked to the network_modification_node_info table
++    dynamic_simulation_result_uuid,   -- UUID for dynamic simulation result
++    loadflow_result_uuid,             -- UUID for load flow result
++    global_build_status,              -- Global build status
++    local_build_status,               -- Local build status
++    non_evacuated_energy_result_uuid, -- UUID for non-evacuated energy result
++    one_bus_short_circuit_analysis_result_uuid, -- UUID for one bus short-circuit analysis result
++    security_analysis_result_uuid,    -- UUID for security analysis result
++    sensitivity_analysis_result_uuid, -- UUID for sensitivity analysis result
++    short_circuit_analysis_result_uuid,-- UUID for short-circuit analysis result
++    state_estimation_result_uuid,     -- UUID for state estimation result
++    variant_id,                       -- Variant ID for the network modification
++    voltage_init_result_uuid          -- UUID for voltage initialization result
++)
++SELECT
++    gen_random_uuid(),                -- Generate a new unique UUID for each time_point_node_info row
++    t.id,                             -- Reference the id of the associated time_point
++    n.id_node,                        -- Reference the id of the associated network_modification_node_info
++    n.dynamic_simulation_result_uuid, -- Retrieve dynamic simulation result UUID  from the table network_modification_node_info
++    n.loadflow_result_uuid,           -- Retrieve load flow result UUID  from the table network_modification_node_info
++    n.global_build_status,            -- Retrieve global build status  from the table network_modification_node_info
++    n.local_build_status,             -- Retrieve local build status  from the table network_modification_node_info
++    n.non_evacuated_energy_result_uuid, -- Retrieve non-evacuated energy result UUID  from the table network_modification_node_info
++    n.one_bus_short_circuit_analysis_result_uuid, -- Retrieve one bus short-circuit analysis result UUID  from the table network_modification_node_info
++    n.security_analysis_result_uuid,  -- Retrieve security analysis result UUID  from the table network_modification_node_info
++    n.sensitivity_analysis_result_uuid,-- Retrieve sensitivity analysis result UUID  from the table network_modification_node_info
++    n.short_circuit_analysis_result_uuid,-- Retrieve short-circuit analysis result UUID  from the table network_modification_node_info
++    n.state_estimation_result_uuid,   -- Retrieve state estimation result UUID  from the table network_modification_node_info
++    n.variant_id,                     -- Retrieve variant ID  from the table network_modification_node_info
++    n.voltage_init_result_uuid        -- Retrieve voltage initialization result UUID  from the table network_modification_node_info
++FROM
++    network_modification_node_info n    -- Start from the network_modification_node_info table
++        JOIN node ne ON ne.id_node = n.id_node  -- Join with the node table based on id_node
++        JOIN time_point t ON ne.study_id = t.study_uuid -- Join with time_point based on study_uuid
++WHERE
++    NOT EXISTS (                        -- Prevent duplicates: check if a time_point_node_info entry with the same time_point_id and node_info_id already exists
++        SELECT 1
++        FROM time_point_node_info tpni
++        WHERE tpni.time_point_id = t.id
++          AND tpni.node_info_id = n.id_node
++    );
++
++
++
++-- Update existing modification_reports to set time_point_node_info_entity_id
++UPDATE modification_reports mr
++SET time_point_node_info_entity_id = tpn.id
++FROM network_modification_node_info n
++         JOIN time_point_node_info tpn ON n.id_node = tpn.node_info_id
++WHERE mr.network_modification_node_info_entity_id_node = n.id_node   --   foreign key column 'network_modification_node_info_entity_id_node' in modification_reports
++AND mr.time_point_node_info_entity_id IS NULL;  -- Only update if the column is NULL
+ 
+--- Step 3:
+ 
++-- Update existing computation_reports to set time_point_node_info_entity_id
++UPDATE computation_reports cr
++SET time_point_node_info_entity_id = tpn.id
++FROM network_modification_node_info n
++         JOIN time_point_node_info tpn ON n.id_node = tpn.node_info_id
++WHERE cr.network_modification_node_info_entity_id_node = n.id_node   --  a foreign key column 'network_modification_node_info_entity_id_node' in computation_reports
++AND cr.time_point_node_info_entity_id IS NULL;  -- Only update if the column is NULL
+diff --git a/src/main/resources/db/changelog/changesets/migrationTimePoint.sql b/src/main/resources/db/changelog/changesets/migrationTimePoint.sql
+index 823313e..8c943cb 100644
+--- a/src/main/resources/db/changelog/changesets/migrationTimePoint.sql
++++ b/src/main/resources/db/changelog/changesets/migrationTimePoint.sql
+@@ -1,20 +1,19 @@
+--- REMOVE USELESS DATA FROM TABLE BRANCH_STATUS_MODIFICATION
+-UPDATE branch_status_modification
+- SET energized_voltage_level_id = NULL
+- WHERE ( action = 'TRIP' OR action = 'LOCKOUT' OR action = 'SWITCH_ON' )
+- AND energized_voltage_level_id IS NOT NULL;
+--- RECREATE MESSAGE_VALUES IN TABLE MODIFICATION
+-UPDATE modification m1
+- SET message_values = (
+-	 SELECT
+-	 	CASE
+-	 		WHEN bsm.energized_voltage_level_id IS NULL AND bsm.action IS NOT NULL AND bsm.equipment_id IS NOT NULL
+-	 		THEN  '{"action":"' || bsm.action || '","equipmentId":"' || bsm.equipment_id || '"}'
+-	 		WHEN bsm.energized_voltage_level_id IS NOT NULL AND bsm.action IS NOT NULL AND bsm.equipment_id IS NOT NULL
+-	 		THEN  '{"energizedVoltageLevelId":"' || bsm.energized_voltage_level_id || '","action":"' || bsm.action || '","equipmentId":"' || bsm.equipment_id || '"}'
+-	 		ELSE m1.message_values
+-	 	END
+-	 FROM modification m
+-	 LEFT JOIN branch_status_modification bsm ON m.id = bsm.id
+-	 WHERE m1.id = m.id)
+- WHERE m1.type = 'BRANCH_STATUS_MODIFICATION';
+\ No newline at end of file
++-- Start a transaction to ensure data integrity
++BEGIN;
++-- Step 1: Insert data from study to timepoint
++INSERT INTO timepoint (id, network_uuid, network_id, case_format, case_uuid, case_name, study_uuid)
++SELECT
++    gen_random_uuid(),
++    network_uuid,
++    network_id,
++    case_format,
++    case_uuid,
++    case_name,
++    id AS study_uuid
++FROM
++    study;
++
++-- Step 2: Drop the columns from the study table
++
++-- Step 3:
++
+diff --git a/src/main/resources/db/changelog/db.changelog-master.yaml b/src/main/resources/db/changelog/db.changelog-master.yaml
+index 1570a71..84f35ca 100644
+--- a/src/main/resources/db/changelog/db.changelog-master.yaml
++++ b/src/main/resources/db/changelog/db.changelog-master.yaml
+@@ -243,4 +243,7 @@ databaseChangeLog:
+       relativeToChangelogFile: true
+   - include:
+       file: changesets/changelog_20240902T130809Z.xml
+-      relativeToChangelogFile: true
+\ No newline at end of file
++      relativeToChangelogFile: true
++  - include:
++       file: changesets/changelog_20241007T145221zaZ.xml
++       relativeToChangelogFile: true
+\ No newline at end of file

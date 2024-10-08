@@ -1,0 +1,52 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="souissimai (generated)" id="1728045026834-10">
+        <createTable tableName="time_point">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="time_pointPK"/>
+            </column>
+            <column name="case_format" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="case_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="case_uuid" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_uuid" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="study_uuid" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728045026834-11">
+        <createTable tableName="time_point_node_info">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="time_point_node_infoPK"/>
+            </column>
+            <column name="dynamic_simulation_result_uuid" type="UUID"/>
+            <column name="loadflow_result_uuid" type="UUID"/>
+            <column name="non_evacuated_energy_result_uuid" type="UUID"/>
+            <column name="one_bus_short_circuit_analysis_result_uuid" type="UUID"/>
+            <column name="security_analysis_result_uuid" type="UUID"/>
+            <column name="sensitivity_analysis_result_uuid" type="UUID"/>
+            <column name="short_circuit_analysis_result_uuid" type="UUID"/>
+            <column name="state_estimation_result_uuid" type="UUID"/>
+            <column name="variant_id" type="VARCHAR(255)"/>
+            <column name="voltage_init_result_uuid" type="UUID"/>
+            <column name="node_info_id" type="UUID"/>
+            <column name="time_point_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+
+
+
+
+</databaseChangeLog>

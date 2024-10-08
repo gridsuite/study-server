@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
-import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -26,7 +25,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
 
@@ -156,8 +154,7 @@ public class SupervisionService {
         List<UUID> reportsToDelete = new ArrayList<>();
         nodes.forEach(node -> {
             node.setLoadFlowResultUuid(null);
-            reportsToDelete.add(node.getComputationReports().get(ComputationType.LOAD_FLOW.name()));
-            node.getComputationReports().remove(ComputationType.LOAD_FLOW.name());
+
         });
         reportService.deleteReports(reportsToDelete);
         loadFlowService.deleteLoadFlowResults();
@@ -183,8 +180,7 @@ public class SupervisionService {
         List<UUID> reportsToDelete = new ArrayList<>();
         nodes.forEach(node -> {
             node.setSecurityAnalysisResultUuid(null);
-            reportsToDelete.add(node.getComputationReports().get(ComputationType.SECURITY_ANALYSIS.name()));
-            node.getComputationReports().remove(ComputationType.SECURITY_ANALYSIS.name());
+
         });
         reportService.deleteReports(reportsToDelete);
         securityAnalysisService.deleteSecurityAnalysisResults();
@@ -199,8 +195,7 @@ public class SupervisionService {
         List<UUID> reportsToDelete = new ArrayList<>();
         nodes.forEach(node -> {
             node.setSensitivityAnalysisResultUuid(null);
-            reportsToDelete.add(node.getComputationReports().get(ComputationType.SENSITIVITY_ANALYSIS.name()));
-            node.getComputationReports().remove(ComputationType.SENSITIVITY_ANALYSIS.name());
+
         });
         reportService.deleteReports(reportsToDelete);
         sensitivityAnalysisService.deleteSensitivityAnalysisResults();
@@ -218,8 +213,7 @@ public class SupervisionService {
         List<UUID> reportsToDelete = new ArrayList<>();
         nodes.forEach(node -> {
             node.setNonEvacuatedEnergyResultUuid(null);
-            reportsToDelete.add(node.getComputationReports().get(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name()));
-            node.getComputationReports().remove(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name());
+
         });
         reportService.deleteReports(reportsToDelete);
         nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResults();
@@ -233,33 +227,12 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         // Reset result uuid and remove logs, for all-buses computations, then for 1-bus ones
         List<NetworkModificationNodeInfoEntity> allBusesNodes = networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
-        if (!allBusesNodes.isEmpty()) {
-            List<UUID> reportsToDelete = new ArrayList<>();
-            allBusesNodes.forEach(node -> {
-                node.setShortCircuitAnalysisResultUuid(null);
-                reportsToDelete.add(node.getComputationReports().get(ComputationType.SHORT_CIRCUIT.name()));
-                node.getComputationReports().remove(ComputationType.SHORT_CIRCUIT.name());
-            });
-            reportService.deleteReports(reportsToDelete);
-        }
-        List<NetworkModificationNodeInfoEntity> oneBusNodes = networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull();
-        if (!oneBusNodes.isEmpty()) {
-            List<UUID> reportsToDelete = new ArrayList<>();
-            oneBusNodes.forEach(node -> {
-                node.setOneBusShortCircuitAnalysisResultUuid(null);
-                reportsToDelete.add(node.getComputationReports().get(ComputationType.SHORT_CIRCUIT_ONE_BUS.name()));
-                node.getComputationReports().remove(ComputationType.SHORT_CIRCUIT_ONE_BUS.name());
-            });
-            reportService.deleteReports(reportsToDelete);
-        }
+
         // Then delete all results (1-bus and all-buses), cause short-circuit-server cannot make the difference
         shortCircuitService.deleteShortCircuitAnalysisResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SHORT_CIRCUIT, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         // return distinct processed nodes count
-        return (int) Stream.concat(allBusesNodes.stream(), oneBusNodes.stream())
-                .map(AbstractNodeInfoEntity::getId)
-                .distinct()
-                .count();
+        return null;
     }
 
     private Integer deleteVoltageInitResults() {
@@ -270,8 +243,7 @@ public class SupervisionService {
             List<UUID> reportsToDelete = new ArrayList<>();
             nodes.forEach(node -> {
                 node.setVoltageInitResultUuid(null);
-                reportsToDelete.add(node.getComputationReports().get(ComputationType.VOLTAGE_INITIALIZATION.name()));
-                node.getComputationReports().remove(ComputationType.VOLTAGE_INITIALIZATION.name());
+
             });
             reportService.deleteReports(reportsToDelete);
         }
@@ -287,8 +259,7 @@ public class SupervisionService {
         List<UUID> reportsToDelete = new ArrayList<>();
         nodes.forEach(node -> {
             node.setStateEstimationResultUuid(null);
-            reportsToDelete.add(node.getComputationReports().get(ComputationType.STATE_ESTIMATION.name()));
-            node.getComputationReports().remove(ComputationType.STATE_ESTIMATION.name());
+
         });
         reportService.deleteReports(reportsToDelete);
         stateEstimationService.deleteStateEstimationResults();

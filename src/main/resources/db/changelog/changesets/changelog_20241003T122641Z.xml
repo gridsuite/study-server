@@ -1,0 +1,115 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- 1. Create timePoint table -->
+    <changeSet author="souissimai (generated)" id="1727958416947-10">
+        <createTable tableName="time_point">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="time_pointPK"/>
+            </column>
+            <column name="case_format" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="case_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="case_uuid" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_uuid" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="study_uuid" type="UUID"/>
+            <!-- <column name="report_uuid" type="UUID"/>  to see wht is it-->
+        </createTable>
+        <!-- Add foreign key constraint to link with the Study entity with TimePoint Entity -->
+         <addForeignKeyConstraint baseColumnNames="study_uuid" baseTableName="time_point" constraintName="fk_time_point_study" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="study" validate="true"/>
+    </changeSet>
+
+    <!-- 2. Migrate data from study to timePoint -->
+    <changeSet author="souissimai (generated)" id="1727958416947-12">
+<!--        <sqlFile-->
+<!--                encoding="UTF-8"-->
+<!--                path="migrationTimePoint.sql"-->
+<!--                relativeToChangelogFile="true"-->
+<!--                splitStatements="true"-->
+<!--                stripComments="true"/>-->
+    </changeSet>
+
+    <!-- 3. Drop moved columns from study table  TO DO LATER  -->
+    <changeSet author="souissimai (generated)" id="1727958416947-13">
+<!--        <dropColumn tableName="study" columnName="network_uuid"/>-->
+<!--        <dropColumn tableName="study" columnName="network_id"/>-->
+<!--        <dropColumn tableName="study" columnName="case_format"/>-->
+<!--        <dropColumn tableName="study" columnName="case_uuid"/>-->
+<!--        <dropColumn tableName="study" columnName="case_name"/>-->
+    </changeSet>
+
+    <!-- 4. Create time_point_node_info table -->
+    <changeSet author="souissimai (generated)" id="1727958416947-14">
+        <createTable tableName="time_point_node_info">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="time_point_node_infoPK"/>
+            </column>
+            <column name="time_point_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="node_info_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <!--   columns moved from to NetworkModificationNodeInfo -->
+            <column name="dynamic_simulation_result_uuid" type="UUID"/>
+            <column name="loadflow_result_uuid" type="UUID"/>
+            <column name="non_evacuated_energy_result_uuid" type="UUID"/>
+            <column name="one_bus_short_circuit_analysis_result_uuid" type="UUID"/>
+            <column name="security_analysis_result_uuid" type="UUID"/>
+            <column name="sensitivity_analysis_result_uuid" type="UUID"/>
+            <column name="short_circuit_analysis_result_uuid" type="UUID"/>
+            <column name="state_estimation_result_uuid" type="UUID"/>
+            <column name="variant_id" type="VARCHAR(255)"/>
+            <column name="voltage_init_result_uuid" type="UUID"/>
+            <column name="global_build_status" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="local_build_status" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+          </createTable>
+
+
+        <!-- Add foreign key constraint between TimePointNodeInfo and TimePointEntity - -->
+        <addForeignKeyConstraint baseColumnNames="time_point_id" baseTableName="time_point_node_info" constraintName="fk_time_point_node_info" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="time_point" validate="true"/>
+        <!-- Add foreign key constraint between TimePointNodeInfo and NetworkModificationNodeInfo -->
+        <addForeignKeyConstraint baseColumnNames="node_info_id" baseTableName="time_point_node_info" constraintName="fk_time_point_node_info_to_network_mod_node_info" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="network_modification_node_info" validate="true"/>
+    </changeSet>
+
+    <changeSet author="souissimai (generated)" id="1728305580949-12">
+        <createTable tableName="time_point_node_info_entity_modifications_to_exclude">
+            <column name="time_point_node_info_entity_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modifications_to_exclude" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728305580949-16">
+        <createIndex indexName="time_point_node_info_entity_modifications_to_exclude_idx" tableName="time_point_node_info_entity_modifications_to_exclude">
+            <column name="time_point_node_info_entity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728305580949-20">
+        <addForeignKeyConstraint baseColumnNames="time_point_node_info_entity_id" baseTableName="time_point_node_info_entity_modifications_to_exclude" constraintName="timePointNodeInfoEntity_modificationsToExclude_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="time_point_node_info" validate="true"/>
+    </changeSet>
+
+
+    <!-- 5. Drop moved columns from NetworkModificationNodeInfo table to TimePointNodeInfo TO DO LATER  -->
+
+    <!-- 6. Migration  -->
+
+
+</databaseChangeLog>

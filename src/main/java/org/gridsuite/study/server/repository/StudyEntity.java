@@ -10,8 +10,10 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -32,20 +34,25 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "id")
     private UUID id;
 
-    @Column(name = "networkUuid", nullable = false)
+// TO DROP those columns  ==> moved from StudyEntity  to TimePointEntity  MAISSA
+    @Column(name = "networkUuid", nullable = false) //this  MAISSA
     private UUID networkUuid;
 
-    @Column(name = "networkId", nullable = false)
+    @Column(name = "networkId", nullable = false) //this  MAISSA
     private String networkId;
 
-    @Column(name = "caseFormat", nullable = false)
+    @Column(name = "caseFormat", nullable = false) //this  MAISSA
     private String caseFormat;
 
-    @Column(name = "caseUuid", nullable = false)
+    @Column(name = "caseUuid", nullable = false) //this  MAISSA
     private UUID caseUuid;
 
-    @Column(name = "caseName", nullable = false)
+    @Column(name = "caseName", nullable = false) //this  MAISSA
     private String caseName;
+
+    //add relation study _ timepoint
+    @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true) //, fetch = FetchType.LAZY) // fetch not necessary?
+    private List<TimePointEntity> timePoints;
 
     /**
      * @deprecated to remove when the data is migrated into the loadflow-server
@@ -117,9 +124,10 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             foreignKey = @ForeignKey(name = "studyEntity_importParameters_fk1"))
     private Map<String, String> importParameters;
 
+// TO DROP those columns  ==> moved from StudyEntity  to TimePointEntity  MAISSA NOOOT MOVED
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private StudyIndexationStatus indexationStatus = StudyIndexationStatus.NOT_INDEXED;
+    private StudyIndexationStatus indexationStatus = StudyIndexationStatus.NOT_INDEXED; //this  MAISSA
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "study_voltage_init_parameters_id",

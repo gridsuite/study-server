@@ -149,28 +149,11 @@ public class NetworkModificationTreeService {
 
         //And the modification node info
         NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationNodeInfoRepository.findById(nodeToCopyUuid).orElseThrow(() -> new StudyException(GET_MODIFICATIONS_FAILED));
-        NetworkModificationNodeInfoEntity newNetworkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(
-                newGroupUuid,
-                UUID.randomUUID().toString(),
-                new HashSet<>(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                NodeBuildStatus.from(BuildStatus.NOT_BUILT).toEntity(),
-                new HashMap<>(),
-                new HashMap<>()
-        );
+        NetworkModificationNodeInfoEntity newNetworkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity();
         UUID studyUuid = anchorNodeEntity.getStudy().getId();
         newNetworkModificationNodeInfoEntity.setName(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()));
         newNetworkModificationNodeInfoEntity.setDescription(networkModificationNodeInfoEntity.getDescription());
         newNetworkModificationNodeInfoEntity.setIdNode(node.getIdNode());
-        newNetworkModificationNodeInfoEntity.setModificationReports(new HashMap<>(Map.of(node.getIdNode(), newReportUuid)));
         networkModificationNodeInfoRepository.save(newNetworkModificationNodeInfoEntity);
 
         return node.getIdNode();

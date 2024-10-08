@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, RTE (http://www.rte-france.com)
+ * Copyright (c) 2024, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -8,38 +8,50 @@
 package org.gridsuite.study.server.networkmodificationtree.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 /**
- * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
+ * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
  */
 @NoArgsConstructor
-@AllArgsConstructor
 @Getter
 @Setter
 @Entity
-@Table(name = "NetworkModificationNodeInfo")
-public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
+@SuperBuilder
+@Table(name = "TimePointNodeInfo")
+public class TimePointNodeInfoEntity {
 
-    @Column
-    private UUID modificationGroupUuid;
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "id")
+    private UUID id;
 
-    // One NetworkModificationNodeInfo can have multiple TimePointNodeInfo entries
-    @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo", cascade = CascadeType.ALL)
-    protected List<TimePointNodeInfoEntity> timePointNodeInfos;
+    // One TimePoint can have multiple NodeInfo entries
+    @ManyToOne
+    @JoinColumn(name = "timePointId", nullable = false, foreignKey = @ForeignKey(name = "fk_time_point_node_info"))
+    private TimePointEntity timePoint;
 
-    // all those columns will be moved to TimePointNodeInfoEntity MAISSA
-    // moved columns
+    // Many TimePointNodeInfo entries can belong to one NetworkModificationNodeInfo
+    @ManyToOne
+    @JoinColumn(name = "nodeInfoId",
+        referencedColumnName = "idNode",
+        foreignKey = @ForeignKey)
+    private NetworkModificationNodeInfoEntity nodeInfo;
+
+    //columns moved from to TimePointNodeInfoEntity
     @Column
     private String variantId;
+
+    @Column(name = "modificationsToExclude")
+    @ElementCollection
+    @CollectionTable(foreignKey = @ForeignKey(name = "timePointNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "time_point_node_info_entity_modifications_to_exclude_idx", columnList = "time_point_node_info_entity_id")})
+    private Set<UUID> modificationsToExclude;
 
     @Column(name = "shortCircuitAnalysisResultUuid")
     private UUID shortCircuitAnalysisResultUuid;
@@ -75,20 +87,15 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     })
     private NodeBuildStatusEmbeddable nodeBuildStatus;
 
-    @Column(name = "modificationsToExclude")
-    @ElementCollection
-    @CollectionTable(foreignKey = @ForeignKey(name = "networkModificationNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "networkModificationNodeInfoEntity_modificationsToExclude_idx", columnList = "network_modification_node_info_entity_id_node")})
-    private Set<UUID> modificationsToExclude;
-
     @ElementCollection
     @CollectionTable(name = "computationReports",
-            indexes = {@Index(name = "networkModificationNodeInfoEntity_computationReports_idx1", columnList = "network_modification_node_info_entity_id_node")},
-            foreignKey = @ForeignKey(name = "networkModificationNodeInfoEntity_computationReports_fk1"))
+            indexes = {@Index(name = "timePointNodeInfoEntity_computationReports_idx1", columnList = "time_point_node_info_entity_id")},
+            foreignKey = @ForeignKey(name = "timePointNodeInfoEntity_computationReports_fk1"))
     private Map<String, UUID> computationReports;
 
     @ElementCollection
     @CollectionTable(name = "modificationReports",
-            indexes = {@Index(name = "networkModificationNodeInfoEntity_modificationReports_idx1", columnList = "network_modification_node_info_entity_id_node")},
-            foreignKey = @ForeignKey(name = "networkModificationNodeInfoEntity_modificationReports_fk1"))
+            indexes = {@Index(name = "timePointNodeInfoEntity_modificationReports_idx1", columnList = "time_point_node_info_entity_id")},
+            foreignKey = @ForeignKey(name = "timePointNodeInfoEntity_modificationReports_fk1"))
     private Map<UUID, UUID> modificationReports;
 }
