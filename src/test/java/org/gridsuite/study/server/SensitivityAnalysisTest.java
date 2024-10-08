@@ -78,6 +78,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.gridsuite.study.server.notification.ComputationsNotificationTypes.*;
 
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
@@ -301,17 +302,17 @@ public class SensitivityAnalysisTest {
         Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
 
         Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT, updateType);
 
         sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*?receiver=.*nodeUuid.*")));
 
@@ -361,7 +362,7 @@ public class SensitivityAnalysisTest {
         sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertTrue(updateType.equals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS) || updateType.equals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT));
+        assertTrue(updateType.equals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS) || updateType.equals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT));
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + resultUuid + "/stop\\?receiver=.*nodeUuid.*")));
     }
@@ -403,17 +404,17 @@ public class SensitivityAnalysisTest {
         Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
 
         Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT, updateType);
 
         sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*?receiver=.*nodeUuid.*")));
 
@@ -520,7 +521,7 @@ public class SensitivityAnalysisTest {
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED, updateType);
     }
 
     // test sensitivity analysis on network 2 will fail
@@ -541,13 +542,13 @@ public class SensitivityAnalysisTest {
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED, updateType);
 
         // message sent by run and save controller to notify frontend sensitivity analysis is running and should update status
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/run-and-save.*?receiver=.*nodeUuid.*")));
 
@@ -570,7 +571,7 @@ public class SensitivityAnalysisTest {
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid2, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/run-and-save.*?receiver=.*nodeUuid.*")));
     }
@@ -722,7 +723,7 @@ public class SensitivityAnalysisTest {
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));

@@ -36,11 +36,11 @@ import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
-import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
+import static org.gridsuite.study.server.notification.ComputationsNotificationTypes.*;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>

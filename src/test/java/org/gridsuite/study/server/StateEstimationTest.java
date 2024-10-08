@@ -60,6 +60,7 @@ import static org.junit.Assert.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.gridsuite.study.server.notification.ComputationsNotificationTypes.*;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
@@ -248,9 +249,9 @@ public class StateEstimationTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_RESULT);
-        checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(ids.studyId, UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(ids.studyId, UPDATE_TYPE_STATE_ESTIMATION_RESULT);
+        checkUpdateModelStatusMessagesReceived(ids.studyId, UPDATE_TYPE_STATE_ESTIMATION_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID + "&receiver=.*")));
     }
 
@@ -350,7 +351,7 @@ public class StateEstimationTest {
 
         // stop running estim
         mockMvc.perform(put(STATE_ESTIMATION_URL_BASE + "stop", ids.studyId, ids.nodeId)).andExpect(status().isOk());
-        checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_RESULT);
+        checkUpdateModelStatusMessagesReceived(ids.studyId, UPDATE_TYPE_STATE_ESTIMATION_STATUS, UPDATE_TYPE_STATE_ESTIMATION_RESULT);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
     }
 
@@ -362,8 +363,8 @@ public class StateEstimationTest {
         mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.nodeId)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
-        checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_FAILED);
-        checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(ids.studyId, UPDATE_TYPE_STATE_ESTIMATION_FAILED);
+        checkUpdateModelStatusMessagesReceived(ids.studyId, UPDATE_TYPE_STATE_ESTIMATION_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID_2 + "&receiver=.*")));
     }
 }
