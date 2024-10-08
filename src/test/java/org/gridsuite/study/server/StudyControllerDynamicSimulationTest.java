@@ -71,6 +71,7 @@ import static org.mockito.BDDMockito.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.gridsuite.study.server.notification.ComputationsNotificationTypes.*;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -281,7 +282,7 @@ public class StudyControllerDynamicSimulationTest {
         Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         // resultUuid must be present in database at this moment
         UUID actualResultUuid = networkModificationTreeService.getComputationResultUuid(modificationNode1Uuid, ComputationType.DYNAMIC_SIMULATION).get();
         getLogger().info("Actual result uuid in the database = " + actualResultUuid);
@@ -301,7 +302,7 @@ public class StudyControllerDynamicSimulationTest {
         dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED);
         // resultUuid must be empty in database at this moment
         assertThat(networkModificationTreeService.getComputationResultUuid(modificationNode1Uuid, ComputationType.DYNAMIC_SIMULATION)).isEmpty();
     }
@@ -349,7 +350,7 @@ public class StudyControllerDynamicSimulationTest {
         Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         // resultUuid must be present in database at this moment
         UUID actualResultUuid = networkModificationTreeService.getComputationResultUuid(modificationNode1Uuid, ComputationType.DYNAMIC_SIMULATION).get();
         getLogger().info("Actual result uuid in the database = " + actualResultUuid);
@@ -369,13 +370,13 @@ public class StudyControllerDynamicSimulationTest {
         dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
 
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT from channel : studyUpdateDestination
         Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(dynamicSimulationResultMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT);
 
         //Test result count
         Mockito.doAnswer(invocation -> 1).when(dynamicSimulationService).getResultsCount();
@@ -424,7 +425,7 @@ public class StudyControllerDynamicSimulationTest {
         Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         // resultUuid must be present in database at this moment
         UUID actualResultUuid = networkModificationTreeService.getComputationResultUuid(modificationNode1Uuid, ComputationType.DYNAMIC_SIMULATION).get();
         getLogger().info("Actual result uuid in the database = " + actualResultUuid);
@@ -444,7 +445,7 @@ public class StudyControllerDynamicSimulationTest {
         dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 
     @Test
@@ -730,7 +731,7 @@ public class StudyControllerDynamicSimulationTest {
         Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(studyUpdateMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         studyUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
@@ -760,7 +761,7 @@ public class StudyControllerDynamicSimulationTest {
         Message<byte[]> studyUpdateMessageStatus = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(studyUpdateMessageStatus.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 
     @Test

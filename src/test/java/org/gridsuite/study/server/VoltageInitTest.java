@@ -80,6 +80,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.gridsuite.study.server.notification.ComputationsNotificationTypes.*;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -358,7 +359,7 @@ public class VoltageInitTest {
 
         Message<byte[]> voltageInitStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_VOLTAGE_INIT_STATUS, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
 
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
@@ -491,13 +492,13 @@ public class VoltageInitTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_VOLTAGE_INIT_STATUS);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_VOLTAGE_INIT_RESULT);
 
         checkReactiveSlacksAlertMessagesReceived(studyNameUserIdUuid, 10.);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_VOLTAGE_INIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
@@ -534,7 +535,7 @@ public class VoltageInitTest {
                 .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_VOLTAGE_INIT_STATUS, UPDATE_TYPE_VOLTAGE_INIT_RESULT);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
 
@@ -542,9 +543,9 @@ public class VoltageInitTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_FAILED);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_VOLTAGE_INIT_FAILED);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_VOLTAGE_INIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
 
@@ -582,13 +583,13 @@ public class VoltageInitTest {
                 .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_3)));
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_VOLTAGE_INIT_STATUS);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_VOLTAGE_INIT_RESULT);
 
         checkReactiveSlacksAlertMessagesReceived(studyNameUserIdUuid, 10.);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_VOLTAGE_INIT_STATUS);
 
         // stop voltage init analysis fail
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/stop", studyNameUserIdUuid, modificationNode4Uuid)
@@ -616,10 +617,10 @@ public class VoltageInitTest {
                 .header("userId", "userId"))
             .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_VOLTAGE_INIT_RESULT);
         checkReactiveSlacksAlertMessagesReceived(studyNameUserIdUuid, 10.);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
         // just retrieve modifications list from modificationNode3Uuid
@@ -642,7 +643,7 @@ public class VoltageInitTest {
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid);
         checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNode3Uuid));
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_STUDY);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_VOLTAGE_INIT_RESULT);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.NODE_BUILD_STATUS_UPDATED);
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid);
@@ -650,15 +651,15 @@ public class VoltageInitTest {
     }
 
     private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid) {
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, UPDATE_TYPE_STATE_ESTIMATION_STATUS);
     }
 
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
@@ -727,7 +728,7 @@ public class VoltageInitTest {
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_VOLTAGE_INIT_FAILED, updateType);
+        assertEquals(UPDATE_TYPE_VOLTAGE_INIT_FAILED, updateType);
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, String updateTypeToCheck) {

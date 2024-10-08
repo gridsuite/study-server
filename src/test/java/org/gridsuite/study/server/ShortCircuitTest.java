@@ -69,6 +69,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.gridsuite.study.server.notification.ComputationsNotificationTypes.*;
 
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
@@ -322,11 +323,11 @@ public class ShortCircuitTest implements WithAssertions {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
@@ -362,7 +363,7 @@ public class ShortCircuitTest implements WithAssertions {
                 .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_STATUS, UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
 
@@ -371,9 +372,9 @@ public class ShortCircuitTest implements WithAssertions {
                 .header(HEADER_USER_ID, "testUserId"))
                 .andExpect(status().isOk()).andReturn();
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_FAILED);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
 
@@ -426,11 +427,11 @@ public class ShortCircuitTest implements WithAssertions {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING_NOT_FOUND + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_4)));
 
@@ -459,11 +460,11 @@ public class ShortCircuitTest implements WithAssertions {
                 .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
@@ -499,7 +500,7 @@ public class ShortCircuitTest implements WithAssertions {
                 .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_STATUS, UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
     }
@@ -537,11 +538,11 @@ public class ShortCircuitTest implements WithAssertions {
                 .header("userId", "userId"))
             .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
@@ -621,7 +622,7 @@ public class ShortCircuitTest implements WithAssertions {
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED, updateType);
+        assertEquals(UPDATE_TYPE_SHORT_CIRCUIT_FAILED, updateType);
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, String updateTypeToCheck) {
@@ -697,11 +698,11 @@ public class ShortCircuitTest implements WithAssertions {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
         //run a one bus short circuit analysis
@@ -711,19 +712,19 @@ public class ShortCircuitTest implements WithAssertions {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
         // invalidate status
         mockMvc.perform(put("/v1/studies/{studyUuid}/short-circuit/invalidate-status", studyNameUserIdUuid)
                 .header("userId", "userId")).andExpect(status().isOk());
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "&resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
 
     }

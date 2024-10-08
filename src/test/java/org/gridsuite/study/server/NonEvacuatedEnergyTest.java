@@ -80,6 +80,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.gridsuite.study.server.notification.ComputationsNotificationTypes.*;
 
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
@@ -279,17 +280,17 @@ public class NonEvacuatedEnergyTest {
         Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
 
         Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_RESULT, updateType);
+        assertEquals(UPDATE_TYPE_NON_EVACUATED_ENERGY_RESULT, updateType);
 
         sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/non-evacuated-energy.*?receiver=.*nodeUuid.*")));
 
@@ -314,7 +315,7 @@ public class NonEvacuatedEnergyTest {
         sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertTrue(updateType.equals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS) || updateType.equals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_RESULT));
+        assertTrue(updateType.equals(UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS) || updateType.equals(UPDATE_TYPE_NON_EVACUATED_ENERGY_RESULT));
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/non-evacuated-energy/results/" + resultUuid + "/stop\\?receiver=.*nodeUuid.*")));
     }
@@ -352,17 +353,17 @@ public class NonEvacuatedEnergyTest {
         Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
 
         Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_RESULT, updateType);
+        assertEquals(UPDATE_TYPE_NON_EVACUATED_ENERGY_RESULT, updateType);
 
         sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/non-evacuated-energy.*?receiver=.*nodeUuid.*")));
 
@@ -447,7 +448,7 @@ public class NonEvacuatedEnergyTest {
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_FAILED, updateType);
+        assertEquals(UPDATE_TYPE_NON_EVACUATED_ENERGY_FAILED, updateType);
         assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.NON_EVACUATED_ENERGY_ANALYSIS).isEmpty());
     }
 
@@ -475,13 +476,13 @@ public class NonEvacuatedEnergyTest {
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_FAILED, updateType);
+        assertEquals(UPDATE_TYPE_NON_EVACUATED_ENERGY_FAILED, updateType);
 
         // message sent by run controller to notify frontend sensitivity analysis non evacuated energy is running and should update status
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/non-evacuated-energy.*?receiver=.*nodeUuid.*")));
 
@@ -504,7 +505,7 @@ public class NonEvacuatedEnergyTest {
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid2, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, updateType);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/non-evacuated-energy.*?receiver=.*nodeUuid.*")));
     }
