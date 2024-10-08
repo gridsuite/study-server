@@ -8,6 +8,7 @@ package org.gridsuite.study.server.notification;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
@@ -38,6 +39,7 @@ public class NotificationService {
     public static final String HEADER_NODES = "nodes";
     public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String HEADER_UPDATE_TYPE = "updateType";
+    public static final String HEADER_COMPUTATION_TYPE = "computationType";
     public static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
     public static final String HEADER_USER_ID = "userId";
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
@@ -80,6 +82,7 @@ public class NotificationService {
     public static final String UPDATE_TYPE_STATE_ESTIMATION_FAILED = "stateEstimation_failed";
     public static final String UPDATE_TYPE_STATE_ESTIMATION_RESULT = "stateEstimationResult";
     public static final String UPDATE_TYPE_STATE_ESTIMATION_STATUS = "stateEstimation_status";
+    public static final String UPDATE_TYPE_COMPUTATION_PARAMETERS = "computationParametersUpdated";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
     public static final String MODIFICATIONS_STASHING_IN_PROGRESS = "stashingInProgress";
@@ -164,6 +167,15 @@ public class NotificationService {
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .build());
+    }
+
+    @PostCompletion
+    public void emitComputationParamsChanged(UUID studyUuid, ComputationType computationType) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+               .setHeader(HEADER_STUDY_UUID, studyUuid)
+               .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_COMPUTATION_PARAMETERS)
+               .setHeader(HEADER_COMPUTATION_TYPE, computationType.name())
+               .build());
     }
 
     public void emitStudyCreationError(UUID studyUuid, String userId, String errorMessage) {
