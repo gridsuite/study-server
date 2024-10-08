@@ -306,7 +306,7 @@ public class NetworkModificationTreeTest {
                 } else if (path.matches("/v1/groups/.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(HttpStatus.OK.value())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/reports/.*") && request.getMethod().equals("DELETE")) {
+                } else if (path.matches("/v1/reports") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(HttpStatus.OK.value())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
@@ -577,7 +577,7 @@ public class NetworkModificationTreeTest {
         assertEquals(2, children.size());
         NetworkModificationNode n1 = (NetworkModificationNode) children.get(0);
         NetworkModificationNodeInfoEntity n1Infos = networkModificationTreeService.getNetworkModificationNodeInfoEntity(n1.getId());
-        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(n1.getId(), timePointUuid);
+        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(n1.getId(), timePointUuid).orElseThrow(() -> new StudyException(StudyException.Type.TIMEPOINT_NOT_FOUND));
 
         assertEquals("n1", n1.getName());
         assertEquals("zzz", n1.getDescription());

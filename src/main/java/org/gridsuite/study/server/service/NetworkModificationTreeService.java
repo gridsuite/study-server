@@ -139,10 +139,8 @@ public class NetworkModificationTreeService {
     @Transactional
     public NetworkModificationNode createNodeThenLinkItToTimepoints(StudyEntity study, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
         // create new node
-        //TODO: check if is ok
         NetworkModificationNode newNode = createNode(study, nodeId, nodeInfo, insertMode, userId);
 
-        //TODO: make it cleaner
         if (Objects.isNull(nodeInfo.getNodeBuildStatus())) {
             nodeInfo.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
         }
@@ -165,8 +163,8 @@ public class NetworkModificationTreeService {
                 .shortCircuitAnalysisResultUuid(nodeInfo.getShortCircuitAnalysisResultUuid())
                 .stateEstimationResultUuid(nodeInfo.getStateEstimationResultUuid())
                 .voltageInitResultUuid(nodeInfo.getVoltageInitResultUuid())
-                // TODO: Fix if is ok
-                .reportUuid(UUID.randomUUID())
+                .computationReports(nodeInfo.getComputationsReports())
+                .modificationReports(nodeInfo.getModificationReports())
                 .modificationsToExclude(Set.of())
                 .build();
             newNodeInfoEntity.addTimePointNodeInfo(newTimePointNodeInfoEntity);
@@ -228,7 +226,7 @@ public class NetworkModificationTreeService {
         TimePointNodeInfoEntity timePointNodeInfoEntity = TimePointNodeInfoEntity.builder()
             .variantId(UUID.randomUUID().toString())
             .nodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT))
-            .reportUuid(newReportUuid)
+            .modificationReports(new HashMap<>(Map.of(node.getIdNode(), newReportUuid)))
             .modificationsToExclude(new HashSet<>())
             .build();
         newNetworkModificationNodeInfoEntity.addTimePointNodeInfo(timePointNodeInfoEntity);
@@ -374,10 +372,8 @@ public class NetworkModificationTreeService {
             //get all timepointnodeinfo info linked to node
             List<TimePointNodeInfoEntity> timePointNodeInfoEntity = timePointNodeInfoRepository.findAllByNodeInfoId(id);
             timePointNodeInfoEntity.forEach(tpNodeinfo -> {
-                UUID reportUuid = tpNodeinfo.getReportUuid();
-                if (reportUuid != null) {
-                    deleteNodeInfos.addReportUuid(reportUuid);
-                }
+                tpNodeinfo.getModificationReports().forEach((key, value) -> deleteNodeInfos.addReportUuid(value));
+                tpNodeinfo.getComputationReports().forEach((key, value) -> deleteNodeInfos.addReportUuid(value));
 
                 String variantId = tpNodeinfo.getVariantId();
                 if (!StringUtils.isBlank(variantId)) {
@@ -505,7 +501,7 @@ public class NetworkModificationTreeService {
             if (nodeInfo instanceof RootNode rootNode) {
                 rootNode.setReportUuid(timePointEntity.getReportUuid());
             } else {
-                ((NetworkModificationNode) nodeInfo).completeDtoFromTimePointNodeInfo(timePointService.getTimePointNodeInfo(nodeInfo.getId(), timePointEntity.getId()));
+                ((NetworkModificationNode) nodeInfo).completeDtoFromTimePointNodeInfo(timePointService.getTimePointNodeInfo(nodeInfo.getId(), timePointEntity.getId()).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND)));
             }
         });
     }
@@ -546,7 +542,6 @@ public class NetworkModificationTreeService {
                 UUID modificationGroupToDuplicateId = model.getModificationGroupUuid();
                 model.setModificationGroupUuid(newModificationGroupId);
                 model.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
-                model.setReportUuid(newReportUuid);
                 model.setLoadFlowResultUuid(null);
                 model.setSecurityAnalysisResultUuid(null);
                 model.setSensitivityAnalysisResultUuid(null);
@@ -555,6 +550,8 @@ public class NetworkModificationTreeService {
                 model.setOneBusShortCircuitAnalysisResultUuid(null);
                 model.setVoltageInitResultUuid(null);
                 model.setStateEstimationResultUuid(null);
+                model.setModificationReports(new HashMap<>(Map.of(model.getId(), newReportUuid)));
+                model.setComputationsReports(new HashMap<>());
 
                 nextParentId = self.createNodeThenLinkItToTimepoints(study, referenceParentNodeId, model, InsertMode.CHILD, null).getId();
                 networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId);
@@ -579,7 +576,7 @@ public class NetworkModificationTreeService {
         TimePointNodeInfoEntity timePointNodeInfoEntity = TimePointNodeInfoEntity.builder()
             .variantId(FIRST_VARIANT_ID)
             .nodeBuildStatus(new NodeBuildStatusEmbeddable(BuildStatus.BUILT, BuildStatus.BUILT))
-            .reportUuid(UUID.randomUUID())
+            .modificationReports(Map.of(firstNode.getId(), UUID.randomUUID()))
             .modificationsToExclude(Set.of())
             .build();
         firstNodeInfosEntity.addTimePointNodeInfo(timePointNodeInfoEntity);
@@ -625,8 +622,11 @@ public class NetworkModificationTreeService {
         if (node.getVariantId() != null) {
             timePointNodeInfoEntity.setVariantId(node.getVariantId());
         }
-        if (node.getReportUuid() != null) {
-            timePointNodeInfoEntity.setReportUuid(node.getReportUuid());
+        if (node.getModificationReports() != null) {
+            timePointNodeInfoEntity.setModificationReports(node.getModificationReports());
+        }
+        if (node.getComputationsReports() != null) {
+            timePointNodeInfoEntity.setComputationReports(node.getComputationsReports());
         }
         if (node.getName() != null) {
             networkModificationNode.setName(node.getName());
@@ -724,7 +724,7 @@ public class NetworkModificationTreeService {
             return "";
         }
 
-        return timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(nodeUuid, timePointUuid).getVariantId();
+        return timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(nodeUuid, timePointUuid).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND)).getVariantId();
     }
 
     @Transactional(readOnly = true)
@@ -753,7 +753,7 @@ public class NetworkModificationTreeService {
         if (nodeEntity.getType().equals(NodeType.ROOT)) {
             return timePointRepository.findById(timePointUuid).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND)).getReportUuid();
         } else {
-            return timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid).getReportUuid();
+            return timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND)).getModificationReports().get(nodeUuid);
         }
     }
 
@@ -776,7 +776,7 @@ public class NetworkModificationTreeService {
                     tpNodeInfo -> {
                         NodeModificationInfos nodeModificationInfos = NodeModificationInfos.builder()
                             .id(n.getIdNode())
-                            .reportUuid(tpNodeInfo.getReportUuid())
+                            .reportUuid(tpNodeInfo.getModificationReports().get(n.getIdNode()))
                             .dynamicSimulationUuid(tpNodeInfo.getDynamicSimulationResultUuid())
                             .loadFlowUuid(tpNodeInfo.getLoadFlowResultUuid())
                             .nonEvacuatedEnergyUuid(tpNodeInfo.getNonEvacuatedEnergyResultUuid())
@@ -830,6 +830,26 @@ public class NetworkModificationTreeService {
         }
     }
 
+    @Transactional
+    public void updateComputationReportUuid(UUID nodeUuid, UUID timePointUuid, ComputationType computationType, UUID reportUuid) {
+        timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid).ifPresent(tpNodeInfo -> tpNodeInfo.getComputationReports().put(computationType.name(), reportUuid));
+    }
+
+    @Transactional
+    public Map<String, UUID> getComputationReports(UUID nodeUuid, UUID timePointUuid) {
+        return timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND)).getComputationReports();
+    }
+
+    @Transactional
+    public void setModificationReports(UUID nodeUuid, UUID timePointUuid, Map<UUID, UUID> modificationReports) {
+        timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid).ifPresent(tpNodeInfo -> tpNodeInfo.setModificationReports(modificationReports));
+    }
+
+    @Transactional
+    public Map<UUID, UUID> getModificationReports(UUID nodeUuid, UUID timePointUuid) {
+        return timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND)).getModificationReports();
+    }
+
     private void restoreNodeChildren(UUID studyId, UUID parentNodeId) {
         nodesRepository.findAllByParentNodeIdNode(parentNodeId).forEach(nodeEntity -> {
             NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeEntity.getIdNode()).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
@@ -852,7 +872,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void updateComputationResultUuid(UUID nodeUuid, UUID timePointUuid, UUID computationResultUuid, ComputationType computationType) {
-        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(nodeUuid, timePointUuid);
+        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(nodeUuid, timePointUuid).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
         switch (computationType) {
             case LOAD_FLOW -> timePointNodeInfoEntity.setLoadFlowResultUuid(computationResultUuid);
             case SECURITY_ANALYSIS -> timePointNodeInfoEntity.setSecurityAnalysisResultUuid(computationResultUuid);
@@ -875,7 +895,7 @@ public class NetworkModificationTreeService {
             return null;
         }
 
-        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(nodeUuid, timePointUuid);
+        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(nodeUuid, timePointUuid).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
         return getComputationResultUuid(timePointNodeInfoEntity, computationType);
     }
 
@@ -943,7 +963,11 @@ public class NetworkModificationTreeService {
         return uuids;
     }
 
-    private void getBuildInfos(NodeEntity nodeEntity, UUID timePointUuid, BuildInfos buildInfos) {
+    private UUID getModificationReportUuid(UUID nodeUuid, UUID timePointUuid, UUID nodeToBuildUuid) {
+        return self.getModificationReports(nodeToBuildUuid, timePointUuid).getOrDefault(nodeUuid, UUID.randomUUID());
+    }
+
+    private void getBuildInfos(NodeEntity nodeEntity, UUID timePointUuid, BuildInfos buildInfos, UUID nodeToBuildUuid) {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
@@ -951,8 +975,9 @@ public class NetworkModificationTreeService {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
             }
             if (!modificationNode.getNodeBuildStatus().isBuilt()) {
-                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), modificationNode.getId().toString());
-                getBuildInfos(nodeEntity.getParentNode(), timePointUuid, buildInfos);
+                UUID reportUuid = getModificationReportUuid(nodeEntity.getIdNode(), timePointUuid, nodeToBuildUuid);
+                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), new ReportInfos(reportUuid, modificationNode.getId()));
+                getBuildInfos(nodeEntity.getParentNode(), timePointUuid, buildInfos, nodeToBuildUuid);
             } else {
                 buildInfos.setOriginVariantId(self.getVariantId(nodeEntity.getIdNode(), timePointUuid));
             }
@@ -968,8 +993,7 @@ public class NetworkModificationTreeService {
                 throw new StudyException(BAD_NODE_TYPE, "The node " + entity.getIdNode() + " is not a modification node");
             } else {
                 buildInfos.setDestinationVariantId(self.getVariantId(nodeUuid, timePointUuid));
-                buildInfos.setReportUuid(self.getReportUuid(nodeUuid, timePointUuid));
-                getBuildInfos(entity, timePointUuid, buildInfos);
+                getBuildInfos(entity, timePointUuid, buildInfos, nodeUuid);
             }
         }, () -> {
             throw new StudyException(ELEMENT_NOT_FOUND);
@@ -980,67 +1004,61 @@ public class NetworkModificationTreeService {
 
     private void fillInvalidateNodeInfos(NodeEntity node, UUID timePointUuid, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
                                          boolean deleteVoltageInitResults) {
-        UUID reportUuid = self.getReportUuid(node.getIdNode(), timePointUuid);
-        List<StudyService.ReportType> reportTypes = new ArrayList<>();
-
+        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(node.getIdNode(), timePointUuid).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
         if (!invalidateOnlyChildrenBuildStatus) {
             // we want to delete associated report and variant in this case
-            invalidateNodeInfos.addReportUuid(reportUuid);
+            timePointNodeInfoEntity.getModificationReports().forEach((key, value) -> invalidateNodeInfos.addReportUuid(value));
             invalidateNodeInfos.addVariantId(self.getVariantId(node.getIdNode(), timePointUuid));
         }
 
-        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(node.getIdNode(), timePointUuid);
+        // we want to delete associated computation reports exept for voltage initialization : only if deleteVoltageInitResults is true
+        timePointNodeInfoEntity.getComputationReports().forEach((key, value) -> {
+            if (deleteVoltageInitResults || !VOLTAGE_INITIALIZATION.name().equals(key)) {
+                invalidateNodeInfos.addReportUuid(value);
+            }
+        });
+
         UUID loadFlowResultUuid = getComputationResultUuid(timePointNodeInfoEntity, LOAD_FLOW);
         if (loadFlowResultUuid != null) {
             invalidateNodeInfos.addLoadFlowResultUuid(loadFlowResultUuid);
-            reportTypes.add(StudyService.ReportType.LOAD_FLOW);
         }
 
         UUID securityAnalysisResultUuid = getComputationResultUuid(timePointNodeInfoEntity, SECURITY_ANALYSIS);
         if (securityAnalysisResultUuid != null) {
             invalidateNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
-            reportTypes.add(StudyService.ReportType.SECURITY_ANALYSIS);
         }
 
         UUID sensitivityAnalysisResultUuid = getComputationResultUuid(timePointNodeInfoEntity, SENSITIVITY_ANALYSIS);
         if (sensitivityAnalysisResultUuid != null) {
             invalidateNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
-            reportTypes.add(StudyService.ReportType.SENSITIVITY_ANALYSIS);
         }
 
         UUID nonEvacuatedEnergyResultUuid = getComputationResultUuid(timePointNodeInfoEntity, NON_EVACUATED_ENERGY_ANALYSIS);
         if (nonEvacuatedEnergyResultUuid != null) {
             invalidateNodeInfos.addNonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid);
-            reportTypes.add(StudyService.ReportType.NON_EVACUATED_ENERGY_ANALYSIS);
         }
 
         UUID shortCircuitAnalysisResultUuid = getComputationResultUuid(timePointNodeInfoEntity, SHORT_CIRCUIT);
         if (shortCircuitAnalysisResultUuid != null) {
             invalidateNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
-            reportTypes.add(StudyService.ReportType.SHORT_CIRCUIT);
         }
 
         UUID oneBusShortCircuitAnalysisResultUuid = getComputationResultUuid(timePointNodeInfoEntity, SHORT_CIRCUIT_ONE_BUS);
         if (oneBusShortCircuitAnalysisResultUuid != null) {
             invalidateNodeInfos.addOneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid);
-            reportTypes.add(StudyService.ReportType.SHORT_CIRCUIT_ONE_BUS);
         }
 
         if (deleteVoltageInitResults) {
             UUID voltageInitResultUuid = getComputationResultUuid(timePointNodeInfoEntity, VOLTAGE_INITIALIZATION);
             if (voltageInitResultUuid != null) {
                 invalidateNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
-                reportTypes.add(StudyService.ReportType.VOLTAGE_INITIALIZATION);
             }
         }
 
         UUID stateEstimationResultUuid = getComputationResultUuid(timePointNodeInfoEntity, STATE_ESTIMATION);
         if (stateEstimationResultUuid != null) {
             invalidateNodeInfos.addStateEstimationResultUuid(stateEstimationResultUuid);
-            reportTypes.add(StudyService.ReportType.STATE_ESTIMATION);
         }
-
-        invalidateNodeInfos.addReportTypes(reportUuid, reportTypes);
     }
 
     @Transactional
@@ -1088,7 +1106,7 @@ public class NetworkModificationTreeService {
                                       List<UUID> changedNodes, boolean deleteVoltageInitResults) {
         UUID childUuid = child.getIdNode();
         // No need to invalidate a node with a status different of "BUILT"
-        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(childUuid, timePointEntity.getId());
+        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(childUuid, timePointEntity.getId()).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
 
         if (self.getNodeBuildStatus(childUuid, timePointEntity.getId()).isBuilt()) {
             fillInvalidateNodeInfos(child, timePointEntity.getId(), invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, deleteVoltageInitResults);
@@ -1106,6 +1124,16 @@ public class NetworkModificationTreeService {
                 timePointNodeInfoEntity.setVoltageInitResultUuid(null);
             }
             timePointNodeInfoEntity.setStateEstimationResultUuid(null);
+
+            // we want to keep only voltage initialization report if deleteVoltageInitResults is false
+            Map<String, UUID> computationReports = timePointNodeInfoEntity.getComputationReports()
+                .entrySet()
+                .stream()
+                .filter(entry -> VOLTAGE_INITIALIZATION.name().equals(entry.getKey()) && !deleteVoltageInitResults)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+            // Update the computation reports in the repository
+            timePointNodeInfoEntity.setComputationReports(computationReports);
         }
     }
 
@@ -1116,7 +1144,7 @@ public class NetworkModificationTreeService {
 
         timePointNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
         timePointNodeInfoEntity.setVariantId(UUID.randomUUID().toString());
-        timePointNodeInfoEntity.setReportUuid(UUID.randomUUID());
+        timePointNodeInfoEntity.setModificationReports(Map.of(nodeUuid, UUID.randomUUID()));
         changedNodes.add(nodeUuid);
     }
 
@@ -1124,7 +1152,7 @@ public class NetworkModificationTreeService {
     public void updateNodeBuildStatus(UUID nodeUuid, UUID timepointUuid, NodeBuildStatus nodeBuildStatus) {
         List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
-        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(nodeUuid, timepointUuid);
+        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(nodeUuid, timepointUuid).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
         NodeBuildStatusEmbeddable currentNodeStatus = timePointNodeInfoEntity.getNodeBuildStatus();
 
@@ -1163,7 +1191,7 @@ public class NetworkModificationTreeService {
         if (nodeEntity.getType().equals(NodeType.ROOT)) {
             return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
         }
-        return getNodeBuildStatus(timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid));
+        return getNodeBuildStatus(timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND)));
     }
 
     @Transactional(readOnly = true)
@@ -1181,7 +1209,9 @@ public class NetworkModificationTreeService {
     private NodeEntity doGetLastParentNodeBuilt(NodeEntity nodeEntity, UUID timePointUuid) {
         if (nodeEntity.getType() == NodeType.ROOT) {
             return nodeEntity;
-        } else if (timePointService.getTimePointNodeInfo(nodeEntity.getIdNode(), timePointUuid).getNodeBuildStatus().toDto().isBuilt()) {
+        } else if (timePointService
+            .getTimePointNodeInfo(nodeEntity.getIdNode(), timePointUuid).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND))
+            .getNodeBuildStatus().toDto().isBuilt()) {
             return nodeEntity;
         } else {
             return doGetLastParentNodeBuilt(nodeEntity.getParentNode(), timePointUuid);
@@ -1208,7 +1238,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void handleExcludeModification(UUID nodeUuid, UUID timePointUuid, UUID modificationUuid, boolean active) {
-        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid);
+        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
         if (timePointNodeInfoEntity.getModificationsToExclude() == null) {
             timePointNodeInfoEntity.setModificationsToExclude(new HashSet<>());
         }
@@ -1221,7 +1251,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void removeModificationsToExclude(UUID nodeUuid, UUID timePointUuid, List<UUID> modificationUuids) {
-        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid);
+        TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, timePointUuid).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
         if (timePointNodeInfoEntity.getModificationsToExclude() != null) {
             modificationUuids.forEach(timePointNodeInfoEntity.getModificationsToExclude()::remove);
         }

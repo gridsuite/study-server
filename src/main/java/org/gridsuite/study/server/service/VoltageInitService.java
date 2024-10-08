@@ -63,8 +63,7 @@ public class VoltageInitService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runVoltageInit(UUID networkUuid, String variantId, UUID parametersUuid, UUID nodeUuid, UUID timePointUuid, String userId) {
-        UUID reportUuid = getReportUuid(nodeUuid, timePointUuid);
+    public UUID runVoltageInit(UUID networkUuid, String variantId, UUID parametersUuid, UUID reportUuid, UUID nodeUuid, UUID timePointUuid, String userId) {
 
         String receiver;
         try {
@@ -239,10 +238,6 @@ public class VoltageInitService {
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
         restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
-    }
-
-    private UUID getReportUuid(UUID nodeUuid, UUID timePointUuid) {
-        return networkModificationTreeService.getReportUuid(nodeUuid, timePointUuid);
     }
 
     public void setVoltageInitServerBaseUri(String voltageInitServerBaseUri) {

@@ -74,10 +74,9 @@ public class ShortCircuitService extends AbstractComputationService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String busId, Optional<UUID> parametersUuid, String userId) {
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String busId, Optional<UUID> parametersUuid, UUID reportUuid, String userId) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid, timePointUuid);
-        UUID reportUuid = getReportUuid(nodeUuid, timePointUuid);
 
         String receiver;
         try {
@@ -227,9 +226,10 @@ public class ShortCircuitService extends AbstractComputationService {
         return result;
     }
 
-    public void stopShortCircuitAnalysis(UUID studyUuid, UUID nodeUuid, UUID timePointUuid) {
+    public void stopShortCircuitAnalysis(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
+        Objects.requireNonNull(userId);
 
         UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SHORT_CIRCUIT);
         if (resultUuid == null) {
@@ -246,15 +246,15 @@ public class ShortCircuitService extends AbstractComputationService {
                 .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/stop")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
-        restTemplate.put(shortCircuitServerBaseUri + path, Void.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     private String getVariantId(UUID nodeUuid, UUID timePointUuid) {
         return networkModificationTreeService.getVariantId(nodeUuid, timePointUuid);
-    }
-
-    private UUID getReportUuid(UUID nodeUuid, UUID timePointUuid) {
-        return networkModificationTreeService.getReportUuid(nodeUuid, timePointUuid);
     }
 
     public void deleteShortCircuitAnalysisResult(UUID uuid) {

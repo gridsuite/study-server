@@ -12,7 +12,10 @@ import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoReposito
 import org.gridsuite.study.server.repository.timepoint.TimePointRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
@@ -31,7 +34,22 @@ public class TimePointService {
         return timePointRepository.findById(timePointUuid).map(TimePointEntity::getNetworkUuid).orElse(null);
     }
 
-    public TimePointNodeInfoEntity getTimePointNodeInfo(UUID nodeUuid, UUID timePointUuid) {
+    public Optional<TimePointNodeInfoEntity> getTimePointNodeInfo(UUID nodeUuid, UUID timePointUuid) {
         return timePointNodeInfoRepository.findByNodeInfoIdAndTimePointId(nodeUuid, timePointUuid);
+    }
+
+    public List<UUID> getAllReportUuids(UUID studyUuid) {
+        List<TimePointEntity> timePointEntities = timePointRepository.findAllWithInfosByStudyId(studyUuid);
+        List<UUID> rootNodeUuids = timePointEntities.stream().map(TimePointEntity::getReportUuid).toList();
+        List<TimePointNodeInfoEntity> timePointNodeInfoEntities = timePointEntities.stream().flatMap(timePointEntity -> timePointEntity.getTimePointNodeInfos().stream()).toList();
+
+        //study reports uuids is the concatenation of modification reports, computation reports and root reports uuids
+        return timePointNodeInfoEntities.stream().flatMap(timePointNodeInfoEntity ->
+            Stream.of(
+                timePointNodeInfoEntity.getModificationReports().values().stream(),
+                timePointNodeInfoEntity.getComputationReports().values().stream(),
+                rootNodeUuids.stream()))
+            .reduce(Stream::concat)
+            .orElse(Stream.empty()).toList();
     }
 }

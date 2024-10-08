@@ -21,6 +21,6 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
 
     @Override
     public RootNode toDto(RootNodeInfoEntity node) {
-        return completeNodeInfo(node, new RootNode(null));
+        return completeNodeInfo(node, new RootNode(null, null));
     }
 }

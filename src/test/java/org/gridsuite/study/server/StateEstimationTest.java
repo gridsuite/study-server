@@ -193,7 +193,7 @@ public class StateEstimationTest {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8")
                             .setBody("1");
-                } else if (path.matches("/v1/treereports")) {
+                } else if (path.matches("/v1/reports")) {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results")) {
@@ -340,7 +340,7 @@ public class StateEstimationTest {
                 .andExpect(status().isOk());
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         // no more result
         assertEquals(0, timePointNodeStatusRepository.findAllByLoadFlowResultUuidNotNull().size());
     }

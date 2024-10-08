@@ -334,7 +334,7 @@ public class VoltageInitTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("1");
-                } else if (path.matches("/v1/treereports")) {
+                } else if (path.matches("/v1/reports")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
@@ -718,8 +718,8 @@ public class VoltageInitTest {
                     .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
                 .build(), voltageInitFailedDestination);
             return resultUuid;
-        }).when(studyService).runVoltageInit(any(), any(), any());
-        studyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), "");
+        }).when(studyService).runVoltageInit(any(), any(), any(), any());
+        studyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), timePointUuid, "");
 
         // Test doesn't reset uuid result in the database
         assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, VOLTAGE_INITIALIZATION).toString());
@@ -771,7 +771,7 @@ public class VoltageInitTest {
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         assertEquals(0, timePointNodeStatusRepository.findAllByVoltageInitResultUuidNotNull().size());
     }
 

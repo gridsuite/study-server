@@ -36,9 +36,7 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertNull;
@@ -164,7 +162,6 @@ class NetworkModificationUnitTest {
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid));
         checkUpdateModelsStatusMessagesReceived(studyUuid, node1Uuid);
 
-        Mockito.verify(reportService).deleteReport(REPORT_UUID_1);
         Mockito.verify(networkService).deleteVariants(NETWORK_UUID, List.of(VARIANT_1));
     }
 
@@ -251,7 +248,7 @@ class NetworkModificationUnitTest {
     private NodeEntity insertNode(StudyEntity study, UUID nodeId, String variantId, UUID reportUuid, NodeEntity parentNode, TimePointEntity timePointEntity, BuildStatus buildStatus) {
         NodeEntity node = nodeRepository.save(new NodeEntity(nodeId, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
         NetworkModificationNodeInfoEntity nodeInfos = NetworkModificationNodeInfoEntity.builder().modificationGroupUuid(UUID.randomUUID()).build();
-        TimePointNodeInfoEntity timePointNodeInfoEntity = TimePointNodeInfoEntity.builder().variantId(variantId).reportUuid(reportUuid).modificationsToExclude(new HashSet<>()).nodeBuildStatus(NodeBuildStatus.from(buildStatus).toEntity()).build();
+        TimePointNodeInfoEntity timePointNodeInfoEntity = TimePointNodeInfoEntity.builder().variantId(variantId).modificationReports(Map.of(node.getIdNode(), reportUuid)).modificationsToExclude(new HashSet<>()).nodeBuildStatus(NodeBuildStatus.from(buildStatus).toEntity()).build();
         nodeInfos.addTimePointNodeInfo(timePointNodeInfoEntity);
         timePointEntity.addTimePointNodeInfo(timePointNodeInfoEntity);
 

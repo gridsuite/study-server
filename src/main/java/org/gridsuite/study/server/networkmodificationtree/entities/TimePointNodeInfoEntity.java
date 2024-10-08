@@ -12,6 +12,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -37,9 +38,6 @@ public class TimePointNodeInfoEntity {
         foreignKey = @ForeignKey)
     private TimePointEntity timePoint;
 
-    @Column
-    UUID reportUuid;
-
     @ManyToOne
     @JoinColumn(name = "nodeInfoId",
         referencedColumnName = "idNode",
@@ -53,6 +51,18 @@ public class TimePointNodeInfoEntity {
     @ElementCollection
     @CollectionTable(foreignKey = @ForeignKey(name = "timePointNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "time_point_node_info_entity_modifications_to_exclude_idx", columnList = "time_point_node_info_entity_id")})
     private Set<UUID> modificationsToExclude;
+
+    @ElementCollection
+    @CollectionTable(name = "computationReports",
+        indexes = {@Index(name = "time_point_node_info_entity_computationReports_idx1", columnList = "time_point_node_info_entity_id")},
+        foreignKey = @ForeignKey(name = "timePointNodeInfoEntity_computationReports_fk1"))
+    private Map<String, UUID> computationReports;
+
+    @ElementCollection
+    @CollectionTable(name = "modificationReports",
+        indexes = {@Index(name = "time_point_node_info_entity_modificationReports_idx1", columnList = "time_point_node_info_entity_id")},
+        foreignKey = @ForeignKey(name = "timePointNodeInfoEntity_modificationReports_fk1"))
+    private Map<UUID, UUID> modificationReports;
 
     @Column(name = "shortCircuitAnalysisResultUuid")
     private UUID shortCircuitAnalysisResultUuid;

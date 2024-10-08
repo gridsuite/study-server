@@ -103,7 +103,6 @@ public class DynamicSimulationServiceTest {
     public static final String TIMELINE_NAME = "Timeline";
 
     public static final UUID REPORT_UUID = UUID.randomUUID();
-    public static final String REPORTER_ID = NODE_UUID.toString();
 
     @MockBean
     private DynamicMappingClient dynamicMappingClient;
@@ -139,10 +138,10 @@ public class DynamicSimulationServiceTest {
         given(networkModificationTreeService.getReportUuid(NODE_UUID, TIMEPOINT_UUID)).willReturn(REPORT_UUID);
 
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.run(eq(""), any(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(new ReportInfos(REPORT_UUID, REPORTER_ID)), any(), any())).willReturn(RESULT_UUID);
+        given(dynamicSimulationClient.run(eq(""), any(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(new ReportInfos(REPORT_UUID, NODE_UUID)), any(), any())).willReturn(RESULT_UUID);
 
         // call method to be tested
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", STUDY_UUID, NODE_UUID, TIMEPOINT_UUID, null, "testUserId");
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", STUDY_UUID, NODE_UUID, TIMEPOINT_UUID, REPORT_UUID, null, "testUserId");
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);
@@ -264,8 +263,8 @@ public class DynamicSimulationServiceTest {
         assertThatExceptionOfType(StudyException.class).isThrownBy(() ->
             dynamicSimulationService.getTimelineResult(NODE_UUID, TIMEPOINT_UUID)
         ).withMessage("Timelines can not be a type: %s, expected type: %s",
-                timelines.get(0).getClass().getSimpleName(),
-                StringTimeSeries.class.getSimpleName());
+                        timelines.get(0).getClass().getSimpleName(),
+                        StringTimeSeries.class.getSimpleName());
 
         // --- create bad type timeline events --- //
         List<String> timelineEventInfosList = List.of(

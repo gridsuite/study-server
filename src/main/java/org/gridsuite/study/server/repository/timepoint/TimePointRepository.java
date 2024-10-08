@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.repository.timepoint;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -18,4 +19,7 @@ import java.util.UUID;
 @Repository
 public interface TimePointRepository extends JpaRepository<TimePointEntity, UUID> {
     List<TimePointEntity> findAllByStudyId(UUID studyUuid);
+
+    @EntityGraph(attributePaths = {"timePointNodeInfos"}, type = EntityGraph.EntityGraphType.LOAD)
+    List<TimePointEntity> findAllWithInfosByStudyId(UUID studyUuid);
 }

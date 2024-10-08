@@ -60,10 +60,9 @@ public class LoadFlowService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, UUID parametersUuid, String userId, Float limitReduction) {
+    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, UUID parametersUuid, UUID reportUuid, String userId, Float limitReduction) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid, timePointUuid);
-        UUID reportUuid = getReportUuid(nodeUuid, timePointUuid);
 
         String receiver;
         try {
@@ -157,9 +156,10 @@ public class LoadFlowService extends AbstractComputationService {
         return getLoadFlowResultOrStatus(nodeUuid, timePointUuid, null, null, "/status");
     }
 
-    public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID timePointUuid) {
+    public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
+        Objects.requireNonNull(userId);
 
         UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.LOAD_FLOW);
         if (resultUuid == null) {
@@ -176,7 +176,11 @@ public class LoadFlowService extends AbstractComputationService {
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/stop")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
-        restTemplate.put(loadFlowServerBaseUri + path, Void.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     public void invalidateLoadFlowStatus(List<UUID> uuids) {
@@ -191,10 +195,6 @@ public class LoadFlowService extends AbstractComputationService {
 
     private String getVariantId(UUID nodeUuid, UUID timePointUuid) {
         return networkModificationTreeService.getVariantId(nodeUuid, timePointUuid);
-    }
-
-    private UUID getReportUuid(UUID nodeUuid, UUID timePointUuid) {
-        return networkModificationTreeService.getReportUuid(nodeUuid, timePointUuid);
     }
 
     public void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {

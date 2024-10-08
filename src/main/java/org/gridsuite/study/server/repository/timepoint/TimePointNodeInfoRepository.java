@@ -10,6 +10,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNode
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -36,5 +37,5 @@ public interface TimePointNodeInfoRepository extends JpaRepository<TimePointNode
 
     List<TimePointNodeInfoEntity> findAllByNodeInfoId(UUID nodeInfoId);
 
-    TimePointNodeInfoEntity findByNodeInfoIdAndTimePointId(UUID nodeInfoId, UUID timePointId);
+    Optional<TimePointNodeInfoEntity> findByNodeInfoIdAndTimePointId(UUID nodeInfoId, UUID timePointId);
 }

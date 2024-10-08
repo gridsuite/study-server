@@ -36,6 +36,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -74,7 +75,6 @@ import java.util.stream.Stream;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_OPERATION;
-import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -127,10 +127,6 @@ public class StudyService {
     private final TimePointRepository timePointRepository;
 
     private final ObjectMapper objectMapper;
-
-    public enum ReportNameMatchingType {
-        EXACT_MATCHING, ENDS_WITH
-    }
 
     public enum ReportType {
         NETWORK_MODIFICATION("NetworkModification"),
@@ -403,6 +399,8 @@ public class StudyService {
             UUID networkUuid = networkStoreService.doGetNetworkUuid(studyUuid);
             List<NodeModificationInfos> nodesModificationInfos;
             nodesModificationInfos = networkModificationTreeService.getAllNodesModificationInfos(studyUuid);
+            // get all reports related to the study
+            List<UUID> reportUuids = timePointService.getAllReportUuids(studyUuid);
             studyEntity.ifPresent(s -> {
                 caseUuid.set(studyEntity.get().getFirstTimepoint().getCaseUuid());
                 networkModificationTreeService.doDeleteTree(studyUuid);
@@ -421,7 +419,7 @@ public class StudyService {
                     sensitivityAnalysisService.deleteSensitivityAnalysisParameters(s.getSensitivityAnalysisParametersUuid());
                 }
             });
-            deleteStudyInfos = new DeleteStudyInfos(networkUuid, caseUuid.get(), nodesModificationInfos);
+            deleteStudyInfos = new DeleteStudyInfos(networkUuid, caseUuid.get(), nodesModificationInfos, reportUuids);
         } else {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
         }
@@ -463,7 +461,7 @@ public class StudyService {
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
                                 .map(NodeModificationInfos::getStateEstimationUuid).filter(Objects::nonNull).forEach(stateEstimationService::deleteStateEstimationResult)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
+                        studyServerExecutionService.runAsync(() -> reportService.deleteReports(deleteStudyInfos.getReportsUuids())),
                         studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
                         studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid())),
                         studyServerExecutionService.runAsync(() -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()))
@@ -711,17 +709,19 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, String userId, Float limitReduction) {
+    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String userId, Float limitReduction) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), LOAD_FLOW);
+        UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, LOAD_FLOW);
         if (prevResultUuid != null) {
             loadflowService.deleteLoadFlowResult(prevResultUuid);
         }
 
         UUID lfParametersUuid = loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
-        UUID result = loadflowService.runLoadFlow(studyUuid, nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), lfParametersUuid, userId, limitReduction);
+        UUID lfReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, timePointUuid).getOrDefault(LOAD_FLOW.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, timePointUuid, LOAD_FLOW, lfReportUuid);
+        UUID result = loadflowService.runLoadFlow(studyUuid, nodeUuid, timePointUuid, lfParametersUuid, lfReportUuid, userId, limitReduction);
 
-        updateComputationResultUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), result, LOAD_FLOW);
+        updateComputationResultUuid(nodeUuid, timePointUuid, result, LOAD_FLOW);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         return result;
     }
@@ -963,7 +963,8 @@ public class StudyService {
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid));
-        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid));
+        UUID saReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, timePointUuid).getOrDefault(SECURITY_ANALYSIS.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), SECURITY_ANALYSIS, saReportUuid);
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         String receiver;
         try {
@@ -980,7 +981,7 @@ public class StudyService {
 
         var runSecurityAnalysisParametersInfos = new RunSecurityAnalysisParametersInfos(study.getSecurityAnalysisParametersUuid(), study.getLoadFlowParametersUuid(), contingencyListNames);
         UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, variantId, runSecurityAnalysisParametersInfos,
-            new ReportInfos(reportUuid, nodeUuid.toString()), receiver, userId);
+                new ReportInfos(saReportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), result, SECURITY_ANALYSIS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         return result;
@@ -1237,12 +1238,12 @@ public class StudyService {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid));
+            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid)).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             String variantId = timePointNodeInfoEntity.getVariantId();
-            UUID reportUuid = timePointNodeInfoEntity.getReportUuid();
+            UUID reportUuid = timePointNodeInfoEntity.getModificationReports().get(nodeUuid);
 
-            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModification(studyUuid, createModificationAttributes, groupUuid, variantId, reportUuid, nodeUuid.toString());
+            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModification(studyUuid, createModificationAttributes, groupUuid, variantId, reportUuid, nodeUuid);
             updateNode(studyUuid, nodeUuid, networkModificationResult);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -1288,6 +1289,8 @@ public class StudyService {
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userId) {
         assertCanBuildNode(studyUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid));
+        Map<UUID, UUID> nodeUuidToReportUuid = buildInfos.getReportsInfos().stream().collect(Collectors.toMap(ReportInfos::nodeUuid, ReportInfos::reportUuid));
+        networkModificationTreeService.setModificationReports(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), nodeUuidToReportUuid);
         networkModificationTreeService.updateNodeBuildStatus(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), NodeBuildStatus.from(BuildStatus.BUILDING));
         try {
             networkModificationService.buildNode(studyUuid, nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), buildInfos);
@@ -1397,18 +1400,17 @@ public class StudyService {
         }
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
-            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getReportTypesPerReport().forEach((reportId, reportTypes) -> reportTypes.forEach(t -> reportService.deleteReportByType(reportId, t)))),
-            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
-            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
-            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
-            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getNonEvacuatedEnergyResultUuids().forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)),
-            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
-            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
-            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
-            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
-            studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getStateEstimationResultUuids().forEach(stateEstimationService::deleteStateEstimationResult)),
-            studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
+                studyServerExecutionService.runAsync(() -> reportService.deleteReports(invalidateNodeInfos.getReportUuids())),
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getNonEvacuatedEnergyResultUuids().forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)),
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getStateEstimationResultUuids().forEach(stateEstimationService::deleteStateEstimationResult)),
+                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
         );
         try {
             executeInParallel.get();
@@ -1540,7 +1542,7 @@ public class StudyService {
 
             CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                     studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
+                    studyServerExecutionService.runAsync(() -> reportService.deleteReports(deleteNodeInfos.getReportUuids())),
                     studyServerExecutionService.runAsync(() -> deleteNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
                     studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
                     studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
@@ -1660,7 +1662,7 @@ public class StudyService {
             checkStudyContainsNode(studyUuid, targetNodeUuid);
             UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
             NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(targetNodeUuid);
-            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(targetNodeUuid, self.getStudyFirstTimePointUuid(studyUuid));
+            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(targetNodeUuid, self.getStudyFirstTimePointUuid(studyUuid)).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
             Optional<NetworkModificationResult> networkModificationResult = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, networkModificationNodeInfoEntity, timePointNodeInfoEntity, buildTargetNode);
             if (!targetNodeBelongsToSourceNodeSubTree) {
@@ -1689,7 +1691,7 @@ public class StudyService {
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nodeUuid);
-            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid));
+            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid)).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
             Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModifications(modificationUuidList, networkUuid, networkModificationNodeInfoEntity, timePointNodeInfoEntity, action);
             // invalidate the whole subtree except the target node (we have built this node during the duplication)
@@ -1708,51 +1710,75 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public Report getSubReport(String subReportId, Set<String> severityLevels) {
-        return reportService.getSubReport(UUID.fromString(subReportId), severityLevels);
+    public List<ReportLog> getReportLogs(String reportId, String messageFilter, Set<String> severityLevels) {
+        return reportService.getReportLogs(UUID.fromString(reportId), messageFilter, severityLevels);
     }
 
     @Transactional(readOnly = true)
-    public List<Report> getNodeReport(UUID nodeUuid, String reportId, Set<String> severityLevels) {
-        return reportService.getReport(UUID.fromString(reportId), nodeUuid.toString(), null, null, severityLevels);
-    }
+    public List<ReportLog> getParentNodesReportLogs(UUID nodeUuid, UUID timePointUuid, String messageFilter, Set<String> severityLevels) {
+        List<UUID> nodeIds = nodesTree(nodeUuid);
+        List<ReportLog> reportLogs = new ArrayList<>();
+        Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, timePointUuid);
 
-    private Pair<String, ReportNameMatchingType> getFiltersParamaters(UUID nodeUuid, boolean nodeOnlyReport, ReportType reportType) {
-        String reportNameFilter;
-        ReportNameMatchingType reportNameMatchingType;
-        if (nodeOnlyReport) {
-            reportNameFilter = nodeUuid + "@" + reportType.reportKey;
-            reportNameMatchingType = ReportNameMatchingType.EXACT_MATCHING;
-        } else {
-            // in "all logs/nodes" mode, we have to filter only on the report type (ex: anything ending with "@NetWorkModification")
-            reportNameFilter = "@" + reportType.reportKey;
-            reportNameMatchingType = ReportNameMatchingType.ENDS_WITH;
+        for (UUID nodeId : nodeIds) {
+            UUID reportId = modificationReportsMap.getOrDefault(nodeId, networkModificationTreeService.getReportUuid(nodeId, timePointUuid));
+            reportLogs.addAll(reportService.getReportLogs(reportId, messageFilter, severityLevels));
         }
-        return Pair.of(reportNameFilter, reportNameMatchingType);
+        return reportLogs;
     }
 
     @Transactional(readOnly = true)
     public List<Report> getParentNodesReport(UUID nodeUuid, UUID timePointUuid, boolean nodeOnlyReport, ReportType reportType, Set<String> severityLevels) {
-        // recursive function to retrieve all reports from a given node up to the Root node
-        Pair<String, ReportNameMatchingType> filtersParameters = getFiltersParamaters(nodeUuid, nodeOnlyReport, reportType);
-        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid, timePointUuid);
-        List<Report> subReporters = reportService.getReport(reportUuid, nodeUuid.toString(), filtersParameters.getFirst(), filtersParameters.getSecond(), severityLevels);
-        if (subReporters.isEmpty()) {
-            return subReporters;
+        AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
+        
+        if (isNonRootNodeWithComputationReportType(nodeInfos, reportType)) {
+            UUID reportUuid = getReportUuidForNode(nodeUuid, timePointUuid, reportType);
+            return reportUuid != null ? List.of(reportService.getReport(reportUuid, nodeUuid.toString(), severityLevels)) : Collections.emptyList();
         } else if (nodeOnlyReport) {
-            return List.of(subReporters.get(subReporters.size() - 1));
+            return getNodeOnlyReport(nodeUuid, timePointUuid, severityLevels);
         } else {
-            String subReporterNodeId = subReporters.get(0).message();
-            if (ROOT_NODE_NAME.equalsIgnoreCase(subReporterNodeId)) {
-                return subReporters;
-            }
-            Optional<UUID> parentUuid = networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporterNodeId));
-            if (parentUuid.isEmpty()) {
-                return subReporters;
-            }
-            List<Report> parentReporters = self.getParentNodesReport(parentUuid.get(), timePointUuid, false, reportType, severityLevels);
-            return Stream.concat(parentReporters.stream(), subReporters.stream()).collect(Collectors.toList());
+            return getAllModificationReports(nodeUuid, timePointUuid, severityLevels);
         }
+    }
+    
+    private boolean isNonRootNodeWithComputationReportType(AbstractNode nodeInfos, ReportType reportType) {
+        return nodeInfos.getType() != NodeType.ROOT && reportType != ReportType.NETWORK_MODIFICATION;
+    }
+    
+    private UUID getReportUuidForNode(UUID nodeUuid, UUID timePointUuid, ReportType reportType) {
+        return networkModificationTreeService.getComputationReports(nodeUuid, timePointUuid).get(reportType.name());
+    }
+    
+    private List<Report> getNodeOnlyReport(UUID nodeUuid, UUID timePointUuid, Set<String> severityLevels) {
+        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid, timePointUuid);
+        return List.of(reportService.getReport(reportUuid, nodeUuid.toString(), severityLevels));
+    }
+    
+    private List<Report> getAllModificationReports(UUID nodeUuid, UUID timePointUuid, Set<String> severityLevels) {
+        List<UUID> nodeIds = nodesTree(nodeUuid);
+        List<Report> modificationReports = new ArrayList<>();
+        Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, timePointUuid);
+
+        for (UUID nodeId : nodeIds) {
+            UUID reportId = modificationReportsMap.getOrDefault(nodeId, networkModificationTreeService.getReportUuid(nodeId, timePointUuid));
+            modificationReports.add(reportService.getReport(reportId, nodeId.toString(), severityLevels));
+        }
+        
+        return modificationReports;
+    }
+
+    private List<UUID> nodesTree(UUID nodeUuid) {
+        List<UUID> nodeIds = new ArrayList<>();
+        nodeIds.add(nodeUuid);
+        Optional<UUID> parentUuid = networkModificationTreeService.getParentNodeUuid(nodeUuid);
+        
+        while (parentUuid.isPresent()) {
+            nodeIds.add(parentUuid.get());
+            parentUuid = networkModificationTreeService.getParentNodeUuid(parentUuid.get());
+        }
+
+        Collections.reverse(nodeIds);
+        return nodeIds;
     }
 
     private void updateNode(UUID studyUuid, UUID nodeUuid, Optional<NetworkModificationResult> networkModificationResult) {
@@ -1805,41 +1831,46 @@ public class StudyService {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid));
-        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid));
+        UUID sensiReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid)).getOrDefault(SENSITIVITY_ANALYSIS.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), SENSITIVITY_ANALYSIS, sensiReportUuid);
 
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), networkUuid, variantId, reportUuid, userId, study.getSensitivityAnalysisParametersUuid(), study.getLoadFlowParametersUuid());
+        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), networkUuid, variantId, sensiReportUuid, userId, study.getSensitivityAnalysisParametersUuid(), study.getLoadFlowParametersUuid());
 
         updateComputationResultUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), result, SENSITIVITY_ANALYSIS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         return result;
     }
 
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, Optional<String> busId, String userId) {
-        UUID shortCircuitResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, Optional<String> busId, String userId) {
+        ComputationType computationType = busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS;
+        UUID shortCircuitResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, computationType);
         if (shortCircuitResultUuid != null) {
             shortCircuitService.deleteShortCircuitAnalysisResult(shortCircuitResultUuid);
         }
-
         final Optional<UUID> parametersUuid = studyRepository.findById(studyUuid).map(StudyEntity::getShortCircuitParametersUuid);
-        final UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), busId.orElse(null), parametersUuid, userId);
-        updateComputationResultUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), result, busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
+        UUID scReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, timePointUuid).getOrDefault(computationType.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, timePointUuid, computationType, scReportUuid);
+        final UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, timePointUuid, busId.orElse(null), parametersUuid, scReportUuid, userId);
+        updateComputationResultUuid(nodeUuid, timePointUuid, result, computationType);
         notificationService.emitStudyChanged(studyUuid, nodeUuid,
             busId.isEmpty() ? NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS : NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         return result;
     }
 
-    public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, String userId) {
-        UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), VOLTAGE_INITIALIZATION);
+    public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String userId) {
+        UUID prevResultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, VOLTAGE_INITIALIZATION);
         if (prevResultUuid != null) {
             voltageInitService.deleteVoltageInitResult(prevResultUuid);
         }
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid));
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, timePointUuid);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID result = voltageInitService.runVoltageInit(networkUuid, variantId, studyEntity.getVoltageInitParametersUuid(), nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), userId);
+        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, timePointUuid).getOrDefault(VOLTAGE_INITIALIZATION.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, timePointUuid, VOLTAGE_INITIALIZATION, reportUuid);
+        UUID result = voltageInitService.runVoltageInit(networkUuid, variantId, studyEntity.getVoltageInitParametersUuid(), reportUuid, nodeUuid, timePointUuid, userId);
 
-        updateComputationResultUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), result, VOLTAGE_INITIALIZATION);
+        updateComputationResultUuid(nodeUuid, timePointUuid, result, VOLTAGE_INITIALIZATION);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         return result;
     }
@@ -1989,9 +2020,11 @@ public class StudyService {
         if (parameters != null) {
             PropertyUtils.copyNonNullProperties(parameters, mergeParameters);
         }
+        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, timePointUuid).getOrDefault(DYNAMIC_SIMULATION.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, timePointUuid, DYNAMIC_SIMULATION, reportUuid);
 
         // launch dynamic simulation
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyUuid), studyUuid, nodeUuid, timePointUuid, mergeParameters, userId);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyUuid), studyUuid, nodeUuid, timePointUuid, reportUuid, mergeParameters, userId);
 
         // update result uuid and notification
         updateComputationResultUuid(nodeUuid, timePointUuid, resultUuid, DYNAMIC_SIMULATION);
@@ -2045,7 +2078,7 @@ public class StudyService {
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nodeUuid);
-            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid));
+            TimePointNodeInfoEntity timePointNodeInfoEntity = timePointService.getTimePointNodeInfo(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid)).orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
             Optional<NetworkModificationResult> networkModificationResult = networkModificationService.duplicateModificationsInGroup(voltageInitModificationsGroupUuid, networkUuid, networkModificationNodeInfoEntity, timePointNodeInfoEntity);
 
@@ -2131,7 +2164,8 @@ public class StudyService {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String provider = getNonEvacuatedEnergyProvider(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid));
-        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid));
+        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid)).getOrDefault(NON_EVACUATED_ENERGY_ANALYSIS.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), NON_EVACUATED_ENERGY_ANALYSIS, reportUuid);
 
         NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos = getNonEvacuatedEnergyParametersInfos(studyUuid);
         SensitivityAnalysisParameters sensitivityAnalysisParameters = SensitivityAnalysisParameters.load();
@@ -2218,7 +2252,8 @@ public class StudyService {
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, timePointUuid);
-        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid, timePointUuid);
+        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, timePointUuid).getOrDefault(STATE_ESTIMATION.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, timePointUuid, STATE_ESTIMATION, reportUuid);
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
@@ -2231,7 +2266,7 @@ public class StudyService {
             stateEstimationService.deleteStateEstimationResult(prevResultUuid);
         }
 
-        UUID result = stateEstimationService.runStateEstimation(networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid.toString()), receiver, userId);
+        UUID result = stateEstimationService.runStateEstimation(networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, timePointUuid, result, STATE_ESTIMATION);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
         return result;

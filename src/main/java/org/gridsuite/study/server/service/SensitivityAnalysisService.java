@@ -204,9 +204,10 @@ public class SensitivityAnalysisService {
         return result;
     }
 
-    public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, UUID timePointUuid) {
+    public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
+        Objects.requireNonNull(userId);
 
         UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuid == null) {
@@ -223,7 +224,11 @@ public class SensitivityAnalysisService {
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
             .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
-        restTemplate.put(sensitivityAnalysisServerBaseUri + path, Void.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     public void invalidateSensitivityAnalysisStatus(List<UUID> uuids) {

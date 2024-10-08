@@ -120,9 +120,6 @@
     <changeSet author="lesaulnierkev (generated)" id="1726585358232-33">
         <dropColumn columnName="ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
     </changeSet>
-    <changeSet author="lesaulnierkev (generated)" id="1726585358232-34">
-        <dropColumn columnName="REPORT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
-    </changeSet>
     <changeSet author="lesaulnierkev (generated)" id="1726585358232-35">
         <dropColumn columnName="REPORT_UUID" tableName="ROOT_NODE_INFO"/>
     </changeSet>

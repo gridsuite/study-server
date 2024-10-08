@@ -13,6 +13,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -68,8 +69,13 @@ public class NetworkModificationNode extends AbstractNode {
         this.setDynamicSimulationResultUuid(timePointNodeInfoEntity.getDynamicSimulationResultUuid());
         this.setStateEstimationResultUuid(timePointNodeInfoEntity.getStateEstimationResultUuid());
         this.setNodeBuildStatus(timePointNodeInfoEntity.getNodeBuildStatus().toDto());
-        this.setReportUuid(timePointNodeInfoEntity.getReportUuid());
+        this.setComputationsReports(timePointNodeInfoEntity.getComputationReports());
+        this.setModificationReports(timePointNodeInfoEntity.getModificationReports());
     }
+
+    private Map<String, UUID> computationsReports;
+
+    private Map<UUID, UUID> modificationReports;
 
     @Override
     public NodeType getType() {

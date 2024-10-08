@@ -246,7 +246,7 @@ public class ShortCircuitTest implements WithAssertions {
                 } else if (path.matches("/v1/results")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/treereports")) {
+                } else if (path.matches("/v1/reports")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/supervision/results-count")) {
@@ -360,7 +360,9 @@ public class ShortCircuitTest implements WithAssertions {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
 
         // stop short circuit analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode3Uuid)).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode3Uuid)
+                .header(HEADER_USER_ID, "userId"))
+                .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
@@ -395,7 +397,7 @@ public class ShortCircuitTest implements WithAssertions {
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         assertEquals(0, timePointNodeStatusRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
     }
 
@@ -495,7 +497,9 @@ public class ShortCircuitTest implements WithAssertions {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
 
         // stop short circuit analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)
+                .header(HEADER_USER_ID, "userId"))
+                .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
@@ -589,7 +593,7 @@ public class ShortCircuitTest implements WithAssertions {
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         assertEquals(0, timePointNodeStatusRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
     }
 
@@ -611,8 +615,8 @@ public class ShortCircuitTest implements WithAssertions {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), shortCircuitAnalysisFailedDestination);
             return resultUuid;
-        }).when(studyService).runShortCircuit(any(), any(), any(), any());
-        studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), Optional.empty(), "user_1");
+        }).when(studyService).runShortCircuit(any(), any(), any(), any(), any());
+        studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), timePointUuid, Optional.empty(), "user_1");
 
         // Test reset uuid result in the database
         assertNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, ComputationType.SHORT_CIRCUIT));
@@ -667,7 +671,9 @@ public class ShortCircuitTest implements WithAssertions {
                 status().isNoContent());
 
         // stop non-existing short circuit analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)
+                .header(HEADER_USER_ID, "userId"))
+                .andExpect(status().isOk());
     }
 
     @Test

@@ -149,7 +149,7 @@ public class NetworkModificationService {
                                                                   String createModificationAttributes,
                                                                   UUID groupUuid,
                                                                   String variantId, UUID reportUuid,
-                                                                  String reporterId) {
+                                                                  UUID nodeUuid) {
         Optional<NetworkModificationResult> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createModificationAttributes);
@@ -161,7 +161,7 @@ public class NetworkModificationService {
                 .queryParam(NETWORK_UUID, networkUuid)
                 .queryParam(GROUP_UUID, groupUuid)
                 .queryParam(REPORT_UUID, reportUuid)
-                .queryParam(REPORTER_ID, reporterId);
+                .queryParam(REPORTER_ID, nodeUuid);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -318,7 +318,7 @@ public class NetworkModificationService {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam(QUERY_PARAM_ACTION, ModificationsActionType.MOVE.name())
             .queryParam(NETWORK_UUID, networkUuid)
-            .queryParam(REPORT_UUID, timePointNodeInfoEntity.getReportUuid())
+            .queryParam(REPORT_UUID, timePointNodeInfoEntity.getModificationReports().get(networkModificationNodeInfoEntity.getId()))
             .queryParam(REPORTER_ID, networkModificationNodeInfoEntity.getId())
             .queryParam(VARIANT_ID, timePointNodeInfoEntity.getVariantId())
             .queryParam("originGroupUuid", originGroupUuid)
@@ -341,7 +341,7 @@ public class NetworkModificationService {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam(QUERY_PARAM_ACTION, action.name())
             .queryParam(NETWORK_UUID, networkUuid)
-            .queryParam(REPORT_UUID, timePointNodeInfoEntity.getReportUuid())
+            .queryParam(REPORT_UUID, timePointNodeInfoEntity.getModificationReports().get(networkModificationNodeInfoEntity.getId()))
             .queryParam(REPORTER_ID, networkModificationNodeInfoEntity.getId())
             .queryParam(VARIANT_ID, timePointNodeInfoEntity.getVariantId());
 
@@ -376,7 +376,7 @@ public class NetworkModificationService {
     public Optional<NetworkModificationResult> duplicateModificationsInGroup(UUID originGroupUuid, UUID networkUuid, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity, TimePointNodeInfoEntity timePointNodeInfoEntity) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "duplications")
             .queryParam(NETWORK_UUID, networkUuid)
-            .queryParam(REPORT_UUID, timePointNodeInfoEntity.getReportUuid())
+            .queryParam(REPORT_UUID, timePointNodeInfoEntity.getModificationReports().get(networkModificationNodeInfoEntity.getId()))
             .queryParam(REPORTER_ID, networkModificationNodeInfoEntity.getId())
             .queryParam(VARIANT_ID, timePointNodeInfoEntity.getVariantId())
             .queryParam("duplicateFrom", originGroupUuid);

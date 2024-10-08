@@ -27,7 +27,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.utils.MatcherReport;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -58,7 +57,6 @@ import static org.junit.Assert.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -128,7 +126,7 @@ public class ReportServiceTest {
                     String reportUuid = Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2);
                     String nodeUuid = request.getRequestUrl().queryParameter(QUERY_PARAM_REPORT_DEFAULT_NAME);
                     return new MockResponse().setResponseCode(HttpStatus.OK.value())
-                            .setBody(mapper.writeValueAsString(List.of(getNodeReport(UUID.fromString(reportUuid), nodeUuid))))
+                            .setBody(mapper.writeValueAsString(getNodeReport(UUID.fromString(reportUuid), nodeUuid)))
                             .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 } else if (path.matches("/v1/subreports/.*\\?severityLevels=.*")) {
                     String reportId = Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2);
@@ -169,6 +167,7 @@ public class ReportServiceTest {
     @Test
     public void testReport() {
         RootNode rootNode = createRoot();
+        StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
         List<Report> expectedRootReports = List.of(getNodeReport(ROOT_NODE_REPORT_UUID, rootNode.getId().toString()));
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), rootNode.getId()))
@@ -180,16 +179,7 @@ public class ReportServiceTest {
         checkReports(reports, expectedRootReports);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), rootNode.getId()))
-            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
-            .andReturn();
-        reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
-        });
-        checkReports(reports, expectedRootReports);
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
-
-        StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
-        NetworkModificationNode node = networkModificationTreeService.createNodeThenLinkItToTimepoints(studyEntity, rootNode.getId(), createModificationNodeInfo("Node1", MODIFICATION_NODE_REPORT_UUID), InsertMode.AFTER, null);
+        NetworkModificationNode node = networkModificationTreeService.createNodeThenLinkItToTimepoints(studyEntity, rootNode.getId(), createModificationNodeInfo("Node1"), InsertMode.AFTER, null);
         output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);  // message for modification node creation
         List<Report> expectedNodeReports = List.of(getNodeReport(MODIFICATION_NODE_REPORT_UUID, node.getId().toString()));
 
@@ -216,9 +206,9 @@ public class ReportServiceTest {
     public void testMultipleReport() {
         RootNode rootNode = createRoot();
         StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
-        NetworkModificationNode node = networkModificationTreeService.createNodeThenLinkItToTimepoints(studyEntity, rootNode.getId(), createModificationNodeInfo("Modification Node", MODIFICATION_NODE_REPORT_UUID), InsertMode.AFTER, null);
-        NetworkModificationNode child1 = networkModificationTreeService.createNodeThenLinkItToTimepoints(studyEntity, node.getId(), createModificationNodeInfo("Child 1", MODIFICATION_CHILD_NODE1_REPORT_UUID), InsertMode.AFTER, null);
-        NetworkModificationNode child2 = networkModificationTreeService.createNodeThenLinkItToTimepoints(studyEntity, node.getId(), createModificationNodeInfo("Child 2", MODIFICATION_CHILD_NODE2_REPORT_UUID), InsertMode.AFTER, null);
+        NetworkModificationNode node = networkModificationTreeService.createNodeThenLinkItToTimepoints(studyEntity, rootNode.getId(), createModificationNodeInfo("Modification Node"), InsertMode.AFTER, null);
+        NetworkModificationNode child1 = networkModificationTreeService.createNodeThenLinkItToTimepoints(studyEntity, node.getId(), createModificationNodeInfo("Child 1"), InsertMode.AFTER, null);
+        NetworkModificationNode child2 = networkModificationTreeService.createNodeThenLinkItToTimepoints(studyEntity, node.getId(), createModificationNodeInfo("Child 2"), InsertMode.AFTER, null);
 
         // message for 3 modification nodes creation
         output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
@@ -283,40 +273,6 @@ public class ReportServiceTest {
         childrenAndParentsExpectedReports.add(child1ExpectedReport);
         checkReports(child1AndParentsReports, childrenAndParentsExpectedReports);
         assertTrue(TestUtils.getRequestsDone(childrenAndParentsExpectedReports.size(), server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
-    }
-
-    @SneakyThrows
-    @Test
-    public void testSubReport() {
-        RootNode rootNode = createRoot();
-        Report expectedSubReport = getNodeReport(ROOT_NODE_REPORT_UUID, ROOT_NODE_REPORT_UUID.toString());
-
-        MvcResult mvcResult =
-                mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/subreport?reportId={id}&severityLevels=INFO&severityLevels=WARN",
-                                rootNode.getStudyId(), rootNode.getId(), ROOT_NODE_REPORT_UUID.toString()))
-                        .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
-                        .andReturn();
-        Report report = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
-        });
-        assertThat(expectedSubReport, new MatcherReport(report));
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/subreports/.*")));
-    }
-
-    @SneakyThrows
-    @Test
-    public void testNodeReport() {
-        RootNode rootNode = createRoot();
-        Report expectedReport = getNodeReport(ROOT_NODE_REPORT_UUID, rootNode.getId().toString());
-
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report?reportId={id}&reportType=NETWORK_MODIFICATION",
-                                rootNode.getStudyId(), rootNode.getId(), ROOT_NODE_REPORT_UUID.toString()))
-                        .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
-                        .andReturn();
-        List<Report> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
-        });
-        assertEquals(1, reports.size());
-        assertThat(reports.get(0), new MatcherReport(expectedReport));
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
 
     private Report getNodeReport(UUID reportUuid, String nodeUuid) {

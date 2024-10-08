@@ -10,6 +10,9 @@ import lombok.NonNull;
 import org.apache.poi.util.StringUtil;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.Report;
+import org.gridsuite.study.server.dto.ReportLog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -21,8 +24,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -40,6 +41,8 @@ public class ReportService {
 
     private final RestTemplate restTemplate;
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReportService.class);
+
     @Autowired
     public ReportService(RemoteServicesProperties remoteServicesProperties,
                          RestTemplate restTemplate) {
@@ -55,56 +58,45 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "reports" + DELIMITER;
     }
 
-    private String getSubReportsServerURI() {
-        return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "subreports" + DELIMITER;
-    }
-
-    public List<Report> getReport(@NonNull UUID id, @NonNull String defaultName, String reportNameFilter, StudyService.ReportNameMatchingType reportNameMatchingType, Set<String> severityLevels) {
+    public Report getReport(@NonNull UUID id, @NonNull String defaultName, Set<String> severityLevels) {
         var uriBuilder = UriComponentsBuilder.fromPath("{id}")
                 .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
                 .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
-        if (!StringUtil.isBlank(reportNameFilter)) {
-            uriBuilder.queryParam(QUERY_PARAM_REPORT_NAME_FILTER, reportNameFilter);
-            uriBuilder.queryParam(QUERY_PARAM_REPORT_NAME_MATCHING_TYPE, reportNameMatchingType);
+        var path = uriBuilder.buildAndExpand(id).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<Report>() {
+        }).getBody();
+    }
+
+    public void deleteReports(@NonNull List<UUID> reportsUuids) {
+        if (reportsUuids.isEmpty()) {
+            return;
+        }
+        var path = UriComponentsBuilder.fromPath("reports").toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(reportsUuids, headers);
+
+        try {
+            restTemplate.exchange(this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + path, HttpMethod.DELETE, httpEntity, Void.class);
+        } catch (Exception e) {
+            LOGGER.error("Error while deleting reports : {}", e.getMessage());
+        }
+    }
+
+    public List<ReportLog> getReportLogs(@NonNull UUID id, String messageFilter, Set<String> severityLevels) {
+        var uriBuilder = UriComponentsBuilder.fromPath("{id}/logs");
+        if (severityLevels != null && !severityLevels.isEmpty()) {
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
+        }
+        if (!StringUtil.isBlank(messageFilter)) {
+            uriBuilder.queryParam(QUERY_PARAM_MESSAGE_FILTER, messageFilter);
         }
         var path = uriBuilder.buildAndExpand(id).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<Report>>() {
+        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReportLog>>() {
         }).getBody();
-    }
-
-    public Report getSubReport(@NonNull UUID id, Set<String> severityLevels) {
-        var uriBuilder = UriComponentsBuilder.fromPath("{id}")
-                .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
-        var path = uriBuilder.buildAndExpand(id).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(this.getSubReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<Report>() {
-        }).getBody();
-    }
-
-    public void deleteReport(@NonNull UUID reportUuid) {
-        deleteReportByType(reportUuid, null);
-    }
-
-    public void deleteReportByType(UUID reportUuid, StudyService.ReportType reportType) {
-        Objects.requireNonNull(reportUuid);
-        var uriBuilder = UriComponentsBuilder.fromPath("{reportUuid}")
-                .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false);
-        if (reportType != null) {
-            uriBuilder.queryParam(QUERY_PARAM_REPORT_TYPE_FILTER, reportType.reportKey);
-        }
-        var path = uriBuilder.buildAndExpand(reportUuid).toUriString();
-        restTemplate.delete(this.getReportsServerURI() + path);
-    }
-
-    public void deleteTreeReports(@NonNull Map<UUID, String> treeReportsKeys) {
-        var path = UriComponentsBuilder.fromPath("treereports").toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<UUID, String>> httpEntity = new HttpEntity<>(treeReportsKeys, headers);
-
-        restTemplate.exchange(this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + path, HttpMethod.DELETE, httpEntity, Void.class);
     }
 }

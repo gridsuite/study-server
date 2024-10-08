@@ -65,6 +65,7 @@ import java.io.IOException;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.junit.Assert.*;
@@ -294,7 +295,7 @@ public class LoadFlowTest {
                 } else if (path.matches("/v1/results")) {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/treereports")) {
+                } else if (path.matches("/v1/reports")) {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/supervision/results-count")) {
@@ -404,7 +405,9 @@ public class LoadFlowTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/status")));
 
         // stop loadflow analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/stop", studyNameUserIdUuid, modificationNode3Uuid)).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/stop", studyNameUserIdUuid, modificationNode3Uuid)
+                .header(HEADER_USER_ID, "userId"))
+                .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
 
@@ -554,8 +557,8 @@ public class LoadFlowTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), loadflowFailedDestination);
             return resultUuid;
-        }).when(studyService).runLoadFlow(any(), any(), any(), any());
-        studyService.runLoadFlow(studyEntity.getId(), modificationNode.getId(), "", null);
+        }).when(studyService).runLoadFlow(any(), any(), any(), any(), any());
+        studyService.runLoadFlow(studyEntity.getId(), modificationNode.getId(), timePointUuid, "", null);
 
         // Test reset uuid result in the database
         assertNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, LOAD_FLOW));
@@ -598,7 +601,7 @@ public class LoadFlowTest {
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/treereports")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         assertEquals(0, timePointNodeStatusRepository.findAllByLoadFlowResultUuidNotNull().size());
     }
 
@@ -621,7 +624,8 @@ public class LoadFlowTest {
                 status().isNoContent());
 
         // stop non existing loadflow
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)
+                .header(HEADER_USER_ID, "userId")).andExpect(status().isOk());
     }
 
     private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {

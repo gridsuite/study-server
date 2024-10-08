@@ -272,7 +272,7 @@ public class StudyControllerDynamicSimulationTest {
         TimePointEntity timePoint = timePointRepository.findAllByStudyId(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.TIMEPOINT_NOT_FOUND));
         when(loadFlowService.getLoadFlowStatus(any(), any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), eq(timePoint.getId()), any(), any());
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), eq(timePoint.getId()), any(), any(), any());
 
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
@@ -340,7 +340,7 @@ public class StudyControllerDynamicSimulationTest {
         TimePointEntity timePoint = timePointRepository.findAllByStudyId(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.TIMEPOINT_NOT_FOUND));
         when(loadFlowService.getLoadFlowStatus(any(), any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), eq(timePoint.getId()), any(), any());
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), eq(timePoint.getId()), any(), any(), any());
 
         MvcResult result;
         // --- call endpoint to be tested --- //
@@ -417,7 +417,7 @@ public class StudyControllerDynamicSimulationTest {
 
         when(loadFlowService.getLoadFlowStatus(any(), any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), eq(timePoint.getId()), any(), any());
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(studyUuid), eq(modificationNode1Uuid), eq(timePoint.getId()), any(), any(), any());
 
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
