@@ -24,7 +24,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @Builder
-@Table(name = "timepoint")
+@Table(name = "timePoint")
 public class TimePointEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

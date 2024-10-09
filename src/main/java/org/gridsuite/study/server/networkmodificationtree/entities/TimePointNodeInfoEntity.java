@@ -35,7 +35,8 @@ public class TimePointNodeInfoEntity {
     @ManyToOne
     @JoinColumn(name = "timePointId",
         referencedColumnName = "id",
-        foreignKey = @ForeignKey)
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_time_point_node_info"))
     private TimePointEntity timePoint;
 
     @ManyToOne

@@ -10,7 +10,6 @@ package org.gridsuite.study.server.networkmodificationtree;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeInfoRepository;
 
 import java.util.*;
