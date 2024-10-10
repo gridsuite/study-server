@@ -152,7 +152,6 @@ public class NetworkModificationTreeService {
         NetworkModificationNodeInfoEntity newNetworkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(
                 newGroupUuid,
                 UUID.randomUUID().toString(),
-                new HashSet<>(),
                 null,
                 null,
                 null,
@@ -754,9 +753,6 @@ public class NetworkModificationTreeService {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-            if (modificationNode.getModificationsToExclude() != null) {
-                buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
-            }
             if (!modificationNode.getNodeBuildStatus().isBuilt()) {
                 UUID reportUuid = getModificationReportUuid(nodeEntity.getIdNode(), nodeToBuildUuid);
                 buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), new ReportInfos(reportUuid, modificationNode.getId()));
@@ -983,16 +979,6 @@ public class NetworkModificationTreeService {
     @Transactional(readOnly = true)
     public Optional<Boolean> isReadOnly(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).isReadOnly(nodeUuid));
-    }
-
-    @Transactional
-    public void handleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).handleExcludeModification(nodeUuid, modificationUUid, active));
-    }
-
-    @Transactional
-    public void removeModificationsToExclude(UUID nodeUuid, List<UUID> modificationUUid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).removeModificationsToExclude(nodeUuid, modificationUUid));
     }
 
     @Transactional

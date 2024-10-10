@@ -38,7 +38,6 @@ import org.springframework.messaging.MessageHeaders;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -235,7 +234,7 @@ class NetworkModificationUnitTest {
 
     private NodeEntity insertNode(StudyEntity study, UUID nodeId, NodeEntity parentNode, BuildStatus buildStatus) {
         NodeEntity node = nodeRepository.save(new NodeEntity(nodeId, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
-        NetworkModificationNodeInfoEntity nodeInfos = new NetworkModificationNodeInfoEntity(UUID.randomUUID(), VARIANT_1, new HashSet<>(), null, null, null, null, null, null, null, null, null, NodeBuildStatus.from(buildStatus).toEntity(), new HashMap<>(), new HashMap<>());
+        NetworkModificationNodeInfoEntity nodeInfos = new NetworkModificationNodeInfoEntity(UUID.randomUUID(), VARIANT_1, null, null, null, null, null, null, null, null, null, NodeBuildStatus.from(buildStatus).toEntity(), new HashMap<>(), new HashMap<>());
         nodeInfos.setIdNode(node.getIdNode());
         networkModificationNodeInfoRepository.save(nodeInfos);
 
