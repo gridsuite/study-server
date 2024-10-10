@@ -1412,17 +1412,6 @@ public class StudyService {
     }
 
     @Transactional
-    public void changeModificationActiveState(@NonNull UUID studyUuid, @NonNull UUID nodeUuid,
-                                              @NonNull UUID modificationUuid, boolean active, String userId) {
-        if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
-            throw new StudyException(NOT_ALLOWED);
-        }
-        networkModificationTreeService.handleExcludeModification(nodeUuid, modificationUuid, active);
-        updateStatuses(studyUuid, nodeUuid, false);
-        notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
-    @Transactional
     public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
@@ -1432,9 +1421,7 @@ public class StudyService {
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.deleteModifications(groupId, modificationsUuids);
-            if (modificationsUuids != null) {
-                networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
-            }
+
             updateStatuses(studyUuid, nodeUuid, false, false, false);
         } finally {
             notificationService.emitEndDeletionEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -1452,7 +1439,6 @@ public class StudyService {
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.stashModifications(groupId, modificationsUuids);
-            networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -1487,7 +1473,6 @@ public class StudyService {
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.restoreModifications(groupId, modificationsUuids);
-            networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
