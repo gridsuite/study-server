@@ -128,8 +128,6 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.failed
           group: studyCaseImportFailedGroup
       output-bindings: publishStudyUpdate-out-0;publishElementUpdate-out-0
-#  jpa:
-#    show-sql: true
 
 powsybl:
   services:
