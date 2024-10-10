@@ -34,6 +34,7 @@ import org.gridsuite.study.server.notification.dto.AlertLevel;
 import org.gridsuite.study.server.notification.dto.StudyAlert;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.*;
@@ -200,6 +201,9 @@ public class VoltageInitTest {
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
+    @Autowired
+    private TimePointNodeInfoRepository timePointNodeStatusRepository;
+
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String voltageInitResultDestination = "voltageinit.result";
@@ -248,7 +252,7 @@ public class VoltageInitTest {
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_3)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", VOLTAGE_INIT_CANCEL_FAILED_UUID)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE)
                             .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
                             .build(), voltageInitResultDestination);
@@ -258,7 +262,7 @@ public class VoltageInitTest {
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", VOLTAGE_INIT_RESULT_UUID)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE)
                             .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
                             .build(), voltageInitResultDestination);
@@ -267,7 +271,7 @@ public class VoltageInitTest {
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
                         .build(), voltageInitFailedDestination);
                     return new MockResponse().setResponseCode(200)
@@ -296,7 +300,7 @@ public class VoltageInitTest {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? VOLTAGE_INIT_OTHER_NODE_RESULT_UUID : VOLTAGE_INIT_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", resultUuid)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), voltageInitStoppedDestination);
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -701,14 +705,15 @@ public class VoltageInitTest {
     public void testNotResetedUuidResultWhenVoltageInitFailed() {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID), false);
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
-        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
+        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), timePointUuid));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, VOLTAGE_INITIALIZATION);
-        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), VOLTAGE_INITIALIZATION).isPresent());
-        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), VOLTAGE_INITIALIZATION).get());
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), timePointUuid, resultUuid, VOLTAGE_INITIALIZATION);
+        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, VOLTAGE_INITIALIZATION) != null);
+        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, VOLTAGE_INITIALIZATION));
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
@@ -718,11 +723,11 @@ public class VoltageInitTest {
                     .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
                 .build(), voltageInitFailedDestination);
             return resultUuid;
-        }).when(studyService).runVoltageInit(any(), any(), any());
-        studyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), "");
+        }).when(studyService).runVoltageInit(any(), any(), any(), any());
+        studyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), timePointUuid, "");
 
         // Test doesn't reset uuid result in the database
-        assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), VOLTAGE_INITIALIZATION).get().toString());
+        assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, VOLTAGE_INITIALIZATION).toString());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -763,7 +768,7 @@ public class VoltageInitTest {
     }
 
     private void testDeleteResults(int expectedInitialResultCount) throws Exception {
-        assertEquals(expectedInitialResultCount, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
+        assertEquals(expectedInitialResultCount, timePointNodeStatusRepository.findAllByVoltageInitResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", String.valueOf(VOLTAGE_INITIALIZATION))
                 .queryParam("dryRun", String.valueOf(false)))
@@ -772,7 +777,7 @@ public class VoltageInitTest {
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
+        assertEquals(0, timePointNodeStatusRepository.findAllByVoltageInitResultUuidNotNull().size());
     }
 
     @Test
@@ -800,11 +805,11 @@ public class VoltageInitTest {
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID voltageInitParametersUuid, boolean applyModifications) {
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "",
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null,
                 UUID.randomUUID(), null, voltageInitParametersUuid, null, null,
                 defaultNonEvacuatedEnergyParametersEntity, applyModifications);
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity, null);
+        networkModificationTreeService.createRoot(studyEntity);
         return study;
     }
 

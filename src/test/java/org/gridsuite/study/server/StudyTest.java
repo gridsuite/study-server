@@ -42,6 +42,8 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
+import org.gridsuite.study.server.repository.timepoint.TimePointRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.*;
@@ -90,6 +92,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.TIMEPOINT_NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.DEFAULT_ERROR_MESSAGE;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
@@ -232,6 +235,9 @@ public class StudyTest {
     private StudyInfosService studyInfosService;
 
     @Autowired
+    private StudyService studyService;
+
+    @Autowired
     private ObjectMapper mapper;
 
     private ObjectWriter objectWriter;
@@ -267,6 +273,10 @@ public class StudyTest {
     private final String elementUpdateDestination = "element.update";
 
     private boolean indexed = false;
+    @Autowired
+    private TimePointRepository timePointRepository;
+    @Autowired
+    private TimePointService timePointService;
 
     private static EquipmentInfos toEquipmentInfos(Line line) {
         return EquipmentInfos.builder()
@@ -668,6 +678,7 @@ public class StudyTest {
                     .setHeader("networkUuid", networkInfos.getNetworkUuid().toString())
                     .setHeader("networkId", networkInfos.getNetworkId())
                     .setHeader("caseFormat", format)
+                    .setHeader("caseName", "caseName")
                     .setHeader("importParameters", importParameters)
                     .build(), "case.import.succeeded");
         }
@@ -932,8 +943,9 @@ public class StudyTest {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
         assertNotNull(studyEntity);
         UUID nonExistingCaseUuid = UUID.randomUUID();
-        studyEntity.setCaseUuid(nonExistingCaseUuid);
-        studyRepository.save(studyEntity);
+        TimePointEntity timePointEntity = timePointRepository.findAllByStudyId(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
+        timePointEntity.setCaseUuid(nonExistingCaseUuid);
+        timePointRepository.save(timePointEntity);
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
@@ -1030,16 +1042,17 @@ public class StudyTest {
     public void testGetParentNodesReportLogs() throws Exception {
         String userId = "userId";
         UUID studyUuid = createStudy(userId, CASE_UUID);
+        UUID timePointUuid = timePointRepository.findAllByStudyId(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.TIMEPOINT_NOT_FOUND)).getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         AbstractNode modificationNode = rootNode.getChildren().get(0);
         NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
         NetworkModificationNode node2 = createNetworkModificationNode(studyUuid, node1.getId(), VARIANT_ID_2, "node2", userId);
         createNetworkModificationNode(studyUuid, modificationNodeUuid, VARIANT_ID_3, "node3", userId);
-        UUID rootNodeReportId = networkModificationTreeService.getReportUuid(rootNode.getId());
-        UUID modificationNodeReportId = networkModificationTreeService.getReportUuid(modificationNode.getId());
-        UUID node1ReportId = networkModificationTreeService.getReportUuid(node1.getId());
-        UUID node2ReportId = networkModificationTreeService.getReportUuid(node2.getId());
+        UUID rootNodeReportId = networkModificationTreeService.getReportUuid(rootNode.getId(), timePointUuid);
+        UUID modificationNodeReportId = networkModificationTreeService.getReportUuid(modificationNode.getId(), timePointUuid);
+        UUID node1ReportId = networkModificationTreeService.getReportUuid(node1.getId(), timePointUuid);
+        UUID node2ReportId = networkModificationTreeService.getReportUuid(node2.getId(), timePointUuid);
 
         //          root
         //           |
@@ -1680,7 +1693,9 @@ public class StudyTest {
             numberOfRequests++;
         }
         requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + duplicatedStudy.getNetworkUuid() + "/reindex-all")).count());
+
+        TimePointEntity timePointEntity = timePointRepository.findAllByStudyId(duplicatedStudy.getId()).stream().findFirst().orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND));
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + timePointEntity.getNetworkUuid() + "/reindex-all")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getVoltageInitParametersUuid())).count());
@@ -1893,6 +1908,7 @@ public class StudyTest {
     public void testCutAndPasteNodeWithoutModification() throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(userId, CASE_UUID);
+        UUID timePointUuid = timePointRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND)).getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
@@ -1905,15 +1921,16 @@ public class StudyTest {
         Set<String> request = TestUtils.getRequestsDone(1, server);
         assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports")));
 
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNode.getId()).getGlobalBuildStatus());
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node1.getId()).getGlobalBuildStatus());
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNodeChild.getId()).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNode.getId(), timePointUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node1.getId(), timePointUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNodeChild.getId(), timePointUuid).getGlobalBuildStatus());
     }
 
     @Test
     public void testCutAndPasteNodeWithModification() throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(userId, CASE_UUID);
+        UUID timePointUuid = timePointRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND)).getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
@@ -1926,9 +1943,9 @@ public class StudyTest {
         Set<String> request = TestUtils.getRequestsDone(2, server);
         assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports")));
 
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(notEmptyNode.getId()).getGlobalBuildStatus());
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(node1.getId()).getGlobalBuildStatus());
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(notEmptyNodeChild.getId()).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(notEmptyNode.getId(), timePointUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(node1.getId(), timePointUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(notEmptyNodeChild.getId(), timePointUuid).getGlobalBuildStatus());
     }
 
     @Test
@@ -1968,6 +1985,7 @@ public class StudyTest {
     public void testCutAndPasteSubtree() throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(userId, CASE_UUID);
+        UUID timePointUuid = timePointRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND)).getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
@@ -2014,9 +2032,9 @@ public class StudyTest {
         var request = TestUtils.getRequestsDone(1, server);
         assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports")));
 
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node1.getId()).getGlobalBuildStatus());
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNode.getId()).getGlobalBuildStatus());
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNodeChild.getId()).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node1.getId(), timePointUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNode.getId(), timePointUuid).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNodeChild.getId(), timePointUuid).getGlobalBuildStatus());
 
         mockMvc.perform(get(STUDIES_URL +
                         "/{studyUuid}/subtree?parentNodeUuid={parentSubtreeNode}",
@@ -2136,15 +2154,17 @@ public class StudyTest {
                 .andExpect(status().isForbidden());
 
         // Test Built status when duplicating an empty node
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId()).getGlobalBuildStatus());
+        UUID timePointUuid = studyService.getStudyFirstTimePointUuid(study1Uuid);
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId(), timePointUuid).getGlobalBuildStatus());
         duplicateNode(study1Uuid, study1Uuid, emptyNode, node3.getId(), InsertMode.BEFORE, userId);
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId()).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId(), timePointUuid).getGlobalBuildStatus());
     }
 
     @Test
     public void testDuplicateSubtree() throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(userId, CASE_UUID);
+        UUID timePointUuid = timePointRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(TIMEPOINT_NOT_FOUND)).getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
@@ -2177,7 +2197,7 @@ public class StudyTest {
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createTwoWindingsTransformerAttributes, NETWORK_UUID_STRING, VARIANT_ID);
 
         // Invalidation node 3
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId()).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId(), timePointUuid).getGlobalBuildStatus());
         Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
 
@@ -2265,9 +2285,9 @@ public class StudyTest {
                 .count());
 
         //node2 should be built
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node2.getId()).getGlobalBuildStatus());
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node2.getId(), timePointUuid).getGlobalBuildStatus());
         //duplicated node2 should now be not built
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodesAfterDuplication.get(1)).getGlobalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodesAfterDuplication.get(1), timePointUuid).getGlobalBuildStatus());
 
         //try copy non existing node and expect not found
         mockMvc.perform(post(STUDIES_URL +

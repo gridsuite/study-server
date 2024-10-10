@@ -18,7 +18,9 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.Report;
+import org.gridsuite.study.server.repository.timepoint.TimePointRepository;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -94,6 +96,10 @@ public class ReportServiceTest {
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
 
     private static final long TIMEOUT = 1000;
+    @Autowired
+    private TimePointRepository timePointRepository;
+    @Autowired
+    private TimePointService timePointService;
 
     private void cleanDB() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
@@ -151,9 +157,9 @@ public class ReportServiceTest {
     }
 
     private RootNode createRoot() {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.randomUUID(), UUID.randomUUID(), "caseName", "");
+        StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.randomUUID(), UUID.randomUUID(), "caseName", "", ROOT_NODE_REPORT_UUID);
         studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity, ROOT_NODE_REPORT_UUID);
+        networkModificationTreeService.createRoot(studyEntity);
         return networkModificationTreeService.getStudyTree(studyEntity.getId());
     }
 
@@ -161,6 +167,7 @@ public class ReportServiceTest {
     @Test
     public void testReport() {
         RootNode rootNode = createRoot();
+        StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
         List<Report> expectedRootReports = List.of(getNodeReport(ROOT_NODE_REPORT_UUID, rootNode.getId().toString()));
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), rootNode.getId()))
@@ -172,7 +179,7 @@ public class ReportServiceTest {
         checkReports(reports, expectedRootReports);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
-        NetworkModificationNode node = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), rootNode.getId(), createModificationNodeInfo("Node1"), InsertMode.AFTER, null);
+        NetworkModificationNode node = networkModificationTreeService.createNodeThenLinkItToTimepoints(studyEntity, rootNode.getId(), createModificationNodeInfo("Node1"), InsertMode.AFTER, null);
         output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);  // message for modification node creation
         List<Report> expectedNodeReports = List.of(getNodeReport(MODIFICATION_NODE_REPORT_UUID, node.getId().toString()));
 
@@ -198,9 +205,10 @@ public class ReportServiceTest {
     @Test
     public void testMultipleReport() {
         RootNode rootNode = createRoot();
-        NetworkModificationNode node = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), rootNode.getId(), createModificationNodeInfo("Modification Node"), InsertMode.AFTER, null);
-        NetworkModificationNode child1 = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), node.getId(), createModificationNodeInfo("Child 1"), InsertMode.AFTER, null);
-        NetworkModificationNode child2 = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), node.getId(), createModificationNodeInfo("Child 2"), InsertMode.AFTER, null);
+        StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
+        NetworkModificationNode node = networkModificationTreeService.createNodeThenLinkItToTimepoints(studyEntity, rootNode.getId(), createModificationNodeInfo("Modification Node"), InsertMode.AFTER, null);
+        NetworkModificationNode child1 = networkModificationTreeService.createNodeThenLinkItToTimepoints(studyEntity, node.getId(), createModificationNodeInfo("Child 1"), InsertMode.AFTER, null);
+        NetworkModificationNode child2 = networkModificationTreeService.createNodeThenLinkItToTimepoints(studyEntity, node.getId(), createModificationNodeInfo("Child 2"), InsertMode.AFTER, null);
 
         // message for 3 modification nodes creation
         output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);

@@ -10,8 +10,11 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -32,20 +35,8 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "id")
     private UUID id;
 
-    @Column(name = "networkUuid", nullable = false)
-    private UUID networkUuid;
-
-    @Column(name = "networkId", nullable = false)
-    private String networkId;
-
-    @Column(name = "caseFormat", nullable = false)
-    private String caseFormat;
-
-    @Column(name = "caseUuid", nullable = false)
-    private UUID caseUuid;
-
-    @Column(name = "caseName", nullable = false)
-    private String caseName;
+    @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TimePointEntity> timePoints;
 
     /**
      * @deprecated to remove when the data is migrated into the loadflow-server
@@ -131,6 +122,20 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Value
     public static class StudyNetworkUuid {
         UUID networkUuid;
+    }
+
+    //TODO temporary, for now we are only working with one timepoint
+    @Transient
+    public TimePointEntity getFirstTimepoint() {
+        return timePoints.get(0);
+    }
+
+    public void addTimePoint(TimePointEntity timePointEntity) {
+        if (timePoints == null) {
+            timePoints = new ArrayList<>();
+        }
+        timePointEntity.setStudy(this);
+        timePoints.add(timePointEntity);
     }
 }
 

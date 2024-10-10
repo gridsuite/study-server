@@ -314,7 +314,7 @@ public class WireMockUtils {
         removeRequestForStub(stubUuid, 1);
     }
 
-    public UUID stubImportNetwork(String caseUuid, Map<String, Object> importParameters, String networkUuid, String networkId, String caseFormat, CountDownLatch countDownLatch) {
+    public UUID stubImportNetwork(String caseUuid, Map<String, Object> importParameters, String networkUuid, String networkId, String caseFormat, String caseName, CountDownLatch countDownLatch) {
         UUID importNetworkStubId = wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
             .withQueryParam("caseUuid", WireMock.equalTo(caseUuid))
             .withQueryParam("variantId", WireMock.equalTo(FIRST_VARIANT_ID))
@@ -327,6 +327,7 @@ public class WireMockUtils {
                         "networkUuid", networkUuid,
                         "networkId", networkId,
                         "caseFormat", caseFormat,
+                        "caseName", caseName,
                         "importParameters", importParameters,
                         "latch", countDownLatch
                     )

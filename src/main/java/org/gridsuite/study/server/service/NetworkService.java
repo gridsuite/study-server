@@ -17,8 +17,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.NetworkVariantsListener;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
+import org.gridsuite.study.server.repository.timepoint.TimePointRepository;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -44,13 +45,15 @@ public class NetworkService {
     private final EquipmentInfosService equipmentInfosService;
 
     private final StudyRepository studyRepository;
+    private final TimePointRepository timePointRepository;
 
     NetworkService(NetworkStoreService networkStoreService,
                    EquipmentInfosService equipmentInfosService,
-                   StudyRepository studyRepository) {
+                   StudyRepository studyRepository, TimePointRepository timePointRepository) {
         this.networkStoreService = networkStoreService;
         this.equipmentInfosService = equipmentInfosService;
         this.studyRepository = studyRepository;
+        this.timePointRepository = timePointRepository;
     }
 
     public UUID getNetworkUuid(UUID studyUuid) {
@@ -84,7 +87,7 @@ public class NetworkService {
     }
 
     UUID doGetNetworkUuid(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).map(StudyEntity::getNetworkUuid).orElse(null);
+        return timePointRepository.findAllByStudyId(studyUuid).stream().findFirst().map(TimePointEntity::getNetworkUuid).orElse(null);
     }
 
     void deleteNetwork(UUID networkUuid) {

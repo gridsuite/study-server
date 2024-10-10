@@ -24,6 +24,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -143,6 +144,9 @@ public class ShortCircuitTest implements WithAssertions {
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
     @Autowired
+    private TimePointNodeInfoRepository timePointNodeStatusRepository;
+
+    @Autowired
     private ReportService reportService;
 
     //output destinations
@@ -179,7 +183,7 @@ public class ShortCircuitTest implements WithAssertions {
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&busId=BUS_TEST_ID&variantId=" + VARIANT_ID_2)) {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
-                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                         .setHeader("busId", "BUS_TEST_ID")
                         .build(), shortCircuitAnalysisResultDestination);
                     return new MockResponse().setResponseCode(200)
@@ -188,7 +192,7 @@ public class ShortCircuitTest implements WithAssertions {
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisResultDestination);
                     return new MockResponse().setResponseCode(200)
                             .setBody(shortCircuitAnalysisResultUuidStr)
@@ -196,14 +200,14 @@ public class ShortCircuitTest implements WithAssertions {
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING_NOT_FOUND + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_4)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisResultDestination);
                     return new MockResponse().setResponseCode(200)
                             .setBody(shortCircuitAnalysisResultNotFoundUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisFailedDestination);
                     return new MockResponse().setResponseCode(200)
                             .setBody(shortCircuitAnalysisErrorResultUuidStr)
@@ -236,7 +240,7 @@ public class ShortCircuitTest implements WithAssertions {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID : SHORT_CIRCUIT_ANALYSIS_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", resultUuid)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisStoppedDestination);
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -387,7 +391,7 @@ public class ShortCircuitTest implements WithAssertions {
 
         // Delete Shortcircuit results
         // In short-circuit server there is no distinction between 1-bus and all-buses, so we remove all kinds of short-circuit
-        assertEquals(1, networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
+        assertEquals(1, timePointNodeStatusRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
                 .queryParam("dryRun", String.valueOf(false)))
@@ -396,7 +400,7 @@ public class ShortCircuitTest implements WithAssertions {
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
+        assertEquals(0, timePointNodeStatusRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
     }
 
     @Test
@@ -545,7 +549,7 @@ public class ShortCircuitTest implements WithAssertions {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
-        assertEquals(1, networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
+        assertEquals(1, timePointNodeStatusRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
 
         // get one bus short circuit result
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode3Uuid)
@@ -592,31 +596,32 @@ public class ShortCircuitTest implements WithAssertions {
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
+        assertEquals(0, timePointNodeStatusRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
     }
 
     @Test
     public void testResetUuidResultWhenSCFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
+        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
-        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
+        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), timePointUuid));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, ComputationType.SHORT_CIRCUIT);
-        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.SHORT_CIRCUIT).isPresent());
-        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.SHORT_CIRCUIT).get());
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), timePointUuid, resultUuid, ComputationType.SHORT_CIRCUIT);
+        assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, ComputationType.SHORT_CIRCUIT));
+        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, ComputationType.SHORT_CIRCUIT));
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), shortCircuitAnalysisFailedDestination);
             return resultUuid;
-        }).when(studyService).runShortCircuit(any(), any(), any(), any());
-        studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), Optional.empty(), "user_1");
+        }).when(studyService).runShortCircuit(any(), any(), any(), any(), any());
+        studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), timePointUuid, Optional.empty(), "user_1");
 
         // Test reset uuid result in the database
-        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), ComputationType.SHORT_CIRCUIT).isEmpty());
+        assertNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, ComputationType.SHORT_CIRCUIT));
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -730,11 +735,11 @@ public class ShortCircuitTest implements WithAssertions {
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "",
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null,
                 UUID.randomUUID(), null, null, null,
                 defaultNonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity, null);
+        networkModificationTreeService.createRoot(studyEntity);
         return study;
     }
 

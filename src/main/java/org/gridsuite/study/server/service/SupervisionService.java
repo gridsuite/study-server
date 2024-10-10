@@ -9,9 +9,11 @@ package org.gridsuite.study.server.service;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
-import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
+import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
@@ -29,6 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
@@ -63,14 +66,16 @@ public class SupervisionService {
 
     private final EquipmentInfosService equipmentInfosService;
 
-    private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+    private final TimePointNodeInfoRepository timePointNodeInfoRepository;
 
     private final StateEstimationService stateEstimationService;
+
+    private final StudyRepository studyRepository;
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService,
                               NetworkService networkStoreService,
-                              NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
+                              TimePointNodeInfoRepository timePointNodeInfoRepository,
                               ReportService reportService,
                               LoadFlowService loadFlowService,
                               DynamicSimulationService dynamicSimulationService,
@@ -80,11 +85,12 @@ public class SupervisionService {
                               ShortCircuitService shortCircuitService,
                               VoltageInitService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
-                              StateEstimationService stateEstimationService) {
+                              StateEstimationService stateEstimationService,
+                              StudyRepository studyRepository) {
         this.networkStoreService = networkStoreService;
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
-        this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
+        this.timePointNodeInfoRepository = timePointNodeInfoRepository;
         this.reportService = reportService;
         this.loadFlowService = loadFlowService;
         this.dynamicSimulationService = dynamicSimulationService;
@@ -95,6 +101,7 @@ public class SupervisionService {
         this.voltageInitService = voltageInitService;
         this.equipmentInfosService = equipmentInfosService;
         this.stateEstimationService = stateEstimationService;
+        this.studyRepository = studyRepository;
     }
 
     @Transactional
@@ -152,112 +159,113 @@ public class SupervisionService {
     private Integer deleteLoadflowResults() {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
+        List<TimePointNodeInfoEntity> timePointNodeInfoEntities = timePointNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         List<UUID> reportsToDelete = new ArrayList<>();
-        nodes.forEach(node -> {
-            node.setLoadFlowResultUuid(null);
-            reportsToDelete.add(node.getComputationReports().get(ComputationType.LOAD_FLOW.name()));
-            node.getComputationReports().remove(ComputationType.LOAD_FLOW.name());
+        timePointNodeInfoEntities.forEach(timePointNodeInfo -> {
+            timePointNodeInfo.setLoadFlowResultUuid(null);
+            reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.LOAD_FLOW.name()));
+            timePointNodeInfo.getComputationReports().remove(ComputationType.LOAD_FLOW.name());
         });
         reportService.deleteReports(reportsToDelete);
         loadFlowService.deleteLoadFlowResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.LOAD_FLOW, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        return nodes.size();
+        return timePointNodeInfoEntities.size();
     }
 
     private Integer deleteDynamicSimulationResults() {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull();
-        nodes.forEach(node -> node.setShortCircuitAnalysisResultUuid(null));
+        List<TimePointNodeInfoEntity> timePointNodeStatusEntities = timePointNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull();
+        timePointNodeStatusEntities.forEach(timePointNodeStatus -> timePointNodeStatus.setDynamicSimulationResultUuid(null));
         //TODO Add logs deletion once they are added
         dynamicSimulationService.deleteResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SIMULATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        return nodes.size();
+        return timePointNodeStatusEntities.size();
     }
 
     private Integer deleteSecurityAnalysisResults() {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull();
+        List<TimePointNodeInfoEntity> timePointNodeInfoEntities = timePointNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull();
         List<UUID> reportsToDelete = new ArrayList<>();
-        nodes.forEach(node -> {
-            node.setSecurityAnalysisResultUuid(null);
-            reportsToDelete.add(node.getComputationReports().get(ComputationType.SECURITY_ANALYSIS.name()));
-            node.getComputationReports().remove(ComputationType.SECURITY_ANALYSIS.name());
+        timePointNodeInfoEntities.forEach(timePointNodeInfo -> {
+            timePointNodeInfo.setSecurityAnalysisResultUuid(null);
+            reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.SECURITY_ANALYSIS.name()));
+            timePointNodeInfo.getComputationReports().remove(ComputationType.SECURITY_ANALYSIS.name());
         });
         reportService.deleteReports(reportsToDelete);
         securityAnalysisService.deleteSecurityAnalysisResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SECURITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        return nodes.size();
+        return timePointNodeInfoEntities.size();
     }
 
     private Integer deleteSensitivityAnalysisResults() {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull();
+        List<TimePointNodeInfoEntity> timePointNodeInfoEntities = timePointNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull();
         List<UUID> reportsToDelete = new ArrayList<>();
-        nodes.forEach(node -> {
-            node.setSensitivityAnalysisResultUuid(null);
-            reportsToDelete.add(node.getComputationReports().get(ComputationType.SENSITIVITY_ANALYSIS.name()));
-            node.getComputationReports().remove(ComputationType.SENSITIVITY_ANALYSIS.name());
+        timePointNodeInfoEntities.forEach(timePointNodeInfo -> {
+            timePointNodeInfo.setSensitivityAnalysisResultUuid(null);
+            reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.SENSITIVITY_ANALYSIS.name()));
+            timePointNodeInfo.getComputationReports().remove(ComputationType.SENSITIVITY_ANALYSIS.name());
         });
         reportService.deleteReports(reportsToDelete);
         sensitivityAnalysisService.deleteSensitivityAnalysisResults();
-
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SENSITIVITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
 
-        return nodes.size();
+        return timePointNodeInfoEntities.size();
     }
 
     private Integer deleteNonEvacuatedEnergyAnalysisResults() {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
 
-        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull();
+        List<TimePointNodeInfoEntity> timePointNodeInfoEntities = timePointNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull();
         List<UUID> reportsToDelete = new ArrayList<>();
-        nodes.forEach(node -> {
-            node.setNonEvacuatedEnergyResultUuid(null);
-            reportsToDelete.add(node.getComputationReports().get(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name()));
-            node.getComputationReports().remove(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name());
+        timePointNodeInfoEntities.forEach(timePointNodeInfo -> {
+            timePointNodeInfo.setNonEvacuatedEnergyResultUuid(null);
+            reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name()));
+            timePointNodeInfo.getComputationReports().remove(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name());
         });
         reportService.deleteReports(reportsToDelete);
         nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
 
-        return nodes.size();
+        return timePointNodeInfoEntities.size();
     }
 
     private Integer deleteShortcircuitResults() {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         // Reset result uuid and remove logs, for all-buses computations, then for 1-bus ones
-        List<NetworkModificationNodeInfoEntity> allBusesNodes = networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
-        if (!allBusesNodes.isEmpty()) {
+        List<TimePointNodeInfoEntity> allBusesTimePointNodeInfoEntities = timePointNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull();
+        if (!allBusesTimePointNodeInfoEntities.isEmpty()) {
             List<UUID> reportsToDelete = new ArrayList<>();
-            allBusesNodes.forEach(node -> {
-                node.setShortCircuitAnalysisResultUuid(null);
-                reportsToDelete.add(node.getComputationReports().get(ComputationType.SHORT_CIRCUIT.name()));
-                node.getComputationReports().remove(ComputationType.SHORT_CIRCUIT.name());
+            allBusesTimePointNodeInfoEntities.forEach(timePointNodeInfo -> {
+                timePointNodeInfo.setShortCircuitAnalysisResultUuid(null);
+                reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.SHORT_CIRCUIT.name()));
+                timePointNodeInfo.getComputationReports().remove(ComputationType.SHORT_CIRCUIT.name());
             });
             reportService.deleteReports(reportsToDelete);
         }
-        List<NetworkModificationNodeInfoEntity> oneBusNodes = networkModificationNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull();
-        if (!oneBusNodes.isEmpty()) {
+
+        List<TimePointNodeInfoEntity> oneBusTimePointNodeInfoEntities = timePointNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull();
+        if (!oneBusTimePointNodeInfoEntities.isEmpty()) {
             List<UUID> reportsToDelete = new ArrayList<>();
-            oneBusNodes.forEach(node -> {
-                node.setOneBusShortCircuitAnalysisResultUuid(null);
-                reportsToDelete.add(node.getComputationReports().get(ComputationType.SHORT_CIRCUIT_ONE_BUS.name()));
-                node.getComputationReports().remove(ComputationType.SHORT_CIRCUIT_ONE_BUS.name());
+            oneBusTimePointNodeInfoEntities.forEach(timePointNodeInfo -> {
+                timePointNodeInfo.setOneBusShortCircuitAnalysisResultUuid(null);
+                reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.SHORT_CIRCUIT_ONE_BUS.name()));
+                timePointNodeInfo.getComputationReports().remove(ComputationType.SHORT_CIRCUIT_ONE_BUS.name());
             });
             reportService.deleteReports(reportsToDelete);
         }
+
         // Then delete all results (1-bus and all-buses), cause short-circuit-server cannot make the difference
         shortCircuitService.deleteShortCircuitAnalysisResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SHORT_CIRCUIT, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        // return distinct processed nodes count
-        return (int) Stream.concat(allBusesNodes.stream(), oneBusNodes.stream())
-                .map(AbstractNodeInfoEntity::getId)
+        // return distinct processed time point node info count
+        return (int) Stream.concat(allBusesTimePointNodeInfoEntities.stream(), oneBusTimePointNodeInfoEntities.stream())
+                .map(TimePointNodeInfoEntity::getId)
                 .distinct()
                 .count();
     }
@@ -265,35 +273,35 @@ public class SupervisionService {
     private Integer deleteVoltageInitResults() {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull();
-        if (!nodes.isEmpty()) {
+        List<TimePointNodeInfoEntity> timePointNodeInfoEntities = timePointNodeInfoRepository.findAllByVoltageInitResultUuidNotNull();
+        if (!timePointNodeInfoEntities.isEmpty()) {
             List<UUID> reportsToDelete = new ArrayList<>();
-            nodes.forEach(node -> {
-                node.setVoltageInitResultUuid(null);
-                reportsToDelete.add(node.getComputationReports().get(ComputationType.VOLTAGE_INITIALIZATION.name()));
-                node.getComputationReports().remove(ComputationType.VOLTAGE_INITIALIZATION.name());
+            timePointNodeInfoEntities.forEach(timePointNodeInfo -> {
+                timePointNodeInfo.setVoltageInitResultUuid(null);
+                reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.VOLTAGE_INITIALIZATION.name()));
+                timePointNodeInfo.getComputationReports().remove(ComputationType.VOLTAGE_INITIALIZATION.name());
             });
             reportService.deleteReports(reportsToDelete);
         }
         voltageInitService.deleteVoltageInitResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.VOLTAGE_INITIALIZATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        return nodes.size();
+        return timePointNodeInfoEntities.size();
     }
 
     private Integer deleteStateEstimationResults() {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        List<NetworkModificationNodeInfoEntity> nodes = networkModificationNodeInfoRepository.findAllByStateEstimationResultUuidNotNull();
+        List<TimePointNodeInfoEntity> timePointNodeInfoEntities = timePointNodeInfoRepository.findAllByStateEstimationResultUuidNotNull();
         List<UUID> reportsToDelete = new ArrayList<>();
-        nodes.forEach(node -> {
-            node.setStateEstimationResultUuid(null);
-            reportsToDelete.add(node.getComputationReports().get(ComputationType.STATE_ESTIMATION.name()));
-            node.getComputationReports().remove(ComputationType.STATE_ESTIMATION.name());
+        timePointNodeInfoEntities.forEach(timePointNodeInfo -> {
+            timePointNodeInfo.setStateEstimationResultUuid(null);
+            reportsToDelete.add(timePointNodeInfo.getComputationReports().get(ComputationType.STATE_ESTIMATION.name()));
+            timePointNodeInfo.getComputationReports().remove(ComputationType.STATE_ESTIMATION.name());
         });
         reportService.deleteReports(reportsToDelete);
         stateEstimationService.deleteStateEstimationResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.STATE_ESTIMATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        return nodes.size();
+        return timePointNodeInfoEntities.size();
     }
 
     @Transactional
@@ -301,7 +309,8 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
-        studyService.invalidateBuild(studyUuid, rootNode.getId(), false, false, true);
+        TimePointEntity timePointEntity = studyRepository.findById(studyUuid).map(StudyEntity::getFirstTimepoint).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        studyService.invalidateBuild(studyUuid, rootNode.getId(), timePointEntity.getId(), false, false, true);
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 }

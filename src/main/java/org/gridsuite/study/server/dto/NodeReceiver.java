@@ -18,4 +18,6 @@ import java.util.UUID;
 @NoArgsConstructor
 public class NodeReceiver {
     private UUID nodeUuid;
+
+    private UUID timePointUuid;
 }

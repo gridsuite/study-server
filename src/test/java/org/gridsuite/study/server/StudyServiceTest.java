@@ -175,7 +175,7 @@ public class StudyServiceTest {
 
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE", countDownLatch);
+        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(CASE_UUID.toString());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/network", studyUuid)
@@ -224,7 +224,7 @@ public class StudyServiceTest {
 
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(CASE_UUID_STRING, newImportParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE", countDownLatch);
+        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(CASE_UUID_STRING, newImportParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(CASE_UUID.toString());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/network", studyUuid)
@@ -276,7 +276,7 @@ public class StudyServiceTest {
 
         CountDownLatch countDownLatch = new CountDownLatch(1);
 
-        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(caseUuid.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE", countDownLatch);
+        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(caseUuid.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
 
         UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(caseUuid.toString());
 
