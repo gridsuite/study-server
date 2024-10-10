@@ -144,32 +144,4 @@
                         splitStatements="true"
                         stripComments="true"/>
     </changeSet>
-
-    <!-- TO DELETE UNUSED
-         <changeSet author="souissimai (generated)" id="1728407274000-1">
-                <modifyDataType columnName="import_parameters" newDataType="varchar(255)" tableName="import_parameters"/>
-            </changeSet>
-           <changeSet author="souissimai (generated)" id="1728407274000-2">
-                <dropDefaultValue columnDataType="boolean" columnName="stashed" tableName="node"/>
-            </changeSet>
-            <changeSet author="souissimai (generated)" id="1728407274000-3">
-                <dropDefaultValue columnDataType="boolean" columnName="stashed" tableName="node"/>
-            </changeSet>
-    -->
-
-<!-- TO DELETE UNUSED
-<changeSet author="souissimai (generated)" id="1728407274000-4">
-        <dropPrimaryKey tableName="computation_reports"/>
-    </changeSet>
-    <changeSet author="souissimai (generated)" id="1728407274000-5">
-    <addPrimaryKey columnNames="time_point_node_info_entity_id, computation_reports_key"
-                       constraintName="computation_reportsPK" tableName="computation_reports"/>
-    </changeSet>
-    <changeSet author="souissimai (generated)" id="1728407274000-6">
-        <dropPrimaryKey tableName="modification_reports"/>
-    </changeSet>
-    <changeSet author="souissimai (generated)" id="1728407274000-7">
-        <addPrimaryKey columnNames="time_point_node_info_entity_id, modification_reports_key" constraintName="modification_reportsPK" tableName="modification_reports"/>
-    </changeSet>
--->
 </databaseChangeLog>
