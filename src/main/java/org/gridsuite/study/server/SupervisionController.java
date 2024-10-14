@@ -19,7 +19,7 @@ import java.util.UUID;
 
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.springframework.data.elasticsearch.client.ClientConfiguration;
+import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchConnectionDetails;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -38,13 +38,13 @@ public class SupervisionController {
 
     private final EquipmentInfosService equipmentInfosService;
 
-    private final ClientConfiguration elasticsearchClientConfiguration;
+    private final ElasticsearchConnectionDetails elasticsearchConnectionDetails;
 
-    public SupervisionController(SupervisionService supervisionService, StudyService studyService, EquipmentInfosService equipmentInfosService, ClientConfiguration elasticsearchClientConfiguration) {
+    public SupervisionController(SupervisionService supervisionService, StudyService studyService, EquipmentInfosService equipmentInfosService, ElasticsearchConnectionDetails elasticsearchConnectionDetails) {
         this.supervisionService = supervisionService;
         this.studyService = studyService;
         this.equipmentInfosService = equipmentInfosService;
-        this.elasticsearchClientConfiguration = elasticsearchClientConfiguration;
+        this.elasticsearchConnectionDetails = elasticsearchConnectionDetails;
     }
 
     @DeleteMapping(value = "/computation/results")
@@ -59,9 +59,9 @@ public class SupervisionController {
     @Operation(summary = "get the elasticsearch address")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "the elasticsearch address")})
     public ResponseEntity<String> getElasticsearchHost() {
-        String host = elasticsearchClientConfiguration.getEndpoints().get(0).getHostName()
+        String host = elasticsearchConnectionDetails.getNodes().get(0).hostname()
                         + ":"
-                        + elasticsearchClientConfiguration.getEndpoints().get(0).getPort();
+                        + elasticsearchConnectionDetails.getNodes().get(0).port();
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(host);
     }
 
