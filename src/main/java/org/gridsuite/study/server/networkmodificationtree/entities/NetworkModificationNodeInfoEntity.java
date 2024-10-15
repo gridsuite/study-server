@@ -14,7 +14,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -33,11 +32,6 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Column
     private String variantId;
-
-    @Column(name = "modificationsToExclude")
-    @ElementCollection
-    @CollectionTable(foreignKey = @ForeignKey(name = "networkModificationNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "networkModificationNodeInfoEntity_modificationsToExclude_idx", columnList = "network_modification_node_info_entity_id_node")})
-    private Set<UUID> modificationsToExclude;
 
     @Column(name = "shortCircuitAnalysisResultUuid")
     private UUID shortCircuitAnalysisResultUuid;

@@ -1344,20 +1344,6 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}")
-    @Operation(summary = "Activate/Deactivate a modification in a modification group associated with a study node")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification has been activated/deactivated"),
-                           @ApiResponse(responseCode = "404", description = "The study/node/modification doesn't exist")})
-    public ResponseEntity<Void> changeModificationActiveState(@PathVariable("studyUuid") UUID studyUuid,
-                                                              @PathVariable("nodeUuid") UUID nodeUuid,
-                                                              @PathVariable("modificationUuid") UUID modificationUuid,
-                                                              @Parameter(description = "active") @RequestParam("active") boolean active,
-                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.changeModificationActiveState(studyUuid, nodeUuid, modificationUuid, active, userId);
-        return ResponseEntity.ok().build();
-    }
-
     @GetMapping(value = "/loadflow-default-provider")
     @Operation(summary = "get load flow default provider")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "the load flow default provider has been found"))
