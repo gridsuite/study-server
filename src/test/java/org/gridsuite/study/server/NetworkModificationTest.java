@@ -4,7 +4,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -23,11 +22,13 @@ import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import lombok.SneakyThrows;
+import mockwebserver3.Dispatcher;
+import mockwebserver3.MockResponse;
+import mockwebserver3.MockWebServer;
+import mockwebserver3.RecordedRequest;
+import mockwebserver3.junit5.internal.MockWebServerExtension;
+import okhttp3.Headers;
 import okhttp3.HttpUrl;
-import okhttp3.mockwebserver.Dispatcher;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
@@ -45,10 +46,12 @@ import org.gridsuite.study.server.utils.*;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,7 +64,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -75,19 +77,19 @@ import static org.gridsuite.study.server.utils.ImpactUtils.createModificationRes
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@RunWith(SpringRunner.class)
+@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-public class NetworkModificationTest {
+class NetworkModificationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationTest.class);
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
@@ -151,10 +153,6 @@ public class NetworkModificationTest {
     @Autowired
     private MockMvc mockMvc;
 
-    // old mock server
-    private MockWebServer server;
-
-    // new mock server (use this one to mock API calls)
     private WireMockServer wireMockServer;
 
     private WireMockUtils wireMockUtils;
@@ -208,8 +206,8 @@ public class NetworkModificationTest {
     private StudyRepository studyRepository;
 
     //output destinations
-    private final String studyUpdateDestination = "study.update";
-    private final String elementUpdateDestination = "element.update";
+    private static final String STUDY_UPDATE_DESTINATION = "study.update";
+    private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private UUID buildOkStubId;
     private UUID buildStopStubId;
@@ -220,24 +218,21 @@ public class NetworkModificationTest {
     private UUID userProfileNoQuotaStubId;
     private UUID userNoProfileStubId;
 
-    private final String errorMessage = "nullPointerException: unexpected null somewhere";
+    private static final String ERROR_MESSAGE = "nullPointerException: unexpected null somewhere";
 
-    @Before
-    public void setup() throws IOException {
-        ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
-                new ResourceSet("", TEST_FILE));
+    @BeforeEach
+    void setup(final MockWebServer server) throws Exception {
+        ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
         network.getVariantManager().cloneVariant(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID);
         network.getVariantManager().setWorkingVariant(VariantManagerConstants.INITIAL_VARIANT_ID);
 
-        initMockBeans(network);
+        when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
 
-        server = new MockWebServer();
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
         wireMockUtils = new WireMockUtils(wireMockServer);
 
         // Start the mock servers
-        server.start();
         wireMockServer.start();
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
@@ -260,7 +255,7 @@ public class NetworkModificationTest {
             .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", DEFAULT_BUILD_RESULT, "destination", "build.result"))
             .willReturn(WireMock.ok())).getId();
         buildFailedStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_2_STRING + "/build"))
-            .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.failed", "message", errorMessage))
+            .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.failed", "message", ERROR_MESSAGE))
             .willReturn(WireMock.ok())).getId();
         buildErrorStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_3_STRING + "/build"))
             .willReturn(WireMock.serverError())).getId();
@@ -270,15 +265,15 @@ public class NetworkModificationTest {
         userProfileQuotaStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID + "/profile/max-builds"))
             .willReturn(WireMock.ok()
                 .withBody("10")
-                .withHeader("Content-Type", "application/json"))).getId();
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
         userProfileQuotaExceededStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID_QUOTA_EXCEEDED + "/profile/max-builds"))
             .willReturn(WireMock.ok()
                 .withBody("1")
-                .withHeader("Content-Type", "application/json"))).getId();
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
         userProfileNoQuotaStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID_NO_QUOTA + "/profile/max-builds"))
                 .willReturn(WireMock.ok()
                 .withBody((String) null)
-                .withHeader("Content-Type", "application/json"))).getId();
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
         userNoProfileStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID_NO_PROFILE + "/profile/max-builds"))
                 .willReturn(WireMock.notFound())).getId();
 
@@ -290,123 +285,92 @@ public class NetworkModificationTest {
                 String path = Objects.requireNonNull(request.getPath());
 
                 if (path.matches("/v1/reports/.*")) {
-                    return new MockResponse().setResponseCode(200)
-                            .setBody(mapper.writeValueAsString(REPORT_TEST))
-                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(REPORT_TEST));
                 } else if (path.matches("/v1/reports")) {
-                    return new MockResponse().setResponseCode(200);
+                    return new MockResponse(200);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
-                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
-                        "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_STATUS_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
                 } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_STATUS_JSON)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
                     }
-                    return new MockResponse().setResponseCode(500);
+                    return new MockResponse(500);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_RESULT_UUID).equals(path)) {
-                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
-                        "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_STATUS_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SENSITIVITY_ANALYSIS_STATUS_JSON);
                 } else if (("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_STATUS_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SENSITIVITY_ANALYSIS_STATUS_JSON);
                     }
-                    return new MockResponse().setResponseCode(500);
+                    return new MockResponse(500);
                 } else if (("/v1/non-evacuated-energy/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID).equals(path)) {
-                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
-                        "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (("/v1/non-evacuated-energy/results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON);
                 } else if (("/v1/non-evacuated-energy/results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON);
                     }
-                    return new MockResponse().setResponseCode(500);
+                    return new MockResponse(500);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
-                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
-                            "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
-                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
-                        "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (("/v1/results/" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse().setResponseCode(200).setBody(SHORTCIRCUIT_ANALYSIS_STATUS_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
                 } else if (("/v1/results/" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse().setResponseCode(200).setBody(ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
                 } else if (("/v1/results/" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse().setResponseCode(200).setBody(SHORTCIRCUIT_ANALYSIS_STATUS_JSON)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
                     }
-                    return new MockResponse().setResponseCode(500);
+                    return new MockResponse(500);
                 } else if (("/v1/results/" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse().setResponseCode(200).setBody(ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
                     }
-                    return new MockResponse().setResponseCode(500);
+                    return new MockResponse(500);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + VOLTAGE_INIT_RESULT_UUID).equals(path)) {
-                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
-                            "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse().setResponseCode(200).setBody(VOLTAGE_INIT_STATUS_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), VOLTAGE_INIT_STATUS_JSON);
                 } else if (("/v1/results/" + VOLTAGE_INIT_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse().setResponseCode(200).setBody(VOLTAGE_INIT_STATUS_JSON)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), VOLTAGE_INIT_STATUS_JSON);
                     }
-                    return new MockResponse().setResponseCode(500);
+                    return new MockResponse(500);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + LOADFLOW_RESULT_UUID).equals(path)) {
-                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
-                            "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (("/v1/results/" + LOADFLOW_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse().setResponseCode(200).setBody(LOADFLOW_STATUS_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), LOADFLOW_STATUS_JSON);
                 } else if (("/v1/results/" + LOADFLOW_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse().setResponseCode(200).setBody(LOADFLOW_STATUS_JSON)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), LOADFLOW_STATUS_JSON);
                     }
-                    return new MockResponse().setResponseCode(500);
+                    return new MockResponse(500);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + STATE_ESTIMATION_RESULT_UUID).equals(path)) {
-                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
-                        "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse().setResponseCode(200).setBody(STATE_ESTIMATION_STATUS_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), STATE_ESTIMATION_STATUS_JSON);
                 } else if (("/v1/results/" + STATE_ESTIMATION_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse().setResponseCode(200).setBody(STATE_ESTIMATION_STATUS_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), STATE_ESTIMATION_STATUS_JSON);
                     }
-                    return new MockResponse().setResponseCode(500);
+                    return new MockResponse(500);
                 } else {
                     LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
-                    return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
+                    return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
                 }
             }
         };
-
         server.setDispatcher(dispatcher);
     }
 
-    private void initMockBeans(Network network) {
-        when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
-    }
-
     @Test
-    public void testBuildFailed() throws Exception {
+    void testBuildFailed() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_2_STRING), CASE_2_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
@@ -419,7 +383,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testBuildError() throws Exception {
+    void testBuildError() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_3_STRING), CASE_3_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
@@ -431,7 +395,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testBuildQuotaExceeded() throws Exception {
+    void testBuildQuotaExceeded() throws Exception {
         String userId = USER_ID_QUOTA_EXCEEDED;
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -457,7 +421,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testBuildNoQuotaInProfile() throws Exception {
+    void testBuildNoQuotaInProfile() throws Exception {
         String userId = USER_ID_NO_QUOTA;
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -471,7 +435,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testBuildNoProfile() throws Exception {
+    void testBuildNoProfile() throws Exception {
         String userId = USER_ID_NO_PROFILE;
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -485,7 +449,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testBuild() throws Exception {
+    void testBuild() throws Exception {
         String userId = USER_ID;
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -528,7 +492,7 @@ public class NetworkModificationTest {
         modificationNode3.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark node modificationNode3 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         buildInfos = networkModificationTreeService.getBuildInfos(modificationNode4.getId());
         assertEquals("variant_3", buildInfos.getOriginVariantId()); // variant to clone is variant associated to node
@@ -539,15 +503,15 @@ public class NetworkModificationTest {
         modificationNode2.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));  // mark node modificationNode2 as not built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         modificationNode4.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));  // mark node modificationNode4 as built invalid
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode4, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         modificationNode5.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark node modificationNode5 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode5, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         // build modificationNode2 and stop build
         testBuildAndStopWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId(), userId, userProfileQuotaStubId);
@@ -559,7 +523,7 @@ public class NetworkModificationTest {
         modificationNode3.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));  // mark node modificationNode3 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         // build modificationNode3 and stop build
         testBuildAndStopWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId(), userId, userProfileQuotaStubId);
@@ -569,7 +533,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testLocalBuildValue() throws Exception {
+    void testLocalBuildValue() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
@@ -586,7 +550,7 @@ public class NetworkModificationTest {
         modificationNode.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modificationNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "node 2", userId);
@@ -640,7 +604,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testNetworkModificationSwitch() throws Exception {
+    void testNetworkModificationSwitch(final MockWebServer server) throws Exception {
 
         MvcResult mvcResult;
         String resultAsString;
@@ -689,7 +653,7 @@ public class NetworkModificationTest {
                 content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> csbiListResult = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+        List<CreatedStudyBasicInfos> csbiListResult = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertThat(csbiListResult.get(0), createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, "UCTE"));
 
@@ -710,11 +674,11 @@ public class NetworkModificationTest {
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark modificationNode1 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         modificationNode2.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark modificationNode2 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         Optional<NetworkModificationResult> networkModificationResult =
             createModificationResultWithElementImpact(SimpleImpactType.MODIFICATION, IdentifiableType.SWITCH, "switchId", Set.of("s1", "s2", "s3"));
@@ -743,7 +707,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testNetworkModificationEquipment() throws Exception {
+    void testNetworkModificationEquipment() throws Exception {
         MvcResult mvcResult;
         String resultAsString;
         String userId = "userId";
@@ -786,8 +750,7 @@ public class NetworkModificationTest {
                         content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() {
-        });
+        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, "UCTE"));
 
@@ -806,7 +769,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testCreateGenerator() throws Exception {
+    void testCreateGenerator() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -893,7 +856,7 @@ public class NetworkModificationTest {
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreateBis).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
@@ -901,7 +864,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testCreateShuntsCompensator() throws Exception {
+    void testCreateShuntsCompensator() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -948,7 +911,7 @@ public class NetworkModificationTest {
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         // create shunt compensator on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createShuntCompensatorAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -957,7 +920,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testCreateLine() throws Exception {
+    void testCreateLine() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1037,7 +1000,7 @@ public class NetworkModificationTest {
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         // create line on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createLineAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -1046,7 +1009,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testCreateTwoWindingsTransformer() throws Exception {
+    void testCreateTwoWindingsTransformer() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1108,7 +1071,7 @@ public class NetworkModificationTest {
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         // create Two Windings Transformer on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createTwoWindingsTransformerAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -1117,7 +1080,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testChangeModificationActiveState() throws Exception {
+    void testChangeModificationActiveState() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
@@ -1163,7 +1126,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void deleteModificationRequest() throws Exception {
+    void deleteModificationRequest() throws Exception {
         String userId = "userId";
 
         UUID stubId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/network-modifications")).willReturn(WireMock.ok())).getId();
@@ -1212,7 +1175,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testUpdateLines() throws Exception {
+    void testUpdateLines() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1357,7 +1320,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testCreateLoad() throws Exception {
+    void testCreateLoad() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1422,7 +1385,7 @@ public class NetworkModificationTest {
         modificationNode3.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         // create load on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode3Uuid)
@@ -1432,7 +1395,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testModifyLoad() throws Exception {
+    void testModifyLoad() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1492,7 +1455,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testModifyEquipment() throws Exception {
+    void testModifyEquipment() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1549,7 +1512,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testCreateSubstation() throws Exception {
+    void testCreateSubstation() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1611,7 +1574,7 @@ public class NetworkModificationTest {
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         // create substation on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createSubstationAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -1620,7 +1583,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testCreateVoltageLevel() throws Exception {
+    void testCreateVoltageLevel() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1684,7 +1647,7 @@ public class NetworkModificationTest {
         modificationNode1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILDING));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         // create voltage level on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createVoltageLevelAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -1692,9 +1655,8 @@ public class NetworkModificationTest {
                 .andExpect(status().isForbidden());
     }
 
-    @SneakyThrows
     @Test
-    public void testLineSplitWithVoltageLevel() {
+    void testLineSplitWithVoltageLevel() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1761,9 +1723,8 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, badBody);
     }
 
-    @SneakyThrows
     @Test
-    public void testLineAttachToVoltageLevel() {
+    void testLineAttachToVoltageLevel() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1801,9 +1762,8 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, createLineAttachToVoltageLevelAttributes);
     }
 
-    @SneakyThrows
     @Test
-    public void testLinesAttachToSplitLines() {
+    void testLinesAttachToSplitLines() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1854,14 +1814,9 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, badBody);
     }
 
-    @SneakyThrows
-    @Test
-    public void testScaling() {
-        checkScaling(ModificationType.GENERATOR_SCALING);
-        checkScaling(ModificationType.LOAD_SCALING);
-    }
-
-    private void checkScaling(ModificationType scalingType) throws Exception {
+    @ParameterizedTest
+    @EnumSource(value = ModificationType.class, names = {"GENERATOR_SCALING", "LOAD_SCALING"})
+    void testScaling(ModificationType scalingType) throws Exception {
         String userId = "userId";
         ModificationInfos modificationInfos = ModificationInfos.builder().type(scalingType).substationIds(Set.of("s1")).build();
         String requestBody = mapper.writeValueAsString(modificationInfos);
@@ -1915,9 +1870,8 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, requestBody);
     }
 
-    @SneakyThrows
     @Test
-    public void testDeleteVoltageLevelOnline() {
+    void testDeleteVoltageLevelOnline() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1967,9 +1921,8 @@ public class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubIdPutErr, MODIFICATION_UUID, badBody);
     }
 
-    @SneakyThrows
     @Test
-    public void testDeleteAttachingline() {
+    void testDeleteAttachingline() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -2020,7 +1973,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testReorderModification() throws Exception {
+    void testReorderModification() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -2036,7 +1989,7 @@ public class NetworkModificationTest {
                 .withQueryParam("action", WireMock.equalTo("MOVE"))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(Optional.empty()))
-                        .withHeader("Content-Type", "application/json"))).getId();
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
         // switch the 2 modifications order (modification1 is set at the end, after modification2)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
@@ -2084,7 +2037,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testReorderModificationErrorCase() throws Exception {
+    void testReorderModificationErrorCase() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -2112,7 +2065,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testDuplicateModification() throws Exception {
+    void testDuplicateModification() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
@@ -2128,7 +2081,7 @@ public class NetworkModificationTest {
                 .withQueryParam("action", WireMock.equalTo("COPY"))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(Optional.empty()))
-                        .withHeader("Content-Type", "application/json"))).getId();
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
         // duplicate 2 modifications in node1
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
@@ -2158,13 +2111,13 @@ public class NetworkModificationTest {
         node1.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));  // mark node1 as built
         networkModificationTreeService.updateNode(studyUuid, node1, userId);
         checkElementUpdatedMessageSent(studyUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("COPY"))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(Optional.of(NetworkModificationResult.builder().build())))
-                        .withHeader("Content-Type", "application/json"))).getId();
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
                         studyUuid, nodeUuid1)
@@ -2194,7 +2147,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testDuplicateModificationErrorCase() throws Exception {
+    void testDuplicateModificationErrorCase() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
@@ -2222,7 +2175,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testCutAndPasteModification() throws Exception {
+    void testCutAndPasteModification() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
@@ -2241,7 +2194,7 @@ public class NetworkModificationTest {
                 .withQueryParam("action", WireMock.equalTo("MOVE"))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(Optional.empty()))
-                        .withHeader("Content-Type", "application/json"))).getId();
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
         // move 2 modifications within node 1
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
@@ -2309,7 +2262,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testCutAndPasteModificationErrorCase() throws Exception {
+    void testCutAndPasteModificationErrorCase() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
@@ -2338,7 +2291,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testDeleteEquipment() throws Exception {
+    void testDeleteEquipment() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -2402,7 +2355,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testNodesInvalidation() throws Exception {
+    void testNodesInvalidation(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -2424,10 +2377,10 @@ public class NetworkModificationTest {
 
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         // Update a network modification on node 1 (already built) -> build invalidation of all nodes
         String generatorAttributesUpdated = "{\"type\":\"" + ModificationType.GENERATOR_MODIFICATION + "\",\"generatorId\":\"generatorId1\",\"generatorType\":\"FICTITIOUS\",\"activePower\":\"70.0\"}";
@@ -2457,7 +2410,7 @@ public class NetworkModificationTest {
         modificationNode3.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT));
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         // Create a network modification on node 2 (not built) -> build invalidation of node 3
         Map<String, Object> createLoadInfos = Map.of("type", ModificationType.LOAD_CREATION, "equipmentId", "loadId");
@@ -2480,7 +2433,7 @@ public class NetworkModificationTest {
     }
 
     @Test
-    public void testRemoveLoadFlowComputationReport() throws Exception {
+    void testRemoveLoadFlowComputationReport(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -2509,7 +2462,7 @@ public class NetworkModificationTest {
 
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         // A modification body
         Map<String, Object> body = Map.of(
@@ -2544,9 +2497,8 @@ public class NetworkModificationTest {
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports")));
     }
 
-    @SneakyThrows
     @Test
-    public void testUpdateOfBuildStatus() {
+    void testUpdateOfBuildStatus() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
@@ -2577,7 +2529,7 @@ public class NetworkModificationTest {
 
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
 
         // Create network modification on BUILT modification node
         Optional<NetworkModificationResult> networkModificationResult =
@@ -2639,16 +2591,16 @@ public class NetworkModificationTest {
                 .andExpect(status().isOk());
 
         // Initial node update -> BUILDING
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // Successful ->  Node update -> BUILT
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_COMPLETED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
@@ -2667,16 +2619,16 @@ public class NetworkModificationTest {
             .andExpect(status().isOk());
 
         // Initial node update -> BUILDING
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // Successful ->  Node update -> BUILT
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_COMPLETED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
@@ -2692,12 +2644,12 @@ public class NetworkModificationTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build/stop", studyUuid, nodeUuid))
             .andExpect(status().isOk());
 
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        output.receive(TIMEOUT, studyUpdateDestination);
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_CANCELLED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
@@ -2714,21 +2666,21 @@ public class NetworkModificationTest {
             .andExpect(status().isOk());
 
         // initial node update -> building
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // fail -> second node update -> not built
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // error message sent to frontend
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_FAILED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(errorMessage, buildStatusMessage.getHeaders().get(NotificationService.HEADER_ERROR));
+        assertEquals(ERROR_MESSAGE, buildStatusMessage.getHeaders().get(NotificationService.HEADER_ERROR));
 
         wireMockUtils.verifyPostRequest(buildFailedStubId, "/v1/networks/" + NETWORK_UUID_2_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
         wireMockUtils.verifyGetRequest(userProfileQuotaStubId, "/v1/users/" + USER_ID + "/profile/max-builds", Map.of());
@@ -2744,12 +2696,12 @@ public class NetworkModificationTest {
             .andExpect(status().isInternalServerError());
 
         // initial node update -> building
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // error -> second node update -> not built
-        buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
@@ -2761,7 +2713,7 @@ public class NetworkModificationTest {
 
     private void checkEquipmentCreatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -2771,7 +2723,7 @@ public class NetworkModificationTest {
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating model status
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -2794,7 +2746,7 @@ public class NetworkModificationTest {
     }
 
     private void checkNodesBuildStatusUpdatedMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -2812,12 +2764,10 @@ public class NetworkModificationTest {
         checkEquipmentMessagesReceived(studyNameUserIdUuid, List.of(nodeUuid), expectedPayload);
     }
 
-    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, List<UUID> nodeUuids,
-                                                       NetworkImpactsInfos expectedPayload) throws Exception {
+    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, List<UUID> nodeUuids, NetworkImpactsInfos expectedPayload) throws Exception {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
-        NetworkImpactsInfos actualPayload = mapper.readValue(new String(messageStudyUpdate.getPayload()), new TypeReference<NetworkImpactsInfos>() {
-        });
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        NetworkImpactsInfos actualPayload = mapper.readValue(new String(messageStudyUpdate.getPayload()), new TypeReference<>() { });
         assertThat(expectedPayload, new MatcherJson<>(mapper, actualPayload));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -2827,7 +2777,7 @@ public class NetworkModificationTest {
 
     private void checkEquipmentDeletingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -2847,7 +2797,7 @@ public class NetworkModificationTest {
 
     private void checkEquipmentUpdatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -2870,7 +2820,7 @@ public class NetworkModificationTest {
 
     private void checkEquipmentFinishedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -2880,9 +2830,8 @@ public class NetworkModificationTest {
 
     private void checkEquipmentDeletedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, NetworkImpactsInfos expectedPayload) throws Exception {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
-        NetworkImpactsInfos actualPayload = mapper.readValue(new String(messageStudyUpdate.getPayload()), new TypeReference<NetworkImpactsInfos>() {
-        });
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        NetworkImpactsInfos actualPayload = mapper.readValue(new String(messageStudyUpdate.getPayload()), new TypeReference<NetworkImpactsInfos>() { });
         assertThat(expectedPayload, new MatcherJson<>(mapper, actualPayload));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -2942,16 +2891,15 @@ public class NetworkModificationTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).header(USER_ID_HEADER, userId).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
         checkElementUpdatedMessageSent(studyUuid, userId);
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
         return modificationNode;
     }
 
-    @SneakyThrows
     @Test
-    public void testCreateModificationWithErrors() {
+    void testCreateModificationWithErrors() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
@@ -3010,21 +2958,17 @@ public class NetworkModificationTest {
     }
 
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
-        Message<byte[]> message = output.receive(TIMEOUT, elementUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
         assertEquals(elementUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
         assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
     }
 
-    private void cleanDB() {
+    @AfterEach
+    void tearDown(final MockWebServer server) throws Exception {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
-    }
 
-    @After
-    public void tearDown() throws IOException {
-        cleanDB();
-
-        TestUtils.assertQueuesEmptyThenClear(List.of(studyUpdateDestination), output);
+        TestUtils.assertQueuesEmptyThenClear(List.of(STUDY_UPDATE_DESTINATION), output);
 
         try {
             TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);

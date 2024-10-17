@@ -24,11 +24,13 @@ import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import lombok.SneakyThrows;
+import mockwebserver3.Dispatcher;
+import mockwebserver3.MockResponse;
+import mockwebserver3.MockWebServer;
+import mockwebserver3.RecordedRequest;
+import mockwebserver3.junit5.internal.MockWebServerExtension;
+import okhttp3.Headers;
 import okhttp3.HttpUrl;
-import okhttp3.mockwebserver.Dispatcher;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
@@ -49,10 +51,10 @@ import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +72,6 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -95,7 +96,7 @@ import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatc
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -105,12 +106,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
-@RunWith(SpringRunner.class)
+@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-public class StudyTest {
+class StudyTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyTest.class);
 
     @Autowired
@@ -177,7 +178,7 @@ public class StudyTest {
     private static final String DEFAULT_PROVIDER = "defaultProvider";
 
     @Value("${non-evacuated-energy.default-provider}")
-    String defaultNonEvacuatedEnergyProvider;
+    private String defaultNonEvacuatedEnergyProvider;
 
     @Autowired
     private OutputDestination output;
@@ -236,8 +237,6 @@ public class StudyTest {
 
     private List<CreatedStudyBasicInfos> studiesInfos;
 
-    private MockWebServer server;
-
     // new mock server (use this one to mock API calls)
     private WireMockServer wireMockServer;
 
@@ -253,7 +252,7 @@ public class StudyTest {
     private StudyCreationRequestRepository studyCreationRequestRepository;
 
     //used by testGetStudyCreationRequests to control asynchronous case import
-    CountDownLatch countDownLatch;
+    private CountDownLatch countDownLatch;
 
     @MockBean
     private NetworkStoreService networkStoreService;
@@ -309,16 +308,9 @@ public class StudyTest {
         doNothing().when(networkStoreService).deleteNetwork(NOT_EXISTING_NETWORK_UUID);
     }
 
-    private void cleanDB() {
-        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
-        studyRepository.deleteAll();
-        studyCreationRequestRepository.deleteAll();
-    }
-
-    @Before
-    public void setup() throws IOException {
-        ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
-            new ResourceSet("", TEST_FILE));
+    @BeforeEach
+    void setup(final MockWebServer server) throws Exception {
+        ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
         network.getVariantManager().cloneVariant(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID);
         network.getVariantManager().setWorkingVariant(VariantManagerConstants.INITIAL_VARIANT_ID);
@@ -329,14 +321,12 @@ public class StudyTest {
         notExistingNetwork.getVariantManager().setWorkingVariant(VariantManagerConstants.INITIAL_VARIANT_ID);
         initMockBeansNetworkNotExisting();
 
-        server = new MockWebServer();
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
         wireMockUtils = new WireMockUtils(wireMockServer);
 
         objectWriter = mapper.writer().withDefaultPrettyPrinter();
 
         // Start the server.
-        server.start();
         wireMockServer.start();
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
@@ -371,66 +361,53 @@ public class StudyTest {
                 Buffer body = request.getBody();
 
                 if (path.matches("/v1/groups/" + EMPTY_MODIFICATION_GROUP_UUID + "/.*")) {
-                    return new MockResponse().setResponseCode(200)
-                            .setBody(new JSONArray(List.of()).toString())
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), new JSONArray(List.of()).toString());
                 } else if (path.matches("/v1/groups/.*") ||
                     path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*&open=true") ||
                     path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*&open=true&variantId=" + VARIANT_ID) ||
                     path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*&open=true&variantId=" + VARIANT_ID_2)) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2", "s3")));
-                    return new MockResponse().setResponseCode(200)
-                        .setBody(new JSONArray(List.of(jsonObject)).toString())
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), new JSONArray(List.of(jsonObject)).toString());
                 } else if (path.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*")) {
-                    return new MockResponse().setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/network-modifications.*") && POST.equals(request.getMethod())) {
-                    ModificationInfos modificationInfos = mapper.readValue(body.readUtf8(), new TypeReference<ModificationInfos>() {
-                    });
+                    ModificationInfos modificationInfos = mapper.readValue(body.readUtf8(), new TypeReference<>() { });
                     modificationInfos.setSubstationIds(Set.of("s2"));
-                    return new MockResponse().setResponseCode(200)
-                        .setBody("[" + mapper.writeValueAsString(modificationInfos) + "]")
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "[" + mapper.writeValueAsString(modificationInfos) + "]");
                 } else if (path.startsWith("/v1/modifications/" + MODIFICATION_UUID + "/")) {
                     if (!"PUT".equals(request.getMethod()) || !body.peek().readUtf8().equals("bogus")) {
-                        return new MockResponse().setResponseCode(200);
+                        return new MockResponse(200);
                     } else {
-                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
+                        return new MockResponse(HttpStatus.BAD_REQUEST.value());
                     }
                 } else if (path.matches("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/reindex-all")) {
-                    return new MockResponse().setResponseCode(404);
+                    return new MockResponse(404);
                 } else if (path.matches("/v1/networks/.*/reindex-all")) {
                     // simulate a server error
                     if (indexed) {
-                        return new MockResponse().setResponseCode(500);
+                        return new MockResponse(500);
                     }
                     indexed = true;
-                    return new MockResponse().setResponseCode(200);
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/indexed-equipments")) {
-                    return new MockResponse().setResponseCode(404);
+                    return new MockResponse(404);
                 } else if (path.matches("/v1/networks/.*/indexed-equipments")) {
-                    return new MockResponse().setResponseCode(indexed ? 200 : 204);
+                    return new MockResponse(indexed ? 200 : 204);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS, "UCTE");
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + NOT_EXISTING_NETWORK_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NOT_EXISTING_NETWORK_INFOS, "UCTE");
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_2_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS_2, "UCTE");
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_3_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS_3, "UCTE");
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
-                    return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
-                        .addHeader("Content-Type", "application/json; charset=utf-8")
-                        .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
+                    return new MockResponse(500, Headers.of("Content-Type", "application/json; charset=utf-8"),
+                        "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
                 } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
                     // need asynchronous run to get study creation requests
                     new Thread(() -> {
@@ -441,18 +418,15 @@ public class StudyTest {
                             LOGGER.error("Error while waiting", e);
                         }
                     }).start();
-                    return new MockResponse().setResponseCode(200);
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportFailedMessage(path, STUDY_CREATION_ERROR_MESSAGE);
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_CONVERSION_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportFailedMessage(path, null); // some conversion errors don't returnany error mesage
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/reports/.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(mapper.writeValueAsString(REPORT_TEST))
-                        .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(REPORT_TEST));
                 } else if (path.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     // need asynchronous run to get study creation requests
                     new Thread(() -> {
@@ -463,47 +437,41 @@ public class StudyTest {
                             LOGGER.error("Error while waiting", e);
                         }
                     }).start();
-                    return new MockResponse().setResponseCode(200);
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS, "XIIDM");
-                    return new MockResponse().setResponseCode(200);
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CLONED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS, "UCTE");
-                    return new MockResponse().setResponseCode(200);
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/parameters.*") && POST.equals(request.getMethod())) {
                     if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING)) {
-                        return new MockResponse().setResponseCode(404); // params duplication request KO
+                        return new MockResponse(404); // params duplication request KO
                     } else if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING)) {
-                        return new MockResponse().setResponseCode(200).setBody(DUPLICATED_PARAMS_JSON) // params duplication request OK
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), DUPLICATED_PARAMS_JSON); // params duplication request OK
                     } else {
-                        return new MockResponse().setResponseCode(200).addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(mapper.writeValueAsString(UUID.randomUUID()));
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                     }
                 } else if (path.matches("/v1/parameters/.*") && DELETE.equals(request.getMethod())) {
-                    return new MockResponse().setResponseCode(200);
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/parameters/.*/provider")) {
-                    return new MockResponse().setResponseCode(200);
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/default-provider")) {
-                    return new MockResponse().setResponseCode(200).setBody(DEFAULT_PROVIDER);
+                    return new MockResponse.Builder().code(200).body(DEFAULT_PROVIDER).build();
                 } else if (path.matches("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
-                    return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_NO_PARAMS_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), USER_PROFILE_NO_PARAMS_JSON);
                 } else if (path.matches("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
-                    return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_INVALID_PARAMS_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), USER_PROFILE_INVALID_PARAMS_JSON);
                 } else if (path.matches("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
-                    return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_VALID_PARAMS_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), USER_PROFILE_VALID_PARAMS_JSON);
                 }
 
                 switch (path) {
                     case "/v1/networks/" + NETWORK_UUID_STRING:
                     case "/v1/studies/cases/{caseUuid}":
-                        return new MockResponse().setResponseCode(200).setBody("CGMES")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "CGMES");
                     case "/v1/studies/newStudy/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING:
-                        return new MockResponse().setResponseCode(200).setBody("XIIDM")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "XIIDM");
 
                     case "/v1/cases/" + CASE_UUID_STRING + "/exists":
                     case "/v1/cases/" + NOT_EXISTING_NETWORK_CASE_UUID_STRING + "/exists":
@@ -514,132 +482,95 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_3_UUID_STRING + "/exists":
                     case "/v1/cases/" + CASE_UUID_CAUSING_IMPORT_ERROR + "/exists":
                     case "/v1/cases/" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "/exists":
-                        return new MockResponse().setResponseCode(200).setBody("true")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "true");
                     case "/v1/cases/" + CASE_UUID_CAUSING_CONVERSION_ERROR + "/exists":
-                        return new MockResponse().setResponseCode(200).setBody("true")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "true");
                     case "/v1/cases/" + CASE_UUID_STRING + "/infos":
-                        return new MockResponse().setResponseCode(200)
-                                .setBody("{\"uuid\":\"" + CASE_UUID_STRING + "\",\"name\":\"" + TEST_FILE_UCTE + "\",\"format\":\"UCTE\"}")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "{\"uuid\":\"" + CASE_UUID_STRING + "\",\"name\":\"" + TEST_FILE_UCTE + "\",\"format\":\"UCTE\"}");
                     case "/v1/cases/" + NOT_EXISTING_NETWORK_CASE_UUID_STRING + "/infos":
-                        return new MockResponse().setResponseCode(200)
-                                .setBody("{\"uuid\":\"" + NOT_EXISTING_NETWORK_CASE_UUID_STRING + "\",\"name\":\"" + TEST_FILE_UCTE + "\",\"format\":\"UCTE\"}")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "{\"uuid\":\"" + NOT_EXISTING_NETWORK_CASE_UUID_STRING + "\",\"name\":\"" + TEST_FILE_UCTE + "\",\"format\":\"UCTE\"}");
                     case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/infos":
-                        return new MockResponse().setResponseCode(200)
-                                .setBody("{\"uuid\":\"" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "\",\"name\":\"" + TEST_FILE_IMPORT_ERRORS + "\",\"format\":\"XIIDM\"}")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "{\"uuid\":\"" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "\",\"name\":\"" + TEST_FILE_IMPORT_ERRORS + "\",\"format\":\"XIIDM\"}");
                     case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/infos":
-                        return new MockResponse().setResponseCode(200)
-                                .setBody("{\"uuid\":\"" + IMPORTED_CASE_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "{\"uuid\":\"" + IMPORTED_CASE_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}");
                     case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/infos":
-                        return new MockResponse().setResponseCode(200)
-                                .setBody("{\"uuid\":\"" + NEW_STUDY_CASE_UUID + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "{\"uuid\":\"" + NEW_STUDY_CASE_UUID + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}");
                     case "/v1/cases/" + IMPORTED_BLOCKING_CASE_UUID_STRING + "/infos":
-                        return new MockResponse().setResponseCode(200)
-                                .setBody("{\"uuid\":\"" + IMPORTED_BLOCKING_CASE_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "{\"uuid\":\"" + IMPORTED_BLOCKING_CASE_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}");
                     case "/v1/cases/" + CASE_2_UUID_STRING + "/infos":
-                        return new MockResponse().setResponseCode(200)
-                                .setBody("{\"uuid\":\"" + CASE_2_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "{\"uuid\":\"" + CASE_2_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}");
                     case "/v1/cases/" + CASE_3_UUID_STRING + "/infos":
-                        return new MockResponse().setResponseCode(200)
-                                .setBody("{\"uuid\":\"" + CASE_3_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "{\"uuid\":\"" + CASE_3_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}");
                     case "/v1/cases/" + CASE_UUID_STRING + "/format":
                     case "/v1/cases/" + NOT_EXISTING_NETWORK_CASE_UUID_STRING + "/format":
-                        return new MockResponse().setResponseCode(200).setBody("UCTE")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "UCTE");
                     case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/format":
                     case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/format":
                     case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/format":
                     case "/v1/cases/" + IMPORTED_BLOCKING_CASE_UUID_STRING + "/format":
                     case "/v1/cases/" + CASE_2_UUID_STRING + "/format":
                     case "/v1/cases/" + CASE_3_UUID_STRING + "/format":
-                        return new MockResponse().setResponseCode(200).setBody("XIIDM")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "XIIDM");
                     case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/exists":
-                        return new MockResponse().setResponseCode(200).setBody("false")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "false");
                     // duplicate case
                     case "/v1/cases?duplicateFrom=" + CASE_UUID_STRING + "&withExpiration=true":
                     case "/v1/cases?duplicateFrom=" + CASE_UUID_STRING + "&withExpiration=false":
-                        return new MockResponse().setResponseCode(200).setBody(clonedCaseUuidAsString)
-                                .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), clonedCaseUuidAsString);
                     // delete case
                     case "/v1/cases/" + CASE_UUID_STRING:
                     // disable case expiration
                     case "/v1/cases/" + CASE_UUID_STRING + "/disableExpiration":
-                        return new MockResponse().setResponseCode(200);
+                        return new MockResponse(200);
 
                     case "/" + CASE_API_VERSION + "/cases/" + IMPORTED_CASE_UUID_STRING:
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2", "s3")));
-                        return new MockResponse().setResponseCode(200)
-                            .setBody(new JSONArray(List.of(jsonObject)).toString())
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), new JSONArray(List.of(jsonObject)).toString());
 
                     case "/v1/networks?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID:
                     case "/v1/networks?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         countDownLatch.await(2, TimeUnit.SECONDS);
-                        return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), networkInfosAsString);
                     case "/v1/networks?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
-                        return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), networkInfosAsString);
                     case "/v1/networks?caseUuid=" + NOT_EXISTING_NETWORK_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
-                        return new MockResponse().setBody(String.valueOf(notExistingNetworkInfosAsString)).setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), notExistingNetworkInfosAsString);
                     case "/v1/networks?caseUuid=" + CASE_2_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
-                        return new MockResponse().setBody(String.valueOf(networkInfos2AsString)).setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), networkInfos2AsString);
                     case "/v1/networks?caseUuid=" + CASE_3_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
-                        return new MockResponse().setBody(String.valueOf(networkInfos3AsString)).setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), networkInfos3AsString);
                     case "/v1/networks?caseUuid=" + CASE_UUID_CAUSING_IMPORT_ERROR + "&variantId=" + FIRST_VARIANT_ID:
-                        return new MockResponse().setResponseCode(500);
+                        return new MockResponse(500);
                     case "/v1/networks?caseUuid=" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "&variantId=" + FIRST_VARIANT_ID:
                         sendCaseImportFailedMessage(path, "ERROR WHILE IMPORTING STUDY");
-                        return new MockResponse().setResponseCode(200);
+                        return new MockResponse(200);
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
-                        return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
-                            .addHeader("Content-Type", "application/json; charset=utf-8")
-                            .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
+                        return new MockResponse(500, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE),
+                            "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
 
                     case "/v1/reports/" + NETWORK_UUID_STRING:
-                        return new MockResponse().setResponseCode(200)
-                            .setBody(mapper.writeValueAsString(REPORT_TEST))
-                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(REPORT_TEST));
                     case "/v1/reports":
-                        return new MockResponse().setResponseCode(200);
+                        return new MockResponse(200);
                     case "/v1/export/formats":
-                        return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "[\"CGMES\",\"UCTE\",\"XIIDM\"]");
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=" + "myFileName":
-                        return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=fileName", HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE), "byteData");
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM":
-                        return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=fileName", HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE), "byteData");
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=" + VARIANT_ID + "&fileName=" + "myFileName":
-                        return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=fileName", HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE), "byteData");
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=" + VARIANT_ID:
-                        return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=fileName", HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE), "byteData");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID:
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID_2:
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID_3:
-                        return new MockResponse().setResponseCode(200);
+                        return new MockResponse(200);
                     default:
                         LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
-                        return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
+                        return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
                 }
             }
         };
@@ -651,7 +582,7 @@ public class StudyTest {
         Matcher matcher = receiverPattern.matcher(requestPath);
         if (matcher.find()) {
             String receiverUrlString = matcher.group(1);
-            Map<String, String> importParameters = new HashMap<String, String>();
+            Map<String, String> importParameters = new HashMap<>();
             importParameters.put("param1", "changedValue1, changedValue2");
             importParameters.put("param2", "changedValue");
             input.send(MessageBuilder.withPayload("").setHeader("receiver", URLDecoder.decode(receiverUrlString, StandardCharsets.UTF_8))
@@ -679,19 +610,17 @@ public class StudyTest {
     }
 
     @Test
-    public void testSearch() throws Exception {
+    void testSearch(final MockWebServer mockWebServer) throws Exception {
         MvcResult mvcResult;
         String resultAsString;
-        UUID studyUuid = createStudy("userId", CASE_UUID);
+        UUID studyUuid = createStudy(mockWebServer, "userId", CASE_UUID);
         UUID rootNodeId = getRootNodeUuid(studyUuid);
 
         mvcResult = mockMvc
                 .perform(get("/v1/search?q={request}", String.format("userId:%s", "userId")).header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString,
-                new TypeReference<List<CreatedStudyBasicInfos>>() {
-                });
+        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertThat(createdStudyBasicInfosList, new MatcherJson<>(mapper, studiesInfos));
 
         mvcResult = mockMvc
@@ -699,9 +628,7 @@ public class StudyTest {
                         studyUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        List<EquipmentInfos> equipmentInfos = mapper.readValue(resultAsString,
-                new TypeReference<List<EquipmentInfos>>() {
-                });
+        List<EquipmentInfos> equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
 
         mvcResult = mockMvc
@@ -709,8 +636,7 @@ public class StudyTest {
                         studyUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        equipmentInfos = mapper.readValue(resultAsString, new TypeReference<List<EquipmentInfos>>() {
-        });
+        equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
 
         mvcResult = mockMvc
@@ -718,8 +644,7 @@ public class StudyTest {
                         studyUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        equipmentInfos = mapper.readValue(resultAsString, new TypeReference<List<EquipmentInfos>>() {
-        });
+        equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=bogus",
@@ -730,7 +655,7 @@ public class StudyTest {
     }
 
     @Test
-    public void test() throws Exception {
+    void test(final MockWebServer server) throws Exception {
         MvcResult result;
         String resultAsString;
         String userId = "userId";
@@ -744,7 +669,7 @@ public class StudyTest {
             content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));
 
         //insert a study
-        UUID studyUuid = createStudy("userId", CASE_UUID);
+        UUID studyUuid = createStudy(server, "userId", CASE_UUID);
 
         // check the study
         result = mockMvc.perform(get("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
@@ -755,7 +680,7 @@ public class StudyTest {
 
         assertThat(infos, createMatcherStudyInfos(studyUuid, "UCTE"));
 
-        //insert a study with a non existing case and except exception
+        //insert a study with a non-existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}",
                 NOT_EXISTING_CASE_UUID, "false").header(USER_ID_HEADER, "userId").param(CASE_FORMAT, "XIIDM"))
                      .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.valueOf("text/plain;charset=UTF-8"))).andReturn();
@@ -768,28 +693,24 @@ public class StudyTest {
                      .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
 
         resultAsString = result.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString,
-            new TypeReference<List<CreatedStudyBasicInfos>>() {
-            });
+        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertThat(createdStudyBasicInfosList.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));
 
         //insert the same study but with another user (should work)
         //even with the same name should work
-        studyUuid = createStudy("userId2", CASE_UUID);
+        studyUuid = createStudy(server, "userId2", CASE_UUID);
 
         resultAsString = mockMvc.perform(get("/v1/studies").header("userId", "userId2"))
                              .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn().getResponse().getContentAsString();
 
-        createdStudyBasicInfosList = mapper.readValue(resultAsString,
-            new TypeReference<List<CreatedStudyBasicInfos>>() {
-            });
+        createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertThat(createdStudyBasicInfosList.get(1),
             createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));
 
         UUID randomUuid = UUID.randomUUID();
-        //get a non existing study -> 404 not found
+        //get a non-existing study -> 404 not found
         mockMvc.perform(get("/v1/studies/{studyUuid}", randomUuid).header(USER_ID_HEADER, "userId"))
             .andExpectAll(status().isNotFound(),
                 content().contentType(MediaType.APPLICATION_JSON),
@@ -803,9 +724,7 @@ public class StudyTest {
                      .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
 
         resultAsString = result.getResponse().getContentAsString();
-        createdStudyBasicInfosList = mapper.readValue(resultAsString,
-            new TypeReference<List<CreatedStudyBasicInfos>>() {
-            });
+        createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertEquals(2, createdStudyBasicInfosList.size());
 
         //get available export format
@@ -847,26 +766,26 @@ public class StudyTest {
     }
 
     @Test
-    public void testCreateStudyWithImportParameters() throws Exception {
-        Map<String, Object> importParameters = new HashMap<String, Object>();
-        ArrayList<String> randomListParam = new ArrayList<String>();
+    void testCreateStudyWithImportParameters(final MockWebServer mockWebServer) throws Exception {
+        Map<String, Object> importParameters = new HashMap<>();
+        ArrayList<String> randomListParam = new ArrayList<>();
         randomListParam.add("paramValue1");
         randomListParam.add("paramValue2");
         importParameters.put("param1", randomListParam);
-        UUID studyUuid = createStudyWithImportParameters("userId", CASE_UUID, "UCTE", importParameters);
+        UUID studyUuid = createStudyWithImportParameters(mockWebServer, "userId", CASE_UUID, "UCTE", importParameters);
 
         StudyEntity studyEntity = studyRepository.findById(studyUuid).get();
         assertEquals(studyUuid, studyEntity.getId());
     }
 
     @Test
-    public void testCreateStudyWithDuplicateCase() throws Exception {
-        createStudyWithDuplicateCase("userId", CASE_UUID);
+    void testCreateStudyWithDuplicateCase(final MockWebServer mockWebServer) throws Exception {
+        createStudyWithDuplicateCase(mockWebServer, "userId", CASE_UUID);
     }
 
     @Test
-    public void testDeleteStudy() throws Exception {
-        UUID studyUuid = createStudy("userId", CASE_UUID);
+    void testDeleteStudy(final MockWebServer server) throws Exception {
+        UUID studyUuid = createStudy(server, "userId", CASE_UUID);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID()); // does not have default params
         studyRepository.save(studyEntity);
@@ -889,8 +808,8 @@ public class StudyTest {
     }
 
     @Test
-    public void testDeleteStudyWithError() throws Exception {
-        UUID studyUuid = createStudy("userId", CASE_UUID);
+    void testDeleteStudyWithError(final MockWebServer server) throws Exception {
+        UUID studyUuid = createStudy(server, "userId", CASE_UUID);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
         studyEntity.setLoadFlowParametersUuid(null);
         studyEntity.setSecurityAnalysisParametersUuid(null);
@@ -913,12 +832,12 @@ public class StudyTest {
     }
 
     @Test
-    public void testDeleteStudyWithNonExistingCase() throws Exception {
-        UUID studyUuid = createStudy("userId", CASE_UUID);
+    void testDeleteStudyWithNonExistingCase(final MockWebServer server) throws Exception {
+        UUID studyUuid = createStudy(server, "userId", CASE_UUID);
 
         UUID stubUuid = wireMockUtils.stubNetworkModificationDeleteGroup();
 
-        // Changing the study case uuid with a non existing case
+        // Changing the study case uuid with a non-existing case
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
         assertNotNull(studyEntity);
         UUID nonExistingCaseUuid = UUID.randomUUID();
@@ -939,11 +858,11 @@ public class StudyTest {
     }
 
     @Test
-    public void testMetadata() throws Exception {
-        UUID studyUuid = createStudy("userId", CASE_UUID);
+    void testMetadata(final MockWebServer mockWebServer) throws Exception {
+        UUID studyUuid = createStudy(mockWebServer, "userId", CASE_UUID);
         UUID oldStudyUuid = studyUuid;
 
-        studyUuid = createStudy("userId2", CASE_UUID);
+        studyUuid = createStudy(mockWebServer, "userId2", CASE_UUID);
 
         MvcResult mvcResult = mockMvc
                 .perform(get("/v1/studies/metadata?ids="
@@ -951,9 +870,7 @@ public class StudyTest {
                         .header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString,
-                new TypeReference<List<CreatedStudyBasicInfos>>() {
-                });
+        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertNotNull(createdStudyBasicInfosList);
         assertEquals(2, createdStudyBasicInfosList.size());
@@ -967,7 +884,7 @@ public class StudyTest {
     }
 
     @Test
-    public void testNotifyStudyMetadataUpdated() throws Exception {
+    void testNotifyStudyMetadataUpdated() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         mockMvc.perform(post("/v1/studies/{studyUuid}/notification?type=metadata_updated", studyUuid)
                 .header(USER_ID_HEADER, "userId"))
@@ -980,14 +897,14 @@ public class StudyTest {
     }
 
     @Test
-    public void testLogsReport() throws Exception {
-        UUID studyUuid = createStudy("userId", CASE_UUID);
+    void testLogsReport(final MockWebServer server) throws Exception {
+        UUID studyUuid = createStudy(server, "userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?reportType=NETWORK_MODIFICATION", studyUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
-        List<Report> reports = mapper.readValue(resultAsString, new TypeReference<List<Report>>() { });
+        List<Report> reports = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertEquals(1, reports.size());
         assertThat(reports.get(0), new MatcherReport(REPORT_TEST));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
@@ -1027,11 +944,11 @@ public class StudyTest {
         return modificationNode;
     }
 
-    private UUID createStudy(String userId, UUID caseUuid) throws Exception {
-        return createStudy(userId, caseUuid, null, false);
+    private UUID createStudy(final MockWebServer mockWebServer, String userId, UUID caseUuid) throws Exception {
+        return createStudy(mockWebServer, userId, caseUuid, null, false);
     }
 
-    private UUID createStudy(String userId, UUID caseUuid, String parameterDuplicatedUuid, boolean parameterDuplicationSuccess) throws Exception {
+    private UUID createStudy(final MockWebServer server, String userId, UUID caseUuid, String parameterDuplicatedUuid, boolean parameterDuplicationSuccess) throws Exception {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                         .header("userId", userId)
                         .param(CASE_FORMAT, "UCTE"))
@@ -1061,7 +978,7 @@ public class StudyTest {
         return studyUuid;
     }
 
-    protected UUID createStudyWithImportParameters(String userId, UUID caseUuid, String caseFormat, Map<String, Object> importParameters) throws Exception {
+    protected UUID createStudyWithImportParameters(final MockWebServer server, String userId, UUID caseUuid, String caseFormat, Map<String, Object> importParameters) throws Exception {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                         .header("userId", userId).contentType(MediaType.APPLICATION_JSON)
                         .param(CASE_FORMAT, caseFormat)
@@ -1089,7 +1006,7 @@ public class StudyTest {
         return studyUuid;
     }
 
-    private UUID createStudyWithDuplicateCase(String userId, UUID caseUuid) throws Exception {
+    private UUID createStudyWithDuplicateCase(final MockWebServer server, String userId, UUID caseUuid) throws Exception {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                         .param("duplicateCase", "true")
                         .param(CASE_FORMAT, "UCTE")
@@ -1140,13 +1057,13 @@ public class StudyTest {
     }
 
     @Test
-    public void testGetNullNetwork() {
+    void testGetNullNetwork() {
         // just for test coverage
         assertNull(networkService.getNetwork(UUID.randomUUID(), PreloadingStrategy.COLLECTION, null));
     }
 
     @Test
-    public void testCreateStudyWithErrorDuringCaseImport() throws Exception {
+    void testCreateStudyWithErrorDuringCaseImport(final MockWebServer server) throws Exception {
         String userId = "userId";
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_IMPORT_ERROR)
                         .header("userId", userId)
@@ -1166,7 +1083,7 @@ public class StudyTest {
             .andReturn();
 
         String resultAsString = mvcResult.getResponse().getContentAsString();
-        List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
+        List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertEquals(List.of(), bsiListResult);
 
@@ -1176,7 +1093,7 @@ public class StudyTest {
     }
 
     @Test
-    public void testCreateStudyCreationFailedWithoutErrorMessage() throws Exception {
+    void testCreateStudyCreationFailedWithoutErrorMessage(final MockWebServer server) throws Exception {
         String userId = "userId";
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_CONVERSION_ERROR)
                         .header("userId", userId)
@@ -1200,7 +1117,7 @@ public class StudyTest {
     }
 
     @Test
-    public void testCreateStudyWithErrorDuringStudyCreation() throws Exception {
+    void testCreateStudyWithErrorDuringStudyCreation(final MockWebServer server) throws Exception {
         String userId = "userId";
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_STUDY_CREATION_ERROR)
                         .header("userId", userId)
@@ -1226,7 +1143,7 @@ public class StudyTest {
     }
 
     @Test
-    public void testGetStudyCreationRequests() throws Exception {
+    void testGetStudyCreationRequests(final MockWebServer server) throws Exception {
         MvcResult mvcResult;
         String resultAsString;
         countDownLatch = new CountDownLatch(1);
@@ -1236,7 +1153,7 @@ public class StudyTest {
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
+        List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         // once we checked study creation requests, we can countDown latch to trigger study creation request
         countDownLatch.countDown();
@@ -1256,7 +1173,7 @@ public class StudyTest {
                         .andReturn();
 
         resultAsString = mvcResult.getResponse().getContentAsString();
-        bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
+        bsiListResult = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertEquals(List.of(), bsiListResult);
 
@@ -1266,7 +1183,7 @@ public class StudyTest {
                         .andReturn();
 
         resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         countDownLatch = new CountDownLatch(1);
 
@@ -1289,7 +1206,7 @@ public class StudyTest {
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
 
-        bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
+        bsiListResult = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         countDownLatch.countDown();
 
@@ -1309,7 +1226,7 @@ public class StudyTest {
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
 
-        bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
+        bsiListResult = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertEquals(List.of(), bsiListResult);
 
@@ -1319,7 +1236,7 @@ public class StudyTest {
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+        csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(8, server);
@@ -1392,28 +1309,28 @@ public class StudyTest {
     }
 
     @Test
-    public void testCreateStudyWithDefaultLoadflow() throws Exception {
-        createStudy("userId", CASE_UUID);
+    void testCreateStudyWithDefaultLoadflow(final MockWebServer mockWebServer) throws Exception {
+        createStudy(mockWebServer, "userId", CASE_UUID);
         StudyEntity study = studyRepository.findAll().get(0);
         assertEquals(study.getNonEvacuatedEnergyProvider(), defaultNonEvacuatedEnergyProvider);
     }
 
     @Test
-    public void testCreateStudyWithDefaultLoadflowUserHasNoParamsInProfile() throws Exception {
-        createStudy(NO_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, null, false);
+    void testCreateStudyWithDefaultLoadflowUserHasNoParamsInProfile(final MockWebServer mockWebServer) throws Exception {
+        createStudy(mockWebServer, NO_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, null, false);
     }
 
     @Test
-    public void testCreateStudyWithDefaultLoadflowUserHasInvalidParamsInProfile() throws Exception {
-        createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING, false);
+    void testCreateStudyWithDefaultLoadflowUserHasInvalidParamsInProfile(final MockWebServer mockWebServer) throws Exception {
+        createStudy(mockWebServer, INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING, false);
     }
 
     @Test
-    public void testCreateStudyWithDefaultLoadflowUserHasValidParamsInProfile() throws Exception {
-        createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING, true);
+    void testCreateStudyWithDefaultLoadflowUserHasValidParamsInProfile(final MockWebServer mockWebServer) throws Exception {
+        createStudy(mockWebServer, VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING, true);
     }
 
-    private void testDuplicateStudy(UUID study1Uuid) throws Exception {
+    private void testDuplicateStudy(final MockWebServer mockWebServer, UUID study1Uuid) throws Exception {
         String userId = "userId";
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
@@ -1464,41 +1381,41 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         // duplicate the study
-        StudyEntity duplicatedStudy = duplicateStudy(study1Uuid);
+        StudyEntity duplicatedStudy = duplicateStudy(mockWebServer, study1Uuid);
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
 
-        //Test duplication from a non existing source study
+        //Test duplication from a non-existing source study
         mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", UUID.randomUUID())
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    public void testDuplicateStudyWithParametersUuid() throws Exception {
-        UUID study1Uuid = createStudy("userId", CASE_UUID);
+    void testDuplicateStudyWithParametersUuid(final MockWebServer mockWebServer) throws Exception {
+        UUID study1Uuid = createStudy(mockWebServer, "userId", CASE_UUID);
         StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
         studyEntity.setLoadFlowParametersUuid(UUID.randomUUID());
         studyEntity.setSecurityAnalysisParametersUuid(UUID.randomUUID());
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID());
         studyEntity.setSensitivityAnalysisParametersUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
-        testDuplicateStudy(study1Uuid);
+        testDuplicateStudy(mockWebServer, study1Uuid);
     }
 
     @Test
-    public void testDuplicateStudyWithoutParametersUuid() throws Exception {
-        UUID study1Uuid = createStudy("userId", CASE_UUID);
+    void testDuplicateStudyWithoutParametersUuid(final MockWebServer mockWebServer) throws Exception {
+        UUID study1Uuid = createStudy(mockWebServer, "userId", CASE_UUID);
         StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
         studyEntity.setLoadFlowParametersUuid(null);
         studyEntity.setSecurityAnalysisParametersUuid(null);
         studyEntity.setSensitivityAnalysisParametersUuid(null);
         studyRepository.save(studyEntity);
-        testDuplicateStudy(study1Uuid);
+        testDuplicateStudy(mockWebServer, study1Uuid);
     }
 
     @Test
-    public void testDuplicateStudyWithErrorDuringCaseDuplication() throws Exception {
-        UUID studyUuid = createStudy("userId", CASE_UUID);
+    void testDuplicateStudyWithErrorDuringCaseDuplication(final MockWebServer mockWebServer) throws Exception {
+        UUID studyUuid = createStudy(mockWebServer, "userId", CASE_UUID);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
         studyRepository.save(studyEntity);
 
@@ -1518,7 +1435,7 @@ public class StudyTest {
         assertNull(studyRepository.findById(UUID.fromString(duplicatedStudyUuid)).orElse(null));
     }
 
-    private StudyEntity duplicateStudy(UUID studyUuid) throws Exception {
+    private StudyEntity duplicateStudy(final MockWebServer server, UUID studyUuid) throws Exception {
         UUID stubUuid = wireMockUtils.stubDuplicateModificationGroup();
         String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
                         .header(USER_ID_HEADER, "userId"))
@@ -1620,9 +1537,9 @@ public class StudyTest {
     }
 
     @Test
-    public void testCutAndPasteNode() throws Exception {
+    void testCutAndPasteNode(final MockWebServer mockWebServer) throws Exception {
         String userId = "userId";
-        UUID study1Uuid = createStudy("userId", CASE_UUID);
+        UUID study1Uuid = createStudy(mockWebServer, "userId", CASE_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
@@ -1774,9 +1691,9 @@ public class StudyTest {
     }
 
     @Test
-    public void testCutAndPasteNodeAroundItself() throws Exception {
+    void testCutAndPasteNodeAroundItself(final MockWebServer mockWebServer) throws Exception {
         String userId = "userId";
-        UUID study1Uuid = createStudy(userId, CASE_UUID);
+        UUID study1Uuid = createStudy(mockWebServer, userId, CASE_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
@@ -1809,9 +1726,9 @@ public class StudyTest {
     }
 
     @Test
-    public void testCutAndPasteNodeWithoutModification() throws Exception {
+    void testCutAndPasteNodeWithoutModification(final MockWebServer server) throws Exception {
         String userId = "userId";
-        UUID study1Uuid = createStudy(userId, CASE_UUID);
+        UUID study1Uuid = createStudy(server, userId, CASE_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
@@ -1830,9 +1747,9 @@ public class StudyTest {
     }
 
     @Test
-    public void testCutAndPasteNodeWithModification() throws Exception {
+    void testCutAndPasteNodeWithModification(final MockWebServer server) throws Exception {
         String userId = "userId";
-        UUID study1Uuid = createStudy(userId, CASE_UUID);
+        UUID study1Uuid = createStudy(server, userId, CASE_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
@@ -1851,21 +1768,21 @@ public class StudyTest {
     }
 
     @Test
-    public void testCutAndPastErrors() throws Exception {
+    void testCutAndPastErrors(final MockWebServer mockWebServer) throws Exception {
         String userId = "userId";
-        UUID study1Uuid = createStudy("userId", CASE_UUID);
+        UUID study1Uuid = createStudy(mockWebServer, "userId", CASE_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
 
-        //try cut non existing node and expect not found
+        //try cut non-existing node and expect not found
         mockMvc.perform(post(STUDIES_URL +
                         "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 study1Uuid, UUID.randomUUID(), node1.getId(), InsertMode.AFTER)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
 
-        //try to cut to a non existing position and expect not found
+        //try to cut to a non-existing position and expect not found
         mockMvc.perform(post(STUDIES_URL +
                         "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 study1Uuid, node1.getId(), UUID.randomUUID(), InsertMode.AFTER)
@@ -1884,9 +1801,9 @@ public class StudyTest {
     }
 
     @Test
-    public void testCutAndPasteSubtree() throws Exception {
+    void testCutAndPasteSubtree(final MockWebServer server) throws Exception {
         String userId = "userId";
-        UUID study1Uuid = createStudy(userId, CASE_UUID);
+        UUID study1Uuid = createStudy(server, userId, CASE_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
@@ -1949,9 +1866,9 @@ public class StudyTest {
     }
 
     @Test
-    public void testDuplicateNode() throws Exception {
+    void testDuplicateNode(final MockWebServer mockWebServer) throws Exception {
         String userId = "userId";
-        UUID study1Uuid = createStudy(userId, CASE_UUID);
+        UUID study1Uuid = createStudy(mockWebServer, userId, CASE_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
@@ -2033,14 +1950,14 @@ public class StudyTest {
         //and expect that no other node has the new branch create node as parent
         assertEquals(0, allNodes.stream().filter(nodeEntity -> nodeEntity.getParentNode() != null && nodeEntity.getParentNode().getIdNode().equals(duplicatedNodeUuid3)).count());
 
-        //try copy non existing node and expect not found
+        //try copy non-existing node and expect not found
         mockMvc.perform(post(STUDIES_URL +
                         "/{studyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}&sourceStudyUuid={sourceStudyUuid}",
                 study1Uuid, UUID.randomUUID(), node1.getId(), InsertMode.AFTER, study1Uuid)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
 
-        //try to copy to a non existing position and expect not found
+        //try to copy to a non-existing position and expect not found
         mockMvc.perform(post(STUDIES_URL +
                         "/{studyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}&sourceStudyUuid={sourceStudyUuid}",
                 study1Uuid, node1.getId(), UUID.randomUUID(), InsertMode.AFTER, study1Uuid)
@@ -2061,9 +1978,9 @@ public class StudyTest {
     }
 
     @Test
-    public void testDuplicateSubtree() throws Exception {
+    void testDuplicateSubtree(final MockWebServer server) throws Exception {
         String userId = "userId";
-        UUID study1Uuid = createStudy(userId, CASE_UUID);
+        UUID study1Uuid = createStudy(server, userId, CASE_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
@@ -2188,14 +2105,14 @@ public class StudyTest {
         //duplicated node2 should now be not built
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodesAfterDuplication.get(1)).getGlobalBuildStatus());
 
-        //try copy non existing node and expect not found
+        //try copy non-existing node and expect not found
         mockMvc.perform(post(STUDIES_URL +
                                 "/{targetStudyUuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}&sourceStudyUuid={sourceStudyUuid}",
                         study1Uuid, UUID.randomUUID(), node1.getId(), study1Uuid)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
 
-        //try to copy to a non existing position and expect not found
+        //try to copy to a non-existing position and expect not found
         mockMvc.perform(post(STUDIES_URL +
                                 "/{targetStudyUuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}&sourceStudyUuid={sourceStudyUuid}",
                         study1Uuid, node1.getId(), UUID.randomUUID(), study1Uuid)
@@ -2204,15 +2121,15 @@ public class StudyTest {
     }
 
     @Test
-    public void testDuplicateNodeBetweenStudies() throws Exception {
+    void testDuplicateNodeBetweenStudies(final MockWebServer mockWebServer) throws Exception {
         String userId = "userId";
-        UUID study1Uuid = createStudy(userId, CASE_UUID);
+        UUID study1Uuid = createStudy(mockWebServer, userId, CASE_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
         NetworkModificationNode node2 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID_2, "node2", userId);
 
-        UUID study2Uuid = createStudy(userId, CASE_UUID);
+        UUID study2Uuid = createStudy(mockWebServer, userId, CASE_UUID);
         RootNode study2RootNode = networkModificationTreeService.getStudyTree(study2Uuid);
         UUID study2ModificationNodeUuid = study2RootNode.getChildren().get(0).getId();
         NetworkModificationNode study2Node2 = createNetworkModificationNode(study2Uuid, study2ModificationNodeUuid, VARIANT_ID_2, "node2", userId);
@@ -2384,7 +2301,7 @@ public class StudyTest {
     }
 
     @Test
-    public void testGetDefaultProviders() throws Exception {
+    void testGetDefaultProviders(final MockWebServer server) throws Exception {
         // related to LoadFlowTest::testGetDefaultProvidersFromProfile but without a user, so it doesn't use profiles
         mockMvc.perform(get("/v1/loadflow-default-provider")).andExpectAll(
                 status().isOk(),
@@ -2428,14 +2345,14 @@ public class StudyTest {
     }
 
     @Test
-    public void reindexStudyTest() throws Exception {
+    void reindexStudyTest(final MockWebServer server) throws Exception {
         mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", UUID.randomUUID()))
             .andExpect(status().isNotFound());
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", UUID.randomUUID()))
             .andExpectAll(status().isNotFound());
 
-        UUID notExistingNetworkStudyUuid = createStudy("userId", NOT_EXISTING_NETWORK_CASE_UUID);
+        UUID notExistingNetworkStudyUuid = createStudy(server, "userId", NOT_EXISTING_NETWORK_CASE_UUID);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", notExistingNetworkStudyUuid))
             .andExpect(status().isInternalServerError());
@@ -2451,7 +2368,7 @@ public class StudyTest {
         requests = TestUtils.getRequestsWithBodyDone(1, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/indexed-equipments")).count());
 
-        UUID study1Uuid = createStudy("userId", CASE_UUID);
+        UUID study1Uuid = createStudy(server, "userId", CASE_UUID);
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", study1Uuid))
             .andExpectAll(status().isOk(),
@@ -2489,8 +2406,8 @@ public class StudyTest {
     }
 
     @Test
-    public void providerTest() throws Exception {
-        UUID studyUuid = createStudy(USER_ID_HEADER, CASE_UUID);
+    void providerTest(final MockWebServer server) throws Exception {
+        UUID studyUuid = createStudy(server, USER_ID_HEADER, CASE_UUID);
         assertNotNull(studyUuid);
         mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
             .andExpectAll(status().isOk(),
@@ -2534,12 +2451,13 @@ public class StudyTest {
         assertTrue(requests.stream().allMatch(r -> r.matches("/v1/parameters/.*/provider")));
     }
 
-    @After
-    public void tearDown() {
+    @AfterEach
+    void tearDown(final MockWebServer server) {
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        studyRepository.deleteAll();
+        studyCreationRequestRepository.deleteAll();
+
         List<String> destinations = List.of(studyUpdateDestination, elementUpdateDestination);
-
-        cleanDB();
-
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
 
         try {
