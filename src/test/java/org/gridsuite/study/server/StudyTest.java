@@ -92,6 +92,7 @@ import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.DEFAULT_ERROR_MESSAGE;
+import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
@@ -144,6 +145,9 @@ class StudyTest {
     private static final NetworkInfos NOT_EXISTING_NETWORK_INFOS = new NetworkInfos(NOT_EXISTING_NETWORK_UUID, "not_existing_network_id");
     private static final UUID REPORT_UUID = UUID.randomUUID();
     private static final Report REPORT_TEST = Report.builder().id(REPORT_UUID).message("test").severities(List.of(StudyConstants.Severity.WARN)).build();
+    private static final UUID REPORT_LOG_PARENT_UUID = UUID.randomUUID();
+    private static final UUID REPORT_ID = UUID.randomUUID();
+    private static final List<ReportLog> REPORT_LOGS = List.of(new ReportLog("test", Set.of(StudyConstants.Severity.WARN), REPORT_LOG_PARENT_UUID));
     private static final String VARIANT_ID = "variant_1";
     private static final String POST = "POST";
     private static final String DELETE = "DELETE";
@@ -425,6 +429,10 @@ class StudyTest {
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_CONVERSION_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportFailedMessage(path, null); // some conversion errors don't returnany error mesage
                     return new MockResponse(200);
+                } else if (path.matches("/v1/reports/" + REPORT_ID + "/logs.*")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(REPORT_LOGS));
+                } else if (path.matches("/v1/reports/.*/logs.*")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(REPORT_LOGS));
                 } else if (path.matches("/v1/reports/.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(REPORT_TEST));
                 } else if (path.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
@@ -908,6 +916,77 @@ class StudyTest {
         assertEquals(1, reports.size());
         assertThat(reports.get(0), new MatcherReport(REPORT_TEST));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+    }
+
+    @Test
+    public void testGetNodeReportLogs(final MockWebServer server) throws Exception {
+        UUID studyUuid = createStudy(server, "userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report/{reportId}/logs", studyUuid, rootNodeUuid, REPORT_ID).header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk()).andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        List<ReportLog> reportLogs = mapper.readValue(resultAsString, new TypeReference<List<ReportLog>>() { });
+        assertEquals(1, reportLogs.size());
+        assertThat(reportLogs.get(0), new MatcherReportLog(REPORT_LOGS.get(0)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/" + REPORT_ID + "/logs")));
+
+        //test with severityFilter and messageFilter param
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report/{reportId}/logs?severityLevels=WARN&message=testMsgFilter", studyUuid, rootNodeUuid, REPORT_ID).header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk()).andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        reportLogs = mapper.readValue(resultAsString, new TypeReference<List<ReportLog>>() { });
+        assertEquals(1, reportLogs.size());
+        assertThat(reportLogs.get(0), new MatcherReportLog(REPORT_LOGS.get(0)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/" + REPORT_ID + "/logs\\?severityLevels=WARN&message=testMsgFilter")));
+    }
+
+    @Test
+    public void testGetParentNodesReportLogs(final MockWebServer server) throws Exception {
+        String userId = "userId";
+        UUID studyUuid = createStudy(server, userId, CASE_UUID);
+        RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
+        UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        AbstractNode modificationNode = rootNode.getChildren().get(0);
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
+        NetworkModificationNode node2 = createNetworkModificationNode(studyUuid, node1.getId(), VARIANT_ID_2, "node2", userId);
+        createNetworkModificationNode(studyUuid, modificationNodeUuid, VARIANT_ID_3, "node3", userId);
+        UUID rootNodeReportId = networkModificationTreeService.getReportUuid(rootNode.getId());
+        UUID modificationNodeReportId = networkModificationTreeService.getReportUuid(modificationNode.getId());
+        UUID node1ReportId = networkModificationTreeService.getReportUuid(node1.getId());
+        UUID node2ReportId = networkModificationTreeService.getReportUuid(node2.getId());
+
+        //          root
+        //           |
+        //     modificationNode
+        //           |
+        //         node1
+        //         /   \
+        //     node2  node3
+
+        //get logs of node2 and all its parents (should not get node3 logs)
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report/logs", studyUuid, node2.getId()).header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk()).andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        List<ReportLog> reportLogs = mapper.readValue(resultAsString, new TypeReference<List<ReportLog>>() { });
+        assertEquals(4, reportLogs.size());
+        var requests = TestUtils.getRequestsDone(4, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + node2ReportId + "/logs")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + node1ReportId + "/logs")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + modificationNodeReportId + "/logs")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + rootNodeReportId + "/logs")));
+
+        //get logs of node2 and all its parents (should not get node3 logs) with severityFilter and messageFilter param
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report/logs?severityLevels=WARN&message=testMsgFilter", studyUuid, node2.getId()).header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk()).andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        reportLogs = mapper.readValue(resultAsString, new TypeReference<List<ReportLog>>() { });
+        assertEquals(4, reportLogs.size());
+        requests = TestUtils.getRequestsDone(4, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + node2ReportId + "/logs\\?severityLevels=WARN&message=testMsgFilter")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + node1ReportId + "/logs\\?severityLevels=WARN&message=testMsgFilter")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + modificationNodeReportId + "/logs\\?severityLevels=WARN&message=testMsgFilter")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/" + rootNodeReportId + "/logs\\?severityLevels=WARN&message=testMsgFilter")));
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid, String variantId, String nodeName, String userId) throws Exception {
@@ -2421,6 +2500,9 @@ class StudyTest {
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(message);
         assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(message);
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid)
@@ -2431,6 +2513,10 @@ class StudyTest {
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(message);
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(message);
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid)
@@ -2441,6 +2527,10 @@ class StudyTest {
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(message);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(message);
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
