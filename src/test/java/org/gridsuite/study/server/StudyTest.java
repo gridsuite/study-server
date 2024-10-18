@@ -919,7 +919,7 @@ class StudyTest {
     }
 
     @Test
-    public void testGetNodeReportLogs(final MockWebServer server) throws Exception {
+    void testGetNodeReportLogs(final MockWebServer server) throws Exception {
         UUID studyUuid = createStudy(server, "userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
 
@@ -942,7 +942,7 @@ class StudyTest {
     }
 
     @Test
-    public void testGetParentNodesReportLogs(final MockWebServer server) throws Exception {
+    void testGetParentNodesReportLogs(final MockWebServer server) throws Exception {
         String userId = "userId";
         UUID studyUuid = createStudy(server, userId, CASE_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
@@ -2502,7 +2502,9 @@ class StudyTest {
         assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(message);
+
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid)
