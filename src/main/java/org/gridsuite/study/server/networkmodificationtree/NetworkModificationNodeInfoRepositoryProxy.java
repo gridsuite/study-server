@@ -93,13 +93,6 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-
-        updateNode(networkModificationNode);
-    }
-
-    @Override
     public void updateComputationReportUuid(AbstractNode node, UUID reportUuid, ComputationType computationType) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         modificationNode.getComputationsReports().put(computationType.name(), reportUuid);

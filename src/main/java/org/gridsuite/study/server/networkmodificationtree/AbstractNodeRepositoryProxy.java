@@ -83,12 +83,6 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         return null;
     }
 
-    public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
-    }
-
-    public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationUuid) {
-    }
-
     public void updateNodeBuildStatus(AbstractNode node, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
     }
 
