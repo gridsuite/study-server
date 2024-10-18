@@ -14,6 +14,8 @@ import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 import java.util.List;
 import java.util.Map;
@@ -22,7 +24,7 @@ import java.util.concurrent.CountDownLatch;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -135,7 +137,7 @@ public class WireMockUtils {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications-count"))
             .withQueryParam(QUERY_PARAM_STASHED, WireMock.equalTo("false"))
             .willReturn(WireMock.ok()
-                .withHeader("Content-Type", "application/json; charset=utf-8")
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)
                 .withBody(String.valueOf(expectedCount)))
         ).getId();
     }
@@ -144,7 +146,7 @@ public class WireMockUtils {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION))
             .willReturn(WireMock.ok()
                 .withBody(responseBody)
-                .withHeader("Content-Type", "application/json"))
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
         ).getId();
     }
 
@@ -304,7 +306,7 @@ public class WireMockUtils {
     public UUID stubCaseExists(String caseUuid, boolean returnedValue) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/exists"))
                 .willReturn(WireMock.ok().withBody(returnedValue ? "true" : "false")
-                .withHeader("Content-Type", "application/json; charset=utf-8"))
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE))
         ).getId();
     }
 

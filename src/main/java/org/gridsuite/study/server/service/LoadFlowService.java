@@ -4,7 +4,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -15,7 +14,6 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
@@ -48,7 +46,6 @@ public class LoadFlowService extends AbstractComputationService {
     private final NetworkModificationTreeService networkModificationTreeService;
     private String loadFlowServerBaseUri;
 
-    @Autowired
     public LoadFlowService(RemoteServicesProperties remoteServicesProperties,
                            NetworkModificationTreeService networkModificationTreeService,
                            NetworkService networkStoreService, ObjectMapper objectMapper,

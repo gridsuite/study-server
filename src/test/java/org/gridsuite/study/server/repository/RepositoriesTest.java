@@ -6,47 +6,40 @@
  */
 package org.gridsuite.study.server.repository;
 
-import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.junit.After;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
-@RunWith(SpringRunner.class)
-@SpringBootTest
-@DisableElasticsearch
-public class RepositoriesTest {
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+class RepositoriesTest {
     @Autowired
-    StudyRepository studyRepository;
+    private StudyRepository studyRepository;
 
     @Autowired
-    StudyCreationRequestRepository studyCreationRequestRepository;
+    private StudyCreationRequestRepository studyCreationRequestRepository;
 
-    private void cleanDB() {
+    @AfterEach
+    void tearDown() {
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
     }
 
-    @After
-    public void tearDown() {
-        cleanDB();
-    }
-
     @Test
     @Transactional
-    public void testStudyRepository() {
+    void testStudyRepository() {
         UUID shortCircuitParametersUuid1 = UUID.randomUUID();
         UUID shortCircuitParametersUuid2 = UUID.randomUUID();
         UUID shortCircuitParametersUuid3 = UUID.randomUUID();
@@ -94,7 +87,7 @@ public class RepositoriesTest {
 
     @Transactional
     @Test
-    public void testStudyCreationRequest() {
+    void testStudyCreationRequest() {
         UUID studyUuid = UUID.randomUUID();
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(studyUuid);
         studyCreationRequestRepository.save(studyCreationRequestEntity);
@@ -103,7 +96,7 @@ public class RepositoriesTest {
 
     @Test
     @Transactional
-    public void testStudyImportParameters() {
+    void testStudyImportParameters() {
         Map<String, String> importParametersExpected = Map.of("param1", "changedValue1, changedValue2", "param2", "changedValue");
         StudyEntity studyEntityToSave = StudyEntity.builder()
                 .id(UUID.randomUUID())
@@ -119,7 +112,7 @@ public class RepositoriesTest {
         StudyEntity studyEntity = studyRepository.findAll().get(0);
         Map<String, String> savedImportParameters = studyEntity.getImportParameters();
         assertEquals(2, savedImportParameters.size());
-        assertEquals("param1", "changedValue1, changedValue2", savedImportParameters.get("param1"));
+        assertEquals("changedValue1, changedValue2", savedImportParameters.get("param1"), "param1");
         assertEquals("changedValue", savedImportParameters.get("param2"));
     }
 }

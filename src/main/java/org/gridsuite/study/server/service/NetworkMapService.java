@@ -4,7 +4,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
 package org.gridsuite.study.server.service;
 
 /**
@@ -16,7 +15,6 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.InfoTypeParameters;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -45,7 +43,6 @@ public class NetworkMapService {
 
     private String networkMapServerBaseUri;
 
-    @Autowired
     public NetworkMapService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         this.networkMapServerBaseUri = remoteServicesProperties.getServiceUri("network-map-server");
         this.restTemplate = restTemplate;

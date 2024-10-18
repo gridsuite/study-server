@@ -4,7 +4,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
 package org.gridsuite.study.server.service.dynamicsimulation;
 
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
@@ -13,23 +12,20 @@ import org.gridsuite.study.server.repository.dynamicsimulation.EventRepository;
 import org.gridsuite.study.server.repository.dynamicsimulation.entity.EventEntity;
 import org.gridsuite.study.server.utils.PropertyType;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static junit.framework.TestCase.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest
 @DisableElasticsearch
 public class DynamicSimulationEventServiceTest {
@@ -53,8 +49,8 @@ public class DynamicSimulationEventServiceTest {
         eventRepository.deleteAll();
     }
 
-    @Before
-    public void setup() {
+    @BeforeEach
+    void setup() {
         cleanDB();
         // init some event by inject directly
         EventEntity event = new EventEntity(EVENT);
@@ -62,7 +58,7 @@ public class DynamicSimulationEventServiceTest {
     }
 
     @Test
-    public void testGetEventsByNodeId() {
+    void testGetEventsByNodeId() {
         // call method to be tested
         List<EventInfos> eventResultList = dynamicSimulationEventService.getEventsByNodeId(NODE_UUID);
 
@@ -78,7 +74,7 @@ public class DynamicSimulationEventServiceTest {
     }
 
     @Test
-    public void testGetEventByNodeIdAndEquipmentId() {
+    void testGetEventByNodeIdAndEquipmentId() {
         // call method to be tested
         EventInfos eventResult = dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(NODE_UUID, EQUIPMENT_ID);
 
@@ -90,7 +86,7 @@ public class DynamicSimulationEventServiceTest {
     }
 
     @Test
-    public void testCreateEvent() {
+    void testCreateEvent() {
         cleanDB();
         // call method to be tested
         dynamicSimulationEventService.saveEvent(NODE_UUID, EVENT);
@@ -110,7 +106,7 @@ public class DynamicSimulationEventServiceTest {
     }
 
     @Test
-    public void testUpdateEvent() {
+    void testUpdateEvent() {
         EventInfos eventToUpdate = dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(NODE_UUID, EQUIPMENT_ID);
 
         // modify the event then save the change
@@ -134,7 +130,7 @@ public class DynamicSimulationEventServiceTest {
     }
 
     @Test
-    public void testDeleteEvents() {
+    void testDeleteEvents() {
         EventInfos eventResult = dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(NODE_UUID, EQUIPMENT_ID);
         // call method to be tested
         dynamicSimulationEventService.deleteEvents(List.of(eventResult.getId()));
@@ -146,7 +142,7 @@ public class DynamicSimulationEventServiceTest {
     }
 
     @Test
-    public void testDeleteEventsByNodeId() {
+    void testDeleteEventsByNodeId() {
         // call method to be tested
         dynamicSimulationEventService.deleteEventsByNodeId(NODE_UUID);
 

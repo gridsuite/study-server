@@ -4,15 +4,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
 package org.gridsuite.study.server.utils;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.google.common.io.ByteStreams;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
+import mockwebserver3.MockWebServer;
+import mockwebserver3.RecordedRequest;
 import okio.Buffer;
 import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -32,10 +31,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -45,10 +41,10 @@ public final class TestUtils {
     private static final long TIMEOUT = 100;
 
     private TestUtils() {
-
+        throw new IllegalStateException("Utility class");
     }
 
-    public static Set<RequestWithBody> getRequestsWithBodyDone(int n, MockWebServer server) throws UncheckedInterruptedException {
+    public static Set<RequestWithBody> getRequestsWithBodyDone(int n, MockWebServer server) {
         return IntStream.range(0, n).mapToObj(i -> {
             try {
                 var request = server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS);
@@ -62,7 +58,7 @@ public final class TestUtils {
         }).collect(Collectors.toSet());
     }
 
-    public static void assertRequestMatches(String method, String path, MockWebServer server) throws UncheckedInterruptedException {
+    public static void assertRequestMatches(String method, String path, MockWebServer server) {
         RecordedRequest recordedRequest;
         try {
             recordedRequest = Objects.requireNonNull(server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS));
@@ -74,7 +70,7 @@ public final class TestUtils {
         assertTrue(recordedRequest.getPath().matches(path));
     }
 
-    public static Set<String> getRequestsDone(int n, MockWebServer server) throws UncheckedInterruptedException {
+    public static Set<String> getRequestsDone(int n, MockWebServer server) {
         return IntStream.range(0, n).mapToObj(i -> {
             try {
                 return Objects.requireNonNull(server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS)).getPath();
@@ -148,7 +144,7 @@ public final class TestUtils {
 
     public static void assertQueuesEmptyThenClear(List<String> destinations, OutputDestination output) {
         try {
-            destinations.forEach(destination -> assertNull("Should not be any messages in queue " + destination + " : ", output.receive(TIMEOUT, destination)));
+            destinations.forEach(destination -> assertNull(output.receive(TIMEOUT, destination), "Should not be any messages in queue " + destination + " : "));
         } catch (NullPointerException e) {
             // Ignoring
         } finally {
@@ -157,17 +153,11 @@ public final class TestUtils {
     }
 
     public static void assertServerRequestsEmptyThenShutdown(MockWebServer server) throws UncheckedInterruptedException, IOException {
-        Set<String> httpRequest = null;
-
         try {
-            httpRequest = TestUtils.getRequestsDone(1, server);
+            assertNull(getRequestsDone(1, server), "Should not be any http requests : ");
         } catch (NullPointerException e) {
             // ignoring
-        } finally {
-            server.shutdown();
         }
-
-        assertNull("Should not be any http requests : ", httpRequest);
     }
 
     public static void assertWiremockServerRequestsEmptyThenShutdown(WireMockServer wireMockServer) throws UncheckedInterruptedException, IOException {
