@@ -16,7 +16,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -50,7 +49,6 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getModificationGroupUuid(),
             modificationNode.getVariantId(),
-            modificationNode.getModificationsToExclude(),
             modificationNode.getShortCircuitAnalysisResultUuid(),
             modificationNode.getOneBusShortCircuitAnalysisResultUuid(),
             modificationNode.getLoadFlowResultUuid(),
@@ -68,11 +66,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
 
     @Override
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
-        @SuppressWarnings("unused")
-        int ignoreSize = node.getModificationsToExclude().size(); // to load the lazy collection
         return completeNodeInfo(node, new NetworkModificationNode(node.getModificationGroupUuid(),
             node.getVariantId(),
-            new HashSet<>(node.getModificationsToExclude()), // Need to create a new set because it is a persistent set (org.hibernate.collection.internal.PersistentSet)
             node.getLoadFlowResultUuid(),
             node.getShortCircuitAnalysisResultUuid(),
             node.getOneBusShortCircuitAnalysisResultUuid(),
@@ -95,29 +90,6 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public UUID getModificationGroupUuid(AbstractNode node) {
         return ((NetworkModificationNode) node).getModificationGroupUuid();
-    }
-
-    @Override
-    public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        if (networkModificationNode.getModificationsToExclude() == null) {
-            networkModificationNode.setModificationsToExclude(new HashSet<>());
-        }
-        if (!active) {
-            networkModificationNode.getModificationsToExclude().add(modificationUuid);
-        } else {
-            networkModificationNode.getModificationsToExclude().remove(modificationUuid);
-        }
-        updateNode(networkModificationNode);
-    }
-
-    @Override
-    public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationsUuids) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        if (networkModificationNode.getModificationsToExclude() != null) {
-            modificationsUuids.forEach(networkModificationNode.getModificationsToExclude()::remove);
-            updateNode(networkModificationNode);
-        }
     }
 
     @Override
