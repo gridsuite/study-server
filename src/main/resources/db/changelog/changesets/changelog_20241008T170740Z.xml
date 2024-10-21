@@ -137,11 +137,19 @@
 
     <!-- 7. migration Data -->
     <changeSet author="souissimai (generated)" id="1728312755079-30">
-                <sqlFile
-                        encoding="UTF-8"
-                        path="migrationDataTimePoint.sql"
-                        relativeToChangelogFile="true"
-                        splitStatements="true"
-                        stripComments="true"/>
+        <sqlFile
+                dbms="postgresql"
+                encoding="UTF-8"
+                path="migrationDataTimePointPostgres.sql"
+                relativeToChangelogFile="true"
+                splitStatements="true"
+                stripComments="true"/>
+        <sqlFile
+                dbms="H2"
+                encoding="UTF-8"
+                path="migrationDataTimePointH2.sql"
+                relativeToChangelogFile="true"
+                splitStatements="true"
+                stripComments="true"/>
     </changeSet>
 </databaseChangeLog>

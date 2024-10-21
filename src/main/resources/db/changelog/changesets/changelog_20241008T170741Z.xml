@@ -67,10 +67,26 @@
     <changeSet author="souissimai (generated)" id="1728407274000-52">
         <dropColumn columnName="VOLTAGE_INIT_RESULT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
     </changeSet>
-    <changeSet author="souissimai (generated)" id="1728407274000-53">
+    <changeSet author="souissimai (generated)" id="1728407274000-55">
+        <dropPrimaryKey tableName="computation_reports"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-57">
+        <dropPrimaryKey tableName="modification_reports"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-58">
         <dropColumn columnName="NETWORK_MODIFICATION_NODE_INFO_ENTITY_ID_NODE" tableName="computation_reports"/>
     </changeSet>
-    <changeSet author="souissimai (generated)" id="1728407274000-54">
+    <changeSet author="souissimai (generated)" id="1728407274000-59">
         <dropColumn columnName="NETWORK_MODIFICATION_NODE_INFO_ENTITY_ID_NODE" tableName="modification_reports"/>
+    </changeSet>
+
+    <changeSet author="souissimai (generated)" id="1728407274000-60">
+        <addNotNullConstraint tableName="computation_reports" columnName="time_point_node_info_entity_id" />
+        <addPrimaryKey columnNames="time_point_node_info_entity_id, computation_reports_key" constraintName="computation_reportsPK" tableName="computation_reports"/>
+    </changeSet>
+
+    <changeSet author="souissimai (generated)" id="1728407274000-61">
+        <addNotNullConstraint tableName="modification_reports" columnName="time_point_node_info_entity_id" />
+        <addPrimaryKey columnNames="time_point_node_info_entity_id, modification_reports_key" constraintName="modification_reportsPK" tableName="modification_reports"/>
     </changeSet>
 </databaseChangeLog>
