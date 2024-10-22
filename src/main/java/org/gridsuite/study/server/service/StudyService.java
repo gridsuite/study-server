@@ -218,11 +218,19 @@ public class StudyService {
         this.timePointNodeInfoRepository = timePointNodeInfoRepository;
     }
 
+<<<<<<< HEAD
     private static StudyInfos toStudyInfos(StudyEntity entity) {
         return StudyInfos.builder()
             .id(entity.getId())
             .caseFormat(entity.getFirstTimepoint().getCaseFormat())
             .build();
+=======
+    private static CreatedStudyBasicInfos toStudyInfos(StudyEntity entity) {
+        return CreatedStudyBasicInfos.builder()
+                .id(entity.getId())
+                .caseFormat(entity.getCaseFormat())
+                .build();
+>>>>>>> main
     }
 
     private static BasicStudyInfos toBasicStudyInfos(StudyCreationRequestEntity entity) {
@@ -359,7 +367,7 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public StudyInfos getStudyInfos(UUID studyUuid) {
+    public CreatedStudyBasicInfos getStudyInfos(UUID studyUuid) {
         return StudyService.toStudyInfos(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
     }
 
@@ -1146,9 +1154,15 @@ public class StudyService {
         UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, self.getStudyFirstTimePointUuid(studyUuid), computationType);
         if (resultUuid != null) {
             return switch (computationType) {
+<<<<<<< HEAD
                 case LOAD_FLOW -> loadflowService.getEnumValues(enumName, resultUuid);
                 case SECURITY_ANALYSIS -> securityAnalysisService.getEnumValues(enumName, resultUuid);
                 case SHORT_CIRCUIT -> shortCircuitService.getEnumValues(enumName, resultUuid);
+=======
+                case LOAD_FLOW -> loadflowService.getEnumValues(enumName, resultUuidOpt.get());
+                case SECURITY_ANALYSIS -> securityAnalysisService.getEnumValues(enumName, resultUuidOpt.get());
+                case SHORT_CIRCUIT, SHORT_CIRCUIT_ONE_BUS -> shortCircuitService.getEnumValues(enumName, resultUuidOpt.get());
+>>>>>>> main
                 default -> throw new StudyException(NOT_ALLOWED);
             };
         } else {

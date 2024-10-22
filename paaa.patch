@@ -1,0 +1,52 @@
+diff --git a/src/main/resources/db/changelog/changesets/changelog_20241008T170740Z.xml b/src/main/resources/db/changelog/changesets/changelog_20241008T170740Z.xml
+index cd83865d..cd7fc977 100644
+--- a/src/main/resources/db/changelog/changesets/changelog_20241008T170740Z.xml
++++ b/src/main/resources/db/changelog/changesets/changelog_20241008T170740Z.xml
+@@ -69,8 +69,7 @@
+     <changeSet author="souissimai (generated)" id="1728407274000-17">
+         <addColumn tableName="computation_reports">
+             <column name="time_point_node_info_entity_id" type="uuid">
+-                <constraints nullable="false"/>
+-            </column>
++             </column>
+         </addColumn>
+     </changeSet>
+     <!-- 4. Create link table  time_point_node_info and modification_reports-->
+diff --git a/src/main/resources/db/changelog/changesets/changelog_20241008T170741Z.xml b/src/main/resources/db/changelog/changesets/changelog_20241008T170741Z.xml
+index 4d36f808..c1c74efe 100644
+--- a/src/main/resources/db/changelog/changesets/changelog_20241008T170741Z.xml
++++ b/src/main/resources/db/changelog/changesets/changelog_20241008T170741Z.xml
+@@ -73,4 +73,11 @@
+     <changeSet author="souissimai (generated)" id="1728407274000-54">
+         <dropColumn columnName="NETWORK_MODIFICATION_NODE_INFO_ENTITY_ID_NODE" tableName="modification_reports"/>
+     </changeSet>
++    <changeSet author="souissimai (generated)" id="1728407274000-55">
++        <addPrimaryKey columnNames="time_point_node_info_entity_id, computation_reports_key" constraintName="computation_reportsPK" tableName="computation_reports"/>
++    </changeSet>
++
++    <changeSet author="souissimai (generated)" id="1728407274000-56">
++        <addPrimaryKey columnNames="time_point_node_info_entity_id, modification_reports_key" constraintName="modification_reportsPK" tableName="modification_reports"/>
++    </changeSet>
+ </databaseChangeLog>
+diff --git a/src/main/resources/db/changelog/changesets/migrationDataTimePointPostgres.sql b/src/main/resources/db/changelog/changesets/migrationDataTimePointPostgres.sql
+index e909c4da..f40b45ad 100644
+--- a/src/main/resources/db/changelog/changesets/migrationDataTimePointPostgres.sql
++++ b/src/main/resources/db/changelog/changesets/migrationDataTimePointPostgres.sql
+@@ -10,7 +10,7 @@ INSERT INTO time_point (
+     study_uuid           -- UUID associated with the study (foreign key to study table)
+ )
+ SELECT
+-    random_uuid(),   -- Generate a new unique UUID for the time_point row
++    gen_random_uuid(),   -- Generate a new unique UUID for the time_point row
+     s.case_format,       -- Retrieve case_format from the study table
+     s.case_name,         -- Retrieve case_name from the study table
+     s.case_uuid,         -- Retrieve case_uuid from the study table
+@@ -49,7 +49,7 @@ INSERT INTO time_point_node_info (
+     voltage_init_result_uuid          -- UUID for voltage initialization result
+ )
+ SELECT
+-    random_uuid(),                -- Generate a new unique UUID for each time_point_node_info row
++    gen_random_uuid(),                -- Generate a new unique UUID for each time_point_node_info row
+     t.id,                             -- Reference the id of the associated time_point
+     n.id_node,                        -- Reference the id of the associated network_modification_node_info
+     n.dynamic_simulation_result_uuid, -- Retrieve dynamic simulation result UUID  from the table network_modification_node_info
