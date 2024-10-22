@@ -25,7 +25,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.StudyService;
-import org.gridsuite.study.server.service.TimePointService;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -69,7 +69,7 @@ public class EquipmentInfosServiceTests {
     private static final UUID NETWORK_UUID_2 = UUID.fromString("8c73b846-5dbe-4ac8-a9c9-8422fda261bb");
 
     private static final UUID NODE_UUID = UUID.fromString("12345678-8cf0-11bd-b23e-10b96e4ef00d");
-    private static final UUID TIMEPOINT_UUID = UUID.fromString("23456789-8cf0-11bd-b23e-10b96e4ef00d");
+    private static final UUID ROOTNETWORK_UUID = UUID.fromString("23456789-8cf0-11bd-b23e-10b96e4ef00d");
 
     @Autowired
     private EquipmentInfosService equipmentInfosService;
@@ -81,7 +81,7 @@ public class EquipmentInfosServiceTests {
     private NetworkModificationTreeService networkModificationTreeService;
 
     @MockBean
-    private TimePointService timePointService;
+    private RootNetworkService rootNetworkService;
 
     @Autowired
     private StudyService studyService;
@@ -89,8 +89,8 @@ public class EquipmentInfosServiceTests {
     @Before
     public void setup() {
 //        when(networkStoreService.getNetworkUuid(NETWORK_UUID)).thenReturn(NETWORK_UUID);
-        when(networkModificationTreeService.getVariantId(NODE_UUID, TIMEPOINT_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
-        when(timePointService.getTimePointNetworkUuid(TIMEPOINT_UUID)).thenReturn(NETWORK_UUID);
+        when(networkModificationTreeService.getVariantId(NODE_UUID, ROOTNETWORK_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
+        when(rootNetworkService.getRootNetworkNetworkUuid(ROOTNETWORK_UUID)).thenReturn(NETWORK_UUID);
     }
 
     @After
@@ -359,7 +359,7 @@ public class EquipmentInfosServiceTests {
     public ErrorCollector pbsc = new ErrorCollector();
 
     private void testNameFullAscii(String pat) {
-        assertEquals(1, studyService.searchEquipments(NODE_UUID, TIMEPOINT_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, false).size());
+        assertEquals(1, studyService.searchEquipments(NODE_UUID, ROOTNETWORK_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, false).size());
     }
 
     private void testNameFullAsciis() {

@@ -81,12 +81,12 @@
     </changeSet>
 
     <changeSet author="souissimai (generated)" id="1728407274000-60">
-        <addNotNullConstraint tableName="computation_reports" columnName="time_point_node_info_entity_id" />
-        <addPrimaryKey columnNames="time_point_node_info_entity_id, computation_reports_key" constraintName="computation_reportsPK" tableName="computation_reports"/>
+        <addNotNullConstraint tableName="computation_reports" columnName="root_network_node_info_entity_id" />
+        <addPrimaryKey columnNames="root_network_node_info_entity_id, computation_reports_key" constraintName="computation_reportsPK" tableName="computation_reports"/>
     </changeSet>
 
     <changeSet author="souissimai (generated)" id="1728407274000-61">
-        <addNotNullConstraint tableName="modification_reports" columnName="time_point_node_info_entity_id" />
-        <addPrimaryKey columnNames="time_point_node_info_entity_id, modification_reports_key" constraintName="modification_reportsPK" tableName="modification_reports"/>
+        <addNotNullConstraint tableName="modification_reports" columnName="root_network_node_info_entity_id" />
+        <addPrimaryKey columnNames="root_network_node_info_entity_id, modification_reports_key" constraintName="modification_reportsPK" tableName="modification_reports"/>
     </changeSet>
 </databaseChangeLog>

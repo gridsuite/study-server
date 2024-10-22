@@ -92,14 +92,14 @@ public class NonEvacuatedEnergyService {
         this.sensitivityAnalysisServerBaseUri = sensitivityAnalysisServerBaseUri + DELIMITER;
     }
 
-    public void assertNonEvacuatedEnergyNotRunning(UUID nodeUuid, UUID timePointUuid) {
-        String nonEvacuatedEnergyStatus = getNonEvacuatedEnergyStatus(nodeUuid, timePointUuid);
+    public void assertNonEvacuatedEnergyNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
+        String nonEvacuatedEnergyStatus = getNonEvacuatedEnergyStatus(nodeUuid, rootNetworkUuid);
         if (NonEvacuatedEnergyStatus.RUNNING.name().equals(nonEvacuatedEnergyStatus)) {
             throw new StudyException(NON_EVACUATED_ENERGY_RUNNING);
         }
     }
 
-    public UUID runNonEvacuatedEnergy(UUID nodeUuid, UUID timePointUuid, UUID networkUuid,
+    public UUID runNonEvacuatedEnergy(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
                                       String variantId,
                                       UUID reportUuid,
                                       String provider,
@@ -108,7 +108,7 @@ public class NonEvacuatedEnergyService {
                                       String userId) {
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -139,9 +139,9 @@ public class NonEvacuatedEnergyService {
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getNonEvacuatedEnergyResult(UUID nodeUuid, UUID timePointUuid) {
+    public String getNonEvacuatedEnergyResult(UUID nodeUuid, UUID rootNetworkUuid) {
         String result;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
         if (resultUuid == null) {
             return null;
         }
@@ -162,9 +162,9 @@ public class NonEvacuatedEnergyService {
         return result;
     }
 
-    public String getNonEvacuatedEnergyStatus(UUID nodeUuid, UUID timePointUuid) {
+    public String getNonEvacuatedEnergyStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         String result;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
 
         if (resultUuid == null) {
             return null;
@@ -183,11 +183,11 @@ public class NonEvacuatedEnergyService {
         return result;
     }
 
-    public void stopNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String userId) {
+    public void stopNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
         if (resultUuid == null) {
             return;
         }
@@ -198,7 +198,7 @@ public class NonEvacuatedEnergyService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }

@@ -63,11 +63,11 @@ public class VoltageInitService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runVoltageInit(UUID networkUuid, String variantId, UUID parametersUuid, UUID reportUuid, UUID nodeUuid, UUID timePointUuid, String userId) {
+    public UUID runVoltageInit(UUID networkUuid, String variantId, UUID parametersUuid, UUID reportUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -95,9 +95,9 @@ public class VoltageInitService {
         return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
     }
 
-    private String getVoltageInitResultOrStatus(UUID nodeUuid, UUID timePointUuid, String suffix) {
+    private String getVoltageInitResultOrStatus(UUID nodeUuid, UUID rootNetworkUuid, String suffix) {
         String result;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.VOLTAGE_INITIALIZATION);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
 
         if (resultUuid == null) {
             return null;
@@ -117,12 +117,12 @@ public class VoltageInitService {
         return result;
     }
 
-    public String getVoltageInitResult(UUID nodeUuid, UUID timePointUuid) {
-        return getVoltageInitResultOrStatus(nodeUuid, timePointUuid, "");
+    public String getVoltageInitResult(UUID nodeUuid, UUID rootNetworkUuid) {
+        return getVoltageInitResultOrStatus(nodeUuid, rootNetworkUuid, "");
     }
 
-    public String getVoltageInitStatus(UUID nodeUuid, UUID timePointUuid) {
-        return getVoltageInitResultOrStatus(nodeUuid, timePointUuid, "/status");
+    public String getVoltageInitStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        return getVoltageInitResultOrStatus(nodeUuid, rootNetworkUuid, "/status");
     }
 
     public VoltageInitParametersInfos getVoltageInitParameters(UUID parametersUuid) {
@@ -212,19 +212,19 @@ public class VoltageInitService {
         restTemplate.delete(voltageInitServerBaseUri + path);
     }
 
-    public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String userId) {
+    public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(userId);
 
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.VOLTAGE_INITIALIZATION);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
         if (resultUuid == null) {
             return;
         }
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -268,15 +268,15 @@ public class VoltageInitService {
         return restTemplate.getForObject(voltageInitServerBaseUri + path, Integer.class);
     }
 
-    public void assertVoltageInitNotRunning(UUID nodeUuid, UUID timePointUuid) {
-        String scs = getVoltageInitStatus(nodeUuid, timePointUuid);
+    public void assertVoltageInitNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
+        String scs = getVoltageInitStatus(nodeUuid, rootNetworkUuid);
         if (VoltageInitStatus.RUNNING.name().equals(scs)) {
             throw new StudyException(VOLTAGE_INIT_RUNNING);
         }
     }
 
-    public UUID getModificationsGroupUuid(UUID nodeUuid, UUID timePointUuid) {
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.VOLTAGE_INITIALIZATION);
+    public UUID getModificationsGroupUuid(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
         if (resultUuid == null) {
             throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, THE_NODE + nodeUuid + " has no voltage init results");
         }
@@ -305,8 +305,8 @@ public class VoltageInitService {
         }
     }
 
-    public void resetModificationsGroupUuid(UUID nodeUuid, UUID timePointUuid) {
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.VOLTAGE_INITIALIZATION);
+    public void resetModificationsGroupUuid(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
         if (resultUuid == null) {
             throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, THE_NODE + nodeUuid + " has no voltage init results");
         }

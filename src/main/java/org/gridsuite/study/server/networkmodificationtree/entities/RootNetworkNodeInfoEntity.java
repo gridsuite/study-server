@@ -10,7 +10,7 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 
 import java.util.Map;
 import java.util.Set;
@@ -24,8 +24,8 @@ import java.util.UUID;
 @Setter
 @Entity
 @SuperBuilder
-@Table(name = "TimePointNodeInfo")
-public class TimePointNodeInfoEntity {
+@Table(name = "RootNetworkNodeInfo")
+public class RootNetworkNodeInfoEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -33,11 +33,11 @@ public class TimePointNodeInfoEntity {
     private UUID id;
 
     @ManyToOne
-    @JoinColumn(name = "timePointId",
+    @JoinColumn(name = "rootNetworkId",
         referencedColumnName = "id",
         nullable = false,
-        foreignKey = @ForeignKey(name = "fk_time_point_node_info"))
-    private TimePointEntity timePoint;
+        foreignKey = @ForeignKey(name = "fk_root_network_node_info"))
+    private RootNetworkEntity rootNetwork;
 
     @ManyToOne
     @JoinColumn(name = "nodeInfoId",
@@ -50,19 +50,19 @@ public class TimePointNodeInfoEntity {
 
     @Column(name = "modificationsToExclude")
     @ElementCollection
-    @CollectionTable(foreignKey = @ForeignKey(name = "timePointNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "time_point_node_info_entity_modifications_to_exclude_idx", columnList = "time_point_node_info_entity_id")})
+    @CollectionTable(foreignKey = @ForeignKey(name = "rootNetworkNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "root_network_node_info_entity_modifications_to_exclude_idx", columnList = "root_network_node_info_entity_id")})
     private Set<UUID> modificationsToExclude;
 
     @ElementCollection
     @CollectionTable(name = "computationReports",
-        indexes = {@Index(name = "time_point_node_info_entity_computationReports_idx1", columnList = "time_point_node_info_entity_id")},
-        foreignKey = @ForeignKey(name = "timePointNodeInfoEntity_computationReports_fk1"))
+        indexes = {@Index(name = "root_network_node_info_entity_computationReports_idx1", columnList = "root_network_node_info_entity_id")},
+        foreignKey = @ForeignKey(name = "rootNetworkNodeInfoEntity_computationReports_fk1"))
     private Map<String, UUID> computationReports;
 
     @ElementCollection
     @CollectionTable(name = "modificationReports",
-        indexes = {@Index(name = "time_point_node_info_entity_modificationReports_idx1", columnList = "time_point_node_info_entity_id")},
-        foreignKey = @ForeignKey(name = "timePointNodeInfoEntity_modificationReports_fk1"))
+        indexes = {@Index(name = "root_network_node_info_entity_modificationReports_idx1", columnList = "root_network_node_info_entity_id")},
+        foreignKey = @ForeignKey(name = "rootNetworkNodeInfoEntity_modificationReports_fk1"))
     private Map<UUID, UUID> modificationReports;
 
     @Column(name = "shortCircuitAnalysisResultUuid")

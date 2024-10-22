@@ -19,5 +19,5 @@ import java.util.UUID;
 public class NodeReceiver {
     private UUID nodeUuid;
 
-    private UUID timePointUuid;
+    private UUID rootNetworkUuid;
 }

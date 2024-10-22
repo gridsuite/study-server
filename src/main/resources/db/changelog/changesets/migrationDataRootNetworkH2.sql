@@ -1,6 +1,6 @@
--- Migrating data into the time_point table, making sure we don't insert duplicates
-INSERT INTO time_point (
-    id,                  -- UUID (Primary Key) for the time_point table
+-- Migrating data into the root_network table, making sure we don't insert duplicates
+INSERT INTO root_network (
+    id,                  -- UUID (Primary Key) for the root_network table
     case_format,         -- Case format from the study
     case_name,           -- Case name from the study
     case_uuid,           -- UUID associated with the case from the study
@@ -10,7 +10,7 @@ INSERT INTO time_point (
     study_uuid           -- UUID associated with the study (foreign key to study table)
 )
 SELECT
-    random_uuid(),   -- Generate a new unique UUID for the time_point row
+    random_uuid(),   -- Generate a new unique UUID for the root_network row
     s.case_format,       -- Retrieve case_format from the study table
     s.case_name,         -- Retrieve case_name from the study table
     s.case_uuid,         -- Retrieve case_uuid from the study table
@@ -24,16 +24,16 @@ FROM
         JOIN root_node_info r ON r.id_node = n.id_node  -- Join with root_node_info based on node_id
 WHERE
     n.type = 'ROOT'
-  AND NOT EXISTS (        -- Prevent duplicates: check if a time_point entry with the same study_uuid already exists
+  AND NOT EXISTS (        -- Prevent duplicates: check if a root_network entry with the same study_uuid already exists
     SELECT 1
-    FROM time_point tp
+    FROM root_network tp
     WHERE tp.study_uuid = s.id
 );
 
--- Migrating data into the time_point_node_info table, ensuring no duplicate rows are inserted
-INSERT INTO time_point_node_info (
-    id,                              -- UUID (Primary Key) for time_point_node_info
-    time_point_id,                    -- Foreign Key, linked to the time_point table
+-- Migrating data into the root_network_node_info table, ensuring no duplicate rows are inserted
+INSERT INTO root_network_node_info (
+    id,                              -- UUID (Primary Key) for root_network_node_info
+    root_network_id,                    -- Foreign Key, linked to the root_network table
     node_info_id,                     -- Foreign Key, linked to the network_modification_node_info table
     dynamic_simulation_result_uuid,   -- UUID for dynamic simulation result
     loadflow_result_uuid,             -- UUID for load flow result
@@ -49,8 +49,8 @@ INSERT INTO time_point_node_info (
     voltage_init_result_uuid          -- UUID for voltage initialization result
 )
 SELECT
-    random_uuid(),                -- Generate a new unique UUID for each time_point_node_info row
-    t.id,                             -- Reference the id of the associated time_point
+    random_uuid(),                -- Generate a new unique UUID for each root_network_node_info row
+    t.id,                             -- Reference the id of the associated root_network
     n.id_node,                        -- Reference the id of the associated network_modification_node_info
     n.dynamic_simulation_result_uuid, -- Retrieve dynamic simulation result UUID  from the table network_modification_node_info
     n.loadflow_result_uuid,           -- Retrieve load flow result UUID  from the table network_modification_node_info
@@ -67,42 +67,42 @@ SELECT
 FROM
     network_modification_node_info n    -- Start from the network_modification_node_info table
         JOIN node ne ON ne.id_node = n.id_node  -- Join with the node table based on id_node
-        JOIN time_point t ON ne.study_id = t.study_uuid -- Join with time_point based on study_uuid
+        JOIN root_network t ON ne.study_id = t.study_uuid -- Join with root_network based on study_uuid
 WHERE
-    NOT EXISTS (                        -- Prevent duplicates: check if a time_point_node_info entry with the same time_point_id and node_info_id already exists
+    NOT EXISTS (                        -- Prevent duplicates: check if a root_network_node_info entry with the same root_network_id and node_info_id already exists
         SELECT 1
-        FROM time_point_node_info tpni
-        WHERE tpni.time_point_id = t.id
+        FROM root_network_node_info tpni
+        WHERE tpni.root_network_id = t.id
           AND tpni.node_info_id = n.id_node
     );
 
 UPDATE modification_reports mr
-SET time_point_node_info_entity_id = (
+SET root_network_node_info_entity_id = (
     SELECT tpn.id
     FROM network_modification_node_info n
-             JOIN time_point_node_info tpn ON n.id_node = tpn.node_info_id
+             JOIN root_network_node_info tpn ON n.id_node = tpn.node_info_id
     WHERE mr.network_modification_node_info_entity_id_node = n.id_node
 )
-WHERE mr.time_point_node_info_entity_id IS NULL
+WHERE mr.root_network_node_info_entity_id IS NULL
   AND EXISTS (
     SELECT 1
     FROM network_modification_node_info n
-             JOIN time_point_node_info tpn ON n.id_node = tpn.node_info_id
+             JOIN root_network_node_info tpn ON n.id_node = tpn.node_info_id
     WHERE mr.network_modification_node_info_entity_id_node = n.id_node
 );
 
 UPDATE computation_reports cr
-SET time_point_node_info_entity_id = (
+SET root_network_node_info_entity_id = (
     SELECT tpn.id
     FROM network_modification_node_info n
-             JOIN time_point_node_info tpn ON n.id_node = tpn.node_info_id
+             JOIN root_network_node_info tpn ON n.id_node = tpn.node_info_id
     WHERE cr.network_modification_node_info_entity_id_node = n.id_node
 )
-WHERE cr.time_point_node_info_entity_id IS NULL
+WHERE cr.root_network_node_info_entity_id IS NULL
   AND EXISTS (
     SELECT 1
     FROM network_modification_node_info n
-             JOIN time_point_node_info tpn ON n.id_node = tpn.node_info_id
+             JOIN root_network_node_info tpn ON n.id_node = tpn.node_info_id
     WHERE cr.network_modification_node_info_entity_id_node = n.id_node
 );
 

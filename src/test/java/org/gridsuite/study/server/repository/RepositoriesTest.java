@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.repository;
 
-import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.After;
 import org.junit.Test;
@@ -57,18 +57,18 @@ public class RepositoriesTest {
                 .id(UUID.randomUUID())
                 .shortCircuitParametersUuid(shortCircuitParametersUuid1)
                 .build();
-        TimePointEntity timePointEntity1 = TimePointEntity.builder()
+        RootNetworkEntity rootNetworkEntity1 = RootNetworkEntity.builder()
             .networkUuid(UUID.randomUUID())
             .networkId("networkId")
             .caseFormat("caseFormat")
             .caseName("caseName1")
             .caseUuid(UUID.randomUUID()).build();
-        studyEntity.addTimePoint(timePointEntity1);
+        studyEntity.addRootNetwork(rootNetworkEntity1);
         StudyEntity studyEntity1 = studyRepository.save(studyEntity);
 
         StudyEntity studyEntity2 = studyRepository.save(StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .timePoints(List.of(TimePointEntity.builder()
+                .rootNetworks(List.of(RootNetworkEntity.builder()
                     .networkUuid(UUID.randomUUID())
                     .networkId("networkId2")
                     .caseFormat("caseFormat2")
@@ -83,14 +83,14 @@ public class RepositoriesTest {
             .id(UUID.randomUUID())
             .shortCircuitParametersUuid(shortCircuitParametersUuid3)
             .build();
-        TimePointEntity timePointEntity3 = TimePointEntity.builder()
+        RootNetworkEntity rootNetworkEntity3 = RootNetworkEntity.builder()
             .networkUuid(UUID.randomUUID())
             .networkId("networkId3")
             .caseFormat("caseFormat3")
             .caseName("caseName3")
             .caseUuid(UUID.randomUUID())
             .build();
-        studyEntity3.addTimePoint(timePointEntity3);
+        studyEntity3.addRootNetwork(rootNetworkEntity3);
         studyRepository.save(studyEntity3);
 
         assertThat(studyEntity1).as("studyEntity1").extracting(StudyEntity::getId).isNotNull();
@@ -122,7 +122,7 @@ public class RepositoriesTest {
         Map<String, String> importParametersExpected = Map.of("param1", "changedValue1, changedValue2", "param2", "changedValue");
         StudyEntity studyEntityToSave = StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .timePoints(List.of(TimePointEntity.builder()
+                .rootNetworks(List.of(RootNetworkEntity.builder()
                     .networkUuid(UUID.randomUUID())
                     .networkId("networkId")
                     .caseFormat("caseFormat")

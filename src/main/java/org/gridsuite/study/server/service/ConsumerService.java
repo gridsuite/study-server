@@ -106,7 +106,7 @@ public class ConsumerService {
 
                     LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
 
-                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getTimePointUuid(),
+                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(),
                             NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
 
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
@@ -130,7 +130,7 @@ public class ConsumerService {
 
                     LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
 
-                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getTimePointUuid(), NodeBuildStatus.from(BuildStatus.NOT_BUILT));
+                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), NodeBuildStatus.from(BuildStatus.NOT_BUILT));
 
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
@@ -154,7 +154,7 @@ public class ConsumerService {
 
                     LOGGER.info("Build failed for node '{}'", receiverObj.getNodeUuid());
 
-                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getTimePointUuid(), NodeBuildStatus.from(BuildStatus.NOT_BUILT));
+                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), NodeBuildStatus.from(BuildStatus.NOT_BUILT));
 
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
@@ -329,7 +329,7 @@ public class ConsumerService {
 
                 // delete computation results from the databases
                 // ==> will probably be removed soon because it prevents the front from recovering the resultId ; or 'null' parameter will be replaced by null like in VOLTAGE_INITIALIZATION
-                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getTimePointUuid(), resultUuid, computationType);
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notification for failed computation
@@ -353,7 +353,7 @@ public class ConsumerService {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
                 // delete computation results from the database
-                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getTimePointUuid(), null, computationType);
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), null, computationType);
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notification for stopped computation
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateStatusType());
@@ -399,7 +399,7 @@ public class ConsumerService {
                     receiverObj.getNodeUuid());
 
                 // update DB
-                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getTimePointUuid(), resultUuid, computationType);
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notifications
