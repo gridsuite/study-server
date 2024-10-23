@@ -68,7 +68,7 @@ public class StudyServiceSearchTests {
 
     @Before
     public void setup() {
-        when(rootNetworkService.getRootNetworkNetworkUuid(ROOTNETWORK_UUID)).thenReturn(NETWORK_UUID);
+        when(rootNetworkService.getNetworkUuid(ROOTNETWORK_UUID)).thenReturn(NETWORK_UUID);
         when(networkModificationTreeService.getVariantId(NODE_UUID, ROOTNETWORK_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
         when(networkModificationTreeService.getVariantId(VARIANT_NODE_UUID, ROOTNETWORK_UUID)).thenReturn(VARIANT_ID);
         when(networkModificationTreeService.getVariantId(VARIANT_NODE_UUID_2, ROOTNETWORK_UUID)).thenReturn(VARIANT_ID_2);

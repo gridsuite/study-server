@@ -384,7 +384,7 @@ public class StudyService {
                                                  @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
                                                  boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
-        UUID networkUuid = rootNetworkService.getRootNetworkNetworkUuid(rootNetworkUuid);
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid);
         return equipmentInfosService.searchEquipments(networkUuid, variantId, userInput, fieldSelector, equipmentType);
     }
@@ -660,7 +660,7 @@ public class StudyService {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
-        return networkMapService.getElementsInfos(rootNetworkService.getRootNetworkNetworkUuid(self.getStudyFirstRootNetworkUuid(studyUuid)), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, self.getStudyFirstRootNetworkUuid(studyUuid)),
+        return networkMapService.getElementsInfos(rootNetworkService.getNetworkUuid(self.getStudyFirstRootNetworkUuid(studyUuid)), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, self.getStudyFirstRootNetworkUuid(studyUuid)),
             substationsIds, elementType, nominalVoltages, infoType, loadFlowParameters.getDcPowerFactor());
     }
 
@@ -1398,7 +1398,7 @@ public class StudyService {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
-        invalidateNodeInfos.setNetworkUuid(rootNetworkService.getRootNetworkNetworkUuid(rootNetworkUuid));
+        invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
         // we might want to invalidate target node without impacting other nodes (when moving an empty node for example)
         if (invalidateOnlyTargetNode) {
             networkModificationTreeService.invalidateBuildOfNodeOnly(nodeUuid, rootNetworkUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos, deleteVoltageInitResults);
@@ -2290,7 +2290,7 @@ public class StudyService {
 
     public NetworkModificationNode createNode(UUID studyUuid, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        return networkModificationTreeService.createNodeThenLinkItToRootNetworks(study, nodeId, nodeInfo, insertMode, userId);
+        return networkModificationTreeService.createNode(study, nodeId, nodeInfo, insertMode, userId);
     }
 
     //TODO: temporary method, once frontend had been implemented, each operation will need to target a specific rootNetwork UUID, here we manually target the first one

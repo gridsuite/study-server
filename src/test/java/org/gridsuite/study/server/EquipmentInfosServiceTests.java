@@ -90,7 +90,7 @@ public class EquipmentInfosServiceTests {
     public void setup() {
 //        when(networkStoreService.getNetworkUuid(NETWORK_UUID)).thenReturn(NETWORK_UUID);
         when(networkModificationTreeService.getVariantId(NODE_UUID, ROOTNETWORK_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
-        when(rootNetworkService.getRootNetworkNetworkUuid(ROOTNETWORK_UUID)).thenReturn(NETWORK_UUID);
+        when(rootNetworkService.getNetworkUuid(ROOTNETWORK_UUID)).thenReturn(NETWORK_UUID);
     }
 
     @After
