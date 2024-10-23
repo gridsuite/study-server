@@ -395,7 +395,7 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/substation-id")
     @Operation(summary = "get the substation ID for a given network and a given voltage level")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of nominal voltages")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The substation Id for a voltageLevel")})
     public ResponseEntity<String> getVoltageLevelSubstationId(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
