@@ -50,7 +50,7 @@ import static org.mockito.BDDMockito.given;
  */
 @SpringBootTest
 @DisableElasticsearch
-public class DynamicSimulationServiceTest {
+class DynamicSimulationServiceTest {
 
     private static final String MAPPING_NAME_01 = "_01";
     private static final String MAPPING_NAME_02 = "_02";
@@ -84,21 +84,21 @@ public class DynamicSimulationServiceTest {
     private static final UUID STUDY_UUID = UUID.randomUUID();
 
     // converged node
-    public static final UUID NETWORK_UUID = UUID.randomUUID();
-    public static final UUID NODE_UUID = UUID.randomUUID();
-    public static final UUID RESULT_UUID = UUID.randomUUID();
-    public static final UUID TIME_SERIES_UUID = UUID.randomUUID();
-    public static final UUID TIMELINE_UUID = UUID.randomUUID();
+    private static final UUID NETWORK_UUID = UUID.randomUUID();
+    private static final UUID NODE_UUID = UUID.randomUUID();
+    private static final UUID RESULT_UUID = UUID.randomUUID();
+    private static final UUID TIME_SERIES_UUID = UUID.randomUUID();
+    private static final UUID TIMELINE_UUID = UUID.randomUUID();
 
     // running node
-    public static final UUID NODE_UUID_RUNNING = UUID.randomUUID();
-    public static final UUID RESULT_UUID_RUNNING = UUID.randomUUID();
+    private static final UUID NODE_UUID_RUNNING = UUID.randomUUID();
+    private static final UUID RESULT_UUID_RUNNING = UUID.randomUUID();
 
-    public static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
-    public static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
-    public static final String TIMELINE_NAME = "Timeline";
+    private static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
+    private static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
+    private static final String TIMELINE_NAME = "Timeline";
 
-    public static final UUID REPORT_UUID = UUID.randomUUID();
+    private static final UUID REPORT_UUID = UUID.randomUUID();
 
     @MockBean
     private DynamicMappingClient dynamicMappingClient;
@@ -119,7 +119,7 @@ public class DynamicSimulationServiceTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    DynamicSimulationService dynamicSimulationService;
+    private DynamicSimulationService dynamicSimulationService;
 
     @BeforeEach
     void setup() {

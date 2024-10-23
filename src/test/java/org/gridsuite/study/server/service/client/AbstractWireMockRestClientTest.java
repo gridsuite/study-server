@@ -7,8 +7,6 @@
 package org.gridsuite.study.server.service.client;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
-import lombok.AccessLevel;
-import lombok.Getter;
 import org.gridsuite.study.server.StudyApplication;
 import org.junit.jupiter.api.AfterEach;
 import org.slf4j.Logger;
@@ -26,8 +24,9 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public abstract class AbstractWireMockRestClientTest {
-    @Getter(AccessLevel.PROTECTED)
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    protected final Logger getLogger() {
+        return LoggerFactory.getLogger(this.getClass());
+    }
 
     protected WireMockServer wireMockServer;
 

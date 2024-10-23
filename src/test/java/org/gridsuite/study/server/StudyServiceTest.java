@@ -64,9 +64,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class StudyServiceTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyServiceTest.class);
 
-    WireMockServer wireMockServer;
+    private WireMockServer wireMockServer;
 
-    WireMockUtils wireMockUtils;
+    private WireMockUtils wireMockUtils;
 
     @Autowired
     private MockMvc mockMvc;

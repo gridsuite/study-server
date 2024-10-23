@@ -12,6 +12,7 @@ import org.gridsuite.study.server.repository.dynamicsimulation.EventRepository;
 import org.gridsuite.study.server.repository.dynamicsimulation.entity.EventEntity;
 import org.gridsuite.study.server.utils.PropertyType;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,30 +29,30 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 @SpringBootTest
 @DisableElasticsearch
-public class DynamicSimulationEventServiceTest {
+class DynamicSimulationEventServiceTest {
 
     private static final String NODE_UUID_STRING = "00000000-0000-0000-0000-000000000000";
-    public static final UUID NODE_UUID = UUID.fromString(NODE_UUID_STRING);
-    public static final String EQUIPMENT_ID = "_BUS____1-BUS____5-1_AC";
-    public static final EventInfos EVENT = new EventInfos(null, NODE_UUID, EQUIPMENT_ID, "LINE", "Disconnect", List.of(
+    private static final UUID NODE_UUID = UUID.fromString(NODE_UUID_STRING);
+    private static final String EQUIPMENT_ID = "_BUS____1-BUS____5-1_AC";
+    private static final EventInfos EVENT = new EventInfos(null, NODE_UUID, EQUIPMENT_ID, "LINE", "Disconnect", List.of(
             new EventPropertyInfos(null, "staticId", EQUIPMENT_ID, PropertyType.STRING),
             new EventPropertyInfos(null, "startTime", "10", PropertyType.FLOAT),
             new EventPropertyInfos(null, "disconnectOnly", "TwoSides.ONE", PropertyType.ENUM)
     ));
 
     @Autowired
-    EventRepository eventRepository;
+    private EventRepository eventRepository;
 
     @Autowired
-    DynamicSimulationEventService dynamicSimulationEventService;
+    private DynamicSimulationEventService dynamicSimulationEventService;
 
-    public void cleanDB() {
+    @AfterEach
+    void cleanDB() {
         eventRepository.deleteAll();
     }
 
     @BeforeEach
     void setup() {
-        cleanDB();
         // init some event by inject directly
         EventEntity event = new EventEntity(EVENT);
         eventRepository.saveAll(List.of(event));
@@ -87,7 +88,6 @@ public class DynamicSimulationEventServiceTest {
 
     @Test
     void testCreateEvent() {
-        cleanDB();
         // call method to be tested
         dynamicSimulationEventService.saveEvent(NODE_UUID, EVENT);
 
@@ -151,5 +151,4 @@ public class DynamicSimulationEventServiceTest {
         // no event in the db
         assertEquals(0, eventResultList.size());
     }
-
 }
