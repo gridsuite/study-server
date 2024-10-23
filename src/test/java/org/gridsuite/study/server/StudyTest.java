@@ -1220,6 +1220,7 @@ class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
     }
 
+    @SuppressWarnings({"java:S1481", "java:S1854"}) //TODO found better way to test json result that Sonar wouldn't flag because of unused/useless local variables
     @Test
     void testGetStudyCreationRequests(final MockWebServer server) throws Exception {
         MvcResult mvcResult;
