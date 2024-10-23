@@ -175,27 +175,27 @@ class SingleLineDiagramTest {
                 switch (path) {
                     case "/v1/svg/" + NETWORK_UUID_STRING
                         + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en":
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "byte");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "byte");
 
                     case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING
                             + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=STATE_VARIABLE&language=en":
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "svgandmetadata");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "svgandmetadata");
 
                     case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING
                         + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=STATE_VARIABLE&language=en&variantId=" + VARIANT_ID:
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "svgandmetadata");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "svgandmetadata");
 
                     case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING
                             + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=FEEDER_POSITION&language=en":
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "FEEDER_POSITION");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "FEEDER_POSITION");
 
                     case "/v1/substation-svg/" + NETWORK_UUID_STRING
                             + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "substation-byte");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "substation-byte");
 
                     case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING
                             + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "substation-svgandmetadata");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "substation-svgandmetadata");
 
                     case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en":
                     case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=STATE_VARIABLE&language=en":
@@ -207,12 +207,12 @@ class SingleLineDiagramTest {
                     case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en":
                     case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
                     case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
-                        return new MockResponse(500, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"tmp\",\"path\":\"/v1/networks\"}");
+                        return new MockResponse(500, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"tmp\",\"path\":\"/v1/networks\"}");
                     case "/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&withGeoData=true&voltageLevelsIds=vlFr1A":
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "nad-svg");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "nad-svg");
 
                     case "/v1/svg-component-libraries":
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "[\"GridSuiteAndConvergence\",\"Convergence\"]");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "[\"GridSuiteAndConvergence\",\"Convergence\"]");
                     case "/v1/networks/" + NETWORK_UUID_STRING:
                     case "/v1/lines?networkUuid=" + NETWORK_UUID_STRING:
                     case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING:

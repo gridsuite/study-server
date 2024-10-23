@@ -156,17 +156,17 @@ class StateEstimationTest {
                             .setHeader("resultUuid", STATE_ESTIMATION_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), ESTIM_RESULT_JSON_DESTINATION);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), estimResultUuidStr);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimResultUuidStr);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID_2 + "&receiver=.*")) {
                     // estim with failure
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), ESTIM_FAILED_DESTINATION);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), estimErrorResultUuidStr);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimErrorResultUuidStr);
                 } else if (path.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), estimResultJson);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimResultJson);
                 } else if (path.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/status")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), ESTIM_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), ESTIM_STATUS_JSON);
                 } else if (path.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/stop.*")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", STATE_ESTIMATION_RESULT_UUID)
@@ -174,7 +174,7 @@ class StateEstimationTest {
                             .build(), ESTIM_STOPPED_DESTINATION);
                     return new MockResponse(200);
                 } else if (path.matches("/v1/supervision/results-count")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "1");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
                 } else if (path.matches("/v1/reports")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/results")) {

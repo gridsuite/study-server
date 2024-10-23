@@ -243,24 +243,24 @@ class LoadFlowTest {
                             .setHeader("resultUuid", LOADFLOW_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), LOADFLOW_RESULT_DESTINATION);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), loadFlowResultUuidStr);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), loadFlowResultUuidStr);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), LOADFLOW_FAILED_DESTINATION);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), loadFlowErrorResultUuidStr);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), loadFlowErrorResultUuidStr);
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), loadflowResult);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), loadflowResult);
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), loadflowResult);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), loadflowResult);
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/status")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), LOADFLOW_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LOADFLOW_STATUS_JSON);
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), LIMIT_VIOLATIONS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LIMIT_VIOLATIONS_JSON);
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), LIMIT_VIOLATIONS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LIMIT_VIOLATIONS_JSON);
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/computation-status")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), COMPUTING_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), COMPUTING_STATUS_JSON);
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/computation")) {
                     return new MockResponse(404);
                 } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)) {
@@ -278,23 +278,23 @@ class LoadFlowTest {
                 } else if (path.matches("/v1/reports")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/supervision/results-count")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "1");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
                 } else if (path.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)) {
                     if (method.equals("GET")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), LOADFLOW_DEFAULT_PARAMETERS_JSON);
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LOADFLOW_DEFAULT_PARAMETERS_JSON);
                     } else {
                         return new MockResponse(200);
                     }
                 } else if (path.matches("/v1/parameters")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), objectMapper.writeValueAsString(LOADFLOW_PARAMETERS_UUID_STRING));
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(LOADFLOW_PARAMETERS_UUID_STRING));
                 } else if (path.matches("/v1/users/" + NO_PROFILE_USER_ID + "/profile")) {
                     return new MockResponse(404);
                 } else if (path.matches("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), USER_PROFILE_NO_PARAMS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_NO_PARAMS_JSON);
                 } else if (path.matches("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), USER_PROFILE_VALID_PARAMS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_VALID_PARAMS_JSON);
                 } else if (path.matches("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), USER_PROFILE_INVALID_PARAMS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_INVALID_PARAMS_JSON);
                 } else if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING) && method.equals("POST")) {
                     // params duplication request KO
                     return new MockResponse(404);
@@ -302,10 +302,10 @@ class LoadFlowTest {
                     return new MockResponse(404);
                 } else if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING) && method.equals("POST")) {
                     // params duplication request OK
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), DUPLICATED_PARAMS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), DUPLICATED_PARAMS_JSON);
                 } else if (path.matches("/v1/parameters/" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING) && method.equals("GET")) {
                     // profile params get request OK
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), LOADFLOW_PROFILE_PARAMETERS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LOADFLOW_PROFILE_PARAMETERS_JSON);
                 } else if (path.matches("/v1/parameters/" + PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING + "/provider") && method.equals("PATCH")) {
                     // provider update in duplicated params OK
                     return new MockResponse(200);

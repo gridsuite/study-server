@@ -194,29 +194,29 @@ class SecurityAnalysisTest {
                         .setHeader("resultUuid", resultUuid)
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .build(), saResultDestination);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "\"" + resultUuid + "\"");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + resultUuid + "\"");
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/limit-types")
                         || ("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/limit-types").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), limitTypeJson);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), limitTypeJson);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n-result\\?page=.*size=.*filters=.*sort=.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SECURITY_ANALYSIS_N_RESULT_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_N_RESULT_JSON);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-contingencies-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-constraints-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n-result/csv")) {
                     return new MockResponse.Builder().code(200).body(getBinaryAsBuffer(SECURITY_ANALYSIS_N_RESULT_CSV_ZIPPED))
-                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE).build();
+                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).build();
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/n-result/csv")) {
                     return new MockResponse(404);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-contingencies-result/csv")) {
                     return new MockResponse.Builder().code(200).body(getBinaryAsBuffer(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_CSV_ZIPPED))
-                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE).build();
+                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).build();
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-constraints-result/csv")) {
                     return new MockResponse.Builder().code(200).body(getBinaryAsBuffer(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_CSV_ZIPPED))
-                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE).build();
+                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).build();
                 } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/stop.*")
                         || path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_3 + ".*") ? SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID : SECURITY_ANALYSIS_RESULT_UUID;
@@ -227,46 +227,46 @@ class SecurityAnalysisTest {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING)
                         || path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), CONTINGENCIES_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), CONTINGENCIES_JSON);
                 } else if (path.matches("/v1/contingency-lists/count\\?ids=" + CONTINGENCY_LIST_NAME + "&networkUuid=" + NETWORK_UUID_STRING)
                         || path.matches("/v1/contingency-lists/count\\?ids=" + CONTINGENCY_LIST_NAME + "&networkUuid=" + NETWORK_UUID_STRING + "&variantId=.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), CONTINGENCIES_COUNT);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), CONTINGENCIES_COUNT);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/n-result\\?page=.*size=.*filters=.*sort=.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SECURITY_ANALYSIS_N_RESULT_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_N_RESULT_JSON);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/nmk-contingencies-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/nmk-constraints-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON);
                 } else if (("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/run-and-save.*")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), saFailedDestination);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "\"" + SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/run-and-save.*")) {
                     input.send(MessageBuilder.withPayload("")
                         .build(), saFailedDestination);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "\"" + SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"");
                 } else if ("/v1/results".equals(path)) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/reports")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/supervision/results-count")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "1");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
                 } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=.*")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID)) {
                     if (method.equals("GET")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
                     } else {
                         //Method PUT
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
                     }
                 } else if (path.matches("/v1/parameters") && method.equals("POST")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
                 } else if (path.matches("/v1/parameters/default") && method.equals("POST")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
                 } else {
                     LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
                     return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();

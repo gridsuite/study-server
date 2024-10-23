@@ -291,28 +291,28 @@ class NetworkModificationTest {
                 } else if (("/v1/results/invalidate-status?resultUuid=" + SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
                     return new MockResponse(200);
                 } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
                 } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
                     }
                     return new MockResponse(500);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_RESULT_UUID).equals(path)) {
                     return new MockResponse(200);
                 } else if (("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SENSITIVITY_ANALYSIS_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_STATUS_JSON);
                 } else if (("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SENSITIVITY_ANALYSIS_STATUS_JSON);
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_STATUS_JSON);
                     }
                     return new MockResponse(500);
                 } else if (("/v1/non-evacuated-energy/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID).equals(path)) {
                     return new MockResponse(200);
                 } else if (("/v1/non-evacuated-energy/results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON);
                 } else if (("/v1/non-evacuated-energy/results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON);
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON);
                     }
                     return new MockResponse(500);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
@@ -320,44 +320,44 @@ class NetworkModificationTest {
                 } else if (("/v1/results/invalidate-status?resultUuid=" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
                     return new MockResponse(200);
                 } else if (("/v1/results/" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
                 } else if (("/v1/results/" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
                 } else if (("/v1/results/" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
                     }
                     return new MockResponse(500);
                 } else if (("/v1/results/" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
                     }
                     return new MockResponse(500);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + VOLTAGE_INIT_RESULT_UUID).equals(path)) {
                     return new MockResponse(200);
                 } else if (("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), VOLTAGE_INIT_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_STATUS_JSON);
                 } else if (("/v1/results/" + VOLTAGE_INIT_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), VOLTAGE_INIT_STATUS_JSON);
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_STATUS_JSON);
                     }
                     return new MockResponse(500);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + LOADFLOW_RESULT_UUID).equals(path)) {
                     return new MockResponse(200);
                 } else if (("/v1/results/" + LOADFLOW_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), LOADFLOW_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LOADFLOW_STATUS_JSON);
                 } else if (("/v1/results/" + LOADFLOW_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), LOADFLOW_STATUS_JSON);
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LOADFLOW_STATUS_JSON);
                     }
                     return new MockResponse(500);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + STATE_ESTIMATION_RESULT_UUID).equals(path)) {
                     return new MockResponse(200);
                 } else if (("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), STATE_ESTIMATION_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), STATE_ESTIMATION_STATUS_JSON);
                 } else if (("/v1/results/" + STATE_ESTIMATION_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), STATE_ESTIMATION_STATUS_JSON);
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), STATE_ESTIMATION_STATUS_JSON);
                     }
                     return new MockResponse(500);
                 } else {

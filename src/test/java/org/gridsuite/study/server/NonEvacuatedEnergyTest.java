@@ -188,17 +188,17 @@ class NonEvacuatedEnergyTest {
                         .setHeader(HEADER_USER_ID, "userId")
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .build(), NON_EVACUATED_ENERGY_RESULT_DESTINATION);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "\"" + resultUuid + "\"");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + resultUuid + "\"");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/non-evacuated-energy.*")) {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader(HEADER_USER_ID, "userId")
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .build(), NON_EVACUATED_ENERGY_FAILED_DESTINATION);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "\"" + NON_EVACUATED_ENERGY_ERROR_NODE_RESULT_UUID + "\"");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + NON_EVACUATED_ENERGY_ERROR_NODE_RESULT_UUID + "\"");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/non-evacuated-energy.*")) {
                     input.send(MessageBuilder.withPayload("")
                         .build(), NON_EVACUATED_ENERGY_FAILED_DESTINATION);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "\"" + NON_EVACUATED_ENERGY_ERROR_NODE_RESULT_UUID + "\"");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + NON_EVACUATED_ENERGY_ERROR_NODE_RESULT_UUID + "\"");
                 } else if (path.matches("/v1/non-evacuated-energy/results/" + NON_EVACUATED_ENERGY_RESULT_UUID + "/stop.*")
                     || path.matches("/v1/non-evacuated-energy/results/" + NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_3 + ".*") ? NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID : NON_EVACUATED_ENERGY_RESULT_UUID;
@@ -208,15 +208,15 @@ class NonEvacuatedEnergyTest {
                         .build(), NON_EVACUATED_ENERGY_STOPPED_DESTINATION);
                     return new MockResponse(200);
                 } else if (path.matches("/v1/non-evacuated-energy/results/" + NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), FAKE_NON_EVACUATED_ENERGY_RESULT_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), FAKE_NON_EVACUATED_ENERGY_RESULT_JSON);
                 } else if (path.matches("/v1/non-evacuated-energy/results/" + NON_EVACUATED_ENERGY_RESULT_UUID + "/status")
                            || path.matches("/v1/non-evacuated-energy/results/" + NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID + "/status")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), NON_EVACUATED_ENERGY_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NON_EVACUATED_ENERGY_STATUS_JSON);
                 } else if (path.matches("/v1/non-evacuated-energy/results/" + NON_EVACUATED_ENERGY_RESULT_UUID + ".*")
                     || path.matches("/v1/non-evacuated-energy/results/" + NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID + ".*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), FAKE_NON_EVACUATED_ENERGY_RESULT_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), FAKE_NON_EVACUATED_ENERGY_RESULT_JSON);
                 } else if (path.matches("/v1/non-evacuated-energy/results/" + NON_EVACUATED_ENERGY_RESULT_UUID) && request.getMethod().equals("DELETE")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), NON_EVACUATED_ENERGY_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NON_EVACUATED_ENERGY_STATUS_JSON);
                 } else if (path.matches("/v1/non-evacuated-energy/results/invalidate-status?resultUuid=" + NON_EVACUATED_ENERGY_RESULT_UUID)
                            || path.matches("/v1/non-evacuated-energy/results/invalidate-status?resultUuid=" + NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID)) {
                     return new MockResponse(200);
@@ -225,7 +225,7 @@ class NonEvacuatedEnergyTest {
                 } else if (path.matches("/v1/reports")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/supervision/non-evacuated-energy/results-count")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "1");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
                 } else {
                     LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
                     return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();

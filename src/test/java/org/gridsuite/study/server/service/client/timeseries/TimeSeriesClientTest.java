@@ -104,7 +104,7 @@ class TimeSeriesClientTest {
                                 String timeSeriesGroupMetadataJson = null;
 
                                     timeSeriesGroupMetadataJson = objectMapper.writeValueAsString(timeSeriesGroupMetadata);
-                                    response = new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), timeSeriesGroupMetadataJson);
+                                    response = new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), timeSeriesGroupMetadataJson);
                             }
                         } catch (JsonProcessingException e) {
                             return new MockResponse(HttpStatus.NOT_FOUND.value());
@@ -124,7 +124,7 @@ class TimeSeriesClientTest {
                         if (CollectionUtils.isEmpty(timeseries)) {
                             return new MockResponse(HttpStatus.NO_CONTENT.value());
                         }
-                        response = new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), TimeSeries.toJson(timeseries));
+                        response = new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), TimeSeries.toJson(timeseries));
                     }
                 }
                 return response;

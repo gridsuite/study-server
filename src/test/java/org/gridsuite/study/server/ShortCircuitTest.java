@@ -175,38 +175,38 @@ class ShortCircuitTest implements WithAssertions {
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .setHeader("busId", "BUS_TEST_ID")
                         .build(), shortCircuitAnalysisResultDestination);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), shortCircuitAnalysisResultUuidStr);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), shortCircuitAnalysisResultUuidStr);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisResultDestination);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), shortCircuitAnalysisResultUuidStr);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), shortCircuitAnalysisResultUuidStr);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING_NOT_FOUND + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_4)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisResultDestination);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), shortCircuitAnalysisResultNotFoundUuidStr);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), shortCircuitAnalysisResultNotFoundUuidStr);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisFailedDestination);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), shortCircuitAnalysisErrorResultUuidStr);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), shortCircuitAnalysisErrorResultUuidStr);
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=FULL")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SHORT_CIRCUIT_ANALYSIS_RESULT_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORT_CIRCUIT_ANALYSIS_RESULT_JSON);
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault-types")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged" + "\\?mode=FULL&page=0&size=20&sort=id,DESC")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SHORT_CIRCUIT_ANALYSIS_RESULT_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORT_CIRCUIT_ANALYSIS_RESULT_JSON);
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv")) {
                     return new MockResponse.Builder().code(200).body(getBinaryAsBuffer(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT)).addHeader("Content-Type", "application/json; charset=utf-8").build();
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv")) {
                         return new MockResponse(404);
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/feeder_results/paged" + "\\?mode=FULL&filters=fakeFilters&page=0&size=20&sort=id,DESC")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SHORT_CIRCUIT_ANALYSIS_RESULT_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORT_CIRCUIT_ANALYSIS_RESULT_JSON);
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), SHORT_CIRCUIT_ANALYSIS_STATUS_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORT_CIRCUIT_ANALYSIS_STATUS_JSON);
                 } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "&resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop.*")
@@ -222,7 +222,7 @@ class ShortCircuitTest implements WithAssertions {
                 } else if (path.matches("/v1/reports")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/supervision/results-count")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE), "1");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
                 } else if ("POST".equalsIgnoreCase(request.getMethod()) && path.equals("/v1/parameters/default")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID + "\"");
                 } else if ("GET".equalsIgnoreCase(request.getMethod()) && path.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)) {

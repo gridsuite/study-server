@@ -137,7 +137,7 @@ public class WireMockUtils {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications-count"))
             .withQueryParam(QUERY_PARAM_STASHED, WireMock.equalTo("false"))
             .willReturn(WireMock.ok()
-                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .withBody(String.valueOf(expectedCount)))
         ).getId();
     }
@@ -306,7 +306,7 @@ public class WireMockUtils {
     public UUID stubCaseExists(String caseUuid, boolean returnedValue) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/exists"))
                 .willReturn(WireMock.ok().withBody(returnedValue ? "true" : "false")
-                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE))
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
         ).getId();
     }
 

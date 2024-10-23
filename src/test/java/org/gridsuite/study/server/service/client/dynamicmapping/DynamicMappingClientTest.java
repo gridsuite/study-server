@@ -83,7 +83,7 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
         wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(getAllMappingsEndPointUrl + ".*"))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(MAPPINGS))
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
 
         // call method to be tested
@@ -133,7 +133,7 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
         wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(getModelsEndPointUrl + MAPPING_NAMES[0] + DELIMITER + "models" + ".*"))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(MODELS))
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
 
         // call method to be tested
