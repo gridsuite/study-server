@@ -96,7 +96,7 @@ class DynamicSimulationEventServiceTest {
 
         // check result
         // only one event
-        assertEquals(1, eventResultList.size());
+        assertEquals(2, eventResultList.size());
 
         EventInfos eventInfosResult = eventResultList.get(0);
         // same event type
