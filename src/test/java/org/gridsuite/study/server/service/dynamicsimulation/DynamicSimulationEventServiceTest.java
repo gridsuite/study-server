@@ -88,6 +88,7 @@ class DynamicSimulationEventServiceTest {
 
     @Test
     void testCreateEvent() {
+        cleanDB();
         // call method to be tested
         dynamicSimulationEventService.saveEvent(NODE_UUID, EVENT);
 
@@ -96,7 +97,7 @@ class DynamicSimulationEventServiceTest {
 
         // check result
         // only one event
-        assertEquals(2, eventResultList.size());
+        assertEquals(1, eventResultList.size());
 
         EventInfos eventInfosResult = eventResultList.get(0);
         // same event type

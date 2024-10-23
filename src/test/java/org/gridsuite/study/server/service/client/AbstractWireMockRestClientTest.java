@@ -45,7 +45,7 @@ public abstract class AbstractWireMockRestClientTest {
         try {
             wireMockServer.shutdown();
         } catch (Exception e) {
-            getLogger().warn("Can not shutdown the mock server");
+            getLogger().info("Can not shutdown the mock server {}", this.getClass().getSimpleName());
         }
     }
 }
