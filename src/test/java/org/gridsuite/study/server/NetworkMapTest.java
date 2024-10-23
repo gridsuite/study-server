@@ -165,6 +165,8 @@ public class NetworkMapTest {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/busbar-sections":
                         return new MockResponse().setResponseCode(200).setBody(busbarSectionsDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/substation-id":
+                        return new MockResponse().setResponseCode(200).setBody(SUBSTATION_ID_1);
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VL_ID_1 + "/equipments":
                         return new MockResponse().setResponseCode(200).setBody(VOLTAGE_LEVEL_EQUIPMENTS_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -459,6 +461,26 @@ public class NetworkMapTest {
                 .andExpect(status().is5xxServerError())
                 .andReturn();
         wireMockUtils.verifyHvdcLinesShuntCompensatorsGet(stubUuid, NETWORK_UUID_STRING, HVDC_LINE_ID_ERR);
+    }
+
+    @Test
+    public void testGetSubstationIdForVoltageLevel() throws Exception {
+        MvcResult mvcResult;
+        String resultAsString;
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/substation-id",
+                        studyNameUserIdUuid, rootNodeUuid, VOLTAGE_LEVEL_ID))
+                .andExpect(status().isOk())
+                .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        assertEquals(SUBSTATION_ID_1, resultAsString);
+        var requests = TestUtils.getRequestsDone(1, server);
+
+        assertTrue(requests.stream().anyMatch(r -> r.matches(
+                "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/substation-id")));
     }
 
     @Test
