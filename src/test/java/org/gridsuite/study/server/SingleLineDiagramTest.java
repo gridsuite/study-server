@@ -55,7 +55,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -133,7 +132,7 @@ class SingleLineDiagramTest {
     private LoadFlowService loadFlowService;
 
     @BeforeEach
-    void setup(final MockWebServer server) throws Exception {
+    void setup(final MockWebServer server) {
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
@@ -595,8 +594,6 @@ class SingleLineDiagramTest {
             TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
-        } catch (IOException e) {
-            // Ignoring
         }
     }
 }

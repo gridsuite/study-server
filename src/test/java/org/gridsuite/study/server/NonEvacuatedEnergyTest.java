@@ -58,7 +58,6 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -157,7 +156,7 @@ class NonEvacuatedEnergyTest {
     private static final String NON_EVACUATED_ENERGY_FAILED_DESTINATION = "nonEvacuatedEnergy.failed";
 
     @BeforeEach
-    void setup(final MockWebServer server) throws Exception {
+    void setup(final MockWebServer server) {
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
         wireMock = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
@@ -536,8 +535,6 @@ class NonEvacuatedEnergyTest {
             TestUtils.assertServerRequestsEmptyThenShutdown(server);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
-        } catch (IOException e) {
-            // Ignoring
         }
     }
 

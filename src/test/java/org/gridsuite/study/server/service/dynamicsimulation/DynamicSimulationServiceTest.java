@@ -191,23 +191,21 @@ class DynamicSimulationServiceTest {
 
     @Test
     void testGetTimeSeriesResultGivenBadType() {
-        assertThrows(StudyException.class, () -> {
-            // setup DynamicSimulationClient mock
-            given(dynamicSimulationClient.getTimeSeriesResult(RESULT_UUID)).willReturn(TIME_SERIES_UUID);
+        // setup DynamicSimulationClient mock
+        given(dynamicSimulationClient.getTimeSeriesResult(RESULT_UUID)).willReturn(TIME_SERIES_UUID);
 
-            // setup timeSeriesClient mock
-            // create a bad type timeseries
-            TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-            List<TimeSeries> timeSeries = List.of(TimeSeries.createString(TIMELINE_NAME, index,
-                    "CLA_2_5 - CLA : order to change topology",
-                    "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
-                    "CLA_2_5 - CLA : order to change topology",
-                    "CLA_2_4 - CLA : arming by over-current constraint"));
-            given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID, null)).willReturn(timeSeries);
+        // setup timeSeriesClient mock
+        // create a bad type timeseries
+        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
+        List<TimeSeries> timeSeries = List.of(TimeSeries.createString(TIMELINE_NAME, index,
+                "CLA_2_5 - CLA : order to change topology",
+                "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
+                "CLA_2_5 - CLA : order to change topology",
+                "CLA_2_4 - CLA : arming by over-current constraint"));
+        given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID, null)).willReturn(timeSeries);
 
-            // call method to be tested
-            dynamicSimulationService.getTimeSeriesResult(NODE_UUID, null);
-        });
+        // call method to be tested
+        assertThrows(StudyException.class, () -> dynamicSimulationService.getTimeSeriesResult(NODE_UUID, null));
     }
 
     @Test
@@ -323,14 +321,12 @@ class DynamicSimulationServiceTest {
 
     @Test
     void testAssertDynamicSimulationRunning() {
-        assertThrows(StudyException.class, () -> {
-            // setup for running node
-            given(dynamicSimulationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSimulationStatus.RUNNING);
-            given(networkModificationTreeService.getComputationResultUuid(NODE_UUID_RUNNING, ComputationType.DYNAMIC_SIMULATION)).willReturn(Optional.of(RESULT_UUID_RUNNING));
+        // setup for running node
+        given(dynamicSimulationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSimulationStatus.RUNNING);
+        given(networkModificationTreeService.getComputationResultUuid(NODE_UUID_RUNNING, ComputationType.DYNAMIC_SIMULATION)).willReturn(Optional.of(RESULT_UUID_RUNNING));
 
-            // test running
-            dynamicSimulationService.assertDynamicSimulationNotRunning(NODE_UUID_RUNNING);
-        });
+        // test running
+        assertThrows(StudyException.class, () -> dynamicSimulationService.assertDynamicSimulationNotRunning(NODE_UUID_RUNNING));
     }
 
     @Test

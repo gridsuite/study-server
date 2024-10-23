@@ -264,7 +264,7 @@ class StudyControllerDynamicSimulationTest {
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         // resultUuid must be present in database at this moment
         UUID actualResultUuid = networkModificationTreeService.getComputationResultUuid(modificationNode1Uuid, ComputationType.DYNAMIC_SIMULATION).get();
-        LOGGER.info("Actual result uuid in the database = " + actualResultUuid);
+        LOGGER.info("Actual result uuid in the database = {}", actualResultUuid);
         assertThat(actualResultUuid).isEqualTo(RESULT_UUID);
 
         // mock the notification from dynamic-simulation server in case of failed
@@ -331,7 +331,7 @@ class StudyControllerDynamicSimulationTest {
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         // resultUuid must be present in database at this moment
         UUID actualResultUuid = networkModificationTreeService.getComputationResultUuid(modificationNode1Uuid, ComputationType.DYNAMIC_SIMULATION).get();
-        LOGGER.info("Actual result uuid in the database = " + actualResultUuid);
+        LOGGER.info("Actual result uuid in the database = {}", actualResultUuid);
         assertThat(actualResultUuid).isEqualTo(RESULT_UUID);
 
         // mock the notification from dynamic-simulation server in case of having the result
@@ -405,7 +405,7 @@ class StudyControllerDynamicSimulationTest {
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         // resultUuid must be present in database at this moment
         UUID actualResultUuid = networkModificationTreeService.getComputationResultUuid(modificationNode1Uuid, ComputationType.DYNAMIC_SIMULATION).get();
-        LOGGER.info("Actual result uuid in the database = " + actualResultUuid);
+        LOGGER.info("Actual result uuid in the database = {}", actualResultUuid);
         assertThat(actualResultUuid).isEqualTo(RESULT_UUID);
 
         // mock the notification from dynamic-simulation server in case of stop
@@ -461,8 +461,8 @@ class StudyControllerDynamicSimulationTest {
 
         // --- check result --- //
         String timeSeriesExpectedJson = TimeSeries.toJson(timeSeries);
-        LOGGER.info("Time series expected Json = " + timeSeriesExpectedJson);
-        LOGGER.info("Time series result Json = " + timeSeriesResultJson);
+        LOGGER.info("Time series expected Json = {}", timeSeriesExpectedJson);
+        LOGGER.info("Time series result Json = {}", timeSeriesResultJson);
 
         assertThat(objectMapper.readTree(timeSeriesResultJson)).isEqualTo(objectMapper.readTree(timeSeriesExpectedJson));
     }
@@ -558,8 +558,8 @@ class StudyControllerDynamicSimulationTest {
 
         // --- check result --- //
         DynamicSimulationStatus statusExpected = DynamicSimulationStatus.DIVERGED;
-        LOGGER.info("Status expected = " + statusExpected);
-        LOGGER.info("Status result = " + statusResult);
+        LOGGER.info("Status expected = {}", statusExpected);
+        LOGGER.info("Status result = {}", statusResult);
         assertThat(statusResult).isEqualTo(statusExpected);
     }
 
@@ -580,8 +580,8 @@ class StudyControllerDynamicSimulationTest {
         List<MappingInfos> mappingInfos = objectMapper.readValue(content, new TypeReference<>() { });
 
         // --- check result --- //
-        LOGGER.info("Mapping infos expected in Json = " + objectMapper.writeValueAsString(MAPPINGS));
-        LOGGER.info("Mapping infos result in Json = " + objectMapper.writeValueAsString(mappingInfos));
+        LOGGER.info("Mapping infos expected in Json = {}", objectMapper.writeValueAsString(MAPPINGS));
+        LOGGER.info("Mapping infos result in Json = {}", objectMapper.writeValueAsString(mappingInfos));
         assertThat(mappingInfos).hasSameSizeAs(MAPPINGS);
 
     }
@@ -619,8 +619,8 @@ class StudyControllerDynamicSimulationTest {
         String expectedJson = objectMapper.writeValueAsString(defaultDynamicSimulationParameters);
 
         // result parameters must be identical to persisted parameters
-        LOGGER.info("Parameters expected in Json = " + expectedJson);
-        LOGGER.info("Parameters result in Json = " + resultJson);
+        LOGGER.info("Parameters expected in Json = {}", expectedJson);
+        LOGGER.info("Parameters result in Json = {}", resultJson);
         assertThat(objectMapper.readTree(resultJson)).isEqualTo(objectMapper.readTree(expectedJson));
 
     }
@@ -662,8 +662,8 @@ class StudyControllerDynamicSimulationTest {
         String expectedJson = objectMapper.writeValueAsString(MODELS);
 
         // result parameters must be identical to persisted parameters
-        LOGGER.info("Models expect in Json = " + expectedJson);
-        LOGGER.info("Models result in Json = " + resultJson);
+        LOGGER.info("Models expect in Json = {}", expectedJson);
+        LOGGER.info("Models result in Json = {}", resultJson);
         assertThat(objectMapper.readTree(resultJson)).isEqualTo(objectMapper.readTree(expectedJson));
     }
 

@@ -113,7 +113,7 @@ class TimeSeriesClientTest {
                         // take {groupUuid} at the last
                         String groupUuid = emptyIfNull(recordedRequest.getRequestUrl().pathSegments()).stream().reduce((first, second) -> second).orElse("");
                         String timeSeriesNames = recordedRequest.getRequestUrl().queryParameter("timeSeriesNames");
-                        LOGGER.info("sent timeSeriesNames = " + timeSeriesNames);
+                        LOGGER.info("sent timeSeriesNames = {}", timeSeriesNames);
                         List<TimeSeries<?, ?>> timeseries;
                         if (timeSeriesNames == null) {
                             timeseries = database.get(groupUuid); // get all timeseries of the same groupUuid
@@ -175,24 +175,24 @@ class TimeSeriesClientTest {
         // --- check result --- //
         // check time series
         // must contain two elements
-        LOGGER.info("Timeseries size = " + timeSeries.size());
+        LOGGER.info("Timeseries size = {}", timeSeries.size());
         assertThat(timeSeries).hasSize(2);
         // content must be the same
         String expectedTimeSeriesJson = TimeSeries.toJson(database.get(TIME_SERIES_GROUP_UUID));
-        LOGGER.info("expectedTimeSeriesJson = " + expectedTimeSeriesJson);
+        LOGGER.info("expectedTimeSeriesJson = {}", expectedTimeSeriesJson);
         String resultTimeSeriesJson = TimeSeries.toJson(timeSeries);
-        LOGGER.info("resultTimeSeriesJson = " + resultTimeSeriesJson);
+        LOGGER.info("resultTimeSeriesJson = {}", resultTimeSeriesJson);
         assertThat(objectMapper.readTree(resultTimeSeriesJson)).isEqualTo(objectMapper.readTree(expectedTimeSeriesJson));
 
         // check timeline
         // must contain only one element
-        LOGGER.info("Timeline size = " + timelines.size());
+        LOGGER.info("Timeline size = {}", timelines.size());
         assertThat(timelines).hasSize(1);
         // content must be the same
         String expectedTimelinesJson = TimeSeries.toJson(database.get(TIMELINE_GROUP_UUID));
-        LOGGER.info("expectedTimelinesJson = " + expectedTimelinesJson);
+        LOGGER.info("expectedTimelinesJson = {}", expectedTimelinesJson);
         String resultTimelinesJson = TimeSeries.toJson(timelines);
-        LOGGER.info("resultTimelinesJson = " + resultTimelinesJson);
+        LOGGER.info("resultTimelinesJson = {}", resultTimelinesJson);
         assertThat(objectMapper.readTree(resultTimelinesJson)).isEqualTo(objectMapper.readTree(expectedTimelinesJson));
     }
 
@@ -205,29 +205,29 @@ class TimeSeriesClientTest {
         // --- check result --- //
         // check time series
         // must contain only one element
-        LOGGER.info("Timeseries size = " + timeSeries.size());
+        LOGGER.info("Timeseries size = {}", timeSeries.size());
         assertThat(timeSeries).hasSize(1);
         // content must be the same
         String expectedTimeSeriesJson = TimeSeries.toJson(database.get(TIME_SERIES_GROUP_UUID).stream().filter(series -> series.getMetadata().getName().equals(TIME_SERIES_NAME_1)).collect(Collectors.toList()));
-        LOGGER.info("expectedTimeSeriesJson = " + expectedTimeSeriesJson);
+        LOGGER.info("expectedTimeSeriesJson = {}", expectedTimeSeriesJson);
         String resultTimeSeriesJson = TimeSeries.toJson(timeSeries);
-        LOGGER.info("resultTimeSeriesJson = " + resultTimeSeriesJson);
+        LOGGER.info("resultTimeSeriesJson = {}", resultTimeSeriesJson);
         assertThat(objectMapper.readTree(resultTimeSeriesJson)).isEqualTo(objectMapper.readTree(expectedTimeSeriesJson));
 
         // check time series unknown
         // must contain only zero element
-        LOGGER.info("Timeseries size = " + timeSeriesNameUnknown.size());
+        LOGGER.info("Timeseries size = {}", timeSeriesNameUnknown.size());
         assertThat(timeSeriesNameUnknown).isEmpty();
 
         // check timeline
         // must contain only one element
-        LOGGER.info("Timeline size = " + timelines.size());
+        LOGGER.info("Timeline size = {}", timelines.size());
         assertThat(timelines).hasSize(1);
         // content must be the same
         String expectedTimelinesJson = TimeSeries.toJson(database.get(TIMELINE_GROUP_UUID).stream().filter(series -> series.getMetadata().getName().equals(TIMELINE_NAME)).collect(Collectors.toList()));
-        LOGGER.info("expectedTimelinesJson = " + expectedTimelinesJson);
+        LOGGER.info("expectedTimelinesJson = {}", expectedTimelinesJson);
         String resultTimelinesJson = TimeSeries.toJson(timelines);
-        LOGGER.info("resultTimelinesJson = " + resultTimelinesJson);
+        LOGGER.info("resultTimelinesJson = {}", resultTimelinesJson);
         assertThat(objectMapper.readTree(resultTimelinesJson)).isEqualTo(objectMapper.readTree(expectedTimelinesJson));
     }
 
@@ -239,8 +239,8 @@ class TimeSeriesClientTest {
         // metadata must be identical to expected
         String expectedTimeSeriesGroupMetadataJson = objectMapper.writeValueAsString(timeSeriesGroupMetadata);
         String resultTimeSeriesGroupMetadataJson = objectMapper.writeValueAsString(resultTimeSeriesGroupMetadata);
-        LOGGER.info("expectedTimeSeriesGroupMetadataJson = " + expectedTimeSeriesGroupMetadataJson);
-        LOGGER.info("resultTimeSeriesGroupMetadataJson = " + resultTimeSeriesGroupMetadataJson);
+        LOGGER.info("expectedTimeSeriesGroupMetadataJson = {}", expectedTimeSeriesGroupMetadataJson);
+        LOGGER.info("resultTimeSeriesGroupMetadataJson = {}", resultTimeSeriesGroupMetadataJson);
         assertThat(objectMapper.readTree(resultTimeSeriesGroupMetadataJson)).isEqualTo(objectMapper.readTree(expectedTimeSeriesGroupMetadataJson));
     }
 }
