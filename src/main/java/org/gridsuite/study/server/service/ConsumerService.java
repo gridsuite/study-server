@@ -180,7 +180,6 @@ public class ConsumerService {
             if (rawParameters != null) {
                 rawParameters.forEach((key, value) -> importParameters.put(key, value.toString()));
             }
-            NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
 
             if (receiverString != null) {
                 CaseImportReceiver receiver;
@@ -197,6 +196,8 @@ public class ConsumerService {
                 Long startTime = receiver.getStartTime();
                 UUID importReportUuid = receiver.getReportUuid();
 
+                CaseInfos caseInfos = new CaseInfos(caseUuid, caseName, caseFormat);
+                NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
                 StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
                 try {
                     if (studyEntity != null) {
@@ -209,7 +210,7 @@ public class ConsumerService {
                         UUID shortCircuitParametersUuid = createDefaultShortCircuitAnalysisParameters();
                         UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters();
                         UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters();
-                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, loadFlowParametersUuid, shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters, importReportUuid);
+                        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid, shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters, importReportUuid);
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {

@@ -132,7 +132,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public NetworkModificationNode createNode(StudyEntity study, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
+    public NetworkModificationNode createNode(@NonNull StudyEntity study, @NonNull UUID nodeId, @NonNull NetworkModificationNode nodeInfo, @NonNull InsertMode insertMode, String userId) {
         // create new node
         // TODO return entity because newNode == nodeInfo
         NetworkModificationNode newNode = createAndInsertNode(study, nodeId, nodeInfo, insertMode, userId);
@@ -530,7 +530,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void createBasicTree(StudyEntity studyEntity, RootNetworkEntity firstRootNetworkEntity) {
+    public void createBasicTree(StudyEntity studyEntity) {
         // create 2 nodes : root node, modification node N1
         NodeEntity rootNodeEntity = self.createRoot(studyEntity);
         NetworkModificationNode modificationNode = NetworkModificationNode

@@ -6,11 +6,16 @@
  */
 package org.gridsuite.study.server.service;
 
-import org.gridsuite.study.server.networkmodificationtree.entities.*;
+import lombok.NonNull;
+import org.gridsuite.study.server.dto.CaseInfos;
+import org.gridsuite.study.server.dto.NetworkInfos;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,14 +29,34 @@ import java.util.stream.Stream;
 public class RootNetworkService {
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     private final RootNetworkRepository rootNetworkRepository;
+    private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
-    public RootNetworkService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository, RootNetworkRepository rootNetworkRepository) {
+    public RootNetworkService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository, RootNetworkRepository rootNetworkRepository,
+                              RootNetworkNodeInfoService rootNetworkNodeInfoService) {
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.rootNetworkRepository = rootNetworkRepository;
+        this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
 
     public UUID getNetworkUuid(UUID rootNetworkUuid) {
         return rootNetworkRepository.findById(rootNetworkUuid).map(RootNetworkEntity::getNetworkUuid).orElse(null);
+    }
+
+    @Transactional
+    public void createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull NetworkInfos networkInfos, @NonNull CaseInfos caseInfos, @NonNull UUID importReportUuid) {
+        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(RootNetworkEntity.builder()
+                .networkUuid(networkInfos.getNetworkUuid())
+                .networkId(networkInfos.getNetworkId())
+                .caseFormat(caseInfos.getCaseFormat())
+                .caseUuid(caseInfos.getCaseUuid())
+                .caseName(caseInfos.getCaseName())
+                .reportUuid(importReportUuid)
+                .build()
+        );
+
+        studyEntity.addRootNetwork(rootNetworkEntity);
+
+        rootNetworkNodeInfoService.createRootNetworkLinks(studyEntity.getId(), rootNetworkEntity);
     }
 
     // TODO move to RootNetworkNodeLinkService

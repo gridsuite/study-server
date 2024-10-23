@@ -12,6 +12,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.springframework.stereotype.Service;
@@ -28,11 +29,15 @@ public class RootNetworkNodeInfoService {
 
     public RootNetworkNodeInfoService(RootNetworkRepository rootNetworkRepository, RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository) {
         this.rootNetworkRepository = rootNetworkRepository;
-        this .rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
+        this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
     }
 
-    public void createRootNetworkLinks(@NonNull UUID studyUuid) {
-        // For each network modification node create a link with the root network
+    public void createRootNetworkLinks(@NonNull UUID studyUuid, @NonNull RootNetworkEntity rootNetworkEntity) {
+        // For each network modification node (nodeInfoEntity) create a link with the root network
+        // Create a default NetworkModificationNode (replace by the RootNetworkNodeInfo DTO
+//        rootNetworkEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
+//        nodeInfoEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
+//        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
     }
 
     // TODO create a DTO RootNetworkNodeInfo
@@ -44,11 +49,11 @@ public class RootNetworkNodeInfoService {
             rootNetworkNodeInfo.setVariantId(UUID.randomUUID().toString());
         }
         if (rootNetworkNodeInfo.getModificationReports() == null) {
-            rootNetworkNodeInfo.setModificationReports(new HashMap<>(Map.of(rootNetworkNodeInfo.getId(), UUID.randomUUID())));
+            rootNetworkNodeInfo.setModificationReports(new HashMap<>(Map.of(nodeInfoEntity.getId(), UUID.randomUUID())));
         }
 
         // For each root network create a link with the node
-        rootNetworkRepository.findAllByStudyId(studyUuid).forEach(RootNetworkEntity -> {
+        rootNetworkRepository.findAllByStudyId(studyUuid).forEach(rootNetworkEntity -> {
             RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = RootNetworkNodeInfoEntity.builder()
                     .nodeBuildStatus(rootNetworkNodeInfo.getNodeBuildStatus().toEntity())
                     .variantId(rootNetworkNodeInfo.getVariantId())
@@ -66,7 +71,7 @@ public class RootNetworkNodeInfoService {
                     .modificationsToExclude(Set.of())
                     .build();
             nodeInfoEntity.addRootNetworkNodeInfo(newRootNetworkNodeInfoEntity);
-            RootNetworkEntity.addRootNetworkNodeInfo(newRootNetworkNodeInfoEntity);
+            rootNetworkEntity.addRootNetworkNodeInfo(newRootNetworkNodeInfoEntity);
             rootNetworkNodeInfoRepository.save(newRootNetworkNodeInfoEntity);
         });
     }

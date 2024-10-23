@@ -486,8 +486,7 @@ public class StudyService {
         LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
-    public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
-                                              UUID caseUuid, String caseName, UUID loadFlowParametersUuid,
+    public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos, UUID loadFlowParametersUuid,
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                               Map<String, String> importParameters, UUID importReportUuid) {
@@ -495,12 +494,12 @@ public class StudyService {
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
         Objects.requireNonNull(networkInfos.getNetworkId());
-        Objects.requireNonNull(caseFormat);
-        Objects.requireNonNull(caseUuid);
+        Objects.requireNonNull(caseInfos.getCaseFormat());
+        Objects.requireNonNull(caseInfos.getCaseUuid());
         Objects.requireNonNull(importParameters);
 
-        StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(studyUuid, networkInfos, caseFormat,
-            caseUuid, caseName, loadFlowParametersUuid,
+        StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(studyUuid, networkInfos,
+            caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, dynamicSimulationParametersEntity,
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
             importParameters, importReportUuid);
@@ -1088,8 +1087,8 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos, String caseFormat,
-                                                       UUID caseUuid, String caseName, UUID loadFlowParametersUuid,
+    public StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
+                                                       CaseInfos caseInfos, UUID loadFlowParametersUuid,
                                                        UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                        UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                                        Map<String, String> importParameters, UUID importReportUuid) {
@@ -1109,20 +1108,10 @@ public class StudyService {
             .voltageInitParameters(new StudyVoltageInitParametersEntity())
             .build();
 
-        RootNetworkEntity firstRootNetworkEntity = RootNetworkEntity.builder()
-            .networkUuid(networkInfos.getNetworkUuid())
-            .networkId(networkInfos.getNetworkId())
-            .caseFormat(caseFormat)
-            .caseUuid(caseUuid)
-            .caseName(caseName)
-            .reportUuid(importReportUuid)
-            .build();
-
-        studyEntity.addRootNetwork(firstRootNetworkEntity);
         var study = studyRepository.save(studyEntity);
+        rootNetworkService.createRootNetwork(studyEntity, networkInfos, caseInfos, importReportUuid);
+        networkModificationTreeService.createBasicTree(study);
 
-        networkModificationTreeService.createBasicTree(study, firstRootNetworkEntity);
-        rootNetworkRepository.save(firstRootNetworkEntity);
         return study;
     }
 
