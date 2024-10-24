@@ -45,6 +45,7 @@
         <gridsuite-dependencies.version>34</gridsuite-dependencies.version>
         <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
         <mockwebserver3.version>5.0.0-alpha.14</mockwebserver3.version>
+        <apache.httpclient.version>5.3</apache.httpclient.version>
         <!-- FIXME: powsybl-ws-commons version is overridden. To be removed at next gridsuite-dependencies.version upgrade -->
         <powsybl-ws-commons.version>1.15.0</powsybl-ws-commons.version>
         <!-- FIXME: powsybl-network-store modules'version is overloaded in the dependencies section.The overloads and this property below have to be removed at next powsybl-ws-dependencies.version upgrade -->
@@ -126,6 +127,12 @@
             </dependency>
 
             <!-- project specific dependencies -->
+            <dependency>
+                <!-- Used by RestTemplate -->
+                <groupId>org.apache.httpcomponents.client5</groupId>
+                <artifactId>httpclient5</artifactId>
+                <version>${apache.httpclient.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -199,7 +206,7 @@
 
         <!-- Runtime dependencies -->
         <dependency>
-            <!-- Used by RestTemplate -->   
+            <!-- Used by RestTemplate -->
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
             <scope>runtime</scope>
