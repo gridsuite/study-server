@@ -68,7 +68,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
@@ -1076,52 +1075,6 @@ class NetworkModificationTest {
                         .content(createTwoWindingsTransformerAttributes2).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void testChangeModificationActiveState() throws Exception {
-        String userId = "userId";
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
-        UUID studyUuid = studyEntity.getId();
-        UUID rootNodeUuid = getRootNode(studyUuid).getId();
-        UUID modificationGroupUuid1 = UUID.randomUUID();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
-                modificationGroupUuid1, "variant_1", "node 1", "userId");
-
-        UUID modificationUuid = UUID.randomUUID();
-        UUID nodeNotFoundUuid = UUID.randomUUID();
-
-        // deactivate modification on modificationNode
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=false",
-                studyUuid, nodeNotFoundUuid, modificationUuid).header(USER_ID_HEADER, "userId")
-                .header(USER_ID_HEADER, userId))
-            .andExpect(status().isNotFound());
-
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=false",
-                        studyUuid, modificationNode1.getId(), modificationUuid).header(USER_ID_HEADER, "userId")
-                .header(USER_ID_HEADER, userId))
-            .andExpect(status().isOk());
-
-        AtomicReference<AbstractNode> node = new AtomicReference<>();
-        node.set(networkModificationTreeService.getNode(modificationNode1.getId()));
-        NetworkModificationNode modificationNode = (NetworkModificationNode) node.get();
-        assertEquals(Set.of(modificationUuid), modificationNode.getModificationsToExclude());
-
-        checkNodesBuildStatusUpdatedMessageReceived(studyUuid, List.of(modificationNode1.getId()));
-        checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode1.getId());
-
-        // reactivate modification
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=true",
-                        studyUuid, modificationNode1.getId(), modificationUuid).header(USER_ID_HEADER, "userId")
-                .header(USER_ID_HEADER, userId))
-            .andExpect(status().isOk());
-
-        node.set(networkModificationTreeService.getNode(modificationNode1.getId()));
-        modificationNode = (NetworkModificationNode) node.get();
-        assertTrue(modificationNode.getModificationsToExclude().isEmpty());
-
-        checkNodesBuildStatusUpdatedMessageReceived(studyUuid, List.of(modificationNode1.getId()));
-        checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode1.getId());
     }
 
     @Test

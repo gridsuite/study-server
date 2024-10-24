@@ -83,12 +83,6 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         return null;
     }
 
-    public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
-    }
-
-    public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationUuid) {
-    }
-
     public void updateNodeBuildStatus(AbstractNode node, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
     }
 
@@ -203,14 +197,6 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
 
     public void invalidateNodeBuildStatus(UUID nodeUuid, List<UUID> changedNodes) {
         invalidateNodeBuildStatus(getNode(nodeUuid), changedNodes);
-    }
-
-    public void handleExcludeModification(UUID nodeUuid, UUID modificationUuid, boolean active) {
-        handleExcludeModification(getNode(nodeUuid), modificationUuid, active);
-    }
-
-    public void removeModificationsToExclude(UUID nodeUuid, List<UUID> modificationUuid) {
-        removeModificationsToExclude(getNode(nodeUuid), modificationUuid);
     }
 
     public Boolean isReadOnly(UUID nodeUuid) {
