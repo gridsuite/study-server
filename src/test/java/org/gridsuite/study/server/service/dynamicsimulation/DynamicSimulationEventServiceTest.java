@@ -4,6 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server.service.dynamicsimulation;
 
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
@@ -12,54 +13,56 @@ import org.gridsuite.study.server.repository.dynamicsimulation.EventRepository;
 import org.gridsuite.study.server.repository.dynamicsimulation.entity.EventEntity;
 import org.gridsuite.study.server.utils.PropertyType;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static junit.framework.TestCase.assertEquals;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
+@RunWith(SpringRunner.class)
 @SpringBootTest
 @DisableElasticsearch
-class DynamicSimulationEventServiceTest {
+public class DynamicSimulationEventServiceTest {
 
     private static final String NODE_UUID_STRING = "00000000-0000-0000-0000-000000000000";
-    private static final UUID NODE_UUID = UUID.fromString(NODE_UUID_STRING);
-    private static final String EQUIPMENT_ID = "_BUS____1-BUS____5-1_AC";
-    private static final EventInfos EVENT = new EventInfos(null, NODE_UUID, EQUIPMENT_ID, "LINE", "Disconnect", List.of(
+    public static final UUID NODE_UUID = UUID.fromString(NODE_UUID_STRING);
+    public static final String EQUIPMENT_ID = "_BUS____1-BUS____5-1_AC";
+    public static final EventInfos EVENT = new EventInfos(null, NODE_UUID, EQUIPMENT_ID, "LINE", "Disconnect", List.of(
             new EventPropertyInfos(null, "staticId", EQUIPMENT_ID, PropertyType.STRING),
             new EventPropertyInfos(null, "startTime", "10", PropertyType.FLOAT),
             new EventPropertyInfos(null, "disconnectOnly", "TwoSides.ONE", PropertyType.ENUM)
     ));
 
     @Autowired
-    private EventRepository eventRepository;
+    EventRepository eventRepository;
 
     @Autowired
-    private DynamicSimulationEventService dynamicSimulationEventService;
+    DynamicSimulationEventService dynamicSimulationEventService;
 
-    @AfterEach
-    void cleanDB() {
+    public void cleanDB() {
         eventRepository.deleteAll();
     }
 
-    @BeforeEach
-    void setup() {
+    @Before
+    public void setup() {
+        cleanDB();
         // init some event by inject directly
         EventEntity event = new EventEntity(EVENT);
         eventRepository.saveAll(List.of(event));
     }
 
     @Test
-    void testGetEventsByNodeId() {
+    public void testGetEventsByNodeId() {
         // call method to be tested
         List<EventInfos> eventResultList = dynamicSimulationEventService.getEventsByNodeId(NODE_UUID);
 
@@ -75,7 +78,7 @@ class DynamicSimulationEventServiceTest {
     }
 
     @Test
-    void testGetEventByNodeIdAndEquipmentId() {
+    public void testGetEventByNodeIdAndEquipmentId() {
         // call method to be tested
         EventInfos eventResult = dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(NODE_UUID, EQUIPMENT_ID);
 
@@ -87,7 +90,7 @@ class DynamicSimulationEventServiceTest {
     }
 
     @Test
-    void testCreateEvent() {
+    public void testCreateEvent() {
         cleanDB();
         // call method to be tested
         dynamicSimulationEventService.saveEvent(NODE_UUID, EVENT);
@@ -107,7 +110,7 @@ class DynamicSimulationEventServiceTest {
     }
 
     @Test
-    void testUpdateEvent() {
+    public void testUpdateEvent() {
         EventInfos eventToUpdate = dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(NODE_UUID, EQUIPMENT_ID);
 
         // modify the event then save the change
@@ -131,7 +134,7 @@ class DynamicSimulationEventServiceTest {
     }
 
     @Test
-    void testDeleteEvents() {
+    public void testDeleteEvents() {
         EventInfos eventResult = dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(NODE_UUID, EQUIPMENT_ID);
         // call method to be tested
         dynamicSimulationEventService.deleteEvents(List.of(eventResult.getId()));
@@ -143,7 +146,7 @@ class DynamicSimulationEventServiceTest {
     }
 
     @Test
-    void testDeleteEventsByNodeId() {
+    public void testDeleteEventsByNodeId() {
         // call method to be tested
         dynamicSimulationEventService.deleteEventsByNodeId(NODE_UUID);
 
@@ -152,4 +155,5 @@ class DynamicSimulationEventServiceTest {
         // no event in the db
         assertEquals(0, eventResultList.size());
     }
+
 }

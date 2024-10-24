@@ -4,6 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -11,13 +12,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import lombok.SneakyThrows;
-import mockwebserver3.Dispatcher;
-import mockwebserver3.MockResponse;
-import mockwebserver3.MockWebServer;
-import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
-import okhttp3.Headers;
 import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.assertj.core.api.WithAssertions;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -37,10 +36,10 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,8 +52,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.io.IOException;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
@@ -62,19 +63,19 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.gridsuite.study.server.utils.TestUtils.getBinaryAsBuffer;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(MockWebServerExtension.class)
+@RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-class ShortCircuitTest implements WithAssertions {
+public class ShortCircuitTest implements WithAssertions {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ShortCircuitTest.class);
 
@@ -116,6 +117,8 @@ class ShortCircuitTest implements WithAssertions {
     @Autowired
     private MockMvc mockMvc;
 
+    private MockWebServer server;
+
     @Autowired
     private OutputDestination output;
 
@@ -148,9 +151,14 @@ class ShortCircuitTest implements WithAssertions {
     private final String shortCircuitAnalysisStoppedDestination = "shortcircuitanalysis.stopped";
     private final String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.failed";
 
-    @BeforeEach
-    void setup(final MockWebServer server) throws Exception {
+    @Before
+    public void setup() throws IOException {
+        server = new MockWebServer();
+
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
+
+        // Start the server.
+        server.start();
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
@@ -174,40 +182,55 @@ class ShortCircuitTest implements WithAssertions {
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .setHeader("busId", "BUS_TEST_ID")
                         .build(), shortCircuitAnalysisResultDestination);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), shortCircuitAnalysisResultUuidStr);
+                    return new MockResponse().setResponseCode(200)
+                        .setBody(shortCircuitAnalysisResultUuidStr)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisResultDestination);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), shortCircuitAnalysisResultUuidStr);
+                    return new MockResponse().setResponseCode(200)
+                            .setBody(shortCircuitAnalysisResultUuidStr)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING_NOT_FOUND + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_4)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisResultDestination);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), shortCircuitAnalysisResultNotFoundUuidStr);
+                    return new MockResponse().setResponseCode(200)
+                            .setBody(shortCircuitAnalysisResultNotFoundUuidStr)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisFailedDestination);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), shortCircuitAnalysisErrorResultUuidStr);
+                    return new MockResponse().setResponseCode(200)
+                            .setBody(shortCircuitAnalysisErrorResultUuidStr)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=FULL")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORT_CIRCUIT_ANALYSIS_RESULT_JSON);
+                    return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault-types")) {
-                    return new MockResponse(200);
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged" + "\\?mode=FULL&page=0&size=20&sort=id,DESC")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORT_CIRCUIT_ANALYSIS_RESULT_JSON);
+                    return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv")) {
-                    return new MockResponse.Builder().code(200).body(getBinaryAsBuffer(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT)).addHeader("Content-Type", "application/json; charset=utf-8").build();
+                    return new MockResponse().setResponseCode(200).setBody(getBinaryAsBuffer(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT))
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv")) {
-                        return new MockResponse(404);
+                        return new MockResponse().setResponseCode(404);
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/feeder_results/paged" + "\\?mode=FULL&filters=fakeFilters&page=0&size=20&sort=id,DESC")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORT_CIRCUIT_ANALYSIS_RESULT_JSON);
+                    return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORT_CIRCUIT_ANALYSIS_STATUS_JSON);
+                    return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "&resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)) {
-                    return new MockResponse(200);
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop.*")
                         || path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID : SHORT_CIRCUIT_ANALYSIS_RESULT_UUID;
@@ -215,22 +238,29 @@ class ShortCircuitTest implements WithAssertions {
                             .setHeader("resultUuid", resultUuid)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisStoppedDestination);
-                    return new MockResponse(200);
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results")) {
-                    return new MockResponse(200);
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/reports")) {
-                    return new MockResponse(200);
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/supervision/results-count")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8")
+                        .setBody("1");
                 } else if ("POST".equalsIgnoreCase(request.getMethod()) && path.equals("/v1/parameters/default")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID + "\"");
+                    return new MockResponse().setResponseCode(200).setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody("\"" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID + "\"");
                 } else if ("GET".equalsIgnoreCase(request.getMethod()) && path.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), TestUtils.resourceToString("/short-circuit-parameters.json"));
+                    return new MockResponse().setResponseCode(200).setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(TestUtils.resourceToString("/short-circuit-parameters.json"));
                 } else if ("PUT".equalsIgnoreCase(request.getMethod()) && path.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)) {
-                    return new MockResponse(200);
+                    return new MockResponse().setResponseCode(200);
                 } else {
                     LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
-                    return new MockResponse(418, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE), "Unhandled method+path: " + request.getMethod() + " " + request.getPath());
+                    return new MockResponse().setResponseCode(418)
+                            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE)
+                            .setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                 }
             }
         };
@@ -238,7 +268,7 @@ class ShortCircuitTest implements WithAssertions {
     }
 
     @Test
-    void testShortCircuitAnalysisParameters(final MockWebServer server) throws Exception {
+    public void testShortCircuitAnalysisParameters() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), UUID.fromString(CASE_SHORT_CIRCUIT_UUID_STRING));
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -258,7 +288,8 @@ class ShortCircuitTest implements WithAssertions {
     }
 
     @Test
-    void testAllBusesShortCircuit(final MockWebServer server) throws Exception {
+    public void testAllBusesShortCircuit() throws Exception {
+
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -349,8 +380,8 @@ class ShortCircuitTest implements WithAssertions {
         // Test result count
         // In short-circuit server there is no distinction between 1-bus and all-buses, so the count will return all kinds of short-circuit
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", ComputationType.SHORT_CIRCUIT.toString())
-                .queryParam("dryRun", "true"))
+                .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
+                .queryParam("dryRun", String.valueOf(true)))
                 .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
 
@@ -358,8 +389,8 @@ class ShortCircuitTest implements WithAssertions {
         // In short-circuit server there is no distinction between 1-bus and all-buses, so we remove all kinds of short-circuit
         assertEquals(1, networkModificationNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", ComputationType.SHORT_CIRCUIT.toString())
-                .queryParam("dryRun", "false"))
+                .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
+                .queryParam("dryRun", String.valueOf(false)))
             .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
@@ -369,7 +400,8 @@ class ShortCircuitTest implements WithAssertions {
     }
 
     @Test
-    void testGetShortCircuitAnalysisCsvResultNotFound(final MockWebServer server) throws Exception {
+    public void testGetShortCircuitAnalysisCsvResultNotFound() throws Exception {
+
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING_NOT_FOUND), UUID.fromString(CASE_SHORT_CIRCUIT_UUID_STRING_NOT_FOUND));
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -411,7 +443,7 @@ class ShortCircuitTest implements WithAssertions {
     }
 
     @Test
-    void testPagedShortCircuit(final MockWebServer server) throws Exception {
+    public void testPagedShortCircuit() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -473,7 +505,7 @@ class ShortCircuitTest implements WithAssertions {
     }
 
     @Test
-    void testOneBusShortCircuit(final MockWebServer server) throws Exception {
+    public void testOneBusShortCircuit() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -546,15 +578,15 @@ class ShortCircuitTest implements WithAssertions {
 
         //Test result count
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                        .queryParam("type", ComputationType.SHORT_CIRCUIT.toString())
-                        .queryParam("dryRun", "true"))
+                        .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
+                        .queryParam("dryRun", String.valueOf(true)))
                 .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
 
         // Delete Shortcircuit results
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                        .queryParam("type", ComputationType.SHORT_CIRCUIT.toString())
-                        .queryParam("dryRun", "false"))
+                        .queryParam("type", String.valueOf(ComputationType.SHORT_CIRCUIT))
+                        .queryParam("dryRun", String.valueOf(false)))
                 .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
@@ -564,7 +596,7 @@ class ShortCircuitTest implements WithAssertions {
     }
 
     @Test
-    void testResetUuidResultWhenSCFailed() throws Exception {
+    public void testResetUuidResultWhenSCFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
@@ -608,7 +640,7 @@ class ShortCircuitTest implements WithAssertions {
     }
 
     @Test
-    void testNoResult() throws Exception {
+    public void testNoResult() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -642,7 +674,7 @@ class ShortCircuitTest implements WithAssertions {
     }
 
     @Test
-    void testInvalidateShortCircuitStatus(final MockWebServer server) throws Exception {
+    public void testInvalidateShortCircuitStatus() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -743,18 +775,25 @@ class ShortCircuitTest implements WithAssertions {
         return modificationNode;
     }
 
-    @AfterEach
-    void tearDown(final MockWebServer server) {
+    private void cleanDB() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
+    }
 
+    @After
+    public void tearDown() {
         List<String> destinations = List.of(studyUpdateDestination, shortCircuitAnalysisResultDestination, shortCircuitAnalysisStoppedDestination, shortCircuitAnalysisFailedDestination);
+
+        cleanDB();
+
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
 
         try {
             TestUtils.assertServerRequestsEmptyThenShutdown(server);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
+        } catch (IOException e) {
+            // Ignoring
         }
     }
 }

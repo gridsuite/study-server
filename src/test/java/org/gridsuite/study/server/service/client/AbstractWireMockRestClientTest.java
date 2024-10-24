@@ -4,27 +4,33 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server.service.client;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import org.gridsuite.study.server.StudyApplication;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
+@RunWith(SpringRunner.class)
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public abstract class AbstractWireMockRestClientTest {
-    protected final Logger getLogger() {
+
+    public final Logger getLogger() {
         return LoggerFactory.getLogger(this.getClass());
     }
 
@@ -34,18 +40,24 @@ public abstract class AbstractWireMockRestClientTest {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
 
         wireMockServer.start();
-        getLogger().info("Mock server started at port = {}", wireMockServer.port());
+        getLogger().info("Mock server started at port = " + wireMockServer.port());
 
         // get base URL
-        return wireMockServer.baseUrl();
+        String baseUrl = wireMockServer.baseUrl();
+        return baseUrl;
     }
 
-    @AfterEach
+    @Before
+    public void setup() {
+
+    }
+
+    @After
     public void tearDown() {
         try {
             wireMockServer.shutdown();
         } catch (Exception e) {
-            getLogger().info("Can not shutdown the mock server {}", this.getClass().getSimpleName());
+            getLogger().info("Can not shutdown the mock server " + this.getClass().getSimpleName());
         }
     }
 }

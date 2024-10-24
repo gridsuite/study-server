@@ -4,6 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -31,14 +32,17 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.utils.PropertyType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.json.JSONObject;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +56,7 @@ import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -60,7 +65,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.BDDMockito.any;
 import static org.mockito.BDDMockito.eq;
 import static org.mockito.Mockito.when;
@@ -70,12 +75,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-@SpringBootTest
+@RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
+@SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-class StudyControllerDynamicSimulationTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(StudyControllerDynamicSimulationTest.class);
+public class StudyControllerDynamicSimulationTest {
 
     private static final String API_VERSION = StudyApi.API_VERSION;
     private static final String DELIMITER = "/";
@@ -131,19 +136,19 @@ class StudyControllerDynamicSimulationTest {
     private static final UUID CASE_UUID = UUID.randomUUID();
     private static final UUID STUDY_UUID = UUID.randomUUID();
     private static final UUID NETWORK_UUID = UUID.randomUUID();
-    private static final UUID NODE_UUID = UUID.randomUUID();
+    public static final UUID NODE_UUID = UUID.randomUUID();
     private static final UUID NODE_NOT_DONE_UUID = UUID.randomUUID();
     private static final UUID NODE_NOT_RUN_UUID = UUID.randomUUID();
     private static final UUID RESULT_UUID = UUID.randomUUID();
 
     private static final String PARAMETERS = String.format("{\"startTime\": %d, \"stopTime\": %d}", START_TIME, STOP_TIME);
 
-    private static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
-    private static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
+    public static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
+    public static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
 
     // event data
-    private static final String EQUIPMENT_ID = "_BUS____1-BUS____5-1_AC";
-    private static final EventInfos EVENT = new EventInfos(null, NODE_UUID, EQUIPMENT_ID, "LINE", "Disconnect", List.of(
+    public static final String EQUIPMENT_ID = "_BUS____1-BUS____5-1_AC";
+    public static final EventInfos EVENT = new EventInfos(null, NODE_UUID, EQUIPMENT_ID, "LINE", "Disconnect", List.of(
             new EventPropertyInfos(null, "staticId", EQUIPMENT_ID, PropertyType.STRING),
             new EventPropertyInfos(null, "startTime", "10", PropertyType.FLOAT),
             new EventPropertyInfos(null, "disconnectOnly", "TwoSides.ONE", PropertyType.ENUM)
@@ -160,11 +165,14 @@ class StudyControllerDynamicSimulationTest {
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
 
+    @Autowired
+    StudyService studyService;
+
     @MockBean
-    private LoadFlowService loadFlowService;
+    LoadFlowService loadFlowService;
 
     @SpyBean
-    private DynamicSimulationService dynamicSimulationService;
+    DynamicSimulationService dynamicSimulationService;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -176,19 +184,30 @@ class StudyControllerDynamicSimulationTest {
     private InputDestination input;
 
     //output destinations
-    private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
-    private static final String STUDY_UPDATE_DESTINATION = "study.update";
-    private static final String DS_RESULT_DESTINATION = "ds.result";
-    private static final String DS_STOPPED_DESTINATION = "ds.stopped";
-    private static final String DS_FAILED_DESTINATION = "ds.failed";
+    private final String elementUpdateDestination = "element.update";
+    private final String studyUpdateDestination = "study.update";
+    private final String dsResultDestination = "ds.result";
+    private final String dsStoppedDestination = "ds.stopped";
+    private final String dsFailedDestination = "ds.failed";
 
-    @AfterEach
-    void tearDown() {
+    private Logger getLogger() {
+        return LoggerFactory.getLogger(this.getClass());
+    }
+
+    @Before
+    public void setup() {
+    }
+
+    @After
+    public void tearDown() {
+        cleanDB();
+        List<String> destinations = List.of(studyUpdateDestination, dsFailedDestination, dsResultDestination, dsStoppedDestination);
+        TestUtils.assertQueuesEmptyThenClear(destinations, output);
+    }
+
+    private void cleanDB() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
-
-        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, DS_FAILED_DESTINATION, DS_RESULT_DESTINATION, DS_STOPPED_DESTINATION);
-        TestUtils.assertQueuesEmptyThenClear(destinations, output);
     }
 
     private RootNode getRootNode(UUID study) throws Exception {
@@ -228,7 +247,7 @@ class StudyControllerDynamicSimulationTest {
 
         studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(mess).isNotNull();
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertThat(mess.getHeaders()).containsEntry(NotificationService.HEADER_INSERT_MODE, InsertMode.CHILD.name());
@@ -236,7 +255,8 @@ class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    void testRunDynamicSimulationGivenRegularNodeAndFailed() throws Exception {
+    public void testRunDynamicSimulationGivenRegularNodeAndFailed() throws Exception {
+
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -258,13 +278,13 @@ class StudyControllerDynamicSimulationTest {
 
         // --- check async messages emitted by runDynamicSimulation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         // resultUuid must be present in database at this moment
         UUID actualResultUuid = networkModificationTreeService.getComputationResultUuid(modificationNode1Uuid, ComputationType.DYNAMIC_SIMULATION).get();
-        LOGGER.info("Actual result uuid in the database = {}", actualResultUuid);
+        getLogger().info("Actual result uuid in the database = " + actualResultUuid);
         assertThat(actualResultUuid).isEqualTo(RESULT_UUID);
 
         // mock the notification from dynamic-simulation server in case of failed
@@ -273,12 +293,12 @@ class StudyControllerDynamicSimulationTest {
         input.send(MessageBuilder.withPayload("")
                 .setHeader("resultUuid", RESULT_UUID.toString())
                 .setHeader("receiver", receiver)
-                .build(), DS_FAILED_DESTINATION
+                .build(), dsFailedDestination
         );
 
         // --- check async messages emitted by consumeDsFailed of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED from channel : studyUpdateDestination
-        dynamicSimulationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED);
@@ -287,7 +307,7 @@ class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    void testRunDynamicSimulationGivenRootNode() throws Exception {
+    public void testRunDynamicSimulationGivenRootNode() throws Exception {
         // create a root node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -302,7 +322,8 @@ class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    void testRunDynamicSimulationGivenRegularNode() throws Exception {
+    public void testRunDynamicSimulationGivenRegularNode() throws Exception {
+
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -325,13 +346,13 @@ class StudyControllerDynamicSimulationTest {
 
         // --- check async messages emitted by runDynamicSimulation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         // resultUuid must be present in database at this moment
         UUID actualResultUuid = networkModificationTreeService.getComputationResultUuid(modificationNode1Uuid, ComputationType.DYNAMIC_SIMULATION).get();
-        LOGGER.info("Actual result uuid in the database = {}", actualResultUuid);
+        getLogger().info("Actual result uuid in the database = " + actualResultUuid);
         assertThat(actualResultUuid).isEqualTo(RESULT_UUID);
 
         // mock the notification from dynamic-simulation server in case of having the result
@@ -340,18 +361,18 @@ class StudyControllerDynamicSimulationTest {
         input.send(MessageBuilder.withPayload("")
                 .setHeader("resultUuid", RESULT_UUID.toString())
                 .setHeader("receiver", receiver)
-                .build(), DS_RESULT_DESTINATION
+                .build(), dsResultDestination
         );
 
         // --- check async messages emitted by consumeDsResult of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        dynamicSimulationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
 
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(dynamicSimulationResultMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT);
@@ -359,8 +380,8 @@ class StudyControllerDynamicSimulationTest {
         //Test result count
         Mockito.doAnswer(invocation -> 1).when(dynamicSimulationService).getResultsCount();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
-                        .queryParam("type", ComputationType.DYNAMIC_SIMULATION.toString())
-                        .queryParam("dryRun", "true"))
+                        .queryParam("type", String.valueOf(ComputationType.DYNAMIC_SIMULATION))
+                        .queryParam("dryRun", String.valueOf(true)))
                 .andExpect(status().isOk())
                 .andReturn();
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
@@ -368,15 +389,16 @@ class StudyControllerDynamicSimulationTest {
         //Delete Dynamic result init results
         Mockito.doNothing().when(dynamicSimulationService).deleteResults();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
-                        .queryParam("type", ComputationType.DYNAMIC_SIMULATION.toString())
-                        .queryParam("dryRun", "false"))
+                        .queryParam("type", String.valueOf(ComputationType.DYNAMIC_SIMULATION))
+                        .queryParam("dryRun", String.valueOf(false)))
                 .andExpect(status().isOk())
                 .andReturn();
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
     }
 
     @Test
-    void testRunDynamicSimulationGivenRegularNodeAndStopped() throws Exception {
+    public void testRunDynamicSimulationGivenRegularNodeAndStopped() throws Exception {
+
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -399,13 +421,13 @@ class StudyControllerDynamicSimulationTest {
 
         // --- check async messages emitted by runDynamicSimulation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         // resultUuid must be present in database at this moment
         UUID actualResultUuid = networkModificationTreeService.getComputationResultUuid(modificationNode1Uuid, ComputationType.DYNAMIC_SIMULATION).get();
-        LOGGER.info("Actual result uuid in the database = {}", actualResultUuid);
+        getLogger().info("Actual result uuid in the database = " + actualResultUuid);
         assertThat(actualResultUuid).isEqualTo(RESULT_UUID);
 
         // mock the notification from dynamic-simulation server in case of stop
@@ -414,19 +436,19 @@ class StudyControllerDynamicSimulationTest {
         input.send(MessageBuilder.withPayload("")
                 .setHeader("resultUuid", RESULT_UUID.toString())
                 .setHeader("receiver", receiver)
-                .build(), DS_STOPPED_DESTINATION
+                .build(), dsStoppedDestination
         );
 
         // --- check async messages emitted by consumeDsStopped of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        dynamicSimulationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 
     @Test
-    void testGetDynamicSimulationTimeSeriesResultGivenNodeNotDone() throws Exception {
+    public void testGetDynamicSimulationTimeSeriesResultGivenNodeNotDone() throws Exception {
         // setup DynamicSimulationService mock
         Mockito.doAnswer(invocation -> null).when(dynamicSimulationService).getTimeSeriesResult(NODE_NOT_DONE_UUID, null);
 
@@ -439,7 +461,7 @@ class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    void testGetDynamicSimulationTimeSeriesResult() throws Exception {
+    public void testGetDynamicSimulationTimeSeriesResult() throws Exception {
         // timeseries
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{32, 64, 128, 256});
         List<DoubleTimeSeries> timeSeries = new ArrayList<>(Arrays.asList(
@@ -461,14 +483,14 @@ class StudyControllerDynamicSimulationTest {
 
         // --- check result --- //
         String timeSeriesExpectedJson = TimeSeries.toJson(timeSeries);
-        LOGGER.info("Time series expected Json = {}", timeSeriesExpectedJson);
-        LOGGER.info("Time series result Json = {}", timeSeriesResultJson);
+        getLogger().info("Time series expected Json = " + timeSeriesExpectedJson);
+        getLogger().info("Time series result Json = " + timeSeriesResultJson);
 
         assertThat(objectMapper.readTree(timeSeriesResultJson)).isEqualTo(objectMapper.readTree(timeSeriesExpectedJson));
     }
 
     @Test
-    void testGetDynamicSimulationTimelineResultGivenNodeNotDone() throws Exception {
+    public void testGetDynamicSimulationTimelineResultGivenNodeNotDone() throws Exception {
         // setup DynamicSimulationService mock
         Mockito.doAnswer(invocation -> null).when(dynamicSimulationService).getTimelineResult(NODE_NOT_DONE_UUID);
 
@@ -481,7 +503,7 @@ class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    void testGetDynamicSimulationTimelineResult() throws Exception {
+    public void testGetDynamicSimulationTimelineResult() throws Exception {
         List<TimelineEventInfos> timelineEventInfosList = List.of(
                 new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
                 new TimelineEventInfos(102479, "_BUS____2-BUS____5-1_AC", "LINE : opening both sides"),
@@ -507,7 +529,7 @@ class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    void testGetDynamicSimulationStatusResultGivenNodeNotRun() throws Exception {
+    public void testGetDynamicSimulationStatusResultGivenNodeNotRun() throws Exception {
         // setup DynamicSimulationService mock
         Mockito.doAnswer(invocation -> null).when(dynamicSimulationService).getStatus(NODE_NOT_RUN_UUID);
 
@@ -520,7 +542,7 @@ class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    void testGetDynamicSimulationTimeSeriesMetadata() throws Exception {
+    public void testGetDynamicSimulationTimeSeriesMetadata() throws Exception {
         // setup DynamicSimulationService mock
         // timeseries metadata
         List<TimeSeriesMetadataInfos> timeSeriesMetadataInfosList = List.of(new TimeSeriesMetadataInfos(TIME_SERIES_NAME_1), new TimeSeriesMetadataInfos(TIME_SERIES_NAME_2));
@@ -544,7 +566,7 @@ class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    void testGetDynamicSimulationStatus() throws Exception {
+    public void testGetDynamicSimulationStatus() throws Exception {
         // setup DynamicSimulationService mock
         Mockito.doAnswer(invocation -> DynamicSimulationStatus.DIVERGED).when(dynamicSimulationService).getStatus(NODE_UUID);
 
@@ -558,13 +580,13 @@ class StudyControllerDynamicSimulationTest {
 
         // --- check result --- //
         DynamicSimulationStatus statusExpected = DynamicSimulationStatus.DIVERGED;
-        LOGGER.info("Status expected = {}", statusExpected);
-        LOGGER.info("Status result = {}", statusResult);
+        getLogger().info("Status expected = " + statusExpected);
+        getLogger().info("Status result = " + statusResult);
         assertThat(statusResult).isEqualTo(statusExpected);
     }
 
     @Test
-    void testGetDynamicSimulationMappings() throws Exception {
+    public void testGetDynamicSimulationMappings() throws Exception {
         // setup DynamicSimulationService mock
         Mockito.doAnswer(invocation -> MAPPINGS).when(dynamicSimulationService).getMappings(STUDY_UUID);
 
@@ -580,14 +602,15 @@ class StudyControllerDynamicSimulationTest {
         List<MappingInfos> mappingInfos = objectMapper.readValue(content, new TypeReference<>() { });
 
         // --- check result --- //
-        LOGGER.info("Mapping infos expected in Json = {}", objectMapper.writeValueAsString(MAPPINGS));
-        LOGGER.info("Mapping infos result in Json = {}", objectMapper.writeValueAsString(mappingInfos));
+        getLogger().info("Mapping infos expected in Json = " + objectMapper.writeValueAsString(MAPPINGS));
+        getLogger().info("Mapping infos result in Json = " + objectMapper.writeValueAsString(mappingInfos));
         assertThat(mappingInfos).hasSameSizeAs(MAPPINGS);
 
     }
 
     @Test
-    void testSetAndGetDynamicSimulationParameters() throws Exception {
+    public void testSetAndGetDynamicSimulationParameters() throws Exception {
+
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -619,14 +642,15 @@ class StudyControllerDynamicSimulationTest {
         String expectedJson = objectMapper.writeValueAsString(defaultDynamicSimulationParameters);
 
         // result parameters must be identical to persisted parameters
-        LOGGER.info("Parameters expected in Json = {}", expectedJson);
-        LOGGER.info("Parameters result in Json = {}", resultJson);
+        getLogger().info("Parameters expected in Json = " + expectedJson);
+        getLogger().info("Parameters result in Json = " + resultJson);
         assertThat(objectMapper.readTree(resultJson)).isEqualTo(objectMapper.readTree(expectedJson));
 
     }
 
     @Test
-    void testGetDynamicSimulationModels() throws Exception {
+    public void testGetDynamicSimulationModels() throws Exception {
+
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -662,13 +686,13 @@ class StudyControllerDynamicSimulationTest {
         String expectedJson = objectMapper.writeValueAsString(MODELS);
 
         // result parameters must be identical to persisted parameters
-        LOGGER.info("Models expect in Json = {}", expectedJson);
-        LOGGER.info("Models result in Json = {}", resultJson);
+        getLogger().info("Models expect in Json = " + expectedJson);
+        getLogger().info("Models result in Json = " + resultJson);
         assertThat(objectMapper.readTree(resultJson)).isEqualTo(objectMapper.readTree(expectedJson));
     }
 
     @Test
-    void testGetDynamicSimulationModelsGivenEmptyMapping() throws Exception {
+    public void testGetDynamicSimulationModelsGivenEmptyMapping() throws Exception {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -703,15 +727,15 @@ class StudyControllerDynamicSimulationTest {
 
     private void checkNotificationsAfterInjectingDynamicSimulationParameters(UUID studyUuid) {
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS and UPDATE_TYPE_COMPUTATION_PARAMETERS from channel : studyUpdateDestination
-        Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(studyUpdateMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-        studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        studyUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // must have message HEADER_USER_ID_VALUE from channel : elementUpdateDestination
-        Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
+        Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);
         assertThat(elementUpdateMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_ELEMENT_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_MODIFIED_BY, HEADER_USER_ID_VALUE);
@@ -721,26 +745,27 @@ class StudyControllerDynamicSimulationTest {
 
     private void checkNotificationsAfterInjectingDynamicSimulationEvent(UUID studyUuid, String crudType) {
         // must have message crudType from channel : studyUpdateDestination
-        Message<byte[]> studyUpdateMessageBegin = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> studyUpdateMessageBegin = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(studyUpdateMessageBegin.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, crudType);
 
         // must have message EVENTS_CRUD_FINISHED from channel : studyUpdateDestination
-        Message<byte[]> elementUpdateMessageFinished = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> elementUpdateMessageFinished = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(elementUpdateMessageFinished.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.EVENTS_CRUD_FINISHED);
 
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> studyUpdateMessageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> studyUpdateMessageStatus = output.receive(TIMEOUT, studyUpdateDestination);
         assertThat(studyUpdateMessageStatus.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 
     @Test
-    void testCrudDynamicSimulationEvents() throws Exception {
+    public void testCrudDynamicSimulationEvents() throws Exception {
+
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();

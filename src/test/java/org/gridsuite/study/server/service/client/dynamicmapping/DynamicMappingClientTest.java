@@ -4,8 +4,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server.service.client.dynamicmapping;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
@@ -17,11 +19,8 @@ import org.gridsuite.study.server.dto.dynamicmapping.VariablesSetInfos;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.service.client.dynamicmapping.impl.DynamicMappingClientImpl;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
@@ -29,12 +28,13 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
+public class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
     private static final String[] MAPPING_NAMES = {"mapping01", "mapping02"};
     private static final List<MappingInfos> MAPPINGS = Arrays.asList(new MappingInfos(MAPPING_NAMES[0]),
                                                         new MappingInfos(MAPPING_NAMES[1]));
@@ -60,30 +60,32 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
     private DynamicMappingClient dynamicMappingClient;
 
     @Autowired
-    private RestTemplate restTemplate;
+    RestTemplate restTemplate;
 
     @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
-    private RemoteServicesProperties remoteServicesProperties;
+    RemoteServicesProperties remoteServicesProperties;
 
-    @BeforeEach
+    @Override
     public void setup() {
+        super.setup();
+
         // config client
         remoteServicesProperties.setServiceUri("dynamic-mapping-server", initMockWebServer());
         dynamicMappingClient = new DynamicMappingClientImpl(remoteServicesProperties, restTemplate);
     }
 
     @Test
-    void testGetAllMappings() throws Exception {
+    public void testGetAllMappings() throws JsonProcessingException {
 
         // configure mock server response for test case getAllMappings - mappings
         String getAllMappingsEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
         wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(getAllMappingsEndPointUrl + ".*"))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(MAPPINGS))
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withHeader("Content-Type", "application/json; charset=utf-8")
                 ));
 
         // call method to be tested
@@ -91,45 +93,49 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
 
         // --- check result --- //
         // must contain two elements
-        getLogger().info("Size of result mappings = {}", allMappings.size());
+        getLogger().info("Size of result mappings = " + allMappings.size());
         assertEquals(2, allMappings.size());
-        getLogger().info("Result mappings = {}", objectMapper.writeValueAsString(allMappings));
+        getLogger().info("Result mappings = " + objectMapper.writeValueAsString(allMappings));
         // first element's name must be mappingNames[0]
         assertEquals(MAPPING_NAMES[0], allMappings.get(0).getName());
         // first element's name must be mappingNames[1]
         assertEquals(MAPPING_NAMES[1], allMappings.get(1).getName());
     }
 
-    @Test
-    void testGetAllMappingsGivenNotFound() {
+    @Test(expected = StudyException.class)
+    public void testGetAllMappingsGivenNotFound() {
+
         // configure mock server response for test case not found getAllMappings - mappings
         String getAllMappingsEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
         wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(getAllMappingsEndPointUrl + ".*"))
                 .willReturn(WireMock.notFound()
                 ));
+
         // call method to be tested
-        assertThrows(StudyException.class, () -> dynamicMappingClient.getAllMappings());
+        dynamicMappingClient.getAllMappings();
     }
 
-    @Test
-    void testGetAllMappingsGivenBadRequest() {
+    @Test(expected = HttpStatusCodeException.class)
+    public void testGetAllMappingsGivenBadRequest() {
+
         // configure mock server response for test case bad request getAllMappings - mappings
         String getAllMappingsEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
         wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(getAllMappingsEndPointUrl + ".*"))
                 .willReturn(WireMock.badRequest()
                 ));
+
         // call method to be tested
-        assertThrows(HttpStatusCodeException.class, () -> dynamicMappingClient.getAllMappings());
+        dynamicMappingClient.getAllMappings();
     }
 
     @Test
-    void testGetModels() throws Exception {
+    public void testGetModels() throws JsonProcessingException {
         // configure mock server response for test case getModels - mappings/{mappingName}/models
         String getModelsEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
         wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(getModelsEndPointUrl + MAPPING_NAMES[0] + DELIMITER + "models" + ".*"))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(MODELS))
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withHeader("Content-Type", "application/json; charset=utf-8")
                 ));
 
         // call method to be tested
@@ -141,14 +147,14 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
         // two json must equivalent
         String expectedModelsJson = objectMapper.writeValueAsString(MODELS);
         String resultModelsJson = objectMapper.writeValueAsString(resultModelInfosList);
-        getLogger().info("Expect models in json = {}", expectedModelsJson);
-        getLogger().info("Result models in json = {}", resultModelsJson);
+        getLogger().info("Expect models in json = " + expectedModelsJson);
+        getLogger().info("Result models in json = " + resultModelsJson);
         assertEquals(objectMapper.readTree(expectedModelsJson), objectMapper.readTree(resultModelsJson));
 
     }
 
     @Test
-    void testGetModelsGiveBlankMapping() {
+    public void testGetModelsGiveBlankMapping() {
         // call method to be tested
         List<ModelInfos> modelInfosList = dynamicMappingClient.getModels("");
 
@@ -157,25 +163,27 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
         assertNull(modelInfosList);
     }
 
-    @Test
-    void testGetModelsGivenNotFound() {
+    @Test(expected = StudyException.class)
+    public void testGetModelsGivenNotFound() {
         // configure mock server response for test case getModels - mappings/{mappingName}/models
         String getModelsEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
         wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(getModelsEndPointUrl + MAPPING_NAMES[0] + DELIMITER + "models" + ".*"))
                 .willReturn(WireMock.notFound()
                 ));
+
         // call method to be tested
-        assertThrows(StudyException.class, () -> dynamicMappingClient.getModels(MAPPING_NAMES[0]));
+        dynamicMappingClient.getModels(MAPPING_NAMES[0]);
     }
 
-    @Test
-    void testGetModelsGivenBadRequest() {
+    @Test(expected = HttpStatusCodeException.class)
+    public void testGetModelsGivenBadRequest() {
         // configure mock server response for test case getModels - mappings/{mappingName}/models
         String getModelsEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
         wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(getModelsEndPointUrl + MAPPING_NAMES[0] + DELIMITER + "models" + ".*"))
                 .willReturn(WireMock.badRequest()
                 ));
+
         // call method to be tested
-        assertThrows(HttpStatusCodeException.class, () -> dynamicMappingClient.getModels(MAPPING_NAMES[0]));
+        dynamicMappingClient.getModels(MAPPING_NAMES[0]);
     }
 }

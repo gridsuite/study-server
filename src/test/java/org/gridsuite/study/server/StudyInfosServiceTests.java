@@ -7,28 +7,32 @@
 package org.gridsuite.study.server;
 
 import com.google.common.collect.Iterables;
+
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.elasticsearch.StudyInfosRepository;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
+@RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-class StudyInfosServiceTests {
+public class StudyInfosServiceTests {
 
     private static final UUID STUDY_UUID_1 = UUID.fromString("11888888-0000-0000-0000-111111111111");
     private static final UUID STUDY_UUID_2 = UUID.fromString("11888888-0000-0000-0000-22222222222");
@@ -39,13 +43,13 @@ class StudyInfosServiceTests {
     @Autowired
     private StudyInfosRepository studyInfosRepository;
 
-    @AfterEach
-    void setUp() {
+    @Before
+    public void setUp() {
         studyInfosRepository.deleteAll();
     }
 
     @Test
-    void testAddDeleteStudyInfos() {
+    public void testAddDeleteStudyInfos() {
         MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher1 = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_UUID_1, "UCTE");
         MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher2 = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_UUID_2, "UCTE");
         assertThat(studyInfosService.add(matcher1.getReference()), matcher1);
@@ -64,7 +68,7 @@ class StudyInfosServiceTests {
     }
 
     @Test
-    void searchStudyInfos() {
+    public void searchStudyInfos() {
         CreatedStudyBasicInfos studyInfos11 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").caseFormat("XIIDM").build();
         CreatedStudyBasicInfos studyInfos12 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").build();
         CreatedStudyBasicInfos studyInfos21 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-22222222221")).userId("userId2").caseFormat("XIIDM").build();

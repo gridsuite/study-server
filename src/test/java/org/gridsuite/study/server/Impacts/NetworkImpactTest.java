@@ -6,8 +6,16 @@
  */
 package org.gridsuite.study.server.Impacts;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.iidm.network.IdentifiableType;
+import static org.gridsuite.study.server.utils.ImpactUtils.createCollectionElementImpact;
+import static org.gridsuite.study.server.utils.ImpactUtils.createElementImpact;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+
 import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact;
 import org.gridsuite.study.server.dto.impacts.CollectionElementImpact;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
@@ -17,27 +25,23 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationResult.App
 import org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.iidm.network.IdentifiableType;
 
-import static org.gridsuite.study.server.utils.ImpactUtils.createCollectionElementImpact;
-import static org.gridsuite.study.server.utils.ImpactUtils.createElementImpact;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import lombok.SneakyThrows;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-class NetworkImpactTest {
+public class NetworkImpactTest {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Test
-    void testNetworkModificationResult() throws Exception {
+    @SneakyThrows
+    public void testNetworkModificationResult() {
         SimpleElementImpact creationImpact = createElementImpact(SimpleImpactType.CREATION, IdentifiableType.LINE, "lineId", new TreeSet<>(List.of("s2", "s1")));
         SimpleElementImpact modificationImpact = createElementImpact(SimpleImpactType.MODIFICATION, IdentifiableType.LOAD, "loadId", new TreeSet<>(List.of("s3")));
         SimpleElementImpact injectionDeletionImpact = createElementImpact(SimpleImpactType.DELETION, IdentifiableType.GENERATOR, "generatorId", new TreeSet<>(List.of("s4")));
@@ -80,7 +84,8 @@ class NetworkImpactTest {
     }
 
     @Test
-    void testCollectionElementImpact() throws Exception {
+    @SneakyThrows
+    public void testCollectionElementImpact() {
 
         CollectionElementImpact linesCollectionImpact = createCollectionElementImpact(IdentifiableType.LINE);
         CollectionElementImpact loadsCollectionImpact = createCollectionElementImpact(IdentifiableType.LOAD);
@@ -109,7 +114,8 @@ class NetworkImpactTest {
     }
 
     @Test
-    void testNetworkImpact() throws Exception {
+    @SneakyThrows
+    public void testNetworkImpact() {
         NetworkImpactsInfos networkImpactsInfos = NetworkImpactsInfos.builder()
             .impactedSubstationsIds(new HashSet<>(List.of("s1", "s2")))
             .deletedEquipments(

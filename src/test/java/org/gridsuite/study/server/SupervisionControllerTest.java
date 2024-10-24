@@ -28,14 +28,17 @@ import org.gridsuite.study.server.service.NetworkConversionService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -43,7 +46,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -54,9 +57,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @author Sylvain Bouzols <sylvain.bouzols at rte-france.com>
  */
 
+@RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
-@SpringBootTest(classes = {StudyApplication.class})
-class SupervisionControllerTest {
+@SpringBootTest
+@ContextConfiguration(classes = {StudyApplication.class})
+public class SupervisionControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -108,8 +113,8 @@ class SupervisionControllerTest {
         return study;
     }
 
-    @BeforeEach
-    void setup() {
+    @Before
+    public void setup() {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
         network.getIdentifiables().forEach(idable -> equipmentInfosService.addEquipmentInfos(toEquipmentInfos(idable)));
@@ -120,15 +125,17 @@ class SupervisionControllerTest {
         when(networkConversionService.checkStudyIndexationStatus(NETWORK_UUID)).thenReturn(true);
     }
 
-    @AfterEach
-    void tearDown() {
+    @After
+    public void tearDown() {
         equipmentInfosService.deleteAllByNetworkUuid(NETWORK_UUID);
         studyRepository.deleteAll();
     }
 
     private StudyEntity initStudy() throws Exception {
         StudyEntity study = insertDummyStudy(NETWORK_UUID, CASE_UUID, "");
+
         assertIndexationStatus(STUDY_UUID, StudyIndexationStatus.INDEXED.name());
+
         return study;
     }
 
@@ -155,7 +162,7 @@ class SupervisionControllerTest {
     }
 
     @Test
-    void testESConfig() throws Exception {
+    public void testESConfig() throws Exception {
         MvcResult mvcResult;
 
         // Test get elasticsearch host
@@ -181,7 +188,7 @@ class SupervisionControllerTest {
     }
 
     @Test
-    void testDeleteIndexation() throws Exception {
+    public void testDeleteIndexation() throws Exception {
         initStudy();
 
         assertIndexationCount(74, 0);
@@ -206,7 +213,7 @@ class SupervisionControllerTest {
     }
 
     @Test
-    void testInvalidateAllNodesBuilds() throws Exception {
+    public void testInvalidateAllNodesBuilds() throws Exception {
         initStudy();
 
         mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/nodes/builds", STUDY_UUID))
@@ -218,7 +225,7 @@ class SupervisionControllerTest {
     }
 
     @Test
-    void testOrphan() throws Exception {
+    public void testOrphan() throws Exception {
         MvcResult mvcResult;
 
         // Test get orphan indexed equipments

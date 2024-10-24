@@ -4,6 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -19,15 +20,15 @@ import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import com.jayway.jsonpath.spi.mapper.MappingProvider;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManager;
+import com.powsybl.loadflow.LoadFlowResult;
+import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.client.NetworkStoreService;
 import lombok.SneakyThrows;
-import mockwebserver3.Dispatcher;
-import mockwebserver3.MockResponse;
-import mockwebserver3.MockWebServer;
-import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
-import okhttp3.Headers;
 import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -44,10 +45,10 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,40 +59,42 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.data.util.Pair;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(MockWebServerExtension.class)
+@RunWith(SpringRunner.class)
 @AutoConfigureWebTestClient
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-class NetworkModificationTreeTest {
+public class NetworkModificationTreeTest {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationTreeTest.class);
-    private static final String NODE_UPDATED = "nodeUpdated";
-    private static final long TIMEOUT = 1000;
+    public static final String NODE_UPDATED = "nodeUpdated";
 
     @Autowired
     private MockMvc mockMvc;
 
+    private static final long TIMEOUT = 1000;
     @Autowired
     private StudyRepository studyRepository;
 
@@ -114,6 +117,9 @@ class NetworkModificationTreeTest {
     private ObjectMapper objectMapper;
 
     private ObjectWriter objectWriter;
+
+    private LoadFlowResult loadFlowResult;
+    private LoadFlowResult loadFlowResult2;
 
     @Autowired
     private CaseService caseService;
@@ -157,6 +163,8 @@ class NetworkModificationTreeTest {
     @Autowired
     private ActionsService actionsService;
 
+    private MockWebServer server;
+
     @MockBean
     private NetworkStoreService networkStoreService;
 
@@ -178,11 +186,11 @@ class NetworkModificationTreeTest {
     @MockBean
     private Network network;
 
-    private static final String STUDY_UPDATE_DESTINATION = "study.update";
-    private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
+    private String studyUpdateDestination = "study.update";
+    private String elementUpdateDestination = "element.update";
 
-    @BeforeEach
-    void setUp(final MockWebServer server) {
+    @Before
+    public void setUp() throws IOException {
         Configuration.defaultConfiguration();
         MockitoAnnotations.initMocks(this);
         objectMapper.enable(DeserializationFeature.USE_LONG_FOR_INTS);
@@ -199,6 +207,7 @@ class NetworkModificationTreeTest {
         doNothing().when(variantManager).removeVariant(VARIANT_ID);
 
         Configuration.setDefaults(new Configuration.Defaults() {
+
             private final JsonProvider jsonProvider = new JacksonJsonProvider(objectMapper);
             private final MappingProvider mappingProvider = new JacksonMappingProvider(objectMapper);
 
@@ -217,6 +226,18 @@ class NetworkModificationTreeTest {
                 return EnumSet.noneOf(Option.class);
             }
         });
+
+        loadFlowResult = new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs",
+                                                List.of(new LoadFlowResultImpl.ComponentResultImpl(1, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 10, "bus_1", 5., 4.3),
+                                                        new LoadFlowResultImpl.ComponentResultImpl(2, 2, LoadFlowResult.ComponentResult.Status.FAILED, 20, "bus_2", 10., 2.5)));
+        loadFlowResult2 = new LoadFlowResultImpl(false, Map.of("key_3", "metric_3", "key_4", "metric_4"), "logs2",
+            List.of(new LoadFlowResultImpl.ComponentResultImpl(0, 0, LoadFlowResult.ComponentResult.Status.MAX_ITERATION_REACHED, 30, "bus_2", 8., 2.6),
+                new LoadFlowResultImpl.ComponentResultImpl(0, 1, LoadFlowResult.ComponentResult.Status.FAILED, 15, "bus_3", 13., 1.67)));
+
+        server = new MockWebServer();
+
+        // Start the server.
+        server.start();
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
@@ -243,37 +264,52 @@ class NetworkModificationTreeTest {
                 String path = Objects.requireNonNull(request.getPath());
 
                 if ((path.matches("/v1/results/.*") || path.matches("/v1/non-evacuated-energy/results/.*")) && request.getMethod().equals("DELETE")) {
-                    return new MockResponse(HttpStatus.OK.value());
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/network-modifications.*")) {
-                    return new MockResponse(HttpStatus.OK.value());
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value());
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
-                    return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(0));
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                        .addHeader("Content-Type", "application/json; charset=utf-8")
+                        .setBody(objectMapper.writeValueAsString(0));
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_2 + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
-                    return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(2));
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                        .addHeader("Content-Type", "application/json; charset=utf-8")
+                        .setBody(objectMapper.writeValueAsString(2));
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_3 + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
-                    return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(0));
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                        .addHeader("Content-Type", "application/json; charset=utf-8")
+                        .setBody(objectMapper.writeValueAsString(0));
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID + "/.*") && request.getMethod().equals("GET")) {
-                    return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of()));
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                        .addHeader("Content-Type", "application/json; charset=utf-8")
+                        .setBody(objectMapper.writeValueAsString(List.of()));
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_2 + "/.*") && request.getMethod().equals("GET")) {
-                    return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of("S1", "S2")));
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                            .addHeader("Content-Type", "application/json; charset=utf-8")
+                            .setBody(objectMapper.writeValueAsString(List.of("S1", "S2")));
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_3 + "/.*") && request.getMethod().equals("GET")) {
-                    return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of()));
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                            .addHeader("Content-Type", "application/json; charset=utf-8")
+                            .setBody(objectMapper.writeValueAsString(List.of()));
                 } else if (path.matches("/v1/groups/.*") && request.getMethod().equals("DELETE")) {
-                    return new MockResponse(HttpStatus.OK.value());
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/reports") && request.getMethod().equals("DELETE")) {
-                    return new MockResponse(HttpStatus.OK.value());
+                    return new MockResponse().setResponseCode(HttpStatus.OK.value())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
-                    LOGGER.error("Path not supported: {}", request.getPath());
-                    return new MockResponse(HttpStatus.NOT_FOUND.value());
+                    LOGGER.error("Path not supported: " + request.getPath());
+                    return new MockResponse().setResponseCode(HttpStatus.NOT_FOUND.value());
                 }
             }
         };
         server.setDispatcher(dispatcher);
     }
 
-    @AfterEach
-    void tearDown() {
-        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, ELEMENT_UPDATE_DESTINATION);
+    @After
+    public void cleanDB() {
+        List<String> destinations = List.of(studyUpdateDestination, elementUpdateDestination);
         networkModificationNodeInfoRepository.deleteAll();
         rootNodeInfoRepository.deleteAll();
         nodeRepository.deleteAll();
@@ -281,7 +317,7 @@ class NetworkModificationTreeTest {
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
     }
 
-    private static StudyEntity createDummyStudy(UUID networkUuid) {
+    StudyEntity createDummyStudy(UUID networkUuid) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat("").caseUuid(UUID.randomUUID())
             .caseName("caseName1")
             .networkId("netId")
@@ -291,16 +327,16 @@ class NetworkModificationTreeTest {
     }
 
     @Test
-    void testStudyWithNoNodes() {
+    public void testStudyWithNoNodes() {
         StudyEntity studyEntity = createDummyStudy(NETWORK_UUID);
         var study = studyRepository.save(studyEntity);
 
         UUID studyUuid = study.getId();
-        assertThrows(StudyException.class, () -> networkModificationTreeService.getStudyRootNodeUuid(studyUuid), "ELEMENT_NOT_FOUND");
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getStudyRootNodeUuid(studyUuid));
     }
 
     @Test
-    void testGetRoot() throws Exception {
+    public void testGetRoot() throws Exception {
         StudyEntity study = insertDummyStudy();
         RootNode root = getRootNode(study.getId());
 
@@ -329,6 +365,7 @@ class NetworkModificationTreeTest {
     }
 
     private RootNode getRootNode(UUID study) throws Exception {
+
         return objectMapper.readValue(mockMvc.perform(get("/v1/studies/{uuid}/tree", study))
                     .andExpect(status().isOk())
                     .andReturn()
@@ -337,7 +374,7 @@ class NetworkModificationTreeTest {
     }
 
     @Test
-    void testNodeCreation() throws Exception {
+    public void testNodeCreation() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         // Check build status initialized to NOT_BUILT if null
@@ -347,7 +384,7 @@ class NetworkModificationTreeTest {
         List<AbstractNode> children = root.getChildren();
         assertEquals(1, children.size());
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) children.get(0);
-        assertFalse(networkModificationNode.getNodeBuildStatus().isBuilt());
+        assertEquals(false, networkModificationNode.getNodeBuildStatus().isBuilt());
         assertEquals("not_built", networkModificationNode.getName());
         assertEquals("not built node", networkModificationNode.getDescription());
         deleteNode(root.getStudyId(), children, false, Set.of(children.get(0)), true, userId);
@@ -358,14 +395,14 @@ class NetworkModificationTreeTest {
         children = root.getChildren();
         assertEquals(1, children.size());
         networkModificationNode = (NetworkModificationNode) children.get(0);
-        assertTrue(networkModificationNode.getNodeBuildStatus().isBuilt());
+        assertEquals(true, networkModificationNode.getNodeBuildStatus().isBuilt());
         assertEquals("built", networkModificationNode.getName());
         assertEquals("built node", networkModificationNode.getDescription());
         deleteNode(root.getStudyId(), children, false, Set.of(children.get(0)), userId);
     }
 
     @Test
-    void testNodeStashAndRestore() throws Exception {
+    public void testNodeStashAndRestore() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         UUID studyId = root.getStudyId();
@@ -513,7 +550,7 @@ class NetworkModificationTreeTest {
     }
 
     @Test
-    void testNodeModificationInfos() throws Exception {
+    public void testNodeModificationInfos() throws Exception {
         UUID rootStudyId = createNodeTree();
         RootNode root = getRootNode(rootStudyId);
         UUID rootId = root.getId();
@@ -528,16 +565,16 @@ class NetworkModificationTreeTest {
 
         assertEquals("n1", n1.getName());
         assertEquals("zzz", n1.getDescription());
-        assertFalse(n1.getNodeBuildStatus().isBuilt());
+        assertEquals(false, n1.getNodeBuildStatus().isBuilt());
         assertEquals(n1.getId(), n1Infos.getId());
         assertEquals(MODIFICATION_GROUP_UUID, n1Infos.getModificationGroupUuid());
         assertEquals(VARIANT_ID, n1Infos.getVariantId());
         UUID badUuid = UUID.randomUUID();
-        assertThrows(StudyException.class, () -> networkModificationTreeService.getNodeModificationInfos(badUuid), "ELEMENT_NOT_FOUND");
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getNodeModificationInfos(badUuid));
     }
 
     @Test
-    void testNodeAncestor() throws Exception {
+    public void testNodeAncestor() throws Exception {
         UUID rootStudyId = createNodeTree();
 
         // get node ID foreach node
@@ -561,11 +598,11 @@ class NetworkModificationTreeTest {
         assertTrue(networkModificationTreeService.hasAncestor(n4Id, n2Id));
         assertFalse(networkModificationTreeService.hasAncestor(n4Id, n1Id));
         assertFalse(networkModificationTreeService.hasAncestor(n3Id, badUuid));
-        assertThrows(StudyException.class, () -> networkModificationTreeService.hasAncestor(badUuid, rootId), "ELEMENT_NOT_FOUND");
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.hasAncestor(badUuid, rootId));
     }
 
     @Test
-    void testNodeManipulation() throws Exception {
+    public void testNodeManipulation() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         final NetworkModificationNode node1 = buildNetworkModificationNode("hypo 1", "potamus", MODIFICATION_GROUP_UUID, VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
@@ -662,7 +699,7 @@ class NetworkModificationTreeTest {
 
         checkElementUpdatedMessageSent(studyUuid, userId);
 
-        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         if (expectedDeletion != null) {
             Collection<UUID> deletedId = (Collection<UUID>) mess.getHeaders().get(NotificationService.HEADER_NODES);
             assertNotNull(deletedId);
@@ -672,13 +709,13 @@ class NetworkModificationTreeTest {
         }
 
         if (nodeWithModification) {
-            var message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+            var message = output.receive(TIMEOUT, studyUpdateDestination);
             while (message != null) {
                 Collection<UUID> updatedIds = NODE_BUILD_STATUS_UPDATED.equals(message.getHeaders().get(HEADER_UPDATE_TYPE)) ?
                         (Collection<UUID>) message.getHeaders().get(NotificationService.HEADER_NODES) :
                         List.of((UUID) message.getHeaders().get(NotificationService.HEADER_NODE));
                 updatedIds.forEach(id -> assertTrue(children.contains(id)));
-                message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+                message = output.receive(TIMEOUT, studyUpdateDestination);
             }
         }
     }
@@ -690,9 +727,9 @@ class NetworkModificationTreeTest {
         checkElementUpdatedMessageSent(studyUuid, userId);
 
         //first message is node build status being reset and then is the node deleted
-        var message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        var message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(NODE_BUILD_STATUS_UPDATED, message.getHeaders().get(HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = output.receive(TIMEOUT, studyUpdateDestination);
         Collection<UUID> stashedId = (Collection<UUID>) message.getHeaders().get(NotificationService.HEADER_NODES);
         assertNotNull(stashedId);
         assertEquals(expectedStash.size(), stashedId.size());
@@ -701,28 +738,31 @@ class NetworkModificationTreeTest {
     }
 
     private void restoreNode(UUID studyUuid, List<UUID> nodeId, UUID anchorNodeId, Set<UUID> expectedIdRestored, String userId) throws Exception {
+
         String param = nodeId.stream().map(UUID::toString).reduce("", (a1, a2) -> a1 + "," + a2).substring(1);
+
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}", studyUuid, anchorNodeId).header(USER_ID_HEADER, "userId")
                         .queryParam("ids", param))
                 .andExpect(status().isOk());
 
         for (int i = 0; i < expectedIdRestored.size(); i++) {
-            var message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+            var message = output.receive(TIMEOUT, studyUpdateDestination);
             assertTrue(expectedIdRestored.contains(message.getHeaders().get(HEADER_NEW_NODE)));
         }
     }
 
-    private static void assertChildrenEquals(Set<AbstractNode> original, List<AbstractNode> children) {
+    private void assertChildrenEquals(Set<AbstractNode> original, List<AbstractNode> children) {
         assertEquals(original.size(), children.size());
         children.forEach(node -> {
             Optional<AbstractNode> found = original.stream().filter(s -> node.getId().equals(s.getId())).findFirst();
             assertTrue(found.isPresent());
             assertNodeEquals(found.get(), node);
-        });
+            }
+        );
     }
 
     @Test
-    void testNodeInsertion() throws Exception {
+    public void testNodeInsertion() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         final NetworkModificationNode networkModification1 = buildNetworkModificationNode("hypo 1", "potamus", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
@@ -766,7 +806,7 @@ class NetworkModificationTreeTest {
     }
 
     @Test
-    void testInsertAfter() throws Exception {
+    public void testInsertAfter() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         final NetworkModificationNode node1 = buildNetworkModificationNode("hypo", "potamus", null, VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
@@ -793,7 +833,7 @@ class NetworkModificationTreeTest {
     }
 
     @Test
-    void testNodeUpdate() throws Exception {
+    public void testNodeUpdate() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         final NetworkModificationNode node1 = buildNetworkModificationNode("hypo", "potamus", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
@@ -813,7 +853,7 @@ class NetworkModificationTreeTest {
         assertEquals(1, root.getChildren().size());
         assertNodeEquals(node1, root.getChildren().get(0));
 
-        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
         var header = mess.getHeaders();
         assertEquals(root.getStudyId(), header.get(NotificationService.HEADER_STUDY_UUID));
@@ -831,7 +871,7 @@ class NetworkModificationTreeTest {
                 .content(objectWriter.writeValueAsString(justANameUpdate))
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
-        assertEquals(NODE_RENAMED, output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION).getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(NODE_RENAMED, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(HEADER_UPDATE_TYPE));
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
 
         var newNode = getNode(root.getStudyId(), node1.getId());
@@ -850,7 +890,7 @@ class NetworkModificationTreeTest {
     // We update a node description (this is not used in the front) and we assume that it will emit a nodeUpdated notif
     // If it's not the case or if this test causes problems feel free to update it / remove it as needed
     @Test
-    void testNodeDescriptionUpdate() throws Exception {
+    public void testNodeDescriptionUpdate() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         final NetworkModificationNode node1 = buildNetworkModificationNode("hypo", "potamus", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
@@ -864,12 +904,13 @@ class NetworkModificationTreeTest {
                 .content(objectWriter.writeValueAsString(nodeDescriptionUpdate))
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        assertEquals(NODE_UPDATED, output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION).getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(NODE_UPDATED, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(HEADER_UPDATE_TYPE));
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
     }
 
+    @SneakyThrows
     @Test
-    void testLightNode() throws Exception {
+    public void testLightNode() {
         String userId = "userId";
         RootNode root = createRoot();
         final NetworkModificationNode hypo = buildNetworkModificationNode("hypo", "potamus", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
@@ -883,7 +924,7 @@ class NetworkModificationTreeTest {
     }
 
     @Test
-    void testGetParentNode() throws Exception {
+    public void testGetParentNode() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         UUID rootId = root.getId();
@@ -907,12 +948,12 @@ class NetworkModificationTreeTest {
         assertEquals(rootId, networkModificationTreeService.getParentNode(rootId, NodeType.ROOT));
 
         UUID badUuid = UUID.randomUUID();
-        assertThrows(StudyException.class, () -> networkModificationTreeService.getParentNode(badUuid, NodeType.ROOT), "ELEMENT_NOT_FOUND");
-        assertThrows(StudyException.class, () -> networkModificationTreeService.getParentNode(rootId, NodeType.NETWORK_MODIFICATION), "ELEMENT_NOT_FOUND");
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getParentNode(badUuid, NodeType.ROOT));
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getParentNode(rootId, NodeType.NETWORK_MODIFICATION));
     }
 
     @Test
-    void testGetLastParentNodeBuilt() throws Exception {
+    public void testGetLastParentNodeBuilt() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         final NetworkModificationNode node1 = buildNetworkModificationNode("hypo 1", "potamus", null, VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
@@ -960,7 +1001,7 @@ class NetworkModificationTreeTest {
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
         checkElementUpdatedMessageSent(studyUuid, userId);
-        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -986,7 +1027,7 @@ class NetworkModificationTreeTest {
 
         checkElementUpdatedMessageSent(studyUuid, userId);
 
-        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(NotificationService.NODE_CREATED, mess.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(newParentNode.getId(), mess.getHeaders().get(NotificationService.HEADER_PARENT_NODE));
         assertEquals(mode.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -1010,7 +1051,7 @@ class NetworkModificationTreeTest {
         return result.get();
     }
 
-    private static NetworkModificationNode buildNetworkModificationNode(String name, String description, UUID modificationGroupUuid, String variantId,
+    private NetworkModificationNode buildNetworkModificationNode(String name, String description, UUID modificationGroupUuid, String variantId,
         UUID loadFlowResultUuid, UUID securityAnalysisResultUuid, UUID sensitivityAnalysisResultUuid, UUID nonEvacuatedEnergyResultUuid, UUID shortCircuitAnalysisResultUuid, UUID oneBusShortCircuitAnalysisResultUuid, UUID stateEstimationResultUuid, BuildStatus buildStatus) {
         return NetworkModificationNode.builder()
             .name(name)
@@ -1028,7 +1069,7 @@ class NetworkModificationTreeTest {
             .children(Collections.emptyList()).build();
     }
 
-    private static void assertNodeEquals(AbstractNode expected, AbstractNode current) {
+    private void assertNodeEquals(AbstractNode expected, AbstractNode current) {
         assertEquals(expected.getName(), current.getName());
         assertEquals(expected.getDescription(), current.getDescription());
         assertEquals(expected.getChildren().size(), current.getChildren().size());
@@ -1038,7 +1079,7 @@ class NetworkModificationTreeTest {
         }
     }
 
-    private static void assertModificationNodeEquals(AbstractNode expected, AbstractNode current) {
+    private void assertModificationNodeEquals(AbstractNode expected, AbstractNode current) {
         NetworkModificationNode currentModificationNode = (NetworkModificationNode) current;
         NetworkModificationNode expectedModificationNode = (NetworkModificationNode) expected;
 
@@ -1053,7 +1094,7 @@ class NetworkModificationTreeTest {
     }
 
     @Test
-    void testNodeName() throws Exception {
+    public void testNodeName() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         String nodeName = "node 1";
@@ -1093,7 +1134,7 @@ class NetworkModificationTreeTest {
     }
 
     @Test
-    void testGetNetworkModificationsNode() throws Exception {
+    public void testGetNetworkModificationsNode() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         NetworkModificationNode node = buildNetworkModificationNode("modification node 1", "", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
@@ -1117,7 +1158,7 @@ class NetworkModificationTreeTest {
     }
 
     @Test
-    void testGetNetworkModificationsToRestoreByNode() throws Exception {
+    public void testGetNetworkModificationsToRestoreByNode() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         NetworkModificationNode node = buildNetworkModificationNode("modification node 1", "", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
@@ -1139,23 +1180,23 @@ class NetworkModificationTreeTest {
             .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
 
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
     }
 
     @Test
-    void testGetNetworkModificationsToStashByNode() throws Exception {
+    public void testGetNetworkModificationsToStashByNode() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
         NetworkModificationNode node = buildNetworkModificationNode("modification node 1", "", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
@@ -1177,24 +1218,24 @@ class NetworkModificationTreeTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
 
     }
 
     @Test
-    void testUpdateBuildStatus() throws Exception {
+    public void testUpdateBuildStatus() {
         Pair<UUID, NetworkModificationNode> result = createTreeForBuildStatus();
         UUID leafNodeId = result.getSecond().getId();
         UUID studyUuid = result.getFirst();
@@ -1229,7 +1270,7 @@ class NetworkModificationTreeTest {
     }
 
     @Test
-    void testUpdateApplicationStatus() throws Exception {
+    public void testUpdateApplicationStatus() {
         Pair<UUID, NetworkModificationNode> result = createTreeForBuildStatus();
         UUID leafNodeId = result.getSecond().getId();
         UUID studyUuid = result.getFirst();
@@ -1261,7 +1302,8 @@ class NetworkModificationTreeTest {
      * Create a network modification tree to test the build status.
      * @return a pair with the ID of the study and the ID of the leaf node of the tree
      */
-    private Pair<UUID, NetworkModificationNode> createTreeForBuildStatus() throws Exception {
+    @SneakyThrows
+    private Pair<UUID, NetworkModificationNode> createTreeForBuildStatus() {
         String userId = "userId";
         RootNode root = createRoot();
         final NetworkModificationNode node1 = buildNetworkModificationNode("built_with_error", "not built node", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT_WITH_ERROR);
@@ -1276,13 +1318,13 @@ class NetworkModificationTreeTest {
     }
 
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
-        Message<byte[]> message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
+        Message<byte[]> message = output.receive(TIMEOUT, elementUpdateDestination);
         assertEquals(elementUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
         assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
     }
 
     private void checkUpdateNodesMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
