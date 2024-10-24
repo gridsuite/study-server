@@ -4,6 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -18,9 +19,10 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,13 +31,15 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.io.IOException;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -43,11 +47,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
+@RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-class FilterServiceTest {
+public class FilterServiceTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(FilterServiceTest.class);
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
@@ -74,8 +79,8 @@ class FilterServiceTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @BeforeEach
-    void setup() {
+    @Before
+    public void setup() {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
         wireMockUtils = new WireMockUtils(wireMockServer);
 
@@ -86,15 +91,21 @@ class FilterServiceTest {
         Mockito.doAnswer(invocation -> wireMockServer.baseUrl()).when(filterService).getBaseUri();
     }
 
-    @AfterEach
-    void tearDown() {
+    private void cleanDB() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
+    }
+
+    @After
+    public void tearDown() {
+        cleanDB();
 
         try {
             TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
+        } catch (IOException e) {
+            // Ignoring
         }
     }
 
@@ -106,6 +117,7 @@ class FilterServiceTest {
     }
 
     private RootNode getRootNode(UUID study) throws Exception {
+
         return objectMapper.readValue(mockMvc.perform(get("/v1/studies/{uuid}/tree", study))
                 .andExpect(status().isOk())
                 .andReturn()
@@ -114,7 +126,8 @@ class FilterServiceTest {
     }
 
     @Test
-    void testEvaluateFilter() throws Exception {
+    public void testEvaluateFilter() throws Exception {
+
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
@@ -160,7 +173,7 @@ class FilterServiceTest {
     }
 
     @Test
-    void testEvaluateFilterNotFoundError() throws Exception {
+    public void testEvaluateFilterNotFoundError() throws Exception {
         UUID stubUuid = wireMockUtils.stubFilterEvaluateNotFoundError(NETWORK_UUID_STRING);
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
@@ -197,7 +210,7 @@ class FilterServiceTest {
     }
 
     @Test
-    void testEvaluateFilterError() throws Exception {
+    public void testEvaluateFilterError() throws Exception {
         UUID stubUuid = wireMockUtils.stubFilterEvaluateError(NETWORK_UUID_STRING);
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
@@ -234,7 +247,7 @@ class FilterServiceTest {
     }
 
     @Test
-    void testExportFilter() throws Exception {
+    public void testExportFilter() throws Exception {
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyUuid = studyEntity.getId();

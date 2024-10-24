@@ -4,6 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server.service;
 
 /**
@@ -12,6 +13,7 @@ package org.gridsuite.study.server.service;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -32,6 +34,7 @@ public class ActionsService {
 
     private String actionsServerBaseUri;
 
+    @Autowired
     public ActionsService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         this.actionsServerBaseUri = remoteServicesProperties.getServiceUri("actions-server");
         this.restTemplate = restTemplate;

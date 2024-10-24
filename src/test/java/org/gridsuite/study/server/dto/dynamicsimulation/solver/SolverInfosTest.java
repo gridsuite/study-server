@@ -4,40 +4,49 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server.dto.dynamicsimulation.solver;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-class SolverInfosTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SolverInfosTest.class);
+@RunWith(JUnit4.class)
+public class SolverInfosTest {
+
+    static Logger LOGGER = LoggerFactory.getLogger(SolverInfosTest.class);
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    void testToJson() {
+    public void testToJson() {
         IdaSolverInfos idaSolver = DynamicSimulationService.getDefaultIdaSolver();
+
         SimSolverInfos simSolver = DynamicSimulationService.getDefaultSimSolver();
+
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
+
         String resultJson = SolverInfos.toJson(solvers, objectMapper);
         LOGGER.info("result json = " + resultJson);
-        assertFalse(Strings.isBlank(resultJson));
+
+        assertTrue(!Strings.isBlank(resultJson));
     }
 
     @Test
-    void testParseJson() {
+    public void testParseJson() {
         String json = """
             [ {
               "id" : "IDA",

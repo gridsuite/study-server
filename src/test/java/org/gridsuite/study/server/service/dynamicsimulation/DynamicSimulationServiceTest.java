@@ -4,6 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server.service.dynamicsimulation;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -28,11 +29,13 @@ import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingCl
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.*;
 import java.util.stream.LongStream;
@@ -40,7 +43,6 @@ import java.util.stream.LongStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -48,9 +50,10 @@ import static org.mockito.BDDMockito.given;
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
+@RunWith(SpringRunner.class)
 @SpringBootTest
 @DisableElasticsearch
-class DynamicSimulationServiceTest {
+public class DynamicSimulationServiceTest {
 
     private static final String MAPPING_NAME_01 = "_01";
     private static final String MAPPING_NAME_02 = "_02";
@@ -84,21 +87,21 @@ class DynamicSimulationServiceTest {
     private static final UUID STUDY_UUID = UUID.randomUUID();
 
     // converged node
-    private static final UUID NETWORK_UUID = UUID.randomUUID();
-    private static final UUID NODE_UUID = UUID.randomUUID();
-    private static final UUID RESULT_UUID = UUID.randomUUID();
-    private static final UUID TIME_SERIES_UUID = UUID.randomUUID();
-    private static final UUID TIMELINE_UUID = UUID.randomUUID();
+    public static final UUID NETWORK_UUID = UUID.randomUUID();
+    public static final UUID NODE_UUID = UUID.randomUUID();
+    public static final UUID RESULT_UUID = UUID.randomUUID();
+    public static final UUID TIME_SERIES_UUID = UUID.randomUUID();
+    public static final UUID TIMELINE_UUID = UUID.randomUUID();
 
     // running node
-    private static final UUID NODE_UUID_RUNNING = UUID.randomUUID();
-    private static final UUID RESULT_UUID_RUNNING = UUID.randomUUID();
+    public static final UUID NODE_UUID_RUNNING = UUID.randomUUID();
+    public static final UUID RESULT_UUID_RUNNING = UUID.randomUUID();
 
-    private static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
-    private static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
-    private static final String TIMELINE_NAME = "Timeline";
+    public static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
+    public static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
+    public static final String TIMELINE_NAME = "Timeline";
 
-    private static final UUID REPORT_UUID = UUID.randomUUID();
+    public static final UUID REPORT_UUID = UUID.randomUUID();
 
     @MockBean
     private DynamicMappingClient dynamicMappingClient;
@@ -119,16 +122,16 @@ class DynamicSimulationServiceTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private DynamicSimulationService dynamicSimulationService;
+    DynamicSimulationService dynamicSimulationService;
 
-    @BeforeEach
-    void setup() {
+    @Before
+    public void setup() {
         // setup networkModificationTreeService mock in all normal cases
         given(networkModificationTreeService.getComputationResultUuid(NODE_UUID, ComputationType.DYNAMIC_SIMULATION)).willReturn(Optional.of(RESULT_UUID));
     }
 
     @Test
-    void testRunDynamicSimulation() {
+    public void testRunDynamicSimulation() {
         given(networkService.getNetworkUuid(STUDY_UUID)).willReturn(NETWORK_UUID);
         given(networkModificationTreeService.getVariantId(NODE_UUID)).willReturn(VARIANT_1_ID);
         given(networkModificationTreeService.getReportUuid(NODE_UUID)).willReturn(REPORT_UUID);
@@ -144,7 +147,7 @@ class DynamicSimulationServiceTest {
     }
 
     @Test
-    void testGetTimeSeriesMetadataList() throws Exception {
+    public void testGetTimeSeriesMetadataList() throws JsonProcessingException {
         // setup DynamicSimulationClient mock
         given(dynamicSimulationClient.getTimeSeriesResult(RESULT_UUID)).willReturn(TIME_SERIES_UUID);
 
@@ -168,7 +171,7 @@ class DynamicSimulationServiceTest {
     }
 
     @Test
-    void testGetTimeSeriesResult() {
+    public void testGetTimeSeriesResult() {
         // setup DynamicSimulationClient mock
         given(dynamicSimulationClient.getTimeSeriesResult(RESULT_UUID)).willReturn(TIME_SERIES_UUID);
 
@@ -189,8 +192,8 @@ class DynamicSimulationServiceTest {
         assertThat(timeSeriesResult).hasSize(2);
     }
 
-    @Test
-    void testGetTimeSeriesResultGivenBadType() {
+    @Test(expected = StudyException.class)
+    public void testGetTimeSeriesResultGivenBadType() {
         // setup DynamicSimulationClient mock
         given(dynamicSimulationClient.getTimeSeriesResult(RESULT_UUID)).willReturn(TIME_SERIES_UUID);
 
@@ -205,11 +208,11 @@ class DynamicSimulationServiceTest {
         given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID, null)).willReturn(timeSeries);
 
         // call method to be tested
-        assertThrows(StudyException.class, () -> dynamicSimulationService.getTimeSeriesResult(NODE_UUID, null));
+        dynamicSimulationService.getTimeSeriesResult(NODE_UUID, null);
     }
 
     @Test
-    void testGetTimelineResult() {
+    public void testGetTimelineResult() {
         // setup DynamicSimulationClient mock
         given(dynamicSimulationClient.getTimelineResult(RESULT_UUID)).willReturn(TIMELINE_UUID);
 
@@ -244,7 +247,7 @@ class DynamicSimulationServiceTest {
     }
 
     @Test
-    void testGetTimelineResultGivenBadType() throws Exception {
+    public void testGetTimelineResultGivenBadType() throws JsonProcessingException {
         // setup DynamicSimulationClient mock
         given(dynamicSimulationClient.getTimelineResult(RESULT_UUID)).willReturn(TIMELINE_UUID);
 
@@ -290,7 +293,7 @@ class DynamicSimulationServiceTest {
     }
 
     @Test
-    void testGetStatus() {
+    public void testGetStatus() {
         // setup DynamicSimulationClient mock
         given(dynamicSimulationClient.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.CONVERGED);
 
@@ -303,34 +306,34 @@ class DynamicSimulationServiceTest {
     }
 
     @Test
-    void testInvalidateStatus() {
+    public void testInvalidateStatus() {
         assertDoesNotThrow(() -> dynamicSimulationService.invalidateStatus(List.of(RESULT_UUID)));
     }
 
     @Test
-    void testDeleteResult() {
+    public void testDeleteResult() {
         assertDoesNotThrow(() -> dynamicSimulationService.deleteResult(RESULT_UUID));
     }
 
     @Test
-    void testAssertDynamicSimulationNotRunning() {
+    public void testAssertDynamicSimulationNotRunning() {
 
         // test not running
         assertDoesNotThrow(() -> dynamicSimulationService.assertDynamicSimulationNotRunning(NODE_UUID));
     }
 
-    @Test
-    void testAssertDynamicSimulationRunning() {
+    @Test(expected = StudyException.class)
+    public void testAssertDynamicSimulationRunning() {
         // setup for running node
         given(dynamicSimulationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSimulationStatus.RUNNING);
         given(networkModificationTreeService.getComputationResultUuid(NODE_UUID_RUNNING, ComputationType.DYNAMIC_SIMULATION)).willReturn(Optional.of(RESULT_UUID_RUNNING));
 
         // test running
-        assertThrows(StudyException.class, () -> dynamicSimulationService.assertDynamicSimulationNotRunning(NODE_UUID_RUNNING));
+        dynamicSimulationService.assertDynamicSimulationNotRunning(NODE_UUID_RUNNING);
     }
 
     @Test
-    void testGetMappings() {
+    public void testGetMappings() {
         // setup DynamicSimulationClient mock
         given(dynamicMappingClient.getAllMappings()).willReturn(MAPPINGS);
 
@@ -343,7 +346,7 @@ class DynamicSimulationServiceTest {
     }
 
     @Test
-    void testGetModels() {
+    public void testGetModels() {
         // setup DynamicSimulationClient mock
         given(dynamicMappingClient.getModels(MAPPING_NAMES[0])).willReturn(MODELS);
 

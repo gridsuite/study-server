@@ -47,12 +47,10 @@ public class SimpleElementImpact extends AbstractBaseImpact {
         return ImpactType.SIMPLE;
     }
 
-    @Override
     public boolean isSimple() {
         return true;
     }
 
-    @Override
     public boolean isCollection() {
         return false;
     }

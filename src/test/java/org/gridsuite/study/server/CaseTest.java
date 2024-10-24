@@ -4,35 +4,41 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server;
+
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+ */
 
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import lombok.SneakyThrows;
-import mockwebserver3.Dispatcher;
-import mockwebserver3.MockResponse;
-import mockwebserver3.MockWebServer;
-import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.CaseService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -41,24 +47,25 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
- */
-@ExtendWith(MockWebServerExtension.class)
+@RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-class CaseTest {
+public class CaseTest {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(CaseTest.class);
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
+    public static final String POST = "POST";
     private static final String CASE_NAME = "DefaultCaseName";
 
     @Autowired
     private MockMvc mockMvc;
+
+    private MockWebServer server;
 
     @Autowired
     private OutputDestination output;
@@ -73,10 +80,16 @@ class CaseTest {
     private StudyRepository studyRepository;
 
     //output destinations
-    private static final String STUDY_UPDATE_DESTINATION = "study.update";
+    private String studyUpdateDestination = "study.update";
 
-    @BeforeEach
-    void setup(final MockWebServer server) {
+    @Before
+    public void setup() throws IOException {
+
+        server = new MockWebServer();
+
+        // Start the server.
+        server.start();
+
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
@@ -88,18 +101,22 @@ class CaseTest {
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
+                request.getBody();
+
                 switch (path) {
                     default:
-                        LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
-                        return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
+                        LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
+                        return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                 }
             }
+
         };
+
         server.setDispatcher(dispatcher);
     }
 
     @Test
-    void getCaseName() throws Exception {
+    public void getCaseName() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, CASE_NAME);
         UUID study1Uuid = studyEntity.getId();
 
@@ -108,6 +125,7 @@ class CaseTest {
                 content().string(CASE_NAME));
         mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", UUID.randomUUID()))
                 .andExpect(status().isNotFound());
+
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, String caseName) {
@@ -117,12 +135,16 @@ class CaseTest {
         return study;
     }
 
-    @AfterEach
-    void tearDown(final MockWebServer server) {
-        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION);
-
+    private void cleanDB() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
+    }
+
+    @After
+    public void tearDown() {
+        List<String> destinations = List.of(studyUpdateDestination);
+
+        cleanDB();
 
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
 
@@ -130,6 +152,8 @@ class CaseTest {
             TestUtils.assertServerRequestsEmptyThenShutdown(server);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
+        } catch (IOException e) {
+            // Ignoring
         }
     }
 }

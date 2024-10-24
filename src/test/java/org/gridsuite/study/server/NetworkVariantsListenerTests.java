@@ -7,34 +7,39 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.iidm.network.VariantManagerConstants;
+
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.elasticsearch.NoSuchIndexException;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
+@RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-class NetworkVariantsListenerTests {
+public class NetworkVariantsListenerTests {
+
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final String VARIANT_ID = "variant_1";
 
     @Autowired
     private EquipmentInfosService equipmentInfosService;
 
-    @AfterEach
-    void tearDown() {
+    @After
+    public void tearDown() {
         try {
             equipmentInfosService.deleteAllByNetworkUuid(NETWORK_UUID);
         } catch (NoSuchIndexException ex) {
@@ -43,7 +48,8 @@ class NetworkVariantsListenerTests {
     }
 
     @Test
-    void testVariantNotifications() {
+    public void testVariantNotifications() {
+
         // In initial variant
         equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("load0").name("load0").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build());
         equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("gen0").name("gen0").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build());

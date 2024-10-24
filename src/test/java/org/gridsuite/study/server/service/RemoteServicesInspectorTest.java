@@ -40,6 +40,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.ResponseActions;
 import org.springframework.web.client.RestTemplate;
@@ -60,7 +61,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 @DisableJpa
 @Import({StudyAppConfig.class, RemoteServicesProperties.class})
 @RestClientTest({RemoteServicesInspector.class})
-@ExtendWith({MockitoExtension.class})
+@ExtendWith({SpringExtension.class, MockitoExtension.class})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.MethodName.class)
 class RemoteServicesInspectorTest implements WithAssertions {
@@ -106,7 +107,7 @@ class RemoteServicesInspectorTest implements WithAssertions {
     }
 
     @AfterEach
-    void serverCheckup() {
+    public void serverCheckup() {
         try {
             server.verify();
         } finally {

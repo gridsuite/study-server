@@ -4,9 +4,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -15,16 +15,15 @@ import com.powsybl.iidm.network.TwoSides;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.security.LimitViolationType;
 import lombok.SneakyThrows;
-import mockwebserver3.Dispatcher;
-import mockwebserver3.MockResponse;
-import mockwebserver3.MockWebServer;
-import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
-import okhttp3.Headers;
 import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.LimitViolationInfos;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
@@ -38,10 +37,10 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
@@ -52,15 +51,16 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.io.IOException;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
@@ -68,7 +68,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -78,12 +78,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Anis Touri <anis.touri at rte-france.com>
  */
-@ExtendWith(MockWebServerExtension.class)
+@RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-class LoadFlowTest {
+public class LoadFlowTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LoadFlowTest.class);
 
@@ -138,14 +138,15 @@ class LoadFlowTest {
     private static String LOADFLOW_PROFILE_PARAMETERS_JSON;
 
     //output destinations
-    private static final String STUDY_UPDATE_DESTINATION = "study.update";
-    private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
-    private static final String LOADFLOW_RESULT_DESTINATION = "loadflow.result";
-    private static final String LOADFLOW_STOPPED_DESTINATION = "loadflow.stopped";
-    private static final String LOADFLOW_FAILED_DESTINATION = "loadflow.failed";
+    private final String studyUpdateDestination = "study.update";
+    private final String elementUpdateDestination = "element.update";
+    private final String loadflowResultDestination = "loadflow.result";
+    private final String loadflowStoppedDestination = "loadflow.stopped";
+    private final String loadflowFailedDestination = "loadflow.failed";
 
     @Autowired
     private MockMvc mockMvc;
+    private MockWebServer server;
     @Autowired
     private OutputDestination output;
     @Autowired
@@ -166,9 +167,14 @@ class LoadFlowTest {
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    @BeforeEach
-    void setup(final MockWebServer server) throws Exception {
+    @Before
+    public void setup() throws IOException {
+        server = new MockWebServer();
+
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
+
+        // Start the server.
+        server.start();
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
@@ -231,96 +237,122 @@ class LoadFlowTest {
         LOADFLOW_PROFILE_PARAMETERS_JSON = objectMapper.writeValueAsString(profileLoadFlowParametersInfos);
 
         final Dispatcher dispatcher = new Dispatcher() {
-            @SneakyThrows(JsonProcessingException.class)
+            @SneakyThrows
             @Override
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
                 String method = Objects.requireNonNull(request.getMethod());
+                request.getBody();
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + ".*")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", LOADFLOW_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build(), LOADFLOW_RESULT_DESTINATION);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), loadFlowResultUuidStr);
+                            .build(), loadflowResultDestination);
+                    return new MockResponse().setResponseCode(200)
+                            .setBody(loadFlowResultUuidStr)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build(), LOADFLOW_FAILED_DESTINATION);
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), loadFlowErrorResultUuidStr);
+                            .build(), loadflowFailedDestination);
+                    return new MockResponse().setResponseCode(200)
+                            .setBody(loadFlowErrorResultUuidStr)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), loadflowResult);
+                    return new MockResponse().setResponseCode(200).setBody(loadflowResult)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), loadflowResult);
+                    return new MockResponse().setResponseCode(200).setBody(loadflowResult)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/status")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LOADFLOW_STATUS_JSON);
+                    return new MockResponse().setResponseCode(200).setBody(LOADFLOW_STATUS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LIMIT_VIOLATIONS_JSON);
+                    return new MockResponse().setResponseCode(200).setBody(LIMIT_VIOLATIONS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LIMIT_VIOLATIONS_JSON);
+                    return new MockResponse().setResponseCode(200).setBody(LIMIT_VIOLATIONS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/computation-status")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), COMPUTING_STATUS_JSON);
+                    return new MockResponse().setResponseCode(200).setBody(COMPUTING_STATUS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/computation")) {
-                    return new MockResponse(404);
+                    return new MockResponse().setResponseCode(404);
                 } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)) {
-                    return new MockResponse(200);
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/stop.*")
                         || path.matches("/v1/results/" + LOADFLOW_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? LOADFLOW_OTHER_NODE_RESULT_UUID : LOADFLOW_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", resultUuid)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build(), LOADFLOW_STOPPED_DESTINATION);
-                    return new MockResponse(200);
+                            .build(), loadflowStoppedDestination);
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results")) {
-                    return new MockResponse(200);
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/reports")) {
-                    return new MockResponse(200);
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/supervision/results-count")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8")
+                            .setBody("1");
                 } else if (path.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)) {
                     if (method.equals("GET")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LOADFLOW_DEFAULT_PARAMETERS_JSON);
+                        return new MockResponse().setResponseCode(200).setBody(LOADFLOW_DEFAULT_PARAMETERS_JSON)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     } else {
-                        return new MockResponse(200);
+                        return new MockResponse().setResponseCode(200);
                     }
                 } else if (path.matches("/v1/parameters")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(LOADFLOW_PARAMETERS_UUID_STRING));
+                    return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(LOADFLOW_PARAMETERS_UUID_STRING))
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/users/" + NO_PROFILE_USER_ID + "/profile")) {
-                    return new MockResponse(404);
+                    return new MockResponse().setResponseCode(404);
                 } else if (path.matches("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_NO_PARAMS_JSON);
+                    return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_NO_PARAMS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_VALID_PARAMS_JSON);
+                    return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_VALID_PARAMS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_INVALID_PARAMS_JSON);
+                    return new MockResponse().setResponseCode(200).setBody(USER_PROFILE_INVALID_PARAMS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING) && method.equals("POST")) {
                     // params duplication request KO
-                    return new MockResponse(404);
+                    return new MockResponse().setResponseCode(404);
                 } else if (path.matches("/v1/parameters/" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING) && method.equals("GET")) {
-                    return new MockResponse(404);
+                    return new MockResponse().setResponseCode(404);
                 } else if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING) && method.equals("POST")) {
                     // params duplication request OK
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), DUPLICATED_PARAMS_JSON);
+                    return new MockResponse().setResponseCode(200).setBody(DUPLICATED_PARAMS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/parameters/" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING) && method.equals("GET")) {
                     // profile params get request OK
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LOADFLOW_PROFILE_PARAMETERS_JSON);
+                    return new MockResponse().setResponseCode(200).setBody(LOADFLOW_PROFILE_PARAMETERS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/parameters/" + PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING + "/provider") && method.equals("PATCH")) {
                     // provider update in duplicated params OK
-                    return new MockResponse(200);
+                    return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/default-provider")) {
-                    return new MockResponse.Builder().code(200).body(DEFAULT_PROVIDER).build();
+                    return new MockResponse().setResponseCode(200).setBody(DEFAULT_PROVIDER);
                 } else {
-                    LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
-                    return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
+                    LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
+                    return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                 }
             }
+
         };
+
         server.setDispatcher(dispatcher);
     }
 
     @Test
-    void testLoadFlow(final MockWebServer server) throws Exception {
+    public void testLoadFlow() throws Exception {
         MvcResult mvcResult;
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
@@ -393,7 +425,7 @@ class LoadFlowTest {
     }
 
     @Test
-    void testGetLimitViolations(final MockWebServer server) throws Exception {
+    public void testGetLimitViolations() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -445,7 +477,7 @@ class LoadFlowTest {
     }
 
     @Test
-    void testInvalidateStatus(final MockWebServer server) throws Exception {
+    public void testInvalidateStatus() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -472,7 +504,7 @@ class LoadFlowTest {
     }
 
     @Test
-    void testDeleteLoadFlowResults(final MockWebServer server) throws Exception {
+    public void testDeleteLoadFlowResults() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -500,13 +532,14 @@ class LoadFlowTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
         //Test result count
-        testResultCount(server);
+        testResultCount();
         //Delete Voltage init results
-        testDeleteResults(1, server);
+        testDeleteResults(1);
     }
 
     @Test
-    void testResetUuidResultWhenLFFailed() throws Exception {
+    @SneakyThrows
+    public void testResetUuidResultWhenLFFailed() {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), LOADFLOW_PARAMETERS_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
@@ -520,7 +553,7 @@ class LoadFlowTest {
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
-            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), LOADFLOW_FAILED_DESTINATION);
+            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), loadflowFailedDestination);
             return resultUuid;
         }).when(studyService).runLoadFlow(any(), any(), any(), any());
         studyService.runLoadFlow(studyEntity.getId(), modificationNode.getId(), "", null);
@@ -528,14 +561,14 @@ class LoadFlowTest {
         // Test reset uuid result in the database
         assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), LOAD_FLOW).isEmpty());
 
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_FAILED, updateType);
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, String updateTypeToCheck, String otherUpdateTypeToCheck) {
-        Message<byte[]> loadFlowStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> loadFlowStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, loadFlowStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) loadFlowStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         if (otherUpdateTypeToCheck == null) {
@@ -549,19 +582,19 @@ class LoadFlowTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, updateTypeToCheck, null);
     }
 
-    private void testResultCount(final MockWebServer server) throws Exception {
+    private void testResultCount() throws Exception {
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                        .queryParam("type", LOAD_FLOW.toString())
-                        .queryParam("dryRun", "true"))
+                        .queryParam("type", String.valueOf(LOAD_FLOW))
+                        .queryParam("dryRun", String.valueOf(true)))
                 .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
     }
 
-    private void testDeleteResults(int expectedInitialResultCount, final MockWebServer server) throws Exception {
+    private void testDeleteResults(int expectedInitialResultCount) throws Exception {
         assertEquals(expectedInitialResultCount, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                        .queryParam("type", LOAD_FLOW.toString())
-                        .queryParam("dryRun", "false"))
+                        .queryParam("type", String.valueOf(LOAD_FLOW))
+                        .queryParam("dryRun", String.valueOf(false)))
                 .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
@@ -571,7 +604,7 @@ class LoadFlowTest {
     }
 
     @Test
-    void testNoResult() throws Exception {
+    public void testNoResult() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -588,7 +621,7 @@ class LoadFlowTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/status", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
                 status().isNoContent());
 
-        // stop non-existing loadflow
+        // stop non existing loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)
                 .header(HEADER_USER_ID, "userId")).andExpect(status().isOk());
     }
@@ -601,26 +634,27 @@ class LoadFlowTest {
                     .content(parameters))
                 .andExpect(status().is(status.value()));
 
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
+        message = output.receive(TIMEOUT, elementUpdateDestination);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
     }
 
     @Test
-    void testResetLoadFlowParametersUserHasNoProfile(final MockWebServer server) throws Exception {
+    public void testResetLoadFlowParametersUserHasNoProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PROFILE_USER_ID, HttpStatus.OK);
@@ -631,7 +665,7 @@ class LoadFlowTest {
     }
 
     @Test
-    void testResetLoadFlowParametersUserHasNoParamsInProfile(final MockWebServer server) throws Exception {
+    public void testResetLoadFlowParametersUserHasNoParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
@@ -642,7 +676,7 @@ class LoadFlowTest {
     }
 
     @Test
-    void testResetLoadFlowParametersUserHasInvalidParamsInProfile(final MockWebServer server) throws Exception {
+    public void testResetLoadFlowParametersUserHasInvalidParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
@@ -654,7 +688,7 @@ class LoadFlowTest {
     }
 
     @Test
-    void testResetLoadFlowParametersUserHasValidParamsInProfile(final MockWebServer server) throws Exception {
+    public void testResetLoadFlowParametersUserHasValidParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
@@ -667,7 +701,7 @@ class LoadFlowTest {
     }
 
     @Test
-    void testResetLoadFlowParametersUserHasValidParamsInProfileButNoExistingLoadflowParams(final MockWebServer server) throws Exception {
+    public void testResetLoadFlowParametersUserHasValidParamsInProfileButNoExistingLoadflowParams() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
@@ -679,7 +713,7 @@ class LoadFlowTest {
 
     // the following testGetDefaultProviders tests are related to StudyTest::testGetDefaultProviders but with a user and different profile cases
     @Test
-    void testGetDefaultProvidersFromProfile(final MockWebServer server) throws Exception {
+    public void testGetDefaultProvidersFromProfile() throws Exception {
         mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, VALID_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
                 status().isOk(),
                 content().string(OTHER_PROVIDER));
@@ -689,7 +723,7 @@ class LoadFlowTest {
     }
 
     @Test
-    void testGetDefaultProvidersFromProfileInvalid(final MockWebServer server) throws Exception {
+    public void testGetDefaultProvidersFromProfileInvalid() throws Exception {
         mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, INVALID_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
                 status().isOk(),
                 content().string(DEFAULT_PROVIDER));
@@ -700,7 +734,7 @@ class LoadFlowTest {
     }
 
     @Test
-    void testGetDefaultProvidersWithoutProfile(final MockWebServer server) throws Exception {
+    public void testGetDefaultProvidersWithoutProfile() throws Exception {
         mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, NO_PROFILE_USER_ID)).andExpectAll(
                 status().isOk(),
                 content().string(DEFAULT_PROVIDER));
@@ -710,7 +744,7 @@ class LoadFlowTest {
     }
 
     @Test
-    void testGetDefaultProvidersWithoutParamInProfile(final MockWebServer server) throws Exception {
+    public void testGetDefaultProvidersWithoutParamInProfile() throws Exception {
         mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, NO_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
                 status().isOk(),
                 content().string(DEFAULT_PROVIDER));
@@ -720,7 +754,7 @@ class LoadFlowTest {
     }
 
     @Test
-    void testLoadFlowParameters(final MockWebServer server) throws Exception {
+    public void testLoadFlowParameters() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -773,11 +807,18 @@ class LoadFlowTest {
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
-                .getContentAsString(), new TypeReference<>() { });
+                .getContentAsString(), new TypeReference<>() {
+                });
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                   UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
+        return createNetworkModificationNode(studyUuid, parentNodeUuid,
+                modificationGroupUuid, variantId, nodeName, BuildStatus.NOT_BUILT);
+    }
+
+    private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
+                                                                  UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
                 .children(Collections.emptyList()).build();
@@ -791,19 +832,23 @@ class LoadFlowTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
         return modificationNode;
     }
 
-    @AfterEach
-    void tearDown(final MockWebServer server) {
-        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, LOADFLOW_RESULT_DESTINATION, LOADFLOW_STOPPED_DESTINATION, LOADFLOW_FAILED_DESTINATION);
-
+    private void cleanDB() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
+    }
+
+    @After
+    public void tearDown() {
+        List<String> destinations = List.of(studyUpdateDestination, loadflowResultDestination, loadflowStoppedDestination, loadflowFailedDestination);
+
+        cleanDB();
 
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
 
@@ -811,6 +856,8 @@ class LoadFlowTest {
             TestUtils.assertServerRequestsEmptyThenShutdown(server);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
+        } catch (IOException e) {
+            // Ignoring
         }
     }
 }

@@ -17,9 +17,7 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
-import org.assertj.core.api.SoftAssertions;
-import org.assertj.core.api.WithAssertions;
-import org.assertj.core.api.junit.jupiter.SoftAssertionsExtension;
+
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
@@ -27,31 +25,32 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.StudyService;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ErrorCollector;
+import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.elasticsearch.client.elc.Queries;
+import org.springframework.test.context.junit4.SpringRunner;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-@ExtendWith(SoftAssertionsExtension.class)
+@RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-class EquipmentInfosServiceTests implements WithAssertions {
+public class EquipmentInfosServiceTests {
 
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String EQUIPMENT_TYPE_FIELD = "equipmentType.keyword";
@@ -82,24 +81,24 @@ class EquipmentInfosServiceTests implements WithAssertions {
     @Autowired
     private StudyService studyService;
 
-    @BeforeEach
-    void setup() {
+    @Before
+    public void setup() {
         when(networkStoreService.getNetworkUuid(NETWORK_UUID)).thenReturn(NETWORK_UUID);
         when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
     }
 
-    @AfterEach
-    void tearDown() {
+    @After
+    public void tearDown() {
         equipmentInfosService.deleteAllByNetworkUuid(NETWORK_UUID);
         equipmentInfosService.deleteAllByNetworkUuid(NETWORK_UUID_2);
     }
 
-    private static BoolQuery buildBoolQueryEquipmentType(String equipmentType) {
+    private BoolQuery buildBoolQueryEquipmentType(String equipmentType) {
         return new BoolQuery.Builder().filter(Queries.termQuery(EQUIPMENT_TYPE_FIELD, equipmentType)._toQuery()).build();
     }
 
     @Test
-    void testAddDeleteEquipmentInfos() {
+    public void testAddDeleteEquipmentInfos() {
         EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id").name("name").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
         equipmentInfosService.addEquipmentInfos(loadInfos);
         assertEquals(1, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
@@ -144,7 +143,7 @@ class EquipmentInfosServiceTests implements WithAssertions {
     }
 
     @Test
-    void testAddDeleteTombstonedEquipmentInfos() {
+    public void testAddDeleteTombstonedEquipmentInfos() {
         TombstonedEquipmentInfos loadInfos = TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id").build();
         assertEquals(equipmentInfosService.addTombstonedEquipmentInfos(loadInfos), loadInfos);
         assertEquals(1, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());
@@ -171,7 +170,7 @@ class EquipmentInfosServiceTests implements WithAssertions {
     }
 
     @Test
-    void testDeleteAllEquipmentInfos() {
+    public void testDeleteAllEquipmentInfos() {
         TombstonedEquipmentInfos tsLoadInfos = TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id").build();
         EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id").name("name").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
 
@@ -188,7 +187,7 @@ class EquipmentInfosServiceTests implements WithAssertions {
     }
 
     @Test
-    void testGetOrphanEquipmentInfosNetworkUuids() {
+    public void testGetOrphanEquipmentInfosNetworkUuids() {
         // index some equipment infos as orphan
         UUID orphanNetworkUuid = UUID.randomUUID();
         EquipmentInfos orphanLoadInfos = EquipmentInfos.builder().networkUuid(orphanNetworkUuid).id("id").name("name").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
@@ -220,7 +219,7 @@ class EquipmentInfosServiceTests implements WithAssertions {
     }
 
     @Test
-    void testCloneVariant() {
+    public void testCloneVariant() {
         equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type(IdentifiableType.LOAD.name()).variantId("variant1").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build());
         assertEquals(1, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
 
@@ -229,7 +228,7 @@ class EquipmentInfosServiceTests implements WithAssertions {
     }
 
     @Test
-    void testDeleteVariants() {
+    public void testDeleteVariants() {
         equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type(IdentifiableType.LOAD.name()).variantId("variant1").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build());
         assertEquals(1, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
 
@@ -249,7 +248,7 @@ class EquipmentInfosServiceTests implements WithAssertions {
     }
 
     @Test
-    void searchEquipmentInfos() {
+    public void searchEquipmentInfos() {
         EquipmentInfos generatorInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
         EquipmentInfos line1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l1").name("name_l1").type("LINE").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
         EquipmentInfos line2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l2").name("name_l2").type("LINE").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl3").name("vl3").build())).build();
@@ -286,7 +285,7 @@ class EquipmentInfosServiceTests implements WithAssertions {
     }
 
     @Test
-    void searchEquipmentInfosWithPattern() {
+    public void searchEquipmentInfosWithPattern() {
         BoolQuery query;
         EquipmentInfos generatorInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
         EquipmentInfos line1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l1").name("name_l1").type("LINE").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
@@ -346,9 +345,12 @@ class EquipmentInfosServiceTests implements WithAssertions {
             .build();
     }
 
-    private static String createEquipmentName(String name) {
+    private String createEquipmentName(String name) {
         return "*" + EquipmentInfosService.escapeLucene(name) + "*";
     }
+
+    @Rule
+    public ErrorCollector pbsc = new ErrorCollector();
 
     private void testNameFullAscii(String pat) {
         assertEquals(1, studyService.searchEquipments(NETWORK_UUID, NODE_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, false).size());
@@ -375,7 +377,7 @@ class EquipmentInfosServiceTests implements WithAssertions {
     }
 
     @Test
-    void testSearchSpecialChars(final SoftAssertions softly) {
+    public void testSearchSpecialChars() {
         BoolQuery query;
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
@@ -387,49 +389,49 @@ class EquipmentInfosServiceTests implements WithAssertions {
 
         query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, createEquipmentName("___"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
-        softly.assertThat(hits).as(query.toString()).hasSize(1);
+        pbsc.checkThat(hits.size(), is(1));
 
         query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, createEquipmentName("e E"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
-        softly.assertThat(hits).as(query.toString()).hasSize(1);
+        pbsc.checkThat(hits.size(), is(1));
 
         query = new BoolQuery.Builder().must(networkQuery, Queries.queryStringQuery(EQUIPMENT_NAME_FIELD, "*e E*", null)._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
-        softly.assertThat(hits).as(query.toString()).hasSize(4);
+        pbsc.checkThat(hits.size(), is(4));
 
         query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, createEquipmentName("e e"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
-        softly.assertThat(hits).as(query.toString()).hasSize(1);
+        pbsc.checkThat(hits.size(), is(1));
 
         query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_RAW_FIELD, createEquipmentName("e e"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
-        softly.assertThat(hits).as(query.toString()).hasSize(0);
+        pbsc.checkThat(hits.size(), is(0));
 
         query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, createEquipmentName(" sp"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
-        softly.assertThat(hits).as(query.toString()).hasSize(1);
+        pbsc.checkThat(hits.size(), is(1));
 
         query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_NAME_FULLASCII_FIELD, createEquipmentName("PS "))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
-        softly.assertThat(hits).as(query.toString()).hasSize(1);
+        pbsc.checkThat(hits.size(), is(1));
 
         testNameFullAsciis();
 
         query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_ID_FIELD, createEquipmentName("FFR1AA1  FFR2AA1  2"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
-        softly.assertThat(hits).as(query.toString()).hasSize(1);
+        pbsc.checkThat(hits.size(), is(1));
 
         query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_ID_RAW_FIELD, createEquipmentName("fFR1AA1  FFR2AA1  2"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
-        softly.assertThat(hits).as(query.toString()).hasSize(0);
+        pbsc.checkThat(hits.size(), is(0));
 
         query = new BoolQuery.Builder().must(networkQuery, Queries.wildcardQuery(EQUIPMENT_ID_FIELD, createEquipmentName("fFR1àÀ1  FFR2AA1  2"))._toQuery()).build();
         hits = new HashSet<>(equipmentInfosService.searchEquipments(query));
-        softly.assertThat(hits).as(query.toString()).hasSize(1);
+        pbsc.checkThat(hits.size(), is(1));
     }
 
     @Test
-    void cleanRemovedEquipmentsInSerachTest() {
+    public void cleanRemovedEquipmentsInSerachTest() {
         UUID equipmentUuid = UUID.randomUUID();
         EquipmentInfos equipmentInfos = EquipmentInfos.builder().id(equipmentUuid.toString()).name("test").networkUuid(NETWORK_UUID).type("LOAD").variantId(VARIANT_ID).build();
         TombstonedEquipmentInfos tombstonedEquipmentInfos = TombstonedEquipmentInfos.builder().id(equipmentUuid.toString()).networkUuid(NETWORK_UUID).variantId(VARIANT_ID).build();

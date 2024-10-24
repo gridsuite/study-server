@@ -7,6 +7,7 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.iidm.network.VariantManagerConstants;
+
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
@@ -14,13 +15,15 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.StudyService;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.elasticsearch.NoSuchIndexException;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.HashSet;
 import java.util.List;
@@ -28,15 +31,16 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
+@RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-class StudyServiceSearchTests {
+public class StudyServiceSearchTests {
 
     private static final UUID STUDY_UUID = UUID.fromString("14526897-4b5d-11bd-b23e-17e46e4ef00d");
 
@@ -62,8 +66,8 @@ class StudyServiceSearchTests {
     @Autowired
     private StudyService studyService;
 
-    @BeforeEach
-    void setup() {
+    @Before
+    public void setup() {
         when(networkService.getNetworkUuid(STUDY_UUID)).thenReturn(NETWORK_UUID);
         when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
         when(networkModificationTreeService.getVariantId(VARIANT_NODE_UUID)).thenReturn(VARIANT_ID);
@@ -71,8 +75,8 @@ class StudyServiceSearchTests {
         when(networkModificationTreeService.doGetLastParentNodeBuiltUuid(VARIANT_NODE_UUID)).thenReturn(VARIANT_NODE_UUID);
     }
 
-    @AfterEach
-    void tearDown() {
+    @After
+    public void tearDown() {
         try {
             equipmentInfosService.deleteAllByNetworkUuid(NETWORK_UUID);
         } catch (NoSuchIndexException ex) {
@@ -81,7 +85,7 @@ class StudyServiceSearchTests {
     }
 
     @Test
-    void searchEquipmentInfosMultiVariants() {
+    public void searchEquipmentInfosMultiVariants() {
         // Initialize equipment infos initial variant
         EquipmentInfos generatorInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
         EquipmentInfos line1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l1").name("name_l1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LINE").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
@@ -221,7 +225,7 @@ class StudyServiceSearchTests {
     }
 
     @Test
-    void searchModifiedEquipment() {
+    public void searchModifiedEquipment() {
         // Adding an equipment with type "LOAD" and a specific variant to the EquipmentInfosService.
         EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
         equipmentInfosService.addEquipmentInfos(loadInfos);
@@ -255,7 +259,7 @@ class StudyServiceSearchTests {
     }
 
     @Test
-    void testSearchForModifiedEquipmentsFilteredByType() {
+    public void testSearchForModifiedEquipmentsFilteredByType() {
         // Adding LOAD and GENERATOR type equipment to the EquipmentInfosService with initial variant.
         EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
         EquipmentInfos generatorInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();

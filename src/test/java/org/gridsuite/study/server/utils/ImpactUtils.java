@@ -7,10 +7,11 @@
 package org.gridsuite.study.server.utils;
 
 import com.powsybl.iidm.network.IdentifiableType;
-import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact;
-import org.gridsuite.study.server.dto.impacts.CollectionElementImpact;
+
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
+import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact;
+import org.gridsuite.study.server.dto.impacts.CollectionElementImpact;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 
 import java.util.List;
@@ -22,8 +23,8 @@ import java.util.stream.Collectors;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 public final class ImpactUtils {
+
     private ImpactUtils() {
-        throw new IllegalStateException("Utility class");
     }
 
     public static Optional<NetworkModificationResult> createModificationResultWithElementImpact(SimpleImpactType type, IdentifiableType elementType, String elementId, Set<String> substationIds) {

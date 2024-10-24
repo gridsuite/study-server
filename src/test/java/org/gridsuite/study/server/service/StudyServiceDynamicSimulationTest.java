@@ -4,8 +4,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.IrregularTimeSeriesIndex;
@@ -20,13 +22,15 @@ import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.*;
 
@@ -41,11 +45,11 @@ import static org.mockito.BDDMockito.willDoNothing;
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
+@RunWith(SpringRunner.class)
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-class StudyServiceDynamicSimulationTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(StudyServiceDynamicSimulationTest.class);
+public class StudyServiceDynamicSimulationTest {
 
     private static final String MAPPING_NAME_01 = "_01";
     private static final String MAPPING_NAME_02 = "_02";
@@ -68,28 +72,32 @@ class StudyServiceDynamicSimulationTest {
     private static final UUID RESULT_UUID = UUID.randomUUID();
 
     @MockBean
-    private NetworkService networkService;
+    NetworkService networkService;
 
     @MockBean
-    private NetworkModificationTreeService networkModificationTreeService;
+    NetworkModificationTreeService networkModificationTreeService;
 
     @MockBean
-    private NotificationService notificationService;
+    NotificationService notificationService;
 
     @MockBean
-    private DynamicSimulationService dynamicSimulationService;
+    DynamicSimulationService dynamicSimulationService;
 
     @MockBean
-    private LoadFlowService loadFlowService;
+    LoadFlowService loadFlowService;
 
     @Autowired
-    private StudyService studyService;
+    StudyService studyService;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    ObjectMapper objectMapper;
 
-    @BeforeEach
-    void setup() {
+    public final Logger getLogger() {
+        return LoggerFactory.getLogger(this.getClass());
+    }
+
+    @Before
+    public void setup() {
         // setup NetworkService mock
         given(networkService.getNetworkUuid(STUDY_UUID)).willReturn(NETWORK_UUID);
 
@@ -104,7 +112,7 @@ class StudyServiceDynamicSimulationTest {
     }
 
     @Test
-    void testRunDynamicSimulation() {
+    public void testRunDynamicSimulation() {
         // setup DynamicSimulationService mock
         given(dynamicSimulationService.runDynamicSimulation(eq(""), eq(STUDY_UUID), eq(NODE_UUID), any(), any(), any())).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
@@ -124,7 +132,7 @@ class StudyServiceDynamicSimulationTest {
     }
 
     @Test
-    void testGetDynamicSimulationTimeSeries() throws Exception {
+    public void testGetDynamicSimulationTimeSeries() throws JsonProcessingException {
         // setup
         // timeseries
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{32, 64, 128, 256});
@@ -140,13 +148,13 @@ class StudyServiceDynamicSimulationTest {
 
         // --- check result --- //
         String timeSeriesExpectedJson = TimeSeries.toJson(timeSeries);
-        LOGGER.info("Time series expected in Json = {}", timeSeriesExpectedJson);
-        LOGGER.info("Time series result in Json = {}", timeSeriesResultJson);
+        getLogger().info("Time series expected in Json = " + timeSeriesExpectedJson);
+        getLogger().info("Time series result in Json = " + timeSeriesResultJson);
         assertThat(objectMapper.readTree(timeSeriesResultJson)).isEqualTo(objectMapper.readTree(timeSeriesExpectedJson));
     }
 
     @Test
-    void testGetDynamicSimulationTimeline() {
+    public void testGetDynamicSimulationTimeline() {
         // setup
         // timeline
         List<TimelineEventInfos> timelineEventInfosList = List.of(
@@ -167,7 +175,7 @@ class StudyServiceDynamicSimulationTest {
     }
 
     @Test
-    void testGetDynamicSimulationStatus() {
+    public void testGetDynamicSimulationStatus() {
         // setup
         given(dynamicSimulationService.getStatus(NODE_UUID)).willReturn(DynamicSimulationStatus.CONVERGED);
 
@@ -175,13 +183,13 @@ class StudyServiceDynamicSimulationTest {
         DynamicSimulationStatus status = studyService.getDynamicSimulationStatus(NODE_UUID);
 
         // --- check result --- //
-        LOGGER.info("Status expected = {}", DynamicSimulationStatus.CONVERGED.name());
-        LOGGER.info("Status result = {}", status);
+        getLogger().info("Status expected = " + DynamicSimulationStatus.CONVERGED.name());
+        getLogger().info("Status result = " + status);
         assertThat(status).isEqualTo(DynamicSimulationStatus.CONVERGED);
     }
 
     @Test
-    void testGetDynamicSimulationMappings() throws Exception {
+    public void testGetDynamicSimulationMappings() throws JsonProcessingException {
         // setup
         given(dynamicSimulationService.getMappings(STUDY_UUID)).willReturn(MAPPINGS);
 
@@ -190,8 +198,8 @@ class StudyServiceDynamicSimulationTest {
 
         // --- check result --- //
         // must return 2 mappings
-        LOGGER.info("Mapping infos expected in Json = {}", objectMapper.writeValueAsString(MAPPINGS));
-        LOGGER.info("Mapping infos result in Json = {}", objectMapper.writeValueAsString(mappingInfos));
+        getLogger().info("Mapping infos expected in Json = " + objectMapper.writeValueAsString(MAPPINGS));
+        getLogger().info("Mapping infos result in Json = " + objectMapper.writeValueAsString(mappingInfos));
         assertThat(mappingInfos).hasSameSizeAs(MAPPINGS);
     }
 }
