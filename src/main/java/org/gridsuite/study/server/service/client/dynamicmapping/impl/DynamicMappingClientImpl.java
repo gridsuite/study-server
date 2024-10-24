@@ -4,7 +4,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
 package org.gridsuite.study.server.service.client.dynamicmapping.impl;
 
 import org.apache.commons.lang3.StringUtils;
@@ -14,7 +13,6 @@ import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -35,7 +33,6 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
 @Service
 public class DynamicMappingClientImpl extends AbstractRestClient implements DynamicMappingClient {
 
-    @Autowired
     public DynamicMappingClientImpl(RemoteServicesProperties remoteServicesProperties,
                                     RestTemplate restTemplate) {
         super(remoteServicesProperties.getServiceUri("dynamic-mapping-server"), restTemplate);

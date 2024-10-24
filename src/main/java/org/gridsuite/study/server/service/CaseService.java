@@ -4,7 +4,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
 package org.gridsuite.study.server.service;
 
 /**
@@ -14,7 +13,6 @@ package org.gridsuite.study.server.service;
 import org.gridsuite.study.server.StudyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
@@ -37,7 +35,6 @@ public class CaseService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CaseService.class);
 
-    @Autowired
     public CaseService(@Value("${powsybl.services.case-server.base-uri:http://case-server/}") String caseServerBaseUri, RestTemplate restTemplate) {
         this.caseServerBaseUri = caseServerBaseUri;
         this.restTemplate = restTemplate;

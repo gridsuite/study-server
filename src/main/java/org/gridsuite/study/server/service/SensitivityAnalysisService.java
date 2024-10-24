@@ -17,7 +17,6 @@ import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -54,7 +53,6 @@ public class SensitivityAnalysisService {
 
     private final NetworkModificationTreeService networkModificationTreeService;
 
-    @Autowired
     SensitivityAnalysisService(RemoteServicesProperties remoteServicesProperties,
                                NetworkModificationTreeService networkModificationTreeService,
                                RestTemplate restTemplate,

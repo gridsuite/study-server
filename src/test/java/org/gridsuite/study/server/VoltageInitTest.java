@@ -4,7 +4,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -16,11 +15,13 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.network.store.client.NetworkStoreService;
 import lombok.SneakyThrows;
+import mockwebserver3.Dispatcher;
+import mockwebserver3.MockResponse;
+import mockwebserver3.MockWebServer;
+import mockwebserver3.RecordedRequest;
+import mockwebserver3.junit5.internal.MockWebServerExtension;
+import okhttp3.Headers;
 import okhttp3.HttpUrl;
-import okhttp3.mockwebserver.Dispatcher;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
@@ -42,10 +43,10 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,25 +56,24 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.IntStream;
 
-import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.service.VoltageInitResultConsumer.HEADER_REACTIVE_SLACKS_OVER_THRESHOLD;
 import static org.gridsuite.study.server.service.VoltageInitResultConsumer.HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
@@ -84,12 +84,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
  */
-@RunWith(SpringRunner.class)
+@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-public class VoltageInitTest {
+class VoltageInitTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VoltageInitTest.class);
 
@@ -107,7 +107,7 @@ public class VoltageInitTest {
 
     private static final String VOLTAGE_INIT_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
 
-    public static final VoltageInitParametersInfos VOLTAGE_INIT_PARAMETERS_INFOS = VoltageInitParametersInfos.builder()
+    private static final VoltageInitParametersInfos VOLTAGE_INIT_PARAMETERS_INFOS = VoltageInitParametersInfos.builder()
         .voltageLimitsDefault(
             List.of(
                 VoltageLimitInfos.builder()
@@ -122,7 +122,7 @@ public class VoltageInitTest {
         )
         .build();
 
-    public static final VoltageInitParametersInfos VOLTAGE_INIT_PARAMETERS_INFOS_2 = VoltageInitParametersInfos.builder()
+    private static final VoltageInitParametersInfos VOLTAGE_INIT_PARAMETERS_INFOS_2 = VoltageInitParametersInfos.builder()
         .voltageLimitsDefault(
             List.of(
                 VoltageLimitInfos.builder()
@@ -153,8 +153,6 @@ public class VoltageInitTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    private MockWebServer server;
 
     @Autowired
     private OutputDestination output;
@@ -208,18 +206,13 @@ public class VoltageInitTest {
     private final String voltageInitCancelFailedDestination = "voltageinit.cancelfailed";
     private final String elementUpdateDestination = "element.update";
 
-    @Before
-    public void setup() throws IOException {
-        server = new MockWebServer();
-
+    @BeforeEach
+    void setup(final MockWebServer server) throws Exception {
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
         Network network = Network.create("test", "IIDM");
         network.getVariantManager().setWorkingVariant(VariantManagerConstants.INITIAL_VARIANT_ID);
         initMockBeans(network);
-
-        // Start the server.
-        server.start();
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
@@ -244,7 +237,6 @@ public class VoltageInitTest {
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
                 String method = Objects.requireNonNull(request.getMethod());
-
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_3)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", VOLTAGE_INIT_CANCEL_FAILED_UUID)
@@ -252,9 +244,7 @@ public class VoltageInitTest {
                             .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE)
                             .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
                             .build(), voltageInitResultDestination);
-                    return new MockResponse().setResponseCode(200)
-                            .setBody(voltageInitResultUuidStr2)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitResultUuidStr2);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", VOLTAGE_INIT_RESULT_UUID)
@@ -262,35 +252,26 @@ public class VoltageInitTest {
                             .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE)
                             .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
                             .build(), voltageInitResultDestination);
-                    return new MockResponse().setResponseCode(200)
-                            .setBody(voltageInitResultUuidStr)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitResultUuidStr);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
                         .build(), voltageInitFailedDestination);
-                    return new MockResponse().setResponseCode(200)
-                            .setBody(voltageInitErrorResultUuidStr)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitErrorResultUuidStr);
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID)) {
-                    return new MockResponse().setResponseCode(200).setBody(VOLTAGE_INIT_RESULT_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_RESULT_JSON);
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status")) {
-                    return new MockResponse().setResponseCode(200).setBody(VOLTAGE_INIT_STATUS_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_STATUS_JSON);
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")) {
-                    return new MockResponse().setResponseCode(200).setBody("\"" + MODIFICATIONS_GROUP_UUID + "\"")
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + MODIFICATIONS_GROUP_UUID + "\"");
                 } else if (path.matches("/v1/groups/.*/duplications.*")) {
                     Optional<NetworkModificationResult> networkModificationResult =
                             createModificationResultWithElementImpact(SimpleImpactType.MODIFICATION,
                                     IdentifiableType.GENERATOR, "genId", Set.of("s1"));
-                    return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(networkModificationResult))
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(networkModificationResult));
                 } else if (path.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/network-modifications\\?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST))
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST));
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/stop.*")
                         || path.matches("/v1/results/" + VOLTAGE_INIT_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? VOLTAGE_INIT_OTHER_NODE_RESULT_UUID : VOLTAGE_INIT_RESULT_UUID;
@@ -298,8 +279,7 @@ public class VoltageInitTest {
                             .setHeader("resultUuid", resultUuid)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), voltageInitStoppedDestination);
-                    return new MockResponse().setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_CANCEL_FAILED_UUID + "/stop.*")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", VOLTAGE_INIT_CANCEL_FAILED_UUID)
@@ -307,35 +287,28 @@ public class VoltageInitTest {
                             .setHeader("userId", "userId")
                             .setHeader("message", "voltage init could not be cancel")
                             .build(), voltageInitCancelFailedDestination);
-                    return new MockResponse().setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/results/invalidate-status.*")) {
-                    return new MockResponse().setResponseCode(200);
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID)) {
                     if (method.equals("PUT")) {
-                        return new MockResponse().setResponseCode(200);
+                        return new MockResponse(200);
                     } else {
-                        return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(VOLTAGE_INIT_PARAMETERS_INFOS))
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(VOLTAGE_INIT_PARAMETERS_INFOS));
                     }
                 } else if (path.matches("/v1/parameters/" + WRONG_VOLTAGE_INIT_PARAMETERS_UUID)) {
-                    return new MockResponse().setResponseCode(404);
+                    return new MockResponse(404);
                 } else if (path.matches("/v1/parameters")) {
-                    return new MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(VOLTAGE_INIT_PARAMETERS_UUID))
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(VOLTAGE_INIT_PARAMETERS_UUID));
                 } else if (path.matches("/v1/results")) {
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/supervision/results-count")) {
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8")
-                        .setBody("1");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
                 } else if (path.matches("/v1/reports")) {
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else {
-                    LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
-                    return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
+                    LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
+                    return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
                 }
             }
 
@@ -368,7 +341,7 @@ public class VoltageInitTest {
     }
 
     @Test
-    public void testVoltageInitParameters() throws Exception {
+    void testVoltageInitParameters(final MockWebServer server) throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null, false);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -408,7 +381,7 @@ public class VoltageInitTest {
     }
 
     @Test
-    public void testUpdatingParametersWithSameComputationParametersDoesNotInvalidate() throws Exception {
+    void testUpdatingParametersWithSameComputationParametersDoesNotInvalidate(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID), false);
         // Just changing applyModifications value but keeping the same computing parameters
         StudyVoltageInitParameters studyVoltageInitParameters = StudyVoltageInitParameters.builder()
@@ -432,7 +405,7 @@ public class VoltageInitTest {
     }
 
     @Test
-    public void testApplyModificationsWhenParameterIsActivated() throws Exception {
+    void testApplyModificationsWhenParameterIsActivated(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(
             UUID.fromString(NETWORK_UUID_STRING),
             CASE_UUID,
@@ -464,7 +437,7 @@ public class VoltageInitTest {
     }
 
     @Test
-    public void testVoltageInit() throws Exception {
+    void testVoltageInit(final MockWebServer server) throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID), false);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -548,14 +521,12 @@ public class VoltageInitTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
 
-        //Test result count
-        testResultCount();
-        //Delete Voltage init results
-        testDeleteResults(1);
+        testResultCount(server); //Test result count
+        testDeleteResults(server, 1); //Delete Voltage init results
     }
 
     @Test
-    public void testVoltageInitCancelFail() throws Exception {
+    void testVoltageInitCancelFail(final MockWebServer server) throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID), false);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -599,7 +570,7 @@ public class VoltageInitTest {
     }
 
     @Test
-    public void testCopyVoltageInitModifications() throws Exception {
+    void testCopyVoltageInitModifications(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID), false);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
@@ -697,8 +668,7 @@ public class VoltageInitTest {
     }
 
     @Test
-    @SneakyThrows
-    public void testNotResetedUuidResultWhenVoltageInitFailed() {
+    void testNotResetedUuidResultWhenVoltageInitFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID), false);
         UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
@@ -755,19 +725,19 @@ public class VoltageInitTest {
         assertEquals("voltage init could not be cancel", voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_ERROR));
     }
 
-    private void testResultCount() throws Exception {
+    private void testResultCount(final MockWebServer server) throws Exception {
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(VOLTAGE_INITIALIZATION))
-                .queryParam("dryRun", String.valueOf(true)))
+                .queryParam("type", VOLTAGE_INITIALIZATION.toString())
+                .queryParam("dryRun", "true"))
             .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
     }
 
-    private void testDeleteResults(int expectedInitialResultCount) throws Exception {
+    private void testDeleteResults(final MockWebServer server, int expectedInitialResultCount) throws Exception {
         assertEquals(expectedInitialResultCount, rootNetworkNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(VOLTAGE_INITIALIZATION))
-                .queryParam("dryRun", String.valueOf(false)))
+                .queryParam("type", VOLTAGE_INITIALIZATION.toString())
+                .queryParam("dryRun", "false"))
             .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
@@ -777,7 +747,7 @@ public class VoltageInitTest {
     }
 
     @Test
-    public void testNoResult() throws Exception {
+    void testNoResult() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID), false);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -794,7 +764,7 @@ public class VoltageInitTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/status", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
                 status().isNoContent());
 
-        // stop non existing voltage init analysis
+        // stop non-existing voltage init analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/stop", studyNameUserIdUuid, modificationNode1Uuid)
                 .header("userId", "userId")).andExpect(status().isOk());
     }
@@ -846,25 +816,18 @@ public class VoltageInitTest {
         return modificationNode;
     }
 
-    private void cleanDB() {
+    @AfterEach
+    void tearDown(final MockWebServer server) {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
-    }
 
-    @After
-    public void tearDown() {
         List<String> destinations = List.of(studyUpdateDestination, voltageInitResultDestination, voltageInitStoppedDestination, voltageInitFailedDestination, voltageInitCancelFailedDestination);
-
-        cleanDB();
-
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
 
         try {
             TestUtils.assertServerRequestsEmptyThenShutdown(server);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
-        } catch (IOException e) {
-            // Ignoring
         }
     }
 
