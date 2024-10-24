@@ -128,7 +128,6 @@
 
             <!-- project specific dependencies -->
             <dependency>
-                <!-- Used by RestTemplate -->
                 <groupId>org.apache.httpcomponents.client5</groupId>
                 <artifactId>httpclient5</artifactId>
                 <version>${apache.httpclient.version}</version>
