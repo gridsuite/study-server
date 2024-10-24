@@ -4,6 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server.service.client.dynamicsimulation.impl;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
@@ -14,6 +15,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,7 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
 @Service
 public class DynamicSimulationClientImpl extends AbstractRestClient implements DynamicSimulationClient {
 
+    @Autowired
     public DynamicSimulationClientImpl(RemoteServicesProperties remoteServicesProperties,
                                        RestTemplate restTemplate) {
         super(remoteServicesProperties.getServiceUri("dynamic-simulation-server"), restTemplate);

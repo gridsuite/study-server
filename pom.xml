@@ -127,6 +127,11 @@
             </dependency>
 
             <!-- project specific dependencies -->
+            <dependency>
+                <groupId>org.apache.httpcomponents.client5</groupId>
+                <artifactId>httpclient5</artifactId>
+                <version>${apache.httpclient.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -204,6 +209,12 @@
         </dependency>
 
         <!-- Runtime dependencies -->
+        <dependency>
+            <!-- Used by RestTemplate -->
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <dependency>
             <groupId>org.liquibase</groupId>
             <artifactId>liquibase-core</artifactId>

@@ -30,7 +30,6 @@ public abstract class AbstractNodeInfoEntity extends AbstractManuallyAssignedIde
     @Column(name = "idNode", insertable = false, updatable = false)
     private UUID idNode; // don't bother with getter/setter since the `idNode` reference handles everything
 
-    @Override
     public UUID getId() {
         return idNode;
     }
