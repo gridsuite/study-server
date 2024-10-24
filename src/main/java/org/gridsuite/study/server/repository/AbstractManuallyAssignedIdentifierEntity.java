@@ -11,6 +11,8 @@ import jakarta.persistence.PostLoad;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Transient;
 
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.domain.Persistable;
 
 /**
@@ -19,6 +21,8 @@ import org.springframework.data.domain.Persistable;
 
 // Official documentation: https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#jpa.entity-persistence.saving-entites.strategies
 @MappedSuperclass
+@NoArgsConstructor
+@SuperBuilder
 public abstract class AbstractManuallyAssignedIdentifierEntity<T> implements Persistable<T> {
 
     @Transient

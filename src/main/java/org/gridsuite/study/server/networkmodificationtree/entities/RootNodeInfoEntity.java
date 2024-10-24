@@ -7,15 +7,12 @@
 
 package org.gridsuite.study.server.networkmodificationtree.entities;
 
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.UUID;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import lombok.experimental.SuperBuilder;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -24,8 +21,6 @@ import jakarta.persistence.Table;
 @Getter
 @Setter
 @Entity
+@SuperBuilder
 @Table(name = "RootNodeInfo")
-public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
-    @Column
-    private UUID reportUuid;
-}
+public class RootNodeInfoEntity extends AbstractNodeInfoEntity { }

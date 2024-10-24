@@ -8,20 +8,11 @@
 package org.gridsuite.study.server.networkmodificationtree;
 
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeInfoRepository;
-import org.gridsuite.study.server.utils.PropertyUtils;
 
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -34,76 +25,7 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         this.nodeInfoRepository = nodeInfoRepository;
     }
 
-    public abstract T toEntity(AbstractNode node);
-
     public abstract U toDto(T node);
-
-    public String getVariantId(AbstractNode node) {
-        return null;
-    }
-
-    public UUID getModificationGroupUuid(AbstractNode node) {
-        return null;
-    }
-
-    public void updateComputationResultUuid(AbstractNode node, UUID resultUuid, ComputationType computationType) {
-    }
-
-    public void updateComputationReportUuid(AbstractNode node, UUID reportUuid, ComputationType computationType) {
-    }
-
-    public void setModificationReports(AbstractNode node, Map<UUID, UUID> reports) {
-    }
-
-    public void setComputationsReports(AbstractNode node, Map<String, UUID> reports) {
-    }
-
-    public NodeBuildStatus getNodeBuildStatus(AbstractNode node) {
-        return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
-    }
-
-    /**
-     * @param node fetched network modification node
-     * @param computationType type of the fetched computation
-     * @return UUID of the computation of this type, done on this node
-     */
-    public UUID getComputationResultUuid(AbstractNode node, ComputationType computationType) {
-        return null;
-    }
-
-    public Map<String, UUID> getComputationReports(AbstractNode node) {
-        return new HashMap<>();
-    }
-
-    public Map<UUID, UUID> getModificationReports(AbstractNode node) {
-        return new HashMap<>();
-    }
-
-    public UUID getReportUuid(AbstractNode node) {
-        return null;
-    }
-
-    public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
-    }
-
-    public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationUuid) {
-    }
-
-    public void updateNodeBuildStatus(AbstractNode node, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
-    }
-
-    public void invalidateNodeBuildStatus(AbstractNode node, List<UUID> changedNodes) {
-    }
-
-    public void createNodeInfo(AbstractNode nodeInfo) {
-        if (nodeInfo.getType() == NodeType.NETWORK_MODIFICATION) {
-            NetworkModificationNode node = (NetworkModificationNode) nodeInfo;
-            if (node.getModificationReports() == null) {
-                node.setModificationReports(Map.of(node.getId(), UUID.randomUUID()));
-            }
-        }
-        nodeInfoRepository.save(toEntity(nodeInfo));
-    }
 
     public void deleteByNodeId(UUID id) {
         nodeInfoRepository.deleteById(id);
@@ -121,26 +43,8 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         return node;
     }
 
-    protected T completeEntityNodeInfo(AbstractNode node, T entity) {
-        entity.setIdNode(node.getId());
-        entity.setName(node.getName());
-        entity.setDescription(node.getDescription());
-        entity.setReadOnly(node.getReadOnly());
-        return entity;
-    }
-
-    public void updateNode(AbstractNode node, String... authorizedNullProperties) {
-        U persistedNode = getNode(node.getId());
-        /* using only DTO values not jpa Entity */
-        PropertyUtils.copyNonNullProperties(node, persistedNode, authorizedNullProperties);
-
-        T entity = toEntity(persistedNode);
-        entity.markNotNew();
-        nodeInfoRepository.save(entity);
-    }
-
-    public Map<UUID, U> getAll(Collection<UUID> ids) {
-        return nodeInfoRepository.findAllById(ids).stream().map(this::toDto).collect(Collectors.toMap(U::getId, Function.identity()));
+    public List<U> getAll(Collection<UUID> ids) {
+        return nodeInfoRepository.findAllById(ids).stream().map(this::toDto).toList();
     }
 
     public List<U> getAllInOrder(List<UUID> ids) {
@@ -153,75 +57,7 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         nodeInfoRepository.deleteByIdNodeIn(collect);
     }
 
-    public String getVariantId(UUID nodeUuid) {
-        return getVariantId(getNode(nodeUuid));
-    }
-
-    public UUID getModificationGroupUuid(UUID nodeUuid) {
-        return getModificationGroupUuid(getNode(nodeUuid));
-    }
-
-    public void updateComputationResultUuid(UUID nodeUuid, UUID computationResultUuid, ComputationType computationType) {
-        updateComputationResultUuid(getNode(nodeUuid), computationResultUuid, computationType);
-    }
-
-    public UUID getComputationResultUuid(UUID nodeUuid, ComputationType computationType) {
-        return getComputationResultUuid(getNode(nodeUuid), computationType);
-    }
-
-    public Map<String, UUID> getComputationReports(UUID nodeUuid) {
-        return getComputationReports(getNode(nodeUuid));
-    }
-
-    public Map<UUID, UUID> getModificationReports(UUID nodeUuid) {
-        return getModificationReports(getNode(nodeUuid));
-    }
-
-    public UUID getReportUuid(UUID nodeUuid) {
-        return getReportUuid(getNode(nodeUuid));
-    }
-
-    public void updateComputationReportUuid(UUID nodeUuid, UUID reportUuid, ComputationType computationType) {
-        updateComputationReportUuid(getNode(nodeUuid), reportUuid, computationType);
-    }
-
-    public void setModificationReports(UUID nodeUuid, Map<UUID, UUID> reports) {
-        setModificationReports(getNode(nodeUuid), reports);
-    }
-
-    public void setComputationsReports(UUID nodeUuid, Map<String, UUID> reports) {
-        setComputationsReports(getNode(nodeUuid), reports);
-    }
-
-    public void updateNodeBuildStatus(UUID nodeUuid, NodeBuildStatus nodeBuildStatus, List<UUID> changedNodes) {
-        updateNodeBuildStatus(getNode(nodeUuid), nodeBuildStatus, changedNodes);
-    }
-
-    public NodeBuildStatus getNodeBuildStatus(UUID nodeUuid) {
-        return getNodeBuildStatus(getNode(nodeUuid));
-    }
-
-    public void invalidateNodeBuildStatus(UUID nodeUuid, List<UUID> changedNodes) {
-        invalidateNodeBuildStatus(getNode(nodeUuid), changedNodes);
-    }
-
-    public void handleExcludeModification(UUID nodeUuid, UUID modificationUuid, boolean active) {
-        handleExcludeModification(getNode(nodeUuid), modificationUuid, active);
-    }
-
-    public void removeModificationsToExclude(UUID nodeUuid, List<UUID> modificationUuid) {
-        removeModificationsToExclude(getNode(nodeUuid), modificationUuid);
-    }
-
     public Boolean isReadOnly(UUID nodeUuid) {
-        return getNode(nodeUuid).getReadOnly();
-    }
-
-    public NodeModificationInfos getNodeModificationInfos(AbstractNode node) {
-        return null;
-    }
-
-    public NodeModificationInfos getNodeModificationInfos(UUID nodeUuid) {
-        return getNodeModificationInfos(getNode(nodeUuid));
+        return nodeInfoRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(StudyException.Type.NODE_NOT_FOUND)).getReadOnly();
     }
 }

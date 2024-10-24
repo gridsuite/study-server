@@ -27,6 +27,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,6 +70,7 @@ class EquipmentInfosServiceTests implements WithAssertions {
     private static final UUID NETWORK_UUID_2 = UUID.fromString("8c73b846-5dbe-4ac8-a9c9-8422fda261bb");
 
     private static final UUID NODE_UUID = UUID.fromString("12345678-8cf0-11bd-b23e-10b96e4ef00d");
+    private static final UUID ROOTNETWORK_UUID = UUID.fromString("23456789-8cf0-11bd-b23e-10b96e4ef00d");
 
     @Autowired
     private EquipmentInfosService equipmentInfosService;
@@ -79,13 +81,17 @@ class EquipmentInfosServiceTests implements WithAssertions {
     @MockBean
     private NetworkModificationTreeService networkModificationTreeService;
 
+    @MockBean
+    private RootNetworkService rootNetworkService;
+
     @Autowired
     private StudyService studyService;
 
     @BeforeEach
     void setup() {
-        when(networkStoreService.getNetworkUuid(NETWORK_UUID)).thenReturn(NETWORK_UUID);
-        when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
+//        when(networkStoreService.getNetworkUuid(NETWORK_UUID)).thenReturn(NETWORK_UUID);
+        when(networkModificationTreeService.getVariantId(NODE_UUID, ROOTNETWORK_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
+        when(rootNetworkService.getNetworkUuid(ROOTNETWORK_UUID)).thenReturn(NETWORK_UUID);
     }
 
     @AfterEach
@@ -351,7 +357,7 @@ class EquipmentInfosServiceTests implements WithAssertions {
     }
 
     private void testNameFullAscii(String pat) {
-        assertEquals(1, studyService.searchEquipments(NETWORK_UUID, NODE_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, false).size());
+        assertEquals(1, studyService.searchEquipments(NODE_UUID, ROOTNETWORK_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, false).size());
     }
 
     private void testNameFullAsciis() {
