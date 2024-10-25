@@ -31,22 +31,22 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     private UUID modificationGroupUuid;
 
     @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo", cascade = CascadeType.ALL)
-    protected List<TimePointNodeInfoEntity> timePointNodeInfos;
+    protected List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos;
 
-    //TODO temporary, for now we are only working with one timepoint by study
+    //TODO temporary, for now we are only working with one root network by study
     @Transient
-    public TimePointNodeInfoEntity getFirstTimePointNodeInfosEntity() {
-        if (timePointNodeInfos == null || timePointNodeInfos.isEmpty()) {
+    public RootNetworkNodeInfoEntity getFirstRootNetworkNodeInfosEntity() {
+        if (rootNetworkNodeInfos == null || rootNetworkNodeInfos.isEmpty()) {
             return null;
         }
-        return timePointNodeInfos.get(0);
+        return rootNetworkNodeInfos.get(0);
     }
 
-    public void addTimePointNodeInfo(TimePointNodeInfoEntity timePointNodeInfoEntity) {
-        if (timePointNodeInfos == null) {
-            timePointNodeInfos = new ArrayList<>();
+    public void addRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
+        if (rootNetworkNodeInfos == null) {
+            rootNetworkNodeInfos = new ArrayList<>();
         }
-        timePointNodeInfoEntity.setNodeInfo(this);
-        timePointNodeInfos.add(timePointNodeInfoEntity);
+        rootNetworkNodeInfoEntity.setNodeInfo(this);
+        rootNetworkNodeInfos.add(rootNetworkNodeInfoEntity);
     }
 }

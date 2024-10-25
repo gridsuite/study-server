@@ -4,38 +4,32 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
 package org.gridsuite.study.server;
-
-/*
- * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
- */
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.sensitivity.SensitivityFunctionType;
 import lombok.SneakyThrows;
+import mockwebserver3.Dispatcher;
+import mockwebserver3.MockResponse;
+import mockwebserver3.MockWebServer;
+import mockwebserver3.RecordedRequest;
+import mockwebserver3.junit5.internal.MockWebServerExtension;
+import okhttp3.Headers;
 import okhttp3.HttpUrl;
-import okhttp3.mockwebserver.Dispatcher;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
-import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.SendInput;
@@ -43,10 +37,10 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,14 +49,13 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import java.io.IOException;
 import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
@@ -72,19 +65,22 @@ import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSI
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.gridsuite.study.server.utils.TestUtils.getBinaryAsBuffer;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@RunWith(SpringRunner.class)
+/**
+ * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
+ */
+@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-public class SensitivityAnalysisTest {
+class SensitivityAnalysisTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(SensitivityAnalysisTest.class);
 
     private static final String SENSITIVITY_ANALYSIS_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
@@ -119,8 +115,6 @@ public class SensitivityAnalysisTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private MockWebServer server;
-
     private WireMockServer wireMock;
 
     @Autowired
@@ -130,7 +124,7 @@ public class SensitivityAnalysisTest {
     private InputDestination input;
 
     @Autowired
-    private ObjectMapper mapper;
+    private ObjectMapper objectMapper;
 
     private ObjectWriter objectWriter;
 
@@ -150,20 +144,17 @@ public class SensitivityAnalysisTest {
     private StudyRepository studyRepository;
 
     @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private TimePointNodeInfoRepository timePointNodeStatusRepository;
+    private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
     @Autowired
     private ReportService reportService;
 
     //output destinations
-    private final String studyUpdateDestination = "study.update";
-    private final String elementUpdateDestination = "element.update";
-    private final String sensitivityAnalysisResultDestination = "sensitivityanalysis.result";
-    private final String sensitivityAnalysisStoppedDestination = "sensitivityanalysis.stopped";
-    private final String sensitivityAnalysisFailedDestination = "sensitivityanalysis.failed";
+    private static final String STUDY_UPDATE_DESTINATION = "study.update";
+    private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
+    private static final String SENSITIVITY_ANALYSIS_RESULT_DESTINATION = "sensitivityanalysis.result";
+    private static final String SENSITIVITY_ANALYSIS_STOPPED_DESTINATION = "sensitivityanalysis.stopped";
+    private static final String SENSITIVITY_ANALYSIS_FAILED_DESTINATION = "sensitivityanalysis.failed";
 
     public static final String SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":0.0,\"angleFlowSensitivityValueThreshold\":0.0,\"flowVoltageSensitivityValueThreshold\":0.0," +
             "\"sensitivityInjectionsSet\":[],\"sensitivityInjection\":[],\"sensitivityHVDC\":[],\"sensitivityPST\":[],\"sensitivityNodes\":[]}";
@@ -173,17 +164,13 @@ public class SensitivityAnalysisTest {
 
     private static final UUID SENSITIVITY_ANALYSIS_PARAMETERS_UUID = UUID.randomUUID();
 
-    @Before
-    public void setup() throws IOException {
+    @BeforeEach
+    void setup(final MockWebServer server) {
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
-        server = new MockWebServer();
         wireMock = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
 
-        objectWriter = mapper.writer().withDefaultPrettyPrinter();
-
         // Start the server.
-        server.start();
         wireMock.start();
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
@@ -194,102 +181,77 @@ public class SensitivityAnalysisTest {
         reportService.setReportServerBaseUri(baseUrl);
         loadFlowService.setLoadFlowServerBaseUri(baseUrl);
 
-        LoadFlowParametersInfos loadFlowParametersInfos = LoadFlowParametersInfos.builder()
-            .commonParameters(LoadFlowParameters.load())
-            .specificParametersPerProvider(Map.of())
-            .build();
-        String loadFlowParameters = objectMapper.writeValueAsString(loadFlowParametersInfos);
-
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
-                request.getBody();
-
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_3 + ".*") ? SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID : SENSITIVITY_ANALYSIS_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", resultUuid)
                         .setHeader(HEADER_USER_ID, "testUserId")
-                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
-                        .build(), sensitivityAnalysisResultDestination);
-                    return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
+                        .build(), SENSITIVITY_ANALYSIS_RESULT_DESTINATION);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + resultUuid + "\"");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/run-and-save.*")) {
                     input.send(MessageBuilder.withPayload("")
-                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                         .setHeader(HEADER_USER_ID, "testUserId")
-                        .build(), sensitivityAnalysisFailedDestination);
-                    return new MockResponse().setResponseCode(200).setBody("\"" + SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"")
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .build(), SENSITIVITY_ANALYSIS_FAILED_DESTINATION);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/run-and-save.*")) {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader(HEADER_USER_ID, "testUserId")
-                        .build(), sensitivityAnalysisFailedDestination);
-                    return new MockResponse().setResponseCode(200).setBody("\"" + SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"")
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .build(), SENSITIVITY_ANALYSIS_FAILED_DESTINATION);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"");
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/stop.*")
                     || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_3 + ".*") ? SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID : SENSITIVITY_ANALYSIS_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", resultUuid)
-                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22timePointUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
-                        .build(), sensitivityAnalysisStoppedDestination);
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
+                        .build(), SENSITIVITY_ANALYSIS_STOPPED_DESTINATION);
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID)) {
-                    return new MockResponse().setResponseCode(200).setBody(FAKE_RESULT_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), FAKE_RESULT_JSON);
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/status")
                            || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/status")) {
-                    return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_STATUS_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_STATUS_JSON);
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "\\?.*")
                     || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "\\?.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(FAKE_RESULT_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), FAKE_RESULT_JSON);
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/filter-options" + "\\?.*")
                         || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/filter-options" + "\\?.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(FAKE_RESULT_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), FAKE_RESULT_JSON);
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/csv")
                         || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/csv") && request.getMethod().equals("POST")) {
-                    return new MockResponse().setResponseCode(200).setBody(getBinaryAsBuffer(SENSITIVITY_RESULTS_AS_CSV))
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse.Builder().code(200).body(getBinaryAsBuffer(SENSITIVITY_RESULTS_AS_CSV))
+                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).build();
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID) && request.getMethod().equals("DELETE")) {
-                    return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_STATUS_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_STATUS_JSON);
                 } else if (path.matches("/v1/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_RESULT_UUID)
                            || path.matches("/v1/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID)) {
-                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
-                        "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/results")) {
-                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
-                        "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/reports")) {
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/supervision/results-count")) {
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8")
-                        .setBody("1");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
                 } else if (path.matches("/v1/networks/" + ".*" + "/factors-count\\?isInjectionsSet" + "\\&ids.*")) {
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8")
-                        .setBody("4");
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "4");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
-                    return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
+                    return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
                 }
             }
         };
-
         server.setDispatcher(dispatcher);
     }
 
-    private void testSensitivityAnalysisWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID resultUuid) throws Exception {
+    private void testSensitivityAnalysisWithNodeUuid(final MockWebServer server, UUID studyUuid, UUID nodeUuid, UUID resultUuid) throws Exception {
         // sensitivity analysis not found
         mockMvc.perform(get("/v1/sensitivity-analysis/results/{resultUuid}", NOT_FOUND_SENSITIVITY_ANALYSIS_UUID)).andExpect(status().isNotFound());
 
@@ -298,17 +260,17 @@ public class SensitivityAnalysisTest {
             .header("userId", "userId")
             .header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
 
-        Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
 
-        Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, sensitivityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT, updateType);
 
-        sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
@@ -358,7 +320,7 @@ public class SensitivityAnalysisTest {
                 .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
-        sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertTrue(updateType.equals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS) || updateType.equals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT));
@@ -367,7 +329,7 @@ public class SensitivityAnalysisTest {
     }
 
     @Test
-    public void testSensitivityAnalysis() throws Exception {
+    void testSensitivityAnalysis(final MockWebServer server) throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -384,8 +346,8 @@ public class SensitivityAnalysisTest {
             .header(HEADER_USER_ID, "testUserId"))
             .andExpect(status().isForbidden());
 
-        testSensitivityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
-        testSensitivityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
+        testSensitivityAnalysisWithNodeUuid(server, studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
+        testSensitivityAnalysisWithNodeUuid(server, studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
                 studyNameUserIdUuid, UUID.randomUUID(), "fakeJsonSelector"))
@@ -400,17 +362,17 @@ public class SensitivityAnalysisTest {
                 .header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk())
             .andReturn();
 
-        Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
 
-        Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT, updateType);
 
-        sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
@@ -419,22 +381,22 @@ public class SensitivityAnalysisTest {
 
         //Test result count
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(SENSITIVITY_ANALYSIS))
-                .queryParam("dryRun", String.valueOf(true)))
+                .queryParam("type", SENSITIVITY_ANALYSIS.toString())
+                .queryParam("dryRun", "true"))
             .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
 
         //Delete Sensitivity analysis results
-        assertEquals(1, timePointNodeStatusRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
+        assertEquals(1, rootNetworkNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", String.valueOf(SENSITIVITY_ANALYSIS))
-                .queryParam("dryRun", String.valueOf(false)))
+                .queryParam("type", SENSITIVITY_ANALYSIS.toString())
+                .queryParam("dryRun", "false"))
             .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
-        assertEquals(0, timePointNodeStatusRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
+        assertEquals(0, rootNetworkNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
 
         String baseUrlWireMock = wireMock.baseUrl();
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrlWireMock);
@@ -459,10 +421,9 @@ public class SensitivityAnalysisTest {
     }
 
     @Test
-    @SneakyThrows
-    public void testGetSensitivityResultWithWrongId() {
+    void testGetSensitivityResultWithWrongId() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
-        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
+        UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         UUID notFoundSensitivityUuid = UUID.randomUUID();
         UUID studyUuid = studyEntity.getId();
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
@@ -477,9 +438,9 @@ public class SensitivityAnalysisTest {
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNodeUuid = modificationNode1.getId();
-        networkModificationTreeService.updateComputationResultUuid(modificationNodeUuid, timePointUuid, notFoundSensitivityUuid, SENSITIVITY_ANALYSIS);
-        assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, timePointUuid, SENSITIVITY_ANALYSIS));
-        assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, timePointUuid, SENSITIVITY_ANALYSIS));
+        networkModificationTreeService.updateComputationResultUuid(modificationNodeUuid, rootNetworkUuid, notFoundSensitivityUuid, SENSITIVITY_ANALYSIS);
+        assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
+        assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
 
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid))
                 .willReturn(WireMock.notFound()));
@@ -495,31 +456,30 @@ public class SensitivityAnalysisTest {
     }
 
     @Test
-    @SneakyThrows
-    public void testResetUuidResultWhenSAFailed() {
+    void testResetUuidResultWhenSAFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
-        UUID timePointUuid = studyEntity.getFirstTimepoint().getId();
+        UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
-        String resultUuidJson = mapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), timePointUuid));
+        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), rootNetworkUuid));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), timePointUuid, resultUuid, SENSITIVITY_ANALYSIS);
-        assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, SENSITIVITY_ANALYSIS));
-        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, SENSITIVITY_ANALYSIS));
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, SENSITIVITY_ANALYSIS);
+        assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SENSITIVITY_ANALYSIS));
+        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SENSITIVITY_ANALYSIS));
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
-            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), sensitivityAnalysisFailedDestination);
+            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), SENSITIVITY_ANALYSIS_FAILED_DESTINATION);
             return resultUuid;
         }).when(studyService).runSensitivityAnalysis(any(), any(), any());
         studyService.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId(), "testUserId");
 
         // Test reset uuid result in the database
-        assertNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), timePointUuid, SENSITIVITY_ANALYSIS));
+        assertNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SENSITIVITY_ANALYSIS));
 
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED, updateType);
@@ -527,7 +487,7 @@ public class SensitivityAnalysisTest {
 
     // test sensitivity analysis on network 2 will fail
     @Test
-    public void testSensitivityAnalysisFailedForNotification() throws Exception {
+    void testSensitivityAnalysisFailedForNotification(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_2_STRING), CASE_2_UUID);
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
@@ -540,13 +500,13 @@ public class SensitivityAnalysisTest {
             .andExpect(status().isOk());
 
         // failed sensitivity analysis
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED, updateType);
 
         // message sent by run and save controller to notify frontend sensitivity analysis is running and should update status
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
@@ -569,7 +529,7 @@ public class SensitivityAnalysisTest {
         // failed sensitivity analysis without receiver -> no failure message sent to frontend
 
         // message sent by run and save controller to notify frontend sensitivity analysis is running and should update status
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid2, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
@@ -588,12 +548,6 @@ public class SensitivityAnalysisTest {
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
             UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
-        return createNetworkModificationNode(studyUuid, parentNodeUuid,
-            modificationGroupUuid, variantId, nodeName, BuildStatus.NOT_BUILT);
-    }
-
-    private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-            UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
                 .children(Collections.emptyList()).build();
@@ -607,7 +561,7 @@ public class SensitivityAnalysisTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
             .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -618,44 +572,37 @@ public class SensitivityAnalysisTest {
         return networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
     }
 
-    private void cleanDB() {
+    @AfterEach
+    void tearDown(final MockWebServer server) {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
-    }
 
-    @After
-    public void tearDown() {
-        List<String> destinations = List.of(studyUpdateDestination, sensitivityAnalysisFailedDestination, sensitivityAnalysisResultDestination, sensitivityAnalysisStoppedDestination);
-
-        cleanDB();
-
+        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, SENSITIVITY_ANALYSIS_FAILED_DESTINATION, SENSITIVITY_ANALYSIS_RESULT_DESTINATION, SENSITIVITY_ANALYSIS_STOPPED_DESTINATION);
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
 
         try {
             TestUtils.assertServerRequestsEmptyThenShutdown(server);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
-        } catch (IOException e) {
-            // Ignoring
         }
     }
 
     @Test
-    public void testSensitivityAnalysisParameters() throws Exception {
+    void testSensitivityAnalysisParameters() throws Exception {
         // Mocking with WireMock
         String baseUrlWireMock = wireMock.baseUrl();
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrlWireMock);
 
         wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID))
-            .willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON)));
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON)));
         wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID))
             .willReturn(WireMock.ok()));
 
         wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
-            .willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody(mapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID))));
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(objectMapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID))));
 
         wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters/default"))
-            .willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody(mapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID))));
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(objectMapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID))));
         // end mocking
 
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
@@ -697,7 +644,7 @@ public class SensitivityAnalysisTest {
     }
 
     @Test
-    public void testGetSensitivityAnalysisFactorsCount() throws Exception {
+    void testGetSensitivityAnalysisFactorsCount(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
@@ -722,15 +669,15 @@ public class SensitivityAnalysisTest {
                 .content(parameters)).andExpect(
             status().isOk());
 
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);
+        Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
     }
 }

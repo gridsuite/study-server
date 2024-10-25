@@ -10,7 +10,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
-import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 
 import java.util.ArrayList;
@@ -36,7 +36,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private UUID id;
 
     @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TimePointEntity> timePoints;
+    private List<RootNetworkEntity> rootNetworks;
 
     /**
      * @deprecated to remove when the data is migrated into the loadflow-server
@@ -124,18 +124,18 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
         UUID networkUuid;
     }
 
-    //TODO temporary, for now we are only working with one timepoint
+    //TODO temporary, for now we are only working with one rootNetwork
     @Transient
-    public TimePointEntity getFirstTimepoint() {
-        return timePoints.get(0);
+    public RootNetworkEntity getFirstRootNetwork() {
+        return rootNetworks.get(0);
     }
 
-    public void addTimePoint(TimePointEntity timePointEntity) {
-        if (timePoints == null) {
-            timePoints = new ArrayList<>();
+    public void addRootNetwork(RootNetworkEntity rootNetworkEntity) {
+        if (rootNetworks == null) {
+            rootNetworks = new ArrayList<>();
         }
-        timePointEntity.setStudy(this);
-        timePoints.add(timePointEntity);
+        rootNetworkEntity.setStudy(this);
+        rootNetworks.add(rootNetworkEntity);
     }
 }
 

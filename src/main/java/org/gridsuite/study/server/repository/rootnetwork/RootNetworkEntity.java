@@ -4,11 +4,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.repository.timepoint;
+package org.gridsuite.study.server.repository.rootnetwork;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 
 import java.util.ArrayList;
@@ -24,8 +24,8 @@ import java.util.UUID;
 @Setter
 @Entity
 @Builder
-@Table(name = "timePoint")
-public class TimePointEntity {
+@Table(name = "rootNetwork")
+public class RootNetworkEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
@@ -35,8 +35,8 @@ public class TimePointEntity {
     @JoinColumn(name = "studyUuid")
     private StudyEntity study;
 
-    @OneToMany(orphanRemoval = true, mappedBy = "timePoint", cascade = CascadeType.ALL)
-    private List<TimePointNodeInfoEntity> timePointNodeInfos;
+    @OneToMany(orphanRemoval = true, mappedBy = "rootNetwork", cascade = CascadeType.ALL)
+    private List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos;
 
     @Column(name = "networkUuid", nullable = false)
     private UUID networkUuid;
@@ -57,11 +57,11 @@ public class TimePointEntity {
     @Column(name = "reportUuid")
     private UUID reportUuid;
 
-    public void addTimePointNodeInfo(TimePointNodeInfoEntity timePointNodeInfoEntity) {
-        if (timePointNodeInfos == null) {
-            timePointNodeInfos = new ArrayList<>();
+    public void addRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
+        if (rootNetworkNodeInfos == null) {
+            rootNetworkNodeInfos = new ArrayList<>();
         }
-        timePointNodeInfoEntity.setTimePoint(this);
-        timePointNodeInfos.add(timePointNodeInfoEntity);
+        rootNetworkNodeInfoEntity.setRootNetwork(this);
+        rootNetworkNodeInfos.add(rootNetworkNodeInfoEntity);
     }
 }

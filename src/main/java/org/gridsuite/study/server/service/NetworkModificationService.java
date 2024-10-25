@@ -15,7 +15,7 @@ import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.TimePointNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -273,9 +273,9 @@ public class NetworkModificationService {
         }
     }
 
-    void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID timePointUuid, @NonNull BuildInfos buildInfos) {
+    void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull BuildInfos buildInfos) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String receiver = buildReceiver(nodeUuid, timePointUuid);
+        String receiver = buildReceiver(nodeUuid, rootNetworkUuid);
 
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "build");
         var path = uriComponentsBuilder
@@ -291,8 +291,8 @@ public class NetworkModificationService {
         restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, Void.class);
     }
 
-    public void stopBuild(@NonNull UUID nodeUuid, @NonNull UUID timePointUuid) {
-        String receiver = buildReceiver(nodeUuid, timePointUuid);
+    public void stopBuild(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
+        String receiver = buildReceiver(nodeUuid, rootNetworkUuid);
         var path = UriComponentsBuilder.fromPath("build/stop")
             .queryParam(QUERY_PARAM_RECEIVER, receiver)
             .build()
@@ -313,14 +313,14 @@ public class NetworkModificationService {
         return httpEntity;
     }
 
-    public Optional<NetworkModificationResult> moveModifications(UUID originGroupUuid, List<UUID> modificationUuidList, UUID beforeUuid, UUID networkUuid, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity, TimePointNodeInfoEntity timePointNodeInfoEntity, boolean buildTargetNode) {
+    public Optional<NetworkModificationResult> moveModifications(UUID originGroupUuid, List<UUID> modificationUuidList, UUID beforeUuid, UUID networkUuid, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, boolean buildTargetNode) {
         Objects.requireNonNull(networkUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam(QUERY_PARAM_ACTION, ModificationsActionType.MOVE.name())
             .queryParam(NETWORK_UUID, networkUuid)
-            .queryParam(REPORT_UUID, timePointNodeInfoEntity.getModificationReports().get(networkModificationNodeInfoEntity.getId()))
+            .queryParam(REPORT_UUID, rootNetworkNodeInfoEntity.getModificationReports().get(networkModificationNodeInfoEntity.getId()))
             .queryParam(REPORTER_ID, networkModificationNodeInfoEntity.getId())
-            .queryParam(VARIANT_ID, timePointNodeInfoEntity.getVariantId())
+            .queryParam(VARIANT_ID, rootNetworkNodeInfoEntity.getVariantId())
             .queryParam("originGroupUuid", originGroupUuid)
             .queryParam("build", buildTargetNode);
         if (beforeUuid != null) {
@@ -337,13 +337,13 @@ public class NetworkModificationService {
                 }).getBody();
     }
 
-    public Optional<NetworkModificationResult> createModifications(List<UUID> modificationUuidList, UUID networkUuid, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity, TimePointNodeInfoEntity timePointNodeInfoEntity, ModificationsActionType action) {
+    public Optional<NetworkModificationResult> createModifications(List<UUID> modificationUuidList, UUID networkUuid, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, ModificationsActionType action) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam(QUERY_PARAM_ACTION, action.name())
             .queryParam(NETWORK_UUID, networkUuid)
-            .queryParam(REPORT_UUID, timePointNodeInfoEntity.getModificationReports().get(networkModificationNodeInfoEntity.getId()))
+            .queryParam(REPORT_UUID, rootNetworkNodeInfoEntity.getModificationReports().get(networkModificationNodeInfoEntity.getId()))
             .queryParam(REPORTER_ID, networkModificationNodeInfoEntity.getId())
-            .queryParam(VARIANT_ID, timePointNodeInfoEntity.getVariantId());
+            .queryParam(VARIANT_ID, rootNetworkNodeInfoEntity.getVariantId());
 
         HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
         return restTemplate.exchange(
@@ -373,12 +373,12 @@ public class NetworkModificationService {
         }
     }
 
-    public Optional<NetworkModificationResult> duplicateModificationsInGroup(UUID originGroupUuid, UUID networkUuid, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity, TimePointNodeInfoEntity timePointNodeInfoEntity) {
+    public Optional<NetworkModificationResult> duplicateModificationsInGroup(UUID originGroupUuid, UUID networkUuid, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "duplications")
             .queryParam(NETWORK_UUID, networkUuid)
-            .queryParam(REPORT_UUID, timePointNodeInfoEntity.getModificationReports().get(networkModificationNodeInfoEntity.getId()))
+            .queryParam(REPORT_UUID, rootNetworkNodeInfoEntity.getModificationReports().get(networkModificationNodeInfoEntity.getId()))
             .queryParam(REPORTER_ID, networkModificationNodeInfoEntity.getId())
-            .queryParam(VARIANT_ID, timePointNodeInfoEntity.getVariantId())
+            .queryParam(VARIANT_ID, rootNetworkNodeInfoEntity.getVariantId())
             .queryParam("duplicateFrom", originGroupUuid);
 
         HttpHeaders headers = new HttpHeaders();
@@ -392,10 +392,10 @@ public class NetworkModificationService {
             }).getBody();
     }
 
-    private String buildReceiver(UUID nodeUuid, UUID timePointUuid) {
+    private String buildReceiver(UUID nodeUuid, UUID rootNetworkUuid) {
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);

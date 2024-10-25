@@ -413,7 +413,7 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Lines ids") @RequestParam(name = "lineId", required = false) List<String> linesIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLinesGraphics(networkStoreService.getNetworkUuid(studyUuid), nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), linesIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLinesGraphics(networkStoreService.getNetworkUuid(studyUuid), nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), linesIds));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/substations")
@@ -424,7 +424,7 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsGraphics(networkStoreService.getNetworkUuid(studyUuid), nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsGraphics(networkStoreService.getNetworkUuid(studyUuid), nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), substationsIds));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/equipments-ids")
@@ -592,7 +592,7 @@ public class StudyController {
             @Parameter(description = "The limit reduction") @RequestParam(name = "limitReduction", required = false) Float limitReduction,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runLoadFlow(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), userId, limitReduction);
+        studyService.runLoadFlow(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId, limitReduction);
         return ResponseEntity.ok().build();
     }
 
@@ -605,7 +605,7 @@ public class StudyController {
                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                     @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
                                                     Sort sort) {
-        String result = loadflowService.getLoadFlowResult(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), filters, sort);
+        String result = loadflowService.getLoadFlowResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), filters, sort);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -617,7 +617,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The loadflow status has not been found")})
     public ResponseEntity<String> getLoadFlowStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = loadflowService.getLoadFlowStatus(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
+        String result = loadflowService.getLoadFlowStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -628,7 +628,7 @@ public class StudyController {
     public ResponseEntity<Void> stopLoadFlow(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        loadflowService.stopLoadFlow(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), userId);
+        loadflowService.stopLoadFlow(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
         return ResponseEntity.ok().build();
     }
 
@@ -641,7 +641,7 @@ public class StudyController {
             @RequestParam(value = "busId", required = false) Optional<String> busId,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runShortCircuit(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), busId, userId);
+        studyService.runShortCircuit(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), busId, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -651,7 +651,7 @@ public class StudyController {
     public ResponseEntity<Void> stopShortCircuitAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
-        shortCircuitService.stopShortCircuitAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), userId);
+        shortCircuitService.stopShortCircuitAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
         return ResponseEntity.ok().build();
     }
 
@@ -670,7 +670,7 @@ public class StudyController {
                                                         @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
                                                         @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false, defaultValue = "false") boolean paged,
                                                         Pageable pageable) {
-        String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), mode, type, filters, paged, pageable);
+        String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), mode, type, filters, paged, pageable);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -683,7 +683,7 @@ public class StudyController {
     public ResponseEntity<String> getShortCircuitAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                 @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type) {
-        String result = shortCircuitService.getShortCircuitAnalysisStatus(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), type);
+        String result = shortCircuitService.getShortCircuitAnalysisStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), type);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -698,7 +698,7 @@ public class StudyController {
             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "type") @RequestParam(value = "type") ShortcircuitAnalysisType type,
             @Parameter(description = "headersCsv") @RequestBody String headersCsv) {
-        return ResponseEntity.ok().body(shortCircuitService.getShortCircuitAnalysisCsvResult(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), type, headersCsv));
+        return ResponseEntity.ok().body(shortCircuitService.getShortCircuitAnalysisCsvResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), type, headersCsv));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run")
@@ -710,7 +710,7 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runVoltageInit(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), userId);
+        studyService.runVoltageInit(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
         return ResponseEntity.ok().build();
     }
 
@@ -720,7 +720,7 @@ public class StudyController {
     public ResponseEntity<Void> stopVoltageInit(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        voltageInitService.stopVoltageInit(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), userId);
+        voltageInitService.stopVoltageInit(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
         return ResponseEntity.ok().build();
     }
 
@@ -731,7 +731,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The voltage init has not been found")})
     public ResponseEntity<String> getVoltageInitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = voltageInitService.getVoltageInitResult(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
+        String result = voltageInitService.getVoltageInitResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -743,7 +743,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The voltage init status has not been found")})
     public ResponseEntity<String> getVoltageInitStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = voltageInitService.getVoltageInitStatus(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
+        String result = voltageInitService.getVoltageInitStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -801,7 +801,7 @@ public class StudyController {
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         List<String> nonNullcontingencyListNames = contingencyListNames != null ? contingencyListNames : Collections.emptyList();
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), userId);
+        studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
         return ResponseEntity.ok().build();
     }
 
@@ -815,7 +815,7 @@ public class StudyController {
                                                                   @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
                                                                   @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
                                                                   Pageable pageable) {
-        String result = securityAnalysisService.getSecurityAnalysisResult(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), resultType, filters, pageable);
+        String result = securityAnalysisService.getSecurityAnalysisResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), resultType, filters, pageable);
         return result != null ? ResponseEntity.ok().body(result) :
                ResponseEntity.noContent().build();
     }
@@ -829,7 +829,7 @@ public class StudyController {
                                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                            @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
                                                                            @Parameter(description = "Csv translation (JSON)") @RequestBody String csvTranslations) {
-        return securityAnalysisService.getSecurityAnalysisResultCsv(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), resultType, csvTranslations);
+        return securityAnalysisService.getSecurityAnalysisResultCsv(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), resultType, csvTranslations);
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count")
@@ -1019,7 +1019,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The security analysis status has not been found")})
     public ResponseEntity<String> getSecurityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        SecurityAnalysisStatus status = securityAnalysisService.getSecurityAnalysisStatus(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
+        SecurityAnalysisStatus status = securityAnalysisService.getSecurityAnalysisStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return status != null ? ResponseEntity.ok().body(status.name()) :
                 ResponseEntity.noContent().build();
     }
@@ -1030,7 +1030,7 @@ public class StudyController {
     public ResponseEntity<Void> stopSecurityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        securityAnalysisService.stopSecurityAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), userId);
+        securityAnalysisService.stopSecurityAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1043,7 +1043,7 @@ public class StudyController {
                                                                     @Parameter(description = "The report Type") @RequestParam(name = "reportType") StudyService.ReportType reportType,
                                                                     @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReport(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), nodeOnlyReport, reportType, severityLevels));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReport(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), nodeOnlyReport, reportType, severityLevels));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report/{reportId}/logs", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -1066,7 +1066,7 @@ public class StudyController {
                                                                     @Parameter(description = "the message filter") @RequestParam(name = "message", required = false) String messageFilter,
                                                                     @Parameter(description = "Severity levels filter") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReportLogs(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), messageFilter, severityLevels));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReportLogs(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), messageFilter, severityLevels));
     }
 
     @GetMapping(value = "/svg-component-libraries")
@@ -1178,7 +1178,7 @@ public class StudyController {
         @Parameter(description = "Should search in upstream built node") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
         @Parameter(description = "Equipment type") @RequestParam(value = "equipmentType", required = false) String equipmentType) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-            .body(studyService.searchEquipments(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), userInput, fieldSelector, equipmentType, inUpstreamBuiltParentNode));
+            .body(studyService.searchEquipments(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userInput, fieldSelector, equipmentType, inUpstreamBuiltParentNode));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
@@ -1258,7 +1258,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The study or the parent node not found")})
     public ResponseEntity<NetworkModificationNode> getNetworkModificationSubtree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                  @Parameter(description = "parent node uuid") @RequestParam(value = "parentNodeUuid") UUID parentNodeUuid) {
-        NetworkModificationNode parentNode = networkModificationTreeService.getStudySubtree(studyUuid, studyService.getStudyFirstTimePointUuid(studyUuid), parentNodeUuid);
+        NetworkModificationNode parentNode = networkModificationTreeService.getStudySubtree(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), parentNodeUuid);
         return parentNode != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(parentNode)
                 : ResponseEntity.notFound().build();
@@ -1340,21 +1340,7 @@ public class StudyController {
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
     public ResponseEntity<Void> stopBuild(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.stopBuild(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}")
-    @Operation(summary = "Activate/Deactivate a modification in a modification group associated with a study node")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification has been activated/deactivated"),
-                           @ApiResponse(responseCode = "404", description = "The study/node/modification doesn't exist")})
-    public ResponseEntity<Void> changeModificationActiveState(@PathVariable("studyUuid") UUID studyUuid,
-                                                              @PathVariable("nodeUuid") UUID nodeUuid,
-                                                              @PathVariable("modificationUuid") UUID modificationUuid,
-                                                              @Parameter(description = "active") @RequestParam("active") boolean active,
-                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.changeModificationActiveState(studyUuid, nodeUuid, modificationUuid, active, userId);
+        studyService.stopBuild(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return ResponseEntity.ok().build();
     }
 
@@ -1428,7 +1414,7 @@ public class StudyController {
         @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
         @Parameter(description = "results selector") @RequestParam("selector") String selector) {
-        String result = sensitivityAnalysisService.getSensitivityAnalysisResult(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), selector);
+        String result = sensitivityAnalysisService.getSensitivityAnalysisResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), selector);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1442,7 +1428,7 @@ public class StudyController {
         @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
         @RequestBody SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
-        byte[] result = sensitivityAnalysisService.exportSensitivityResultsAsCsv(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), sensitivityAnalysisCsvFileInfos);
+        byte[] result = sensitivityAnalysisService.exportSensitivityResultsAsCsv(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), sensitivityAnalysisCsvFileInfos);
         HttpHeaders responseHeaders = new HttpHeaders();
         responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
         responseHeaders.setContentDispositionFormData("attachment", "sensitivity_results.csv");
@@ -1462,7 +1448,7 @@ public class StudyController {
         @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
         @Parameter(description = "results selector") @RequestParam("selector") String selector) {
-        String result = sensitivityAnalysisService.getSensitivityResultsFilterOptions(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), selector);
+        String result = sensitivityAnalysisService.getSensitivityResultsFilterOptions(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), selector);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1474,7 +1460,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The sensitivity analysis status has not been found")})
     public ResponseEntity<String> getSensitivityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = sensitivityAnalysisService.getSensitivityAnalysisStatus(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
+        String result = sensitivityAnalysisService.getSensitivityAnalysisStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1485,7 +1471,7 @@ public class StudyController {
     public ResponseEntity<Void> stopSensitivityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                         @RequestHeader(HEADER_USER_ID) String userId) {
-        sensitivityAnalysisService.stopSensitivityAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), userId);
+        sensitivityAnalysisService.stopSensitivityAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1607,7 +1593,7 @@ public class StudyController {
                                                      @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runDynamicSimulation(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), parameters, userId);
+        studyService.runDynamicSimulation(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), parameters, userId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 
@@ -1618,7 +1604,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
     public ResponseEntity<List<TimeSeriesMetadataInfos>> getDynamicSimulationTimeSeriesMetadata(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<TimeSeriesMetadataInfos> result = studyService.getDynamicSimulationTimeSeriesMetadata(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
+        List<TimeSeriesMetadataInfos> result = studyService.getDynamicSimulationTimeSeriesMetadata(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return CollectionUtils.isEmpty(result) ? ResponseEntity.noContent().build() :
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
     }
@@ -1631,7 +1617,7 @@ public class StudyController {
     public ResponseEntity<List<DoubleTimeSeries>> getDynamicSimulationTimeSeriesResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                                        @Parameter(description = "timeSeriesNames") @RequestParam(name = "timeSeriesNames", required = false) List<String> timeSeriesNames) {
-        List<DoubleTimeSeries> result = studyService.getDynamicSimulationTimeSeries(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), timeSeriesNames);
+        List<DoubleTimeSeries> result = studyService.getDynamicSimulationTimeSeries(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), timeSeriesNames);
         return CollectionUtils.isEmpty(result) ? ResponseEntity.noContent().build() :
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
     }
@@ -1643,7 +1629,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
     public ResponseEntity<List<TimelineEventInfos>> getDynamicSimulationTimelineResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<TimelineEventInfos> result = studyService.getDynamicSimulationTimeline(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
+        List<TimelineEventInfos> result = studyService.getDynamicSimulationTimeline(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return CollectionUtils.isEmpty(result) ? ResponseEntity.noContent().build() :
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
     }
@@ -1655,7 +1641,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
     public ResponseEntity<DynamicSimulationStatus> getDynamicSimulationStatus(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        DynamicSimulationStatus result = studyService.getDynamicSimulationStatus(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
+        DynamicSimulationStatus result = studyService.getDynamicSimulationStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -1687,7 +1673,7 @@ public class StudyController {
     public ResponseEntity<String> getVoltageInitModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(studyService.getVoltageInitModifications(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid)));
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(studyService.getVoltageInitModifications(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -1768,7 +1754,7 @@ public class StudyController {
             @Parameter(description = "Is Injections Set") @RequestParam(name = "isInjectionsSet", required = false) Boolean isInjectionsSet,
             SensitivityFactorsIdsByGroup factorsIds) {
         return ResponseEntity.ok().body(sensitivityAnalysisService.getSensitivityAnalysisFactorsCount(networkStoreService.getNetworkUuid(studyUuid),
-            networkModificationTreeService.getVariantId(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid)), factorsIds, isInjectionsSet));
+            networkModificationTreeService.getVariantId(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)), factorsIds, isInjectionsSet));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")
@@ -1808,7 +1794,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The sensitivity analysis non evacuated energy has not been found")})
     public ResponseEntity<String> getNonEvacuatedEnergyResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = nonEvacuatedEnergyService.getNonEvacuatedEnergyResult(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
+        String result = nonEvacuatedEnergyService.getNonEvacuatedEnergyResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1820,7 +1806,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The sensitivity analysis status non evacuated energy has not been found")})
     public ResponseEntity<String> getNonEvacuatedEnergyStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = nonEvacuatedEnergyService.getNonEvacuatedEnergyStatus(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
+        String result = nonEvacuatedEnergyService.getNonEvacuatedEnergyStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1831,7 +1817,7 @@ public class StudyController {
     public ResponseEntity<Void> stopNonEvacuatedEnergy(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
-        nonEvacuatedEnergyService.stopNonEvacuatedEnergy(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), userId);
+        nonEvacuatedEnergyService.stopNonEvacuatedEnergy(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1935,7 +1921,7 @@ public class StudyController {
                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runStateEstimation(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid), userId);
+        studyService.runStateEstimation(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1946,7 +1932,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The state estimation has not been found")})
     public ResponseEntity<String> getStateEstimationResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = stateEstimationService.getStateEstimationResult(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
+        String result = stateEstimationService.getStateEstimationResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1958,7 +1944,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The state estimation status has not been found")})
     public ResponseEntity<String> getStateEstimationStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String status = stateEstimationService.getStateEstimationStatus(nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
+        String status = stateEstimationService.getStateEstimationStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return status != null ? ResponseEntity.ok().body(status) : ResponseEntity.noContent().build();
     }
 
@@ -1967,7 +1953,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation has been stopped")})
     public ResponseEntity<Void> stopStateEstimation(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        stateEstimationService.stopStateEstimation(studyUuid, nodeUuid, studyService.getStudyFirstTimePointUuid(studyUuid));
+        stateEstimationService.stopStateEstimation(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return ResponseEntity.ok().build();
     }
 }

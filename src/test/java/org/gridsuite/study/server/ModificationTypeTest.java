@@ -8,18 +8,17 @@ package org.gridsuite.study.server;
 
 import com.powsybl.commons.PowsyblException;
 import org.gridsuite.study.server.dto.modification.ModificationType;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
-public class ModificationTypeTest {
-
+class ModificationTypeTest {
     @Test
-    public void test() {
+    void test() {
         assertEquals("loads", ModificationType.getUriFromType(ModificationType.LOAD_CREATION));
         assertEquals("generators", ModificationType.getUriFromType(ModificationType.GENERATOR_CREATION));
         assertEquals("lines", ModificationType.getUriFromType(ModificationType.LINE_CREATION));

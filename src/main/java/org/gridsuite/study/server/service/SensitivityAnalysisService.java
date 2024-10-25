@@ -69,7 +69,7 @@ public class SensitivityAnalysisService {
         this.sensitivityAnalysisServerBaseUri = sensitivityAnalysisServerBaseUri + DELIMITER;
     }
 
-    public UUID runSensitivityAnalysis(UUID nodeUuid, UUID timePointUuid, UUID networkUuid,
+    public UUID runSensitivityAnalysis(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
                                        String variantId,
                                        UUID reportUuid,
                                        String userId,
@@ -77,7 +77,7 @@ public class SensitivityAnalysisService {
                                        UUID loadFlowParametersUuid) {
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -108,9 +108,9 @@ public class SensitivityAnalysisService {
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getSensitivityAnalysisResult(UUID nodeUuid, UUID timePointUuid, String selector) {
+    public String getSensitivityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, String selector) {
         String result;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuid == null) {
             return null;
         }
@@ -131,8 +131,8 @@ public class SensitivityAnalysisService {
         return result;
     }
 
-    public byte[] exportSensitivityResultsAsCsv(UUID nodeUuid, UUID timePointUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SENSITIVITY_ANALYSIS);
+    public byte[] exportSensitivityResultsAsCsv(UUID nodeUuid, UUID rootNetworkUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuid == null) {
             throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
         }
@@ -160,9 +160,9 @@ public class SensitivityAnalysisService {
 
     }
 
-    public String getSensitivityResultsFilterOptions(UUID nodeUuid, UUID timePointUuid, String selector) {
+    public String getSensitivityResultsFilterOptions(UUID nodeUuid, UUID rootNetworkUuid, String selector) {
         String options;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuid == null) {
             return null;
         }
@@ -183,9 +183,9 @@ public class SensitivityAnalysisService {
         return options;
     }
 
-    public String getSensitivityAnalysisStatus(UUID nodeUuid, UUID timePointUuid) {
+    public String getSensitivityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         String result;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
 
         if (resultUuid == null) {
             return null;
@@ -204,19 +204,19 @@ public class SensitivityAnalysisService {
         return result;
     }
 
-    public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String userId) {
+    public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(userId);
 
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuid == null) {
             return;
         }
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -265,8 +265,8 @@ public class SensitivityAnalysisService {
         return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, Integer.class);
     }
 
-    public void assertSensitivityAnalysisNotRunning(UUID nodeUuid, UUID timePointUuid) {
-        String sas = getSensitivityAnalysisStatus(nodeUuid, timePointUuid);
+    public void assertSensitivityAnalysisNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
+        String sas = getSensitivityAnalysisStatus(nodeUuid, rootNetworkUuid);
         if (SensitivityAnalysisStatus.RUNNING.name().equals(sas)) {
             throw new StudyException(SENSITIVITY_ANALYSIS_RUNNING);
         }

@@ -1,0 +1,13 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="souissimai (generated)" id="1728513471443-13">
+        <dropForeignKeyConstraint baseTableName="network_modification_node_info_entity_modifications_to_exclude" constraintName="networkModificationNodeInfoEntity_modificationsToExclude_fk"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728513471443-14">
+        <dropIndex indexName="networkModificationNodeInfoEntity_modificationsToExclude_idx" tableName="network_modification_node_info_entity_modifications_to_exclude"/>
+    </changeSet>
+
+    <changeSet author="souissimai (generated)" id="1728513471443-15">
+        <dropTable tableName="network_modification_node_info_entity_modifications_to_exclude"/>
+    </changeSet>
+</databaseChangeLog>

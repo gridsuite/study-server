@@ -7,12 +7,6 @@
     <changeSet author="souissimai (generated)" id="1728407274000-32">
         <dropForeignKeyConstraint baseTableName="MODIFICATION_REPORTS" constraintName="networkModificationNodeInfoEntity_modificationReports_fk1"/>
     </changeSet>
-    <changeSet author="souissimai (generated)" id="1728407274000-33">
-        <dropForeignKeyConstraint baseTableName="NETWORK_MODIFICATION_NODE_INFO_ENTITY_MODIFICATIONS_TO_EXCLUDE" constraintName="networkModificationNodeInfoEntity_modificationsToExclude_fk"/>
-    </changeSet>
-    <changeSet author="souissimai (generated)" id="1728407274000-34">
-        <dropTable tableName="NETWORK_MODIFICATION_NODE_INFO_ENTITY_MODIFICATIONS_TO_EXCLUDE"/>
-    </changeSet>
     <changeSet author="souissimai (generated)" id="1728407274000-35">
         <dropColumn columnName="CASE_FORMAT" tableName="STUDY"/>
     </changeSet>
@@ -81,12 +75,12 @@
     </changeSet>
 
     <changeSet author="souissimai (generated)" id="1728407274000-60">
-        <addNotNullConstraint tableName="computation_reports" columnName="time_point_node_info_entity_id" />
-        <addPrimaryKey columnNames="time_point_node_info_entity_id, computation_reports_key" constraintName="computation_reportsPK" tableName="computation_reports"/>
+        <addNotNullConstraint tableName="computation_reports" columnName="root_network_node_info_entity_id" />
+        <addPrimaryKey columnNames="root_network_node_info_entity_id, computation_reports_key" constraintName="computation_reportsPK" tableName="computation_reports"/>
     </changeSet>
 
     <changeSet author="souissimai (generated)" id="1728407274000-61">
-        <addNotNullConstraint tableName="modification_reports" columnName="time_point_node_info_entity_id" />
-        <addPrimaryKey columnNames="time_point_node_info_entity_id, modification_reports_key" constraintName="modification_reportsPK" tableName="modification_reports"/>
+        <addNotNullConstraint tableName="modification_reports" columnName="root_network_node_info_entity_id" />
+        <addPrimaryKey columnNames="root_network_node_info_entity_id, modification_reports_key" constraintName="modification_reportsPK" tableName="modification_reports"/>
     </changeSet>
 </databaseChangeLog>

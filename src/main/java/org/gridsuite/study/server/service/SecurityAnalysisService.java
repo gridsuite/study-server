@@ -65,9 +65,9 @@ public class SecurityAnalysisService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public String getSecurityAnalysisResult(UUID nodeUuid, UUID timePointUuid, SecurityAnalysisResultType resultType, String filters, Pageable pageable) {
+    public String getSecurityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String filters, Pageable pageable) {
         String result;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SECURITY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
 
         if (resultUuid == null) {
             return null;
@@ -100,9 +100,9 @@ public class SecurityAnalysisService extends AbstractComputationService {
         return result;
     }
 
-    public byte[] getSecurityAnalysisResultCsv(UUID nodeUuid, UUID timePointUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
+    public byte[] getSecurityAnalysisResultCsv(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
         ResponseEntity<byte[]> result;
-        UUID resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SECURITY_ANALYSIS);
+        UUID resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
 
         if (resultUuidOpt == null) {
             throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
@@ -172,12 +172,12 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 .exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid, UUID timePointUuid, String userId) {
+    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(userId);
 
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SECURITY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
 
         if (resultUuid == null) {
             return;
@@ -185,7 +185,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, timePointUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
@@ -202,9 +202,9 @@ public class SecurityAnalysisService extends AbstractComputationService {
         restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
-    public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID nodeUuid, UUID timePointUuid) {
+    public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         SecurityAnalysisStatus status;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, timePointUuid, ComputationType.SECURITY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
 
         if (resultUuid == null) {
             return null;
@@ -259,8 +259,8 @@ public class SecurityAnalysisService extends AbstractComputationService {
         }
     }
 
-    public void assertSecurityAnalysisNotRunning(UUID nodeUuid, UUID timePointUuid) {
-        SecurityAnalysisStatus sas = getSecurityAnalysisStatus(nodeUuid, timePointUuid);
+    public void assertSecurityAnalysisNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
+        SecurityAnalysisStatus sas = getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid);
         if (sas == SecurityAnalysisStatus.RUNNING) {
             throw new StudyException(SECURITY_ANALYSIS_RUNNING);
         }

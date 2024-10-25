@@ -16,11 +16,11 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
-import org.gridsuite.study.server.repository.timepoint.TimePointEntity;
-import org.gridsuite.study.server.repository.timepoint.TimePointNodeInfoRepository;
-import org.gridsuite.study.server.repository.timepoint.TimePointRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,46 +36,42 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.ArgumentMatchers.eq;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
  */
-
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
 class NetworkModificationUnitTest {
     @Autowired
-    NodeRepository nodeRepository;
+    private NodeRepository nodeRepository;
     @Autowired
-    NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
     @Autowired
-    RootNodeInfoRepository rootNodeInfoRepository;
+    private RootNodeInfoRepository rootNodeInfoRepository;
     @Autowired
-    TimePointNodeInfoRepository timepointNodeInfoRepository;
+    private StudyRepository studyRepository;
     @Autowired
-    StudyRepository studyRepository;
-    @Autowired
-    StudyController studyController;
+    private StudyController studyController;
     @MockBean
-    ReportService reportService;
+    private NetworkService networkService;
     @MockBean
-    NetworkService networkService;
-    @MockBean
-    RestTemplate restTemplate;
+    private RestTemplate restTemplate;
 
     private static final String CASE_LOADFLOW_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
     private static final UUID CASE_LOADFLOW_UUID = UUID.fromString(CASE_LOADFLOW_UUID_STRING);
     private static final UUID NETWORK_UUID = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d");
 
-    private static final String SHOULD_NOT_RETUTN_NULL_MESSAGE = "Should not return null here";
+    private static final String SHOULD_NOT_RETURN_NULL_MESSAGE = "Should not return null here";
 
     private static final long TIMEOUT = 1000;
     private static final String VARIANT_1 = "variant_1";
@@ -94,17 +90,17 @@ class NetworkModificationUnitTest {
     //output destinations
     @Autowired
     private OutputDestination output;
-    private final String studyUpdateDestination = "study.update";
+    private static final String STUDY_UPDATE_DESTINATION = "study.update";
     @Autowired
-    private TimePointNodeInfoRepository timePointNodeInfoRepository;
+    private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     @Autowired
-    private TimePointRepository timePointRepository;
+    private RootNetworkRepository rootNetworkRepository;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         StudyEntity study = insertStudy();
 
-        TimePointEntity firstTimePointEntity = TimePointEntity.builder()
+        RootNetworkEntity firstRootNetworkEntity = RootNetworkEntity.builder()
             .networkUuid(NETWORK_UUID)
             .networkId("netId")
             .caseUuid(CASE_LOADFLOW_UUID)
@@ -112,14 +108,14 @@ class NetworkModificationUnitTest {
             .caseName("caseName")
             .build();
 
-        study.addTimePoint(firstTimePointEntity);
+        study.addRootNetwork(firstRootNetworkEntity);
         studyRepository.save(study);
         studyUuid = study.getId();
         NodeEntity rootNode = insertRootNode(study, UUID.randomUUID());
-        NodeEntity node1 = insertNode(study, node1Uuid, VARIANT_1, REPORT_UUID_1, rootNode, firstTimePointEntity, BuildStatus.BUILT);
-        NodeEntity node2 = insertNode(study, node2Uuid, VARIANT_2, REPORT_UUID_2, node1, firstTimePointEntity, BuildStatus.BUILT);
-        NodeEntity node3 = insertNode(study, node3Uuid, VARIANT_3, REPORT_UUID_3, node1, firstTimePointEntity, BuildStatus.NOT_BUILT);
-        timePointRepository.save(firstTimePointEntity);
+        NodeEntity node1 = insertNode(study, node1Uuid, VARIANT_1, REPORT_UUID_1, rootNode, firstRootNetworkEntity, BuildStatus.BUILT);
+        NodeEntity node2 = insertNode(study, node2Uuid, VARIANT_2, REPORT_UUID_2, node1, firstRootNetworkEntity, BuildStatus.BUILT);
+        NodeEntity node3 = insertNode(study, node3Uuid, VARIANT_3, REPORT_UUID_3, node1, firstRootNetworkEntity, BuildStatus.NOT_BUILT);
+        rootNetworkRepository.save(firstRootNetworkEntity);
 
         node1Uuid = node1.getIdNode();
         node2Uuid = node2.getIdNode();
@@ -128,36 +124,33 @@ class NetworkModificationUnitTest {
 
     @Test
     void unbuildNode() {
-        /**
-         *       rootNode
+        /*       rootNode
          *          |
          *       node1(B)
          *     |         |
          *  node2(B)   node3
          */
-
-        TimePointNodeInfoEntity timePointNodeInfoEntity1 = timePointNodeInfoRepository.findAllByNodeInfoId(node1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.TIMEPOINT_NOT_FOUND));
-        TimePointNodeInfoEntity timePointNodeInfoEntity2 = timePointNodeInfoRepository.findAllByNodeInfoId(node2Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.TIMEPOINT_NOT_FOUND));
-        TimePointNodeInfoEntity timePointNodeInfoEntity3 = timePointNodeInfoRepository.findAllByNodeInfoId(node3Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.TIMEPOINT_NOT_FOUND));
-        assertEquals(BuildStatus.BUILT, timePointNodeInfoEntity1.getNodeBuildStatus().getLocalBuildStatus());
-        assertEquals(BuildStatus.BUILT, timePointNodeInfoEntity2.getNodeBuildStatus().getLocalBuildStatus());
-        assertEquals(BuildStatus.NOT_BUILT, timePointNodeInfoEntity3.getNodeBuildStatus().getLocalBuildStatus());
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findAllByNodeInfoId(node1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findAllByNodeInfoId(node2Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity3 = rootNetworkNodeInfoRepository.findAllByNodeInfoId(node3Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        assertEquals(BuildStatus.BUILT, rootNetworkNodeInfoEntity1.getNodeBuildStatus().getLocalBuildStatus());
+        assertEquals(BuildStatus.BUILT, rootNetworkNodeInfoEntity2.getNodeBuildStatus().getLocalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, rootNetworkNodeInfoEntity3.getNodeBuildStatus().getLocalBuildStatus());
 
         studyController.unbuildNode(studyUuid, node1Uuid);
 
-        /**
-         *       rootNode
+        /*       rootNode
          *          |
          *        node1
          *     |         |
          *  node2(B)   node3
          */
-        timePointNodeInfoEntity1 = timePointNodeInfoRepository.findAllByNodeInfoId(node1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.TIMEPOINT_NOT_FOUND));
-        timePointNodeInfoEntity2 = timePointNodeInfoRepository.findAllByNodeInfoId(node2Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.TIMEPOINT_NOT_FOUND));
-        timePointNodeInfoEntity3 = timePointNodeInfoRepository.findAllByNodeInfoId(node3Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.TIMEPOINT_NOT_FOUND));
-        assertEquals(BuildStatus.NOT_BUILT, timePointNodeInfoEntity1.getNodeBuildStatus().getLocalBuildStatus());
-        assertEquals(BuildStatus.BUILT, timePointNodeInfoEntity2.getNodeBuildStatus().getLocalBuildStatus());
-        assertEquals(BuildStatus.NOT_BUILT, timePointNodeInfoEntity3.getNodeBuildStatus().getLocalBuildStatus());
+        rootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findAllByNodeInfoId(node1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        rootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findAllByNodeInfoId(node2Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        rootNetworkNodeInfoEntity3 = rootNetworkNodeInfoRepository.findAllByNodeInfoId(node3Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        assertEquals(BuildStatus.NOT_BUILT, rootNetworkNodeInfoEntity1.getNodeBuildStatus().getLocalBuildStatus());
+        assertEquals(BuildStatus.BUILT, rootNetworkNodeInfoEntity2.getNodeBuildStatus().getLocalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, rootNetworkNodeInfoEntity3.getNodeBuildStatus().getLocalBuildStatus());
 
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid));
         checkUpdateModelsStatusMessagesReceived(studyUuid, node1Uuid);
@@ -185,7 +178,7 @@ class NetworkModificationUnitTest {
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeWithModification);
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
-        NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETUTN_NULL_MESSAGE));
+        NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
         Mockito.verify(restTemplate, Mockito.times(1)).exchange(
             matches(".*network-modifications\\?" + networkModificationUuids.stream().map(uuid -> "uuids=" + uuid.toString() + "&").collect(Collectors.joining()) +
                 "groupUuid=" + node1Infos.getModificationGroupUuid().toString() + "&" +
@@ -193,7 +186,7 @@ class NetworkModificationUnitTest {
     }
 
     private void checkModificationUpdatedMessageReceived(UUID studyUuid, UUID nodeUuid, List<UUID> childrenNodeUuids, String notificationType) {
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
 
         MessageHeaders headersStatus = messageStatus.getHeaders();
@@ -204,7 +197,7 @@ class NetworkModificationUnitTest {
     }
 
     private void checkUpdateBuildStateMessageReceived(UUID studyUuid, List<UUID> nodeUuids) {
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
 
         MessageHeaders headersStatus = messageStatus.getHeaders();
@@ -215,7 +208,7 @@ class NetworkModificationUnitTest {
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating model status
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -245,16 +238,16 @@ class NetworkModificationUnitTest {
             .build();
     }
 
-    private NodeEntity insertNode(StudyEntity study, UUID nodeId, String variantId, UUID reportUuid, NodeEntity parentNode, TimePointEntity timePointEntity, BuildStatus buildStatus) {
+    private NodeEntity insertNode(StudyEntity study, UUID nodeId, String variantId, UUID reportUuid, NodeEntity parentNode, RootNetworkEntity rootNetworkEntity, BuildStatus buildStatus) {
         NodeEntity node = nodeRepository.save(new NodeEntity(nodeId, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
         NetworkModificationNodeInfoEntity nodeInfos = NetworkModificationNodeInfoEntity.builder().modificationGroupUuid(UUID.randomUUID()).build();
-        TimePointNodeInfoEntity timePointNodeInfoEntity = TimePointNodeInfoEntity.builder().variantId(variantId).modificationReports(Map.of(node.getIdNode(), reportUuid)).modificationsToExclude(new HashSet<>()).nodeBuildStatus(NodeBuildStatus.from(buildStatus).toEntity()).build();
-        nodeInfos.addTimePointNodeInfo(timePointNodeInfoEntity);
-        timePointEntity.addTimePointNodeInfo(timePointNodeInfoEntity);
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = RootNetworkNodeInfoEntity.builder().variantId(variantId).modificationReports(Map.of(node.getIdNode(), reportUuid)).nodeBuildStatus(NodeBuildStatus.from(buildStatus).toEntity()).build();
+        nodeInfos.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
+        rootNetworkEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
 
         nodeInfos.setIdNode(node.getIdNode());
         networkModificationNodeInfoRepository.save(nodeInfos);
-        timepointNodeInfoRepository.save(timePointNodeInfoEntity);
+        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
         return node;
     }
 
@@ -263,23 +256,19 @@ class NetworkModificationUnitTest {
         RootNodeInfoEntity rootNodeInfo = new RootNodeInfoEntity();
         rootNodeInfo.setIdNode(node.getIdNode());
         rootNodeInfoRepository.save(rootNodeInfo);
-
         return node;
     }
 
     @AfterEach
-    public void tearDown() {
-        List<String> destinations = List.of(studyUpdateDestination);
-        assertQueuesEmptyThenClear(destinations);
-    }
-
-    private void assertQueuesEmptyThenClear(List<String> destinations) {
+    void tearDown() {
+        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION);
         try {
-            destinations.forEach(destination -> assertNull("Should not be any messages in queue " + destination + " : ", output.receive(100, destination)));
+            destinations.forEach(destination -> assertNull(output.receive(100, destination), "Should not be any messages in queue " + destination + " : "));
         } catch (NullPointerException e) {
             // Ignoring
         } finally {
             output.clear(); // purge in order to not fail the other tests
         }
     }
+
 }
