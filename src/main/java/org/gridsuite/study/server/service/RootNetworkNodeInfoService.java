@@ -34,14 +34,12 @@ public class RootNetworkNodeInfoService {
 
     public void createRootNetworkLinks(@NonNull UUID studyUuid, @NonNull RootNetworkEntity rootNetworkEntity) {
         // For each network modification node (nodeInfoEntity) create a link with the root network
-        // Create a default NetworkModificationNode (replace by the RootNetworkNodeInfo DTO
-//        rootNetworkEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
-//        nodeInfoEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
-//        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
+        // Create a default NetworkModificationNode (replace by the RootNetworkNodeInfo DTO)
+        // addLink(nodeInfoEntity, rootNetworkEntity, newRootNetworkNodeInfoEntity);
     }
 
     // TODO create a DTO RootNetworkNodeInfo
-    public void createNodeLinks(@NonNull UUID studyUuid, @NonNull NetworkModificationNodeInfoEntity nodeInfoEntity, @NonNull NetworkModificationNode rootNetworkNodeInfo) {
+    public void createNodeLinks(@NonNull UUID studyUuid, @NonNull NetworkModificationNodeInfoEntity modificationNodeInfoEntity, @NonNull NetworkModificationNode rootNetworkNodeInfo) {
         if (Objects.isNull(rootNetworkNodeInfo.getNodeBuildStatus())) {
             rootNetworkNodeInfo.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
         }
@@ -49,7 +47,7 @@ public class RootNetworkNodeInfoService {
             rootNetworkNodeInfo.setVariantId(UUID.randomUUID().toString());
         }
         if (rootNetworkNodeInfo.getModificationReports() == null) {
-            rootNetworkNodeInfo.setModificationReports(new HashMap<>(Map.of(nodeInfoEntity.getId(), UUID.randomUUID())));
+            rootNetworkNodeInfo.setModificationReports(new HashMap<>(Map.of(modificationNodeInfoEntity.getId(), UUID.randomUUID())));
         }
 
         // For each root network create a link with the node
@@ -69,9 +67,13 @@ public class RootNetworkNodeInfoService {
                     .computationReports(rootNetworkNodeInfo.getComputationsReports())
                     .modificationReports(rootNetworkNodeInfo.getModificationReports())
                     .build();
-            nodeInfoEntity.addRootNetworkNodeInfo(newRootNetworkNodeInfoEntity);
-            rootNetworkEntity.addRootNetworkNodeInfo(newRootNetworkNodeInfoEntity);
-            rootNetworkNodeInfoRepository.save(newRootNetworkNodeInfoEntity);
+            addLink(modificationNodeInfoEntity, rootNetworkEntity, newRootNetworkNodeInfoEntity);
         });
+    }
+
+    private void addLink(NetworkModificationNodeInfoEntity nodeInfoEntity, RootNetworkEntity rootNetworkEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
+        nodeInfoEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
+        rootNetworkEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
+        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
     }
 }
