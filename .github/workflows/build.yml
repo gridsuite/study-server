@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+
+jobs:
+  build:
+    uses: powsybl/github-ci/.github/workflows/build-generic.yml@baf0d2ed84b70d359132693880d5e530cd93f168
+    with:
+      sonarOrganization: gridsuite
+      sonarProjectKey: org.gridsuite:study-server
+      dockerImage: docker.io/gridsuite/study-server
+      dockerUsername: gridsuiteci
+      eventType: study_server_updated
+    secrets:
+      sonar-token: ${{ secrets.SONAR_TOKEN }}
+      docker-token: ${{ secrets.DOCKERHUB_TOKEN }}
+      repo-token: ${{ secrets.REPO_ACCESS_TOKEN }}
