@@ -584,15 +584,12 @@ public class StudyService {
                 .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
                 .importParameters(newImportParameters)
                 .build();
-        RootNetworkEntity newRootNetworkEntity = RootNetworkEntity.builder()
-                .networkUuid(clonedNetworkUuid)
-                .networkId(sourceStudy.getFirstRootNetwork().getNetworkId())
-                .caseFormat(sourceStudy.getFirstRootNetwork().getCaseFormat())
-                .caseUuid(clonedCaseUuid)
-                .caseName(sourceStudy.getFirstRootNetwork().getCaseName())
-                .reportUuid(UUID.randomUUID())
-                .build();
-        newStudyEntity.addRootNetwork(newRootNetworkEntity);
+
+        rootNetworkService.createRootNetwork(newStudyEntity,
+                new NetworkInfos(clonedNetworkUuid, sourceStudy.getFirstRootNetwork().getNetworkId()),
+                new CaseInfos(clonedCaseUuid, sourceStudy.getFirstRootNetwork().getCaseName(), sourceStudy.getFirstRootNetwork().getCaseFormat()),
+                UUID.randomUUID());
+
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(insertDuplicatedStudy(newStudyEntity, sourceStudy.getId()));
 
         studyInfosService.add(createdStudyBasicInfos);
@@ -1320,7 +1317,7 @@ public class StudyService {
     public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         checkStudyContainsNode(sourceStudyUuid, nodeToCopyUuid);
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
-        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, self.getStudyFirstRootNetworkUuid(targetStudyUuid), insertMode);
+        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = networkModificationTreeService.hasModifications(nodeToCopyUuid, false);
         updateStatuses(targetStudyUuid, duplicatedNodeUuid, self.getStudyFirstRootNetworkUuid(targetStudyUuid), true, invalidateBuild, true);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
@@ -1355,7 +1352,7 @@ public class StudyService {
         checkStudyContainsNode(sourceStudyUuid, parentNodeToCopyUuid);
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
 
-        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudySubtree(parentNodeToCopyUuid, referenceNodeUuid, self.getStudyFirstRootNetworkUuid(targetStudyUuid), new HashSet<>());
+        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudySubtree(parentNodeToCopyUuid, referenceNodeUuid, new HashSet<>());
         notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
