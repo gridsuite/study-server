@@ -438,12 +438,11 @@ public class NetworkModificationTreeService {
         if (nodes.isEmpty()) {
             throw new StudyException(ELEMENT_NOT_FOUND);
         }
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyId(studyId).stream().findFirst().orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
 
         List<AbstractNode> allNodeInfos = new ArrayList<>();
         repositories.forEach((key, repository) -> allNodeInfos.addAll(repository.getAll(
             nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()))));
-        completeNodeInfos(allNodeInfos, rootNetworkEntity);
+        completeNodeInfos(allNodeInfos, studyId);
         Map<UUID, AbstractNode> fullMap = allNodeInfos.stream().collect(Collectors.toMap(AbstractNode::getId, Function.identity()));
 
         nodes.stream()
@@ -456,7 +455,8 @@ public class NetworkModificationTreeService {
         return root;
     }
 
-    private void completeNodeInfos(List<AbstractNode> nodes, RootNetworkEntity rootNetworkEntity) {
+    private void completeNodeInfos(List<AbstractNode> nodes, UUID studyId) {
+        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyId(studyId).stream().findFirst().orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
         nodes.forEach(nodeInfo -> {
             if (nodeInfo instanceof RootNode rootNode) {
                 rootNode.setReportUuid(rootNetworkEntity.getReportUuid());
@@ -467,16 +467,13 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public NetworkModificationNode getStudySubtree(UUID studyId, UUID rootNetworkUuid, UUID parentNodeUuid) {
+    public NetworkModificationNode getStudySubtree(UUID studyId, UUID parentNodeUuid) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findById(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
 
         List<AbstractNode> allNodeInfos = new ArrayList<>();
-        repositories.forEach((key, repository) -> {
-            allNodeInfos.addAll(repository.getAll(
-                nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet())));
-        });
-        completeNodeInfos(allNodeInfos, rootNetworkEntity);
+        repositories.forEach((key, repository) -> allNodeInfos.addAll(repository.getAll(
+            nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()))));
+        completeNodeInfos(allNodeInfos, studyId);
         Map<UUID, AbstractNode> fullMap = allNodeInfos.stream().collect(Collectors.toMap(AbstractNode::getId, Function.identity()));
 
         nodes.stream()
@@ -1226,7 +1223,7 @@ public class NetworkModificationTreeService {
     public long countBuiltNodes(UUID studyUuid, UUID rootNetworkUuid) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
         // perform N queries, but it's fast: 25 ms for 400 nodes
-        return nodes.stream().filter(n -> getNodeBuildStatus(n.getIdNode(), rootNetworkUuid).isBuilt()).count();
+        return nodes.stream().filter(n -> self.getNodeBuildStatus(n.getIdNode(), rootNetworkUuid).isBuilt()).count();
     }
 
     public NetworkModificationNodeInfoEntity getNetworkModificationNodeInfoEntity(UUID nodeId) {
