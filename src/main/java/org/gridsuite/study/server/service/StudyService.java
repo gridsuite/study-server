@@ -70,6 +70,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
@@ -88,6 +89,7 @@ public class StudyService {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+    private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     NotificationService notificationService;
 
@@ -150,38 +152,38 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-            @Value("${non-evacuated-energy.default-provider}") String defaultNonEvacuatedEnergyProvider,
-            @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
-            StudyRepository studyRepository,
-            StudyCreationRequestRepository studyCreationRequestRepository,
-            NetworkService networkStoreService,
-            NetworkModificationService networkModificationService,
-            ReportService reportService,
-            UserAdminService userAdminService,
-            StudyInfosService studyInfosService,
-            EquipmentInfosService equipmentInfosService,
-            NetworkModificationTreeService networkModificationTreeService,
-            ObjectMapper objectMapper,
-            StudyServerExecutionService studyServerExecutionService,
-            NotificationService notificationService,
-            LoadFlowService loadflowService,
-            ShortCircuitService shortCircuitService,
-            SingleLineDiagramService singleLineDiagramService,
-            NetworkConversionService networkConversionService,
-            GeoDataService geoDataService,
-            NetworkMapService networkMapService,
-            SecurityAnalysisService securityAnalysisService,
-            ActionsService actionsService,
-            CaseService caseService,
-            SensitivityAnalysisService sensitivityAnalysisService,
-            NonEvacuatedEnergyService nonEvacuatedEnergyService,
-            DynamicSimulationService dynamicSimulationService,
-            VoltageInitService voltageInitService,
-            DynamicSimulationEventService dynamicSimulationEventService,
-            FilterService filterService,
-            StateEstimationService stateEstimationService,
-            RootNetworkRepository rootNetworkRepository,
-            @Lazy StudyService studyService, RootNetworkService rootNetworkService, RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository) {
+        @Value("${non-evacuated-energy.default-provider}") String defaultNonEvacuatedEnergyProvider,
+        @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
+        StudyRepository studyRepository,
+        StudyCreationRequestRepository studyCreationRequestRepository,
+        NetworkService networkStoreService,
+        NetworkModificationService networkModificationService,
+        ReportService reportService,
+        UserAdminService userAdminService,
+        StudyInfosService studyInfosService,
+        EquipmentInfosService equipmentInfosService,
+        NetworkModificationTreeService networkModificationTreeService,
+        ObjectMapper objectMapper,
+        StudyServerExecutionService studyServerExecutionService,
+        NotificationService notificationService,
+        LoadFlowService loadflowService,
+        ShortCircuitService shortCircuitService,
+        SingleLineDiagramService singleLineDiagramService,
+        NetworkConversionService networkConversionService,
+        GeoDataService geoDataService,
+        NetworkMapService networkMapService,
+        SecurityAnalysisService securityAnalysisService,
+        ActionsService actionsService,
+        CaseService caseService,
+        SensitivityAnalysisService sensitivityAnalysisService,
+        NonEvacuatedEnergyService nonEvacuatedEnergyService,
+        DynamicSimulationService dynamicSimulationService,
+        VoltageInitService voltageInitService,
+        DynamicSimulationEventService dynamicSimulationEventService,
+        FilterService filterService,
+        StateEstimationService stateEstimationService,
+        RootNetworkRepository rootNetworkRepository,
+        @Lazy StudyService studyService, RootNetworkService rootNetworkService, RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
@@ -216,6 +218,7 @@ public class StudyService {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
+        this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
 
     private static CreatedStudyBasicInfos toStudyInfos(StudyEntity entity) {
@@ -1040,27 +1043,27 @@ public class StudyService {
     }
 
     public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        securityAnalysisService.invalidateSaStatus(networkModificationTreeService.getComputationResultUuids(studyUuid, SECURITY_ANALYSIS));
+        securityAnalysisService.invalidateSaStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SECURITY_ANALYSIS));
     }
 
     public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        sensitivityAnalysisService.invalidateSensitivityAnalysisStatus(networkModificationTreeService.getComputationResultUuids(studyUuid, SENSITIVITY_ANALYSIS));
+        sensitivityAnalysisService.invalidateSensitivityAnalysisStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SENSITIVITY_ANALYSIS));
     }
 
     public void invalidateNonEvacuatedEnergyAnalysisStatusOnAllNodes(UUID studyUuid) {
-        nonEvacuatedEnergyService.invalidateNonEvacuatedEnergyStatus(networkModificationTreeService.getComputationResultUuids(studyUuid, NON_EVACUATED_ENERGY_ANALYSIS));
+        nonEvacuatedEnergyService.invalidateNonEvacuatedEnergyStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, NON_EVACUATED_ENERGY_ANALYSIS));
     }
 
     public void invalidateDynamicSimulationStatusOnAllNodes(UUID studyUuid) {
-        dynamicSimulationService.invalidateStatus(networkModificationTreeService.getComputationResultUuids(studyUuid, DYNAMIC_SIMULATION));
+        dynamicSimulationService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SIMULATION));
     }
 
     public void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
-        loadflowService.invalidateLoadFlowStatus(networkModificationTreeService.getComputationResultUuids(studyUuid, LOAD_FLOW));
+        loadflowService.invalidateLoadFlowStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, LOAD_FLOW));
     }
 
     public void invalidateVoltageInitStatusOnAllNodes(UUID studyUuid) {
-        voltageInitService.invalidateVoltageInitStatus(networkModificationTreeService.getComputationResultUuids(studyUuid, VOLTAGE_INITIALIZATION));
+        voltageInitService.invalidateVoltageInitStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, VOLTAGE_INITIALIZATION));
     }
 
     @Transactional
@@ -1231,7 +1234,7 @@ public class StudyService {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkService.getRootNetworkNodeInfo(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             String variantId = rootNetworkNodeInfoEntity.getVariantId();
             UUID reportUuid = rootNetworkNodeInfoEntity.getModificationReports().get(nodeUuid);
@@ -1639,7 +1642,7 @@ public class StudyService {
             checkStudyContainsNode(studyUuid, targetNodeUuid);
             UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
             NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(targetNodeUuid);
-            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkService.getRootNetworkNodeInfo(targetNodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(targetNodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
             Optional<NetworkModificationResult> networkModificationResult = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, networkModificationNodeInfoEntity, rootNetworkNodeInfoEntity, buildTargetNode);
             if (!targetNodeBelongsToSourceNodeSubTree) {
@@ -1668,7 +1671,7 @@ public class StudyService {
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nodeUuid);
-            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkService.getRootNetworkNodeInfo(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
             Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModifications(modificationUuidList, networkUuid, networkModificationNodeInfoEntity, rootNetworkNodeInfoEntity, action);
             // invalidate the whole subtree except the target node (we have built this node during the duplication)
@@ -2060,7 +2063,7 @@ public class StudyService {
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nodeUuid);
-            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkService.getRootNetworkNodeInfo(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
             Optional<NetworkModificationResult> networkModificationResult = networkModificationService.duplicateModificationsInGroup(voltageInitModificationsGroupUuid, networkUuid, networkModificationNodeInfoEntity, rootNetworkNodeInfoEntity);
 
@@ -2126,7 +2129,10 @@ public class StudyService {
     }
 
     public void invalidateShortCircuitStatusOnAllNodes(UUID studyUuid) {
-        shortCircuitService.invalidateShortCircuitStatus(networkModificationTreeService.getShortCircuitResultUuids(studyUuid));
+        shortCircuitService.invalidateShortCircuitStatus(Stream.concat(
+            rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT).stream(),
+            rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT_ONE_BUS).stream()
+        ).toList());
     }
 
     @Transactional

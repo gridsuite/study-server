@@ -38,4 +38,6 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
     List<RootNetworkNodeInfoEntity> findAllByNodeInfoId(UUID nodeInfoId);
 
     Optional<RootNetworkNodeInfoEntity> findByNodeInfoIdAndRootNetworkId(UUID nodeInfoId, UUID rootNetworkUuid);
+
+    List<RootNetworkNodeInfoEntity> findAllByRootNetworkStudyId(UUID studyUuid);
 }

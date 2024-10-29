@@ -19,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -28,13 +27,11 @@ import java.util.stream.Stream;
  */
 @Service
 public class RootNetworkService {
-    private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     private final RootNetworkRepository rootNetworkRepository;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     public RootNetworkService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository, RootNetworkRepository rootNetworkRepository,
                               RootNetworkNodeInfoService rootNetworkNodeInfoService) {
-        this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
@@ -58,11 +55,6 @@ public class RootNetworkService {
         studyEntity.addRootNetwork(rootNetworkEntity);
 
         rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity);
-    }
-
-    // TODO move to RootNetworkNodeLinkService
-    public Optional<RootNetworkNodeInfoEntity> getRootNetworkNodeInfo(UUID nodeUuid, UUID rootNetworkUuid) {
-        return rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid);
     }
 
     // TODO move to study service
