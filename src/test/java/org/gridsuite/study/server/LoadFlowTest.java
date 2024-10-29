@@ -165,6 +165,8 @@ class LoadFlowTest {
     private ReportService reportService;
     @Autowired
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+    @Autowired
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @BeforeEach
     void setup(final MockWebServer server) throws Exception {
@@ -515,7 +517,7 @@ class LoadFlowTest {
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), rootNetworkUuid));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, LOAD_FLOW);
+        rootNetworkNodeInfoService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, LOAD_FLOW);
         assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, LOAD_FLOW));
         assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, LOAD_FLOW));
 

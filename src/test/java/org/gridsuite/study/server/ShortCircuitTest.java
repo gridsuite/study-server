@@ -27,10 +27,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NonEvacuatedEnergyService;
-import org.gridsuite.study.server.service.ReportService;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -147,6 +144,8 @@ class ShortCircuitTest implements WithAssertions {
     private final String shortCircuitAnalysisResultDestination = "shortcircuitanalysis.result";
     private final String shortCircuitAnalysisStoppedDestination = "shortcircuitanalysis.stopped";
     private final String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.failed";
+    @Autowired
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @BeforeEach
     void setup(final MockWebServer server) throws Exception {
@@ -573,9 +572,9 @@ class ShortCircuitTest implements WithAssertions {
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), rootNetworkUuid));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, ComputationType.SHORT_CIRCUIT);
-        assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));
-        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));
+        rootNetworkNodeInfoService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, ComputationType.SHORT_CIRCUIT);
+        assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));
+        assertEquals(resultUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {

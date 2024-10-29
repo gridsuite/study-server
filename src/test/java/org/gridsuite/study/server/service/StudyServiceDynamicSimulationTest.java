@@ -88,6 +88,8 @@ class StudyServiceDynamicSimulationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @BeforeEach
     void setup() {
@@ -98,7 +100,7 @@ class StudyServiceDynamicSimulationTest {
         // suppose always having an existing result in a previous run
         given(networkModificationTreeService.getComputationResultUuid(any(UUID.class), any(UUID.class), eq(DYNAMIC_SIMULATION))).willReturn(RESULT_UUID);
         given(networkModificationTreeService.getVariantId(any(UUID.class), any(UUID.class))).willReturn(VARIANT_1_ID);
-        willDoNothing().given(networkModificationTreeService).updateComputationResultUuid(NODE_UUID, ROOTNETWORK_UUID, RESULT_UUID, DYNAMIC_SIMULATION);
+        willDoNothing().given(rootNetworkNodeInfoService).updateComputationResultUuid(NODE_UUID, ROOTNETWORK_UUID, RESULT_UUID, DYNAMIC_SIMULATION);
 
         // setup NotificationService mock
         willDoNothing().given(notificationService).emitStudyChanged(STUDY_UUID, NODE_UUID, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);

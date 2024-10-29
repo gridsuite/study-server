@@ -154,6 +154,8 @@ class NonEvacuatedEnergyTest {
     private static final String NON_EVACUATED_ENERGY_RESULT_DESTINATION = "nonEvacuatedEnergy.result";
     private static final String NON_EVACUATED_ENERGY_STOPPED_DESTINATION = "nonEvacuatedEnergy.stopped";
     private static final String NON_EVACUATED_ENERGY_FAILED_DESTINATION = "nonEvacuatedEnergy.failed";
+    @Autowired
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @BeforeEach
     void setup(final MockWebServer server) {
@@ -384,7 +386,7 @@ class NonEvacuatedEnergyTest {
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNodeUuid = modificationNode1.getId();
-        networkModificationTreeService.updateComputationResultUuid(modificationNodeUuid, rootNetworkUuid, notFoundSensitivityUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        rootNetworkNodeInfoService.updateComputationResultUuid(modificationNodeUuid, rootNetworkUuid, notFoundSensitivityUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
         assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS));
         assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS));
 
@@ -406,7 +408,7 @@ class NonEvacuatedEnergyTest {
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), rootNetworkUuid));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        rootNetworkNodeInfoService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
         assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS));
         assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS));
 

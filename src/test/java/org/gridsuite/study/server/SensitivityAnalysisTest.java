@@ -163,6 +163,8 @@ class SensitivityAnalysisTest {
     private static final byte[] SENSITIVITY_RESULTS_AS_CSV = {0x00, 0x01};
 
     private static final UUID SENSITIVITY_ANALYSIS_PARAMETERS_UUID = UUID.randomUUID();
+    @Autowired
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @BeforeEach
     void setup(final MockWebServer server) {
@@ -438,8 +440,8 @@ class SensitivityAnalysisTest {
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNodeUuid = modificationNode1.getId();
-        networkModificationTreeService.updateComputationResultUuid(modificationNodeUuid, rootNetworkUuid, notFoundSensitivityUuid, SENSITIVITY_ANALYSIS);
-        assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
+        rootNetworkNodeInfoService.updateComputationResultUuid(modificationNodeUuid, rootNetworkUuid, notFoundSensitivityUuid, SENSITIVITY_ANALYSIS);
+        assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
         assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
 
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid))
@@ -465,7 +467,7 @@ class SensitivityAnalysisTest {
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), rootNetworkUuid));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, SENSITIVITY_ANALYSIS);
+        rootNetworkNodeInfoService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, SENSITIVITY_ANALYSIS);
         assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SENSITIVITY_ANALYSIS));
         assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SENSITIVITY_ANALYSIS));
 

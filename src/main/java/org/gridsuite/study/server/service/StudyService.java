@@ -1125,7 +1125,7 @@ public class StudyService {
     }
 
     void updateComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID computationResultUuid, ComputationType computationType) {
-        networkModificationTreeService.updateComputationResultUuid(nodeUuid, rootNetworkUuid, computationResultUuid, computationType);
+        rootNetworkNodeInfoService.updateComputationResultUuid(nodeUuid, rootNetworkUuid, computationResultUuid, computationType);
     }
 
     public List<String> getResultEnumValues(UUID studyUuid, UUID nodeUuid, ComputationType computationType, String enumName) {

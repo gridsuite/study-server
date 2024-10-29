@@ -205,6 +205,8 @@ class VoltageInitTest {
     private final String voltageInitFailedDestination = "voltageinit.failed";
     private final String voltageInitCancelFailedDestination = "voltageinit.cancelfailed";
     private final String elementUpdateDestination = "element.update";
+    @Autowired
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @BeforeEach
     void setup(final MockWebServer server) throws Exception {
@@ -677,9 +679,9 @@ class VoltageInitTest {
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), rootNetworkUuid));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, VOLTAGE_INITIALIZATION);
-        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION) != null);
-        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION));
+        rootNetworkNodeInfoService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, VOLTAGE_INITIALIZATION);
+        assertTrue(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION) != null);
+        assertEquals(resultUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION));
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
