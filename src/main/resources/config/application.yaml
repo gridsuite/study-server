@@ -142,7 +142,7 @@ non-evacuated-energy:
   default-provider: OpenLoadFlow
 
 dynamic-simulation:
-  default-provider: DynaWaltz
+  default-provider: Dynawo
 
 server:
   max-http-header-size: 64000
