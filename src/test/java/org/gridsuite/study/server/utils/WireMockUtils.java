@@ -285,6 +285,12 @@ public class WireMockUtils {
         }
     }
 
+    public UUID stubVoltageLevelIdForBranchOr3WTBySideGet(String networkUuid, String equipmentId, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/branch-or-3wt/" + equipmentId + "/voltage-level-id"))
+                .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
     public UUID stubHvdcLinesShuntCompensatorsGet(String networkUuid, String hvdcId, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/hvdc-lines/" + hvdcId + "/shunt-compensators"))
             .willReturn(WireMock.ok().withBody(responseBody))
@@ -299,6 +305,12 @@ public class WireMockUtils {
 
     public void verifyHvdcLinesShuntCompensatorsGet(UUID stubUuid, String networkUuid, String hvdcId) {
         RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/hvdc-lines/" + hvdcId + "/shunt-compensators"));
+        wireMock.verify(1, requestBuilder);
+        removeRequestForStub(stubUuid, 1);
+    }
+
+    public void verifyVoltageLevelIdByEquipmentIdAndSideGet(UUID stubUuid, String networkUuid, String equipmentId) {
+        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/branch-or-3wt/" + equipmentId + "/voltage-level-id"));
         wireMock.verify(1, requestBuilder);
         removeRequestForStub(stubUuid, 1);
     }

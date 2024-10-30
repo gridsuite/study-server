@@ -401,20 +401,6 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetBranchOr3WTMapServer() throws Exception {
-        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
-
-        // Create study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
-        UUID studyNameUserIdUuid = studyEntity.getId();
-        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
-
-        // Get the line / 2WT / 3WT map data info of a network
-        String lineDataAsString = mapper.writeValueAsString(IdentifiableInfos.builder().id(LINE_ID_1).name("LINE_NAME_1").build());
-        getNetworkEquipmentInfos(studyNameUserIdUuid, rootNodeUuid, "branch-or-3wt", LINE_ID_1, lineDataAsString);
-    }
-
-    @Test
     void testGetHvdcLineShuntCompensators() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         final String responseBody = "{\"id\":\"HVDC1\",\"hvdcType\":\"LCC\",\"mcsOnside1\":[],\"mcsOnside2\":[]}";
@@ -432,6 +418,23 @@ class NetworkMapTest {
         assertEquals(responseBody, resultAsString);
 
         wireMockUtils.verifyHvdcLinesShuntCompensatorsGet(stubUuid, NETWORK_UUID_STRING, HVDC_LINE_ID_1);
+    }
+
+    @Test
+    void testGetVoltageLevelIdForBranchOr3WTBySide() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+        UUID stubUuid = wireMockUtils.stubVoltageLevelIdForBranchOr3WTBySideGet(NETWORK_UUID_STRING, LINE_ID_1, VL_ID_1);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}/voltage-level-id",
+                        studyNameUserIdUuid, rootNodeUuid, LINE_ID_1))
+                .andExpect(status().isOk())
+                .andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        assertEquals(VL_ID_1, resultAsString);
+        wireMockUtils.verifyVoltageLevelIdByEquipmentIdAndSideGet(stubUuid, NETWORK_UUID_STRING, LINE_ID_1);
     }
 
     @Test
