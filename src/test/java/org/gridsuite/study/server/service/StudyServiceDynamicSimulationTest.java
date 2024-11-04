@@ -88,7 +88,8 @@ class StudyServiceDynamicSimulationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
-    @Autowired
+
+    @MockBean
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @BeforeEach

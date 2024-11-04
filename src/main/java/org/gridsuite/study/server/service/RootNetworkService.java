@@ -58,6 +58,7 @@ public class RootNetworkService {
     }
 
     // TODO move to study service
+    @Transactional
     public List<UUID> getAllReportUuids(UUID studyUuid) {
         List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllWithInfosByStudyId(studyUuid);
         List<UUID> rootReportUuids = rootNetworkEntities.stream().map(RootNetworkEntity::getReportUuid).toList();

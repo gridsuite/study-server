@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
 import static org.gridsuite.study.server.StudyException.Type.ROOTNETWORK_NOT_FOUND;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 
@@ -82,7 +83,6 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-
     @Transactional
     public void updateComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID computationResultUuid, ComputationType computationType) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
@@ -99,39 +99,6 @@ public class RootNetworkNodeInfoService {
             case VOLTAGE_INITIALIZATION -> rootNetworkNodeInfoEntity.setVoltageInitResultUuid(computationResultUuid);
             case DYNAMIC_SIMULATION -> rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(computationResultUuid);
             case STATE_ESTIMATION -> rootNetworkNodeInfoEntity.setStateEstimationResultUuid(computationResultUuid);
-        }
-    }
-
-    public void invalidateRootNetworkNodeInfoProper(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
-                                                    List<UUID> changedNodes, boolean deleteVoltageInitResults) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
-        // No need to invalidate a node with a status different of "BUILT"
-        if (rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
-            fillInvalidateNodeInfos(nodeUuid, rootNetworUuid, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, deleteVoltageInitResults);
-            if (!invalidateOnlyChildrenBuildStatus) {
-                invalidateRootNetworkNodeInfoBuildStatus(nodeUuid, rootNetworkNodeInfoEntity, changedNodes);
-            }
-
-            rootNetworkNodeInfoEntity.setLoadFlowResultUuid(null);
-            rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(null);
-            rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(null);
-            rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(null);
-            rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(null);
-            rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(null);
-            if (deleteVoltageInitResults) {
-                rootNetworkNodeInfoEntity.setVoltageInitResultUuid(null);
-            }
-            rootNetworkNodeInfoEntity.setStateEstimationResultUuid(null);
-
-            // we want to keep only voltage initialization report if deleteVoltageInitResults is false
-            Map<String, UUID> computationReports = rootNetworkNodeInfoEntity.getComputationReports()
-                .entrySet()
-                .stream()
-                .filter(entry -> VOLTAGE_INITIALIZATION.name().equals(entry.getKey()) && !deleteVoltageInitResults)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-            // Update the computation reports in the repository
-            rootNetworkNodeInfoEntity.setComputationReports(computationReports);
         }
     }
 
@@ -192,6 +159,39 @@ public class RootNetworkNodeInfoService {
                 deleteNodeInfos.addStateEstimationResultUuid(stateEstimationResultUuid);
             }
         });
+    }
+
+    public void invalidateRootNetworkNodeInfoProper(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
+                                                    List<UUID> changedNodes, boolean deleteVoltageInitResults) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+        // No need to invalidate a node with a status different of "BUILT"
+        if (rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
+            fillInvalidateNodeInfos(nodeUuid, rootNetworUuid, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, deleteVoltageInitResults);
+            if (!invalidateOnlyChildrenBuildStatus) {
+                invalidateRootNetworkNodeInfoBuildStatus(nodeUuid, rootNetworkNodeInfoEntity, changedNodes);
+            }
+
+            rootNetworkNodeInfoEntity.setLoadFlowResultUuid(null);
+            rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(null);
+            rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(null);
+            rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(null);
+            rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(null);
+            rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(null);
+            if (deleteVoltageInitResults) {
+                rootNetworkNodeInfoEntity.setVoltageInitResultUuid(null);
+            }
+            rootNetworkNodeInfoEntity.setStateEstimationResultUuid(null);
+
+            // we want to keep only voltage initialization report if deleteVoltageInitResults is false
+            Map<String, UUID> computationReports = rootNetworkNodeInfoEntity.getComputationReports()
+                .entrySet()
+                .stream()
+                .filter(entry -> VOLTAGE_INITIALIZATION.name().equals(entry.getKey()) && !deleteVoltageInitResults)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+            // Update the computation reports in the repository
+            rootNetworkNodeInfoEntity.setComputationReports(computationReports);
+        }
     }
 
     public void fillInvalidateNodeInfos(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
@@ -281,6 +281,16 @@ public class RootNetworkNodeInfoService {
             .map(rootNetworkNodeInfoEntity -> getComputationResultUuid(rootNetworkNodeInfoEntity, computationType))
             .filter(Objects::nonNull)
             .toList();
+    }
+
+    public List<RootNetworkNodeInfoEntity> getAllStudyRootNetworkNodeInfos(UUID studyUuid) {
+        return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyId(studyUuid);
+    }
+
+    public void assertNoRootNetworkModificationInfoIsBuilding(UUID studyUuid) {
+        if (rootNetworkNodeInfoRepository.existsByStudyUuidAndBuildStatus(studyUuid, BuildStatus.BUILDING)) {
+            throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
+        }
     }
 
     private void addLink(NetworkModificationNodeInfoEntity nodeInfoEntity, RootNetworkEntity rootNetworkEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {

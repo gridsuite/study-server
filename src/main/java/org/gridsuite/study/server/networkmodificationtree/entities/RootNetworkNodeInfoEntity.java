@@ -10,6 +10,7 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 
 import java.util.Map;
@@ -92,4 +93,23 @@ public class RootNetworkNodeInfoEntity {
         @AttributeOverride(name = "globalBuildStatus", column = @Column(name = "globalBuildStatus", nullable = false))
     })
     private NodeBuildStatusEmbeddable nodeBuildStatus;
+
+    public RootNetworkNodeInfo toDto() {
+        return RootNetworkNodeInfo.builder()
+            .id(id)
+            .computationReports(computationReports)
+            .modificationReports(modificationReports)
+            .dynamicSimulationResultUuid(dynamicSimulationResultUuid)
+            .loadFlowResultUuid(loadFlowResultUuid)
+            .nodeBuildStatus(nodeBuildStatus.toDto())
+            .nonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid)
+            .oneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid)
+            .securityAnalysisResultUuid(securityAnalysisResultUuid)
+            .stateEstimationResultUuid(stateEstimationResultUuid)
+            .sensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid)
+            .voltageInitResultUuid(voltageInitResultUuid)
+            .shortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid)
+            .variantId(variantId)
+            .build();
+    }
 }

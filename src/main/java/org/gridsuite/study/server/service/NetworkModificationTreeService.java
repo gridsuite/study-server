@@ -182,17 +182,17 @@ public class NetworkModificationTreeService {
         NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationNodeInfoRepository.findById(nodeToCopyUuid).orElseThrow(() -> new StudyException(GET_MODIFICATIONS_FAILED));
         UUID studyUuid = anchorNodeEntity.getStudy().getId();
         NetworkModificationNodeInfoEntity newNetworkModificationNodeInfoEntity = networkModificationNodeInfoRepository.save(
-                NetworkModificationNodeInfoEntity.builder()
-                        .modificationGroupUuid(newGroupUuid)
-                        .name(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()))
-                        .description(networkModificationNodeInfoEntity.getDescription())
-                        .idNode(node.getIdNode())
-                        .build()
+            NetworkModificationNodeInfoEntity.builder()
+                .modificationGroupUuid(newGroupUuid)
+                .name(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()))
+                .description(networkModificationNodeInfoEntity.getDescription())
+                .idNode(node.getIdNode())
+                .build()
         );
 
         NetworkModificationNode modificationNode = NetworkModificationNode.builder()
-                .modificationReports(new HashMap<>(Map.of(node.getIdNode(), newReportUuid)))
-                .build();
+            .modificationReports(new HashMap<>(Map.of(node.getIdNode(), newReportUuid)))
+            .build();
         rootNetworkNodeInfoService.createNodeLinks(Objects.requireNonNull(studyUuid), newNetworkModificationNodeInfoEntity, modificationNode);
 
         return node.getIdNode();
@@ -470,11 +470,11 @@ public class NetworkModificationTreeService {
         // create 2 nodes : root node, modification node N1
         NodeEntity rootNodeEntity = self.createRoot(studyEntity);
         NetworkModificationNode modificationNode = NetworkModificationNode
-                .builder()
-                .name("N1")
-                .variantId(FIRST_VARIANT_ID)
-                .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT, BuildStatus.BUILT))
-                .build();
+            .builder()
+            .name("N1")
+            .variantId(FIRST_VARIANT_ID)
+            .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT, BuildStatus.BUILT))
+            .build();
 
         createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
     }
@@ -484,44 +484,6 @@ public class NetworkModificationTreeService {
         NetworkModificationNodeInfoEntity networkModificationNodeEntity = networkModificationNodeInfoRepository.findById(node.getId()).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
         if (!networkModificationNodeEntity.getName().equals(node.getName())) {
             assertNodeNameNotExist(studyUuid, node.getName());
-        }
-
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findAllByNodeInfoId(networkModificationNodeEntity.getId()).stream().findFirst().orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
-        if (node.getVoltageInitResultUuid() != null) {
-            rootNetworkNodeInfoEntity.setVoltageInitResultUuid(node.getVoltageInitResultUuid());
-        }
-        if (node.getOneBusShortCircuitAnalysisResultUuid() != null) {
-            rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(node.getOneBusShortCircuitAnalysisResultUuid());
-        }
-        if (node.getShortCircuitAnalysisResultUuid() != null) {
-            rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(node.getShortCircuitAnalysisResultUuid());
-        }
-        if (node.getSecurityAnalysisResultUuid() != null) {
-            rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(node.getSecurityAnalysisResultUuid());
-        }
-        if (node.getStateEstimationResultUuid() != null) {
-            rootNetworkNodeInfoEntity.setStateEstimationResultUuid(node.getStateEstimationResultUuid());
-        }
-        if (node.getNonEvacuatedEnergyResultUuid() != null) {
-            rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(node.getNonEvacuatedEnergyResultUuid());
-        }
-        if (node.getSensitivityAnalysisResultUuid() != null) {
-            rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(node.getSensitivityAnalysisResultUuid());
-        }
-        if (node.getLoadFlowResultUuid() != null) {
-            rootNetworkNodeInfoEntity.setLoadFlowResultUuid(node.getLoadFlowResultUuid());
-        }
-        if (node.getNodeBuildStatus() != null) {
-            rootNetworkNodeInfoEntity.setNodeBuildStatus(node.getNodeBuildStatus().toEntity());
-        }
-        if (node.getVariantId() != null) {
-            rootNetworkNodeInfoEntity.setVariantId(node.getVariantId());
-        }
-        if (node.getModificationReports() != null) {
-            rootNetworkNodeInfoEntity.setModificationReports(node.getModificationReports());
-        }
-        if (node.getComputationsReports() != null) {
-            rootNetworkNodeInfoEntity.setComputationReports(node.getComputationsReports());
         }
         if (node.getName() != null) {
             networkModificationNodeEntity.setName(node.getName());
@@ -652,45 +614,8 @@ public class NetworkModificationTreeService {
         }
     }
 
-    @Transactional(readOnly = true)
-    public List<NodeModificationInfos> getAllNodesModificationInfos(UUID studyUuid) {
-        List<NodeModificationInfos> nodesModificationInfos = new ArrayList<>();
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.forEach(n -> {
-            if (n.getType().equals(NodeType.ROOT)) {
-                rootNetworkRepository.findAllByStudyId(studyUuid).forEach(tp -> {
-                    NodeModificationInfos nodeModificationInfos = NodeModificationInfos.builder()
-                        .id(n.getIdNode())
-                        .reportUuid(tp.getReportUuid())
-                        .build();
-
-                    nodesModificationInfos.add(nodeModificationInfos);
-                });
-            } else {
-                rootNetworkNodeInfoRepository.findAllByNodeInfoId(n.getIdNode()).forEach(
-                    tpNodeInfo -> {
-                        NodeModificationInfos nodeModificationInfos = NodeModificationInfos.builder()
-                            .id(n.getIdNode())
-                            .reportUuid(tpNodeInfo.getModificationReports().get(n.getIdNode()))
-                            .dynamicSimulationUuid(tpNodeInfo.getDynamicSimulationResultUuid())
-                            .loadFlowUuid(tpNodeInfo.getLoadFlowResultUuid())
-                            .nonEvacuatedEnergyUuid(tpNodeInfo.getNonEvacuatedEnergyResultUuid())
-                            .oneBusShortCircuitAnalysisUuid(tpNodeInfo.getOneBusShortCircuitAnalysisResultUuid())
-                            .shortCircuitAnalysisUuid(tpNodeInfo.getShortCircuitAnalysisResultUuid())
-                            .sensitivityAnalysisUuid(tpNodeInfo.getSensitivityAnalysisResultUuid())
-                            .voltageInitUuid(tpNodeInfo.getVoltageInitResultUuid())
-                            .stateEstimationUuid(tpNodeInfo.getStateEstimationResultUuid())
-                            .securityAnalysisUuid(tpNodeInfo.getSecurityAnalysisResultUuid())
-                            .variantId(tpNodeInfo.getVariantId())
-                            .modificationGroupUuid(getModificationGroupUuid(n.getIdNode()))
-                            .build();
-
-                        nodesModificationInfos.add(nodeModificationInfos);
-                    }
-                );
-            }
-        });
-        return nodesModificationInfos;
+    public List<NetworkModificationNodeInfoEntity> getAllStudyNetworkModificationNodeInfo(UUID studyUuid) {
+        return networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid);
     }
 
     public List<Pair<AbstractNode, Integer>> getStashedNodes(UUID studyUuid) {
@@ -815,8 +740,14 @@ public class NetworkModificationTreeService {
         final List<UUID> changedNodes = new ArrayList<>();
         changedNodes.add(nodeUuid);
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
-        rootNetworkNodeInfoService.invalidateRootNetworkNodeInfoProper(nodeUuid, rootNetworkUuid, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
-        invalidateChildrenBuildStatus(nodeUuid, rootNetworkUuid, changedNodes, invalidateNodeInfos, deleteVoltageInitResults);
+        nodesRepository.findById(nodeUuid).ifPresent(nodeEntity -> {
+            rootNetworkRepository.findById(rootNetworkUuid).ifPresent(tp -> {
+                if (nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION)) {
+                    rootNetworkNodeInfoService.invalidateRootNetworkNodeInfoProper(nodeUuid, rootNetworkUuid, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
+                }
+                invalidateChildrenBuildStatus(nodeUuid, rootNetworkUuid, changedNodes, invalidateNodeInfos, deleteVoltageInitResults);
+            });
+        });
 
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }
@@ -828,7 +759,14 @@ public class NetworkModificationTreeService {
         changedNodes.add(nodeUuid);
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
 
-        rootNetworkNodeInfoService.invalidateRootNetworkNodeInfoProper(nodeUuid, rootNetworkUuid, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
+        nodesRepository.findById(nodeUuid).ifPresent(nodeEntity -> {
+                if (nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION)) {
+                    rootNetworkRepository.findById(rootNetworkUuid).ifPresent(tp -> {
+                        rootNetworkNodeInfoService.invalidateRootNetworkNodeInfoProper(nodeUuid, rootNetworkUuid, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
+                    });
+                }
+            }
+        );
 
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }

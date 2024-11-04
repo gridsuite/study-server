@@ -6,8 +6,10 @@
  */
 package org.gridsuite.study.server.repository.rootnetwork;
 
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -40,4 +42,8 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
     Optional<RootNetworkNodeInfoEntity> findByNodeInfoIdAndRootNetworkId(UUID nodeInfoId, UUID rootNetworkUuid);
 
     List<RootNetworkNodeInfoEntity> findAllByRootNetworkStudyId(UUID studyUuid);
+
+    @Query("select count(rnni) > 0 from RootNetworkNodeInfoEntity rnni LEFT JOIN rnni.rootNetwork rn LEFT JOIN rn.study s " +
+        "where s.id = :studyUuid and (rnni.nodeBuildStatus.globalBuildStatus = :buildStatus or rnni.nodeBuildStatus.localBuildStatus = :buildStatus)")
+    boolean existsByStudyUuidAndBuildStatus(UUID studyUuid, BuildStatus buildStatus);
 }
