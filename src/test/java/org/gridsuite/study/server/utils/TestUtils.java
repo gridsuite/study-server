@@ -17,8 +17,6 @@ import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
@@ -120,9 +118,8 @@ public final class TestUtils {
                 .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
                 .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
                 .build();
-        RootNetworkEntity test = RootNetworkEntity.builder().caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build();
-        test.addRootNetworkNodeInfo(RootNetworkNodeInfoEntity.builder().nodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT)).build());
-        studyEntity.addRootNetwork(test);
+        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build();
+        studyEntity.addRootNetwork(rootNetworkEntity);
         return studyEntity;
     }
 
