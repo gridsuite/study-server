@@ -298,6 +298,7 @@ class NetworkModificationTreeTest {
             .build();
         studyEntity.addRootNetwork(RootNetworkEntity.builder()
             .caseFormat("").caseUuid(UUID.randomUUID())
+            .reportUuid(UUID.randomUUID())
             .caseName("caseName1")
             .networkId("netId")
             .networkUuid(networkUuid).build());
@@ -806,7 +807,7 @@ class NetworkModificationTreeTest {
         assertNotNull(networkModificationTreeService.getReportUuid(nodeUuid, rootNetworkUuid));
         assertFalse(networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid).isEmpty());
 
-        assertEquals(4, networkModificationTreeService.getAllNodesModificationInfos(root.getStudyId()).stream().map(NodeModificationInfos::getReportUuid).collect(Collectors.toList()).size());
+        assertEquals(4, networkModificationTreeService.getAllNodesModificationInfos(root.getStudyId()).stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).collect(Collectors.toList()).size());
     }
 
     @Test
