@@ -53,12 +53,12 @@ public class NetworkModificationTreeService {
 
     private final NetworkModificationService networkModificationService;
     private final NotificationService notificationService;
-    private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
     private final NetworkModificationTreeService self;
     private final RootNetworkRepository rootNetworkRepository;
     private final RootNodeInfoRepository rootNodeInfoRepository;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final RootNetworkService rootNetworkService;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
@@ -68,19 +68,18 @@ public class NetworkModificationTreeService {
                                           RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                                           @Lazy NetworkModificationTreeService networkModificationTreeService,
                                           RootNetworkRepository rootNetworkRepository,
-                                          RootNetworkService rootNetworkService,
-                                          RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+                                          RootNetworkNodeInfoService rootNetworkNodeInfoService, RootNetworkService rootNetworkService) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
         this.notificationService = notificationService;
-        this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         repositories.put(NodeType.ROOT, new RootNodeInfoRepositoryProxy(rootNodeInfoRepository));
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
         this.self = networkModificationTreeService;
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNodeInfoRepository = rootNodeInfoRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.rootNetworkService = rootNetworkService;
     }
 
     private NodeEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
@@ -605,7 +604,7 @@ public class NetworkModificationTreeService {
     public UUID getReportUuid(UUID nodeUuid, UUID rootNetworkUuid) {
         NodeEntity nodeEntity = nodesRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
         if (nodeEntity.getType().equals(NodeType.ROOT)) {
-            return rootNetworkRepository.findById(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND)).getReportUuid();
+            return rootNetworkService.getRootReportUuid(rootNetworkUuid);
         } else {
             return rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND)).getModificationReports().get(nodeUuid);
         }
@@ -781,7 +780,7 @@ public class NetworkModificationTreeService {
     public void updateNodeBuildStatus(UUID nodeUuid, UUID rootNetworkUuid, NodeBuildStatus nodeBuildStatus) {
         List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
         NodeBuildStatusEmbeddable currentNodeStatus = rootNetworkNodeInfoEntity.getNodeBuildStatus();
 

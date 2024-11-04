@@ -40,6 +40,10 @@ public class RootNetworkService {
         return rootNetworkRepository.findById(rootNetworkUuid).map(RootNetworkEntity::getNetworkUuid).orElse(null);
     }
 
+    public UUID getRootReportUuid(UUID rootNetworkUuid) {
+        return rootNetworkRepository.findById(rootNetworkUuid).map(RootNetworkEntity::getReportUuid).orElse(null);
+    }
+
     @Transactional
     public void createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull NetworkInfos networkInfos, @NonNull CaseInfos caseInfos, @NonNull UUID importReportUuid) {
         RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(RootNetworkEntity.builder()

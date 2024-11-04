@@ -808,7 +808,7 @@ class NetworkModificationTreeTest {
         assertNotNull(networkModificationTreeService.getReportUuid(nodeUuid, rootNetworkUuid));
         assertFalse(networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid).isEmpty());
 
-        assertEquals(4, rootNetworkService.getAllReportUuids(root.getStudyId()).filter(Objects::nonNull).size());
+        assertEquals(4, rootNetworkService.getAllReportUuids(root.getStudyId()).stream().filter(Objects::nonNull).toList().size());
     }
 
     @Test
