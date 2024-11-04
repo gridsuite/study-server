@@ -43,7 +43,7 @@ public class RootNetworkNodeInfoEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "nodeInfoId",
-        referencedColumnName = "idNode",
+        referencedColumnName = "idNode", nullable = false,
         foreignKey = @ForeignKey(name = "rootNetworkNode_node_id_fk_constraint"))
     private NetworkModificationNodeInfoEntity nodeInfo;
 
