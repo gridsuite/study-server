@@ -605,8 +605,7 @@ class SensitivityAnalysisTest {
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(objectMapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID))));
         // end mocking
 
-        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
-        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID studyNameUserIdUuid = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID()).getId();
         assertNotNull(studyNameUserIdUuid);
 
         // Get sensitivity analysis parameters (on existing)
@@ -622,8 +621,9 @@ class SensitivityAnalysisTest {
         wireMock.verify(WireMock.putRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID)));
 
         // Get sensitivity analysis (not existing, so it will create default)
-        studyEntity.setSensitivityAnalysisParametersUuid(null);
-        studyRepository.save(studyEntity);
+        StudyEntity studyEntityToUpdate = studyRepository.findById(studyNameUserIdUuid).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
+        studyEntityToUpdate.setSensitivityAnalysisParametersUuid(null);
+        studyRepository.save(studyEntityToUpdate);
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
             status().isOk(),
@@ -634,8 +634,8 @@ class SensitivityAnalysisTest {
         assertEquals(SENSITIVITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSensitivityAnalysisParametersUuid());
 
         // Set sensitivity analysis parameters (will create)
-        studyEntity.setSensitivityAnalysisParametersUuid(null);
-        studyRepository.save(studyEntity);
+        studyEntityToUpdate.setSensitivityAnalysisParametersUuid(null);
+        studyRepository.save(studyEntityToUpdate);
 
         setParametersAndDoChecks(studyNameUserIdUuid, SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON);
 
