@@ -35,7 +35,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "id")
     private UUID id;
 
-    @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "study", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RootNetworkEntity> rootNetworks;
 
     /**
@@ -79,10 +79,10 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "dynamicSimulationParametersEntity_id",
-            referencedColumnName = "id",
-            foreignKey = @ForeignKey(
-                    name = "dynamicSimulationParameters_id_fk"
-            ))
+        referencedColumnName = "id",
+        foreignKey = @ForeignKey(
+            name = "dynamicSimulationParameters_id_fk"
+        ))
     private DynamicSimulationParametersEntity dynamicSimulationParameters;
 
     @Column(name = "voltageInitParametersUuid")
@@ -104,8 +104,8 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     @ElementCollection
     @CollectionTable(name = "importParameters",
-            indexes = {@Index(name = "studyEntity_importParameters_idx1", columnList = "study_entity_id")},
-            foreignKey = @ForeignKey(name = "studyEntity_importParameters_fk1"))
+        indexes = {@Index(name = "studyEntity_importParameters_idx1", columnList = "study_entity_id")},
+        foreignKey = @ForeignKey(name = "studyEntity_importParameters_fk1"))
     private Map<String, String> importParameters;
 
     @Enumerated(EnumType.STRING)

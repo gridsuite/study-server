@@ -24,15 +24,16 @@ import java.util.UUID;
 @Setter
 @Entity
 @Builder
-@Table(name = "rootNetwork")
+@Table(name = "rootNetwork",
+        indexes = {@Index(name = "rootNetworkEntity_studyId_idx", columnList = "study_uuid")})
 public class RootNetworkEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
 
-    @ManyToOne
-    @JoinColumn(name = "studyUuid")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "studyUuid", foreignKey = @ForeignKey(name = "rootNetwork_study_id_fk_constraint"))
     private StudyEntity study;
 
     @OneToMany(orphanRemoval = true, mappedBy = "rootNetwork", cascade = CascadeType.ALL)
