@@ -24,7 +24,11 @@ import java.util.UUID;
 @Setter
 @Entity
 @SuperBuilder
-@Table(name = "RootNetworkNodeInfo")
+@Table(name = "RootNetworkNodeInfo",
+    indexes = {
+        @Index(name = "rootNetworkNodeEntity_rootNetworkId_idx", columnList = "root_network_id"),
+        @Index(name = "rootNetworkNodeEntity_nodeId_idx", columnList = "node_info_id"),
+    })
 public class RootNetworkNodeInfoEntity {
 
     @Id
@@ -32,17 +36,16 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "id")
     private UUID id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rootNetworkId",
-        referencedColumnName = "id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_root_network_node_info"))
+        referencedColumnName = "id", nullable = false,
+        foreignKey = @ForeignKey(name = "rootNetworkNode_rootNetwork_id_fk_constraint"))
     private RootNetworkEntity rootNetwork;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "nodeInfoId",
         referencedColumnName = "idNode",
-        foreignKey = @ForeignKey)
+        foreignKey = @ForeignKey(name = "rootNetworkNode_node_id_fk_constraint"))
     private NetworkModificationNodeInfoEntity nodeInfo;
 
     @Column

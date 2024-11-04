@@ -61,16 +61,18 @@ public class RootNetworkService {
     @Transactional
     public List<UUID> getAllReportUuids(UUID studyUuid) {
         List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllWithInfosByStudyId(studyUuid);
-        List<UUID> rootReportUuids = rootNetworkEntities.stream().map(RootNetworkEntity::getReportUuid).toList();
+        List<UUID> rootNodeReportUuids = rootNetworkEntities.stream().map(RootNetworkEntity::getReportUuid).toList();
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkEntities.stream().flatMap(rootNetworkEntity -> rootNetworkEntity.getRootNetworkNodeInfos().stream()).toList();
 
         //study reports uuids is the concatenation of modification reports, computation reports and root reports uuids
-        return rootNetworkNodeInfoEntities.stream().flatMap(rootNetworkNodeInfoEntity ->
-                        Stream.of(
-                                rootNetworkNodeInfoEntity.getModificationReports().values().stream(),
-                                rootNetworkNodeInfoEntity.getComputationReports().values().stream(),
-                                rootReportUuids.stream()))
-                .reduce(Stream::concat)
-                .orElse(Stream.empty()).toList();
+
+        List<UUID> networkModificationNodeReportUuids = rootNetworkNodeInfoEntities.stream().flatMap(rootNetworkNodeInfoEntity ->
+                Stream.of(
+                    rootNetworkNodeInfoEntity.getModificationReports().values().stream(),
+                    rootNetworkNodeInfoEntity.getComputationReports().values().stream()))
+            .reduce(Stream::concat)
+            .orElse(Stream.empty()).toList();
+
+        return Stream.concat(rootNodeReportUuids.stream(), networkModificationNodeReportUuids.stream()).toList();
     }
 }

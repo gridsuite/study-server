@@ -34,7 +34,6 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     protected List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos;
 
     //TODO temporary, for now we are only working with one root network by study
-    @Transient
     public RootNetworkNodeInfoEntity getFirstRootNetworkNodeInfosEntity() {
         if (rootNetworkNodeInfos == null || rootNetworkNodeInfos.isEmpty()) {
             return null;
