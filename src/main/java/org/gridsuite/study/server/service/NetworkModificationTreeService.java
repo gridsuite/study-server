@@ -22,7 +22,6 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.util.Pair;
@@ -55,20 +54,19 @@ public class NetworkModificationTreeService {
     private final NotificationService notificationService;
 
     private final NetworkModificationTreeService self;
-    private final RootNetworkRepository rootNetworkRepository;
     private final RootNodeInfoRepository rootNodeInfoRepository;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final RootNetworkService rootNetworkService;
+    private final RootNetworkRepository rootNetworkRepository;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
                                           NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                                           NotificationService notificationService,
                                           NetworkModificationService networkModificationService,
-                                          RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                                           @Lazy NetworkModificationTreeService networkModificationTreeService,
-                                          RootNetworkRepository rootNetworkRepository,
-                                          RootNetworkNodeInfoService rootNetworkNodeInfoService, RootNetworkService rootNetworkService) {
+                                          RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                                          RootNetworkService rootNetworkService, RootNetworkRepository rootNetworkRepository) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
@@ -76,10 +74,10 @@ public class NetworkModificationTreeService {
         repositories.put(NodeType.ROOT, new RootNodeInfoRepositoryProxy(rootNodeInfoRepository));
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
         this.self = networkModificationTreeService;
-        this.rootNetworkRepository = rootNetworkRepository;
         this.rootNodeInfoRepository = rootNodeInfoRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.rootNetworkService = rootNetworkService;
+        this.rootNetworkRepository = rootNetworkRepository;
     }
 
     private NodeEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
@@ -397,8 +395,8 @@ public class NetworkModificationTreeService {
         return root;
     }
 
-    private void completeNodeInfos(List<AbstractNode> nodes, UUID studyId) {
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyId(studyId).stream().findFirst().orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+    private void completeNodeInfos(List<AbstractNode> nodes, UUID studyUuid) {
+        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyId(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
         nodes.forEach(nodeInfo -> {
             if (nodeInfo instanceof RootNode rootNode) {
                 rootNode.setReportUuid(rootNetworkEntity.getReportUuid());
@@ -737,12 +735,12 @@ public class NetworkModificationTreeService {
         changedNodes.add(nodeUuid);
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
         nodesRepository.findById(nodeUuid).ifPresent(nodeEntity -> {
-            rootNetworkRepository.findById(rootNetworkUuid).ifPresent(tp -> {
+            if (rootNetworkService.exists(rootNetworkUuid)) {
                 if (nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION)) {
                     rootNetworkNodeInfoService.invalidateRootNetworkNodeInfoProper(nodeUuid, rootNetworkUuid, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
                 }
                 invalidateChildrenBuildStatus(nodeUuid, rootNetworkUuid, changedNodes, invalidateNodeInfos, deleteVoltageInitResults);
-            });
+            }
         });
 
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
@@ -756,10 +754,8 @@ public class NetworkModificationTreeService {
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(nodeEntity -> {
-                if (nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION)) {
-                    rootNetworkRepository.findById(rootNetworkUuid).ifPresent(tp -> {
-                        rootNetworkNodeInfoService.invalidateRootNetworkNodeInfoProper(nodeUuid, rootNetworkUuid, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
-                    });
+                if (nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION) && rootNetworkService.exists(rootNetworkUuid)) {
+                    rootNetworkNodeInfoService.invalidateRootNetworkNodeInfoProper(nodeUuid, rootNetworkUuid, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
                 }
             }
         );
