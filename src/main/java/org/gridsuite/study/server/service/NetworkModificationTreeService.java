@@ -866,14 +866,12 @@ public class NetworkModificationTreeService {
     public List<UUID> getComputationResultUuids(UUID studyUuid, ComputationType computationType) {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.forEach(n -> {
-            rootNetworkNodeInfoRepository.findAllByNodeInfoId(n.getIdNode()).forEach(tpNodeInfo -> {
-                UUID uuid = getComputationResultUuid(tpNodeInfo, computationType);
-                if (uuid != null) {
-                    uuids.add(uuid);
-                }
-            });
-        });
+        nodes.forEach(n -> rootNetworkNodeInfoRepository.findAllByNodeInfoId(n.getIdNode()).forEach(tpNodeInfo -> {
+            UUID uuid = getComputationResultUuid(tpNodeInfo, computationType);
+            if (uuid != null) {
+                uuids.add(uuid);
+            }
+        }));
         return uuids;
     }
 
@@ -896,19 +894,17 @@ public class NetworkModificationTreeService {
     public List<UUID> getShortCircuitResultUuids(UUID studyUuid) {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.forEach(n -> {
-            rootNetworkNodeInfoRepository.findAllByNodeInfoId(n.getIdNode()).forEach(tpNodeInfo -> {
-                // we need to check one bus and all bus
-                UUID uuidOneBus = getComputationResultUuid(tpNodeInfo, SHORT_CIRCUIT_ONE_BUS);
-                UUID uuidAllBus = getComputationResultUuid(tpNodeInfo, SHORT_CIRCUIT);
-                if (uuidOneBus != null) {
-                    uuids.add(uuidOneBus);
-                }
-                if (uuidAllBus != null) {
-                    uuids.add(uuidAllBus);
-                }
-            });
-        });
+        nodes.forEach(n -> rootNetworkNodeInfoRepository.findAllByNodeInfoId(n.getIdNode()).forEach(tpNodeInfo -> {
+            // we need to check one bus and all bus
+            UUID uuidOneBus = getComputationResultUuid(tpNodeInfo, SHORT_CIRCUIT_ONE_BUS);
+            UUID uuidAllBus = getComputationResultUuid(tpNodeInfo, SHORT_CIRCUIT);
+            if (uuidOneBus != null) {
+                uuids.add(uuidOneBus);
+            }
+            if (uuidAllBus != null) {
+                uuids.add(uuidAllBus);
+            }
+        }));
         return uuids;
     }
 
@@ -1013,12 +1009,10 @@ public class NetworkModificationTreeService {
         changedNodes.add(nodeUuid);
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
 
-        nodesRepository.findById(nodeUuid).ifPresent(n -> {
-            rootNetworkRepository.findById(rootNetworkUuid).ifPresent(tp -> {
-                invalidateNodeProper(n, tp, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
-                invalidateChildrenBuildStatus(n, tp, changedNodes, invalidateNodeInfos, deleteVoltageInitResults);
-            });
-        });
+        nodesRepository.findById(nodeUuid).ifPresent(n -> rootNetworkRepository.findById(rootNetworkUuid).ifPresent(tp -> {
+            invalidateNodeProper(n, tp, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
+            invalidateChildrenBuildStatus(n, tp, changedNodes, invalidateNodeInfos, deleteVoltageInitResults);
+        }));
 
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }
@@ -1031,9 +1025,7 @@ public class NetworkModificationTreeService {
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(n ->
-            rootNetworkRepository.findById(rootNetworkUuid).ifPresent(tp -> {
-                invalidateNodeProper(n, tp, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
-            })
+            rootNetworkRepository.findById(rootNetworkUuid).ifPresent(tp -> invalidateNodeProper(n, tp, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults))
         );
 
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
