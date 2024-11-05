@@ -10,9 +10,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
-import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -31,7 +29,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
@@ -68,6 +65,8 @@ public class SupervisionService {
 
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
+    private final RootNetworkService rootNetworkService;
+
     private final StateEstimationService stateEstimationService;
 
     private final StudyRepository studyRepository;
@@ -76,6 +75,7 @@ public class SupervisionService {
                               NetworkModificationTreeService networkModificationTreeService,
                               NetworkService networkStoreService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
+                              RootNetworkService rootNetworkService,
                               ReportService reportService,
                               LoadFlowService loadFlowService,
                               DynamicSimulationService dynamicSimulationService,
@@ -91,6 +91,7 @@ public class SupervisionService {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
+        this.rootNetworkService = rootNetworkService;
         this.reportService = reportService;
         this.loadFlowService = loadFlowService;
         this.dynamicSimulationService = dynamicSimulationService;
@@ -309,8 +310,11 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
-        RootNetworkEntity rootNetworkEntity = studyRepository.findById(studyUuid).map(StudyEntity::getFirstRootNetwork).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        studyService.invalidateBuild(studyUuid, rootNode.getId(), rootNetworkEntity.getId(), false, false, true);
+        //TODO: to parallelize ?
+        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
+            studyService.invalidateBuild(studyUuid, rootNode.getId(), rootNetworkEntity.getId(), false, false, true)
+        );
+
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 }

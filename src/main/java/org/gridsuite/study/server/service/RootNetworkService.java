@@ -98,10 +98,14 @@ public class RootNetworkService {
     }
 
     public List<UUID> getStudyCaseUuids(UUID studyUuid) {
-        return rootNetworkRepository.findAllByStudyId(studyUuid).stream().map(RootNetworkEntity::getCaseUuid).toList();
+        return getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::getCaseUuid).toList();
     }
 
     public List<UUID> getStudyNetworkUuids(UUID studyUuid) {
-        return rootNetworkRepository.findAllByStudyId(studyUuid).stream().map(RootNetworkEntity::getNetworkUuid).toList();
+        return getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::getNetworkUuid).toList();
+    }
+
+    public List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
+        return rootNetworkRepository.findAllByStudyId(studyUuid);
     }
 }

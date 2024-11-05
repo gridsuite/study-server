@@ -273,7 +273,7 @@ public class StudyController {
         @ApiResponse(responseCode = "204", description = "The study indexation status doesn't exist"),
         @ApiResponse(responseCode = "404", description = "The study or network doesn't exist")})
     public ResponseEntity<String> checkStudyIndexationStatus(@PathVariable("studyUuid") UUID studyUuid) {
-        String result = studyService.getStudyIndexationStatus(studyUuid).name();
+        String result = studyService.getStudyIndexationStatus(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)).name();
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
