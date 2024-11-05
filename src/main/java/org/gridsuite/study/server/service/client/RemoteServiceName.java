@@ -19,7 +19,6 @@ import org.gridsuite.study.server.RemoteServicesProperties;
  */
 public enum RemoteServiceName {
     ACTIONS_SERVER,
-    //APPS_METADATA_SERVER,
     BALANCES_ADJUSTMENT_SERVER,
     CASE_IMPORT_SERVER,
     CASE_SERVER,
@@ -34,6 +33,7 @@ public enum RemoteServiceName {
     DYNAMIC_SIMULATION_SERVER,
     EXPLORE_SERVER,
     FILTER_SERVER,
+    GATEWAY,
     GEO_DATA_SERVER,
     LOADFLOW_SERVER,
     MERGE_NOTIFICATION_SERVER,
@@ -48,12 +48,14 @@ public enum RemoteServiceName {
     SENSITIVITY_ANALYSIS_SERVER,
     SHORTCIRCUIT_SERVER,
     SINGLE_LINE_DIAGRAM_SERVER,
+    SPREADSHEET_CONFIG_SERVER,
+    STATE_ESTIMATION_ORCHESTRATOR_SERVER,
+    STATE_ESTIMATION_SERVER,
     STUDY_NOTIFICATION_SERVER,
     STUDY_SERVER,
     TIMESERIES_SERVER,
     USER_ADMIN_SERVER,
-    VOLTAGE_INIT_SERVER,
-    STATE_ESTIMATION_SERVER;
+    VOLTAGE_INIT_SERVER;
 
     /**
      * Service name in the format found in {@link RemoteServicesProperties.Service#getName() Service.name}
