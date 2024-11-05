@@ -277,8 +277,6 @@ class StudyTest {
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
     @Autowired
-    private RootNetworkService rootNetworkService;
-    @Autowired
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
     private static EquipmentInfos toEquipmentInfos(Line line) {

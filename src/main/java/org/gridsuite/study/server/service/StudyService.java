@@ -42,7 +42,6 @@ import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
@@ -87,9 +86,6 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
-    private final RootNetworkService rootNetworkService;
-    private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
-    private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     NotificationService notificationService;
 
@@ -126,6 +122,8 @@ public class StudyService {
     private final CaseService caseService;
     private final StateEstimationService stateEstimationService;
     private final RootNetworkRepository rootNetworkRepository;
+    private final RootNetworkService rootNetworkService;
+    private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     private final ObjectMapper objectMapper;
 
@@ -183,7 +181,9 @@ public class StudyService {
         FilterService filterService,
         StateEstimationService stateEstimationService,
         RootNetworkRepository rootNetworkRepository,
-        @Lazy StudyService studyService, RootNetworkService rootNetworkService, RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+        @Lazy StudyService studyService,
+        RootNetworkService rootNetworkService,
+        RootNetworkNodeInfoService rootNetworkNodeInfoService) {
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
@@ -217,14 +217,14 @@ public class StudyService {
         this.self = studyService;
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkService = rootNetworkService;
-        this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
 
-    private static CreatedStudyBasicInfos toStudyInfos(StudyEntity entity) {
+    private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid, UUID rootNetworkUuid) {
+        String caseFormat = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND)).getCaseFormat();
         return CreatedStudyBasicInfos.builder()
-                .id(entity.getId())
-                .caseFormat(entity.getFirstRootNetwork().getCaseFormat())
+                .id(studyUuid)
+                .caseFormat(caseFormat)
                 .build();
     }
 
@@ -248,20 +248,8 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    public List<UUID> getStudiesNetworkUuids() {
-        return studyRepository.findAll().stream()
-                .map(study -> study.getFirstRootNetwork().getNetworkUuid())
-                .toList();
-    }
-
     public List<UUID> getAllOrphanIndexedEquipmentsNetworkUuids() {
-        return equipmentInfosService.getOrphanEquipmentInfosNetworkUuids(getStudiesNetworkUuids());
-    }
-
-    public String getStudyCaseName(UUID studyUuid) {
-        Objects.requireNonNull(studyUuid);
-        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        return study != null ? study.getFirstRootNetwork().getCaseName() : "";
+        return equipmentInfosService.getOrphanEquipmentInfosNetworkUuids(rootNetworkService.getAllNetworkUuids());
     }
 
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
@@ -314,8 +302,9 @@ public class StudyService {
      * @param userId
      * @param studyUuid
      */
+    //TODO : how should it work now a study can have several networks ? For now, only recreating first rootNetwork
     public void recreateStudyRootNetwork(String userId, UUID studyUuid, String caseFormat) {
-        UUID caseUuid = self.getStudyCaseUuid(studyUuid);
+        UUID caseUuid = rootNetworkService.getRootNetwork(self.getStudyFirstRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND)).getCaseUuid();
         recreateStudyRootNetwork(caseUuid, userId, studyUuid, caseFormat, null, true);
     }
 
@@ -362,13 +351,8 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public CreatedStudyBasicInfos getStudyInfos(UUID studyUuid) {
-        return StudyService.toStudyInfos(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
-    }
-
-    @Transactional(readOnly = true)
-    public UUID getStudyCaseUuid(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getFirstRootNetwork().getCaseUuid();
+    public CreatedStudyBasicInfos getStudyInfos(UUID studyUuid, UUID rootNetworkUuid) {
+        return toStudyInfos(studyUuid, rootNetworkUuid);
     }
 
     public List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
@@ -397,15 +381,15 @@ public class StudyService {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         DeleteStudyInfos deleteStudyInfos = null;
         if (studyCreationRequestEntity.isEmpty()) {
-            AtomicReference<UUID> caseUuid = new AtomicReference<>(null);
-            UUID networkUuid = networkStoreService.doGetNetworkUuid(studyUuid);
+            List<UUID> casesToDeleteUuids = new ArrayList<>();
+            List<UUID> networksToDeleteUuids = rootNetworkService.getStudyNetworkUuids(studyUuid);
             List<RootNetworkNodeInfo> rootNetworkNodeInfos = rootNetworkNodeInfoService.getAllStudyRootNetworkNodeInfos(studyUuid).stream().map(RootNetworkNodeInfoEntity::toDto).toList();
             // get all reports related to the study
             List<UUID> reportUuids = rootNetworkService.getAllReportUuids(studyUuid);
             // get all modification groups related to the study
             List<UUID> modificationGroupUuids = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream().map(NetworkModificationNodeInfoEntity::getModificationGroupUuid).toList();
             studyEntity.ifPresent(s -> {
-                caseUuid.set(studyEntity.get().getFirstRootNetwork().getCaseUuid());
+                casesToDeleteUuids.addAll(rootNetworkService.getStudyCaseUuids(studyUuid));
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
@@ -422,7 +406,7 @@ public class StudyService {
                     sensitivityAnalysisService.deleteSensitivityAnalysisParameters(s.getSensitivityAnalysisParametersUuid());
                 }
             });
-            deleteStudyInfos = new DeleteStudyInfos(networkUuid, caseUuid.get(), rootNetworkNodeInfos, reportUuids, modificationGroupUuids);
+            deleteStudyInfos = new DeleteStudyInfos(networksToDeleteUuids, casesToDeleteUuids, rootNetworkNodeInfos, reportUuids, modificationGroupUuids);
         } else {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
         }
@@ -465,9 +449,9 @@ public class StudyService {
                                 .map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).forEach(stateEstimationService::deleteStateEstimationResult)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuids().stream().filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> reportService.deleteReports(deleteStudyInfos.getReportsUuids())),
-                        studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
-                        studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid())),
-                        studyServerExecutionService.runAsync(() -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()))
+                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNetworkUuids().stream().filter(Objects::nonNull).forEach(this::deleteEquipmentIndexes)),
+                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNetworkUuids().stream().filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)),
+                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getCaseUuids().stream().filter(Objects::nonNull).forEach(caseService::deleteCase))
                 );
 
                 executeInParallel.get();
@@ -780,16 +764,6 @@ public class StudyService {
     public void assertNoBuildNoComputation(UUID studyUuid, UUID nodeUuid) {
         assertComputationNotRunning(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid));
         rootNetworkNodeInfoService.assertNoRootNetworkModificationInfoIsBuilding(studyUuid);
-    }
-
-    private void assertNoNodeIsBuilding(UUID studyUuid) {
-        networkModificationTreeService.getAllNodes(studyUuid).forEach(node ->
-                rootNetworkNodeInfoRepository.findAllByNodeInfoId(node.getIdNode()).forEach(tpNodeInfo -> {
-                    if (networkModificationTreeService.getNodeBuildStatus(tpNodeInfo).isBuilding()) {
-                        throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
-                    }
-                })
-        );
     }
 
     public void assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid) {
@@ -1593,7 +1567,8 @@ public class StudyService {
         // Reset indexation status
         updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXING_ONGOING);
         try {
-            networkConversionService.reindexStudyNetworkEquipments(study.getFirstRootNetwork().getNetworkUuid());
+            //TODO: parallelize ?
+            rootNetworkService.getStudyNetworkUuids(study.getId()).forEach(networkConversionService::reindexStudyNetworkEquipments);
             updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXED);
         } catch (Exception e) {
             // Allow to retry indexation

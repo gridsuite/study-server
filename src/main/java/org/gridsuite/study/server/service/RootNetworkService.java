@@ -7,18 +7,19 @@
 package org.gridsuite.study.server.service;
 
 import lombok.NonNull;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -30,18 +31,18 @@ public class RootNetworkService {
     private final RootNetworkRepository rootNetworkRepository;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
-    public RootNetworkService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository, RootNetworkRepository rootNetworkRepository,
+    public RootNetworkService(RootNetworkRepository rootNetworkRepository,
                               RootNetworkNodeInfoService rootNetworkNodeInfoService) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
 
     public UUID getNetworkUuid(UUID rootNetworkUuid) {
-        return rootNetworkRepository.findById(rootNetworkUuid).map(RootNetworkEntity::getNetworkUuid).orElse(null);
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getNetworkUuid).orElse(null);
     }
 
     public UUID getRootReportUuid(UUID rootNetworkUuid) {
-        return rootNetworkRepository.findById(rootNetworkUuid).map(RootNetworkEntity::getReportUuid).orElse(null);
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getReportUuid).orElse(null);
     }
 
     public boolean exists(UUID rootNetworkUuid) {
@@ -82,5 +83,25 @@ public class RootNetworkService {
             .orElse(Stream.empty()).toList();
 
         return Stream.concat(rootNodeReportUuids.stream(), networkModificationNodeReportUuids.stream()).toList();
+    }
+
+    public List<UUID> getAllNetworkUuids() {
+        return rootNetworkRepository.findAll().stream().map(RootNetworkEntity::getNetworkUuid).toList();
+    }
+
+    public Optional<RootNetworkEntity> getRootNetwork(UUID rootNetworkUuid) {
+        return rootNetworkRepository.findById(rootNetworkUuid);
+    }
+
+    public String getCaseName(UUID rootNetworkUuid) {
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getCaseName).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+    }
+
+    public List<UUID> getStudyCaseUuids(UUID studyUuid) {
+        return rootNetworkRepository.findAllByStudyId(studyUuid).stream().map(RootNetworkEntity::getCaseUuid).toList();
+    }
+
+    public List<UUID> getStudyNetworkUuids(UUID studyUuid) {
+        return rootNetworkRepository.findAllByStudyId(studyUuid).stream().map(RootNetworkEntity::getNetworkUuid).toList();
     }
 }

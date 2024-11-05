@@ -78,21 +78,22 @@ public class StudyController {
     private final CaseService caseService;
     private final RemoteServicesInspector remoteServicesInspector;
     private final StateEstimationService stateEstimationService;
+    private final RootNetworkService rootNetworkService;
 
     public StudyController(StudyService studyService,
-            NetworkService networkStoreService,
-            NetworkModificationTreeService networkModificationTreeService,
-            SingleLineDiagramService singleLineDiagramService,
-            NetworkConversionService networkConversionService,
-            SecurityAnalysisService securityAnalysisService,
-            SensitivityAnalysisService sensitivityAnalysisService,
-            NonEvacuatedEnergyService nonEvacuatedEnergyService,
-            ShortCircuitService shortCircuitService,
-            VoltageInitService voltageInitService,
-            LoadFlowService loadflowService,
-            CaseService caseService,
-            RemoteServicesInspector remoteServicesInspector,
-            StateEstimationService stateEstimationService) {
+                           NetworkService networkStoreService,
+                           NetworkModificationTreeService networkModificationTreeService,
+                           SingleLineDiagramService singleLineDiagramService,
+                           NetworkConversionService networkConversionService,
+                           SecurityAnalysisService securityAnalysisService,
+                           SensitivityAnalysisService sensitivityAnalysisService,
+                           NonEvacuatedEnergyService nonEvacuatedEnergyService,
+                           ShortCircuitService shortCircuitService,
+                           VoltageInitService voltageInitService,
+                           LoadFlowService loadflowService,
+                           CaseService caseService,
+                           RemoteServicesInspector remoteServicesInspector,
+                           StateEstimationService stateEstimationService, RootNetworkService rootNetworkService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -107,6 +108,7 @@ public class StudyController {
         this.caseService = caseService;
         this.remoteServicesInspector = remoteServicesInspector;
         this.stateEstimationService = stateEstimationService;
+        this.rootNetworkService = rootNetworkService;
     }
 
     @InitBinder
@@ -128,7 +130,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study case name"),
                            @ApiResponse(responseCode = "204", description = "The study has no case name attached")})
     public ResponseEntity<String> getStudyCaseName(@PathVariable("studyUuid") UUID studyUuid) {
-        String studyCaseName = studyService.getStudyCaseName(studyUuid);
+        String studyCaseName = rootNetworkService.getCaseName(studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return StringUtils.isEmpty(studyCaseName) ? ResponseEntity.noContent().build() : ResponseEntity.ok().body(studyCaseName);
     }
 
@@ -180,7 +182,7 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "The study information"),
         @ApiResponse(responseCode = "404", description = "The study doesn't exist")})
     public ResponseEntity<CreatedStudyBasicInfos> getStudy(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyInfos(studyUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyInfos(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}")
