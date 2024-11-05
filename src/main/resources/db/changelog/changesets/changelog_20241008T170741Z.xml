@@ -1,0 +1,86 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!-- 8. drop columns -->
+    <changeSet author="souissimai (generated)" id="1728407274000-31">
+        <dropForeignKeyConstraint baseTableName="COMPUTATION_REPORTS" constraintName="networkModificationNodeInfoEntity_computationReports_fk1"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-32">
+        <dropForeignKeyConstraint baseTableName="MODIFICATION_REPORTS" constraintName="networkModificationNodeInfoEntity_modificationReports_fk1"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-35">
+        <dropColumn columnName="CASE_FORMAT" tableName="STUDY"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-36">
+        <dropColumn columnName="CASE_NAME" tableName="STUDY"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-37">
+        <dropColumn columnName="CASE_UUID" tableName="STUDY"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-38">
+        <dropColumn columnName="DYNAMIC_SIMULATION_RESULT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-39">
+        <dropColumn columnName="GLOBAL_BUILD_STATUS" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-40">
+        <dropColumn columnName="LOADFLOW_RESULT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-41">
+        <dropColumn columnName="LOCAL_BUILD_STATUS" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-42">
+        <dropColumn columnName="NETWORK_ID" tableName="STUDY"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-43">
+        <dropColumn columnName="NETWORK_UUID" tableName="STUDY"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-44">
+        <dropColumn columnName="NON_EVACUATED_ENERGY_RESULT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-45">
+        <dropColumn columnName="ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-46">
+        <dropColumn columnName="REPORT_UUID" tableName="ROOT_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-47">
+        <dropColumn columnName="SECURITY_ANALYSIS_RESULT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-48">
+        <dropColumn columnName="SENSITIVITY_ANALYSIS_RESULT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-49">
+        <dropColumn columnName="SHORT_CIRCUIT_ANALYSIS_RESULT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-50">
+        <dropColumn columnName="STATE_ESTIMATION_RESULT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-51">
+        <dropColumn columnName="VARIANT_ID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-52">
+        <dropColumn columnName="VOLTAGE_INIT_RESULT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-55">
+        <dropPrimaryKey tableName="computation_reports"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-57">
+        <dropPrimaryKey tableName="modification_reports"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-58">
+        <dropColumn columnName="NETWORK_MODIFICATION_NODE_INFO_ENTITY_ID_NODE" tableName="computation_reports"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-59">
+        <dropColumn columnName="NETWORK_MODIFICATION_NODE_INFO_ENTITY_ID_NODE" tableName="modification_reports"/>
+    </changeSet>
+
+    <changeSet author="souissimai (generated)" id="1728407274000-60">
+        <addNotNullConstraint tableName="computation_reports" columnName="root_network_node_info_entity_id" />
+        <addPrimaryKey columnNames="root_network_node_info_entity_id, computation_reports_key" constraintName="computation_reportsPK" tableName="computation_reports"/>
+    </changeSet>
+
+    <changeSet author="souissimai (generated)" id="1728407274000-61">
+        <addNotNullConstraint tableName="modification_reports" columnName="root_network_node_info_entity_id" />
+        <addPrimaryKey columnNames="root_network_node_info_entity_id, modification_reports_key" constraintName="modification_reportsPK" tableName="modification_reports"/>
+    </changeSet>
+</databaseChangeLog>

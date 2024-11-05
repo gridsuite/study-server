@@ -60,13 +60,13 @@ public class LoadFlowService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID parametersUuid, UUID reportUuid, String userId, Float limitReduction) {
+    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID parametersUuid, UUID reportUuid, String userId, Float limitReduction) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
+        String variantId = getVariantId(nodeUuid, rootNetworkUuid);
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -120,11 +120,11 @@ public class LoadFlowService extends AbstractComputationService {
         return restTemplate.getForObject(loadFlowServerBaseUri + path, Integer.class);
     }
 
-    public String getLoadFlowResultOrStatus(UUID nodeUuid, String filters, Sort sort, String suffix) {
+    public String getLoadFlowResultOrStatus(UUID nodeUuid, UUID rootNetworkUuid, String filters, Sort sort, String suffix) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.LOAD_FLOW);
 
-        if (resultUuidOpt.isEmpty()) {
+        if (resultUuid == null) {
             return null;
         }
 
@@ -135,7 +135,7 @@ public class LoadFlowService extends AbstractComputationService {
         if (sort != null) {
             sort.forEach(order -> uriComponentsBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection()));
         }
-        String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+        String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
 
         try {
             result = restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
@@ -148,33 +148,33 @@ public class LoadFlowService extends AbstractComputationService {
         return result;
     }
 
-    public String getLoadFlowResult(UUID nodeUuid, String filters, Sort sort) {
-        return getLoadFlowResultOrStatus(nodeUuid, filters, sort, "");
+    public String getLoadFlowResult(UUID nodeUuid, UUID rootNetworkUuid, String filters, Sort sort) {
+        return getLoadFlowResultOrStatus(nodeUuid, rootNetworkUuid, filters, sort, "");
     }
 
-    public String getLoadFlowStatus(UUID nodeUuid) {
-        return getLoadFlowResultOrStatus(nodeUuid, null, null, "/status");
+    public String getLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        return getLoadFlowResultOrStatus(nodeUuid, rootNetworkUuid, null, null, "/status");
     }
 
-    public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, String userId) {
+    public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(userId);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
-        if (resultUuidOpt.isEmpty()) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.LOAD_FLOW);
+        if (resultUuid == null) {
             return;
         }
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/stop")
-                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
+                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
@@ -193,26 +193,26 @@ public class LoadFlowService extends AbstractComputationService {
         }
     }
 
-    private String getVariantId(UUID nodeUuid) {
-        return networkModificationTreeService.getVariantId(nodeUuid);
+    private String getVariantId(UUID nodeUuid, UUID rootNetworkUuid) {
+        return networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
     }
 
     public void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
     }
 
-    public void assertLoadFlowNotRunning(UUID nodeUuid) {
-        String scs = getLoadFlowStatus(nodeUuid);
+    public void assertLoadFlowNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
+        String scs = getLoadFlowStatus(nodeUuid, rootNetworkUuid);
         if (LoadFlowStatus.RUNNING.name().equals(scs)) {
             throw new StudyException(LOADFLOW_RUNNING);
         }
     }
 
-    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid, String filters, String globalFilters, Sort sort, UUID networkUuid, String variantId) {
+    public List<LimitViolationInfos> getLimitViolations(UUID nodeUuid, UUID rootNetworkUuid, String filters, String globalFilters, Sort sort, UUID networkUuid, String variantId) {
         List<LimitViolationInfos> result = new ArrayList<>();
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.LOAD_FLOW);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.LOAD_FLOW);
 
-        if (resultUuidOpt.isPresent()) {
+        if (resultUuid != null) {
             UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/limit-violations");
             if (!StringUtils.isEmpty(filters)) {
                 uriComponentsBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
@@ -227,7 +227,7 @@ public class LoadFlowService extends AbstractComputationService {
             if (sort != null) {
                 sort.forEach(order -> uriComponentsBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection()));
             }
-            String path = uriComponentsBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+            String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
             try {
                 ResponseEntity<List<LimitViolationInfos>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
                 });

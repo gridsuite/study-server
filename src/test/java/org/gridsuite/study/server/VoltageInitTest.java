@@ -35,7 +35,7 @@ import org.gridsuite.study.server.notification.dto.AlertLevel;
 import org.gridsuite.study.server.notification.dto.StudyAlert;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -196,7 +196,7 @@ class VoltageInitTest {
     private NetworkStoreService networkStoreService;
 
     @Autowired
-    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+    private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
     //output destinations
     private final String studyUpdateDestination = "study.update";
@@ -240,7 +240,7 @@ class VoltageInitTest {
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_3)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", VOLTAGE_INIT_CANCEL_FAILED_UUID)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE)
                             .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
                             .build(), voltageInitResultDestination);
@@ -248,14 +248,14 @@ class VoltageInitTest {
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", VOLTAGE_INIT_RESULT_UUID)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE)
                             .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
                             .build(), voltageInitResultDestination);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitResultUuidStr);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
                         .build(), voltageInitFailedDestination);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitErrorResultUuidStr);
@@ -277,7 +277,7 @@ class VoltageInitTest {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? VOLTAGE_INIT_OTHER_NODE_RESULT_UUID : VOLTAGE_INIT_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", resultUuid)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), voltageInitStoppedDestination);
                     return new MockResponse(200);
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_CANCEL_FAILED_UUID + "/stop.*")) {
@@ -671,14 +671,15 @@ class VoltageInitTest {
     void testNotResetedUuidResultWhenVoltageInitFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID), false);
+        UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
-        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
+        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), rootNetworkUuid));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), resultUuid, VOLTAGE_INITIALIZATION);
-        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), VOLTAGE_INITIALIZATION).isPresent());
-        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), VOLTAGE_INITIALIZATION).get());
+        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, VOLTAGE_INITIALIZATION);
+        assertTrue(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION) != null);
+        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION));
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
@@ -688,11 +689,11 @@ class VoltageInitTest {
                     .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
                 .build(), voltageInitFailedDestination);
             return resultUuid;
-        }).when(studyService).runVoltageInit(any(), any(), any());
-        studyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), "");
+        }).when(studyService).runVoltageInit(any(), any(), any(), any());
+        studyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "");
 
         // Test doesn't reset uuid result in the database
-        assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), VOLTAGE_INITIALIZATION).get().toString());
+        assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION).toString());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -733,7 +734,7 @@ class VoltageInitTest {
     }
 
     private void testDeleteResults(final MockWebServer server, int expectedInitialResultCount) throws Exception {
-        assertEquals(expectedInitialResultCount, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
+        assertEquals(expectedInitialResultCount, rootNetworkNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", VOLTAGE_INITIALIZATION.toString())
                 .queryParam("dryRun", "false"))
@@ -742,7 +743,7 @@ class VoltageInitTest {
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains("/v1/results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
+        assertEquals(0, rootNetworkNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
     }
 
     @Test
@@ -770,11 +771,11 @@ class VoltageInitTest {
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID voltageInitParametersUuid, boolean applyModifications) {
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "",
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null,
                 UUID.randomUUID(), null, voltageInitParametersUuid, null, null,
                 defaultNonEvacuatedEnergyParametersEntity, applyModifications);
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity, null);
+        networkModificationTreeService.createRoot(studyEntity);
         return study;
     }
 

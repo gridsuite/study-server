@@ -1,0 +1,135 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="souissimai (generated)" id="1728407274000-14">
+        <!-- 1. Create rootNetwork table -->
+        <createTable tableName="root_network">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="root_networkPK"/>
+            </column>
+            <column name="case_format" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="case_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="case_uuid" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_uuid" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="report_uuid" type="UUID"/>
+            <column name="study_uuid" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <!-- 2. Create root_network_node_info table -->
+    <changeSet author="souissimai (generated)" id="1728407274000-15">
+        <createTable tableName="root_network_node_info">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="root_network_node_infoPK"/>
+            </column>
+            <!--   columns moved from NetworkModificationNodeInfo -->
+            <column name="dynamic_simulation_result_uuid" type="UUID"/>
+            <column name="loadflow_result_uuid" type="UUID"/>
+            <column name="global_build_status" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="local_build_status" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="non_evacuated_energy_result_uuid" type="UUID"/>
+            <column name="one_bus_short_circuit_analysis_result_uuid" type="UUID"/>
+            <column name="security_analysis_result_uuid" type="UUID"/>
+            <column name="sensitivity_analysis_result_uuid" type="UUID"/>
+            <column name="short_circuit_analysis_result_uuid" type="UUID"/>
+            <column name="state_estimation_result_uuid" type="UUID"/>
+            <column name="variant_id" type="VARCHAR(255)"/>
+            <column name="voltage_init_result_uuid" type="UUID"/>
+            <!--   Link between rootNetworkNodeInfo and NetworkModificationNodeInfo -->
+            <column name="node_info_id" type="UUID"/>
+            <!--   Link between rootNetwork and NetworkModificationNodeInfo -->
+            <column name="root_network_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <!-- 3. Create link table  root_network_node_info and computation_reports-->
+    <changeSet author="souissimai (generated)" id="1728407274000-17">
+        <addColumn tableName="computation_reports">
+            <column name="root_network_node_info_entity_id" type="uuid">
+            </column>
+        </addColumn>
+    </changeSet>
+    <!-- 4. Create link table  root_network_node_info and modification_reports-->
+    <changeSet author="souissimai (generated)" id="1728407274000-18">
+        <addColumn tableName="modification_reports">
+            <column name="root_network_node_info_entity_id" type="uuid">
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- 5. Index root_network_node_info and computation_reports/modification_reports -->
+    <changeSet author="souissimai (generated)" id="1728407274000-19">
+        <createIndex indexName="IX_computation_reportsPK" tableName="computation_reports" unique="true">
+            <column name="root_network_node_info_entity_id"/>
+            <column name="computation_reports_key"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-20">
+        <createIndex indexName="IX_modification_reportsPK" tableName="modification_reports" unique="true">
+            <column name="root_network_node_info_entity_id"/>
+            <column name="modification_reports_key"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-21">
+        <createIndex indexName="root_network_node_info_entity_computationReports_idx1" tableName="computation_reports">
+            <column name="root_network_node_info_entity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-22">
+        <createIndex indexName="root_network_node_info_entity_modificationReports_idx1" tableName="modification_reports">
+            <column name="root_network_node_info_entity_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- 6. Constraints -->
+            <!-- Add foreign key constraint between rootNetworkNodeInfo and NetworkModificationNodeInfoEntity - -->
+    <changeSet author="souissimai (generated)" id="1728407274000-24">
+        <addForeignKeyConstraint baseColumnNames="node_info_id" baseTableName="root_network_node_info" constraintName="FK40i207mmx5ep57g7xnrv16t0a" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="network_modification_node_info" validate="true"/>
+    </changeSet>
+         <!-- Add foreign key constraint between rootNetworkEntity and StudyEntity - -->
+    <changeSet author="souissimai (generated)" id="1728407274000-25">
+        <addForeignKeyConstraint baseColumnNames="study_uuid" baseTableName="root_network" constraintName="FKc0x0spv4eajo2ri2nomlxp9uv" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="study" validate="true"/>
+    </changeSet>
+        <!-- Add foreign key constraint between rootNetworkNodeInfo and rootNetworkEntity - -->
+    <changeSet author="souissimai (generated)" id="1728407274000-26">
+        <addForeignKeyConstraint baseColumnNames="root_network_id" baseTableName="root_network_node_info" constraintName="fk_root_network_node_info" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="root_network" validate="true"/>
+    </changeSet>
+        <!-- Add foreign key constraint between rootNetworkNodeInfo and computation_reports , modification_reports  -->
+    <changeSet author="souissimai (generated)" id="1728407274000-27">
+        <addForeignKeyConstraint baseColumnNames="root_network_node_info_entity_id" baseTableName="computation_reports" constraintName="rootNetworkNodeInfoEntity_computationReports_fk1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="root_network_node_info" validate="true"/>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1728407274000-28">
+        <addForeignKeyConstraint baseColumnNames="root_network_node_info_entity_id" baseTableName="modification_reports" constraintName="rootNetworkNodeInfoEntity_modificationReports_fk1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="root_network_node_info" validate="true"/>
+    </changeSet>
+    <!-- 7. migration Data -->
+    <changeSet author="souissimai (generated)" id="1728312755079-30">
+        <sqlFile
+                dbms="postgresql"
+                encoding="UTF-8"
+                path="migrationDataRootNetworkPostgres.sql"
+                relativeToChangelogFile="true"
+                splitStatements="true"
+                stripComments="true"/>
+        <sqlFile
+                dbms="H2"
+                encoding="UTF-8"
+                path="migrationDataRootNetworkH2.sql"
+                relativeToChangelogFile="true"
+                splitStatements="true"
+                stripComments="true"/>
+    </changeSet>
+</databaseChangeLog>

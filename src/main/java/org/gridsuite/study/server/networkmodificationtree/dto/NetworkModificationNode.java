@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 
 import java.util.Map;
 import java.util.UUID;
@@ -50,6 +51,22 @@ public class NetworkModificationNode extends AbstractNode {
     private UUID stateEstimationResultUuid;
 
     private NodeBuildStatus nodeBuildStatus;
+
+    //TODO: temporary, used to keep nodeDTO identical since we don't export rootNetworks in APIs yet, once rootNetworks are exported, result uuid won't be stored in nodeDto
+    public void completeDtoFromRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
+        this.setLoadFlowResultUuid(rootNetworkNodeInfoEntity.getLoadFlowResultUuid());
+        this.setShortCircuitAnalysisResultUuid(rootNetworkNodeInfoEntity.getShortCircuitAnalysisResultUuid());
+        this.setOneBusShortCircuitAnalysisResultUuid(rootNetworkNodeInfoEntity.getOneBusShortCircuitAnalysisResultUuid());
+        this.setVoltageInitResultUuid(rootNetworkNodeInfoEntity.getVoltageInitResultUuid());
+        this.setSecurityAnalysisResultUuid(rootNetworkNodeInfoEntity.getSecurityAnalysisResultUuid());
+        this.setSensitivityAnalysisResultUuid(rootNetworkNodeInfoEntity.getSensitivityAnalysisResultUuid());
+        this.setNonEvacuatedEnergyResultUuid(rootNetworkNodeInfoEntity.getNonEvacuatedEnergyResultUuid());
+        this.setDynamicSimulationResultUuid(rootNetworkNodeInfoEntity.getDynamicSimulationResultUuid());
+        this.setStateEstimationResultUuid(rootNetworkNodeInfoEntity.getStateEstimationResultUuid());
+        this.setNodeBuildStatus(rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto());
+        this.setComputationsReports(rootNetworkNodeInfoEntity.getComputationReports());
+        this.setModificationReports(rootNetworkNodeInfoEntity.getModificationReports());
+    }
 
     private Map<String, UUID> computationsReports;
 
