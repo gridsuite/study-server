@@ -92,10 +92,13 @@ class StudyServiceDynamicSimulationTest {
     @MockBean
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
+    @MockBean
+    private RootNetworkService rootNetworkService;
+
     @BeforeEach
     void setup() {
         // setup NetworkService mock
-        given(networkService.getNetworkUuid(STUDY_UUID)).willReturn(NETWORK_UUID);
+        given(rootNetworkService.getNetworkUuid(ROOTNETWORK_UUID)).willReturn(NETWORK_UUID);
 
         // setup NetworkModificationTreeService mock
         // suppose always having an existing result in a previous run

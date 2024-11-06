@@ -681,9 +681,10 @@ class StudyTest {
         String resultAsString;
         String userId = "userId";
 
-        //empty list
+        //TODO: replace with another call, this endpoint wasn't used
+        /*//empty list
         mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId")).andExpectAll(status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));
+            content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));*/
 
         //empty list
         mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(status().isOk(),
@@ -710,7 +711,8 @@ class StudyTest {
         assertTrue(TestUtils.getRequestsDone(1, server)
                        .contains(String.format("/v1/cases/%s/exists", NOT_EXISTING_CASE_UUID)));
 
-        result = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId"))
+        //TODO: replace with something else
+        /*result = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId"))
                      .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
 
         resultAsString = result.getResponse().getContentAsString();
@@ -728,7 +730,7 @@ class StudyTest {
         createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertThat(createdStudyBasicInfosList.get(1),
-            createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));
+            createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));*/
 
         UUID randomUuid = UUID.randomUUID();
         //get a non-existing study -> 404 not found
@@ -739,14 +741,16 @@ class StudyTest {
 
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
+        //TODO: to replace with something else
+
         // expect only 1 study (public one) since the other is private and we use
         // another userId
-        result = mockMvc.perform(get("/v1/studies").header("userId", "a"))
+        /*result = mockMvc.perform(get("/v1/studies").header("userId", "a"))
                      .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
 
         resultAsString = result.getResponse().getContentAsString();
-        createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
-        assertEquals(2, createdStudyBasicInfosList.size());
+        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
+        assertEquals(2, createdStudyBasicInfosList.size());*/
 
         //get available export format
         mockMvc.perform(get("/v1/export-network-formats")).andExpectAll(status().isOk(),
@@ -1271,13 +1275,14 @@ class StudyTest {
 
         assertEquals(List.of(), bsiListResult);
 
-        mvcResult = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId")).andExpectAll(
+        //REMOVED since endpoint has been removed
+        /*mvcResult = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
 
         resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
+        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });*/
 
         countDownLatch = new CountDownLatch(1);
 
@@ -1324,13 +1329,14 @@ class StudyTest {
 
         assertEquals(List.of(), bsiListResult);
 
-        mvcResult = mockMvc.perform(get("/v1/studies")
+        //TODO: to replace with something else, endpoint was not used
+       /* mvcResult = mockMvc.perform(get("/v1/studies")
                                         .header(USER_ID_HEADER, "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
+        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });*/
 
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(8, server);

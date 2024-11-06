@@ -144,11 +144,11 @@ public class SupervisionService {
     }
 
     @Transactional
-    public Long deleteStudyIndexedEquipmentsAndTombstoned(UUID studyUuid) {
+    public Long deleteStudyIndexedEquipmentsAndTombstoned(UUID studyUuid, UUID rootNetworkUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
 
-        UUID networkUUID = networkStoreService.getNetworkUuid(studyUuid);
+        UUID networkUUID = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         Long nbIndexesToDelete = getStudyIndexedEquipmentsCount(networkUUID) + getStudyIndexedTombstonedEquipmentsCount(networkUUID);
         equipmentInfosService.deleteAllByNetworkUuid(networkUUID);
         studyService.updateStudyIndexationStatus(studyUuid, StudyIndexationStatus.NOT_INDEXED);

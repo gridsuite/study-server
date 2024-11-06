@@ -19,6 +19,7 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +53,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class ShortCircuitService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
+    private final RootNetworkService rootNetworkService;
 
     @Setter
     private String shortCircuitServerBaseUri;
@@ -66,16 +68,17 @@ public class ShortCircuitService extends AbstractComputationService {
                                NetworkModificationTreeService networkModificationTreeService,
                                NetworkService networkStoreService,
                                RestTemplate restTemplate,
-                               ObjectMapper objectMapper) {
+                               ObjectMapper objectMapper, RootNetworkService rootNetworkService) {
         this.shortCircuitServerBaseUri = remoteServicesProperties.getServiceUri("shortcircuit-server");
         this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+        this.rootNetworkService = rootNetworkService;
     }
 
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String busId, Optional<UUID> parametersUuid, UUID reportUuid, String userId) {
-        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = getVariantId(nodeUuid, rootNetworkUuid);
 
         String receiver;

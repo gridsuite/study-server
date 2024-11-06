@@ -17,8 +17,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.NetworkVariantsListener;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.HttpStatus;
@@ -32,7 +30,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.NETWORK_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -44,24 +41,14 @@ public class NetworkService {
 
     private final EquipmentInfosService equipmentInfosService;
 
-    private final StudyRepository studyRepository;
     private final RootNetworkRepository rootNetworkRepository;
 
     NetworkService(NetworkStoreService networkStoreService,
                    EquipmentInfosService equipmentInfosService,
-                   StudyRepository studyRepository, RootNetworkRepository rootNetworkRepository) {
+                   RootNetworkRepository rootNetworkRepository) {
         this.networkStoreService = networkStoreService;
         this.equipmentInfosService = equipmentInfosService;
-        this.studyRepository = studyRepository;
         this.rootNetworkRepository = rootNetworkRepository;
-    }
-
-    public UUID getNetworkUuid(UUID studyUuid) {
-        UUID networkUuid = doGetNetworkUuid(studyUuid);
-        if (networkUuid == null) {
-            throw new StudyException(STUDY_NOT_FOUND);
-        }
-        return networkUuid;
     }
 
     public Network getNetwork(UUID networkUuid, PreloadingStrategy strategy, String variantId) {
@@ -84,10 +71,6 @@ public class NetworkService {
             return false;
         }
 
-    }
-
-    UUID doGetNetworkUuid(UUID studyUuid) {
-        return rootNetworkRepository.findAllByStudyId(studyUuid).stream().findFirst().map(RootNetworkEntity::getNetworkUuid).orElse(null);
     }
 
     void deleteNetwork(UUID networkUuid) {

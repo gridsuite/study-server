@@ -108,4 +108,14 @@ public class RootNetworkService {
     public List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
         return rootNetworkRepository.findAllByStudyId(studyUuid);
     }
+
+    @Transactional
+    public void updateStudyEntityNetwork(RootNetworkEntity rootNetworkEntity, NetworkInfos networkInfos) {
+        if (networkInfos != null) {
+            rootNetworkEntity.setNetworkId(networkInfos.getNetworkId());
+            rootNetworkEntity.setNetworkUuid(networkInfos.getNetworkUuid());
+
+            rootNetworkRepository.save(rootNetworkEntity);
+        }
+    }
 }

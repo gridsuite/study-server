@@ -58,17 +58,19 @@ public class NetworkModificationService {
     private final NetworkService networkStoreService;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final RootNetworkService rootNetworkService;
     private String networkModificationServerBaseUri;
 
     @Autowired
     NetworkModificationService(RemoteServicesProperties remoteServicesProperties,
                                NetworkService networkStoreService,
                                RestTemplate restTemplate,
-                               ObjectMapper objectMapper) {
+                               ObjectMapper objectMapper, RootNetworkService rootNetworkService) {
         this.networkModificationServerBaseUri = remoteServicesProperties.getServiceUri("network-modification-server");
         this.networkStoreService = networkStoreService;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+        this.rootNetworkService = rootNetworkService;
     }
 
     public void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
@@ -149,12 +151,13 @@ public class NetworkModificationService {
                                                                   String createModificationAttributes,
                                                                   UUID groupUuid,
                                                                   String variantId, UUID reportUuid,
-                                                                  UUID nodeUuid) {
+                                                                  UUID nodeUuid,
+                                                                  UUID rootNetworkUuid) {
         Optional<NetworkModificationResult> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createModificationAttributes);
 
-        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
 
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
@@ -274,7 +277,7 @@ public class NetworkModificationService {
     }
 
     void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull BuildInfos buildInfos) {
-        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String receiver = buildReceiver(nodeUuid, rootNetworkUuid);
 
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "build");

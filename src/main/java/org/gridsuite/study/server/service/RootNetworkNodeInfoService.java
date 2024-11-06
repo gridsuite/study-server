@@ -257,8 +257,8 @@ public class RootNetworkNodeInfoService {
         return rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid);
     }
 
-    public UUID getComputationResultUuid(UUID rootNetworkUuid, UUID nodeUuid, ComputationType computationType) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = getRootNetworkNodeInfo(rootNetworkUuid, nodeUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+    public UUID getComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
         return getComputationResultUuid(rootNetworkNodeInfoEntity, computationType);
     }
 

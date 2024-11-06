@@ -416,8 +416,8 @@ class NonEvacuatedEnergyTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), NON_EVACUATED_ENERGY_FAILED_DESTINATION);
             return resultUuid;
-        }).when(studyService).runNonEvacuatedEnergy(any(), any(), any());
-        studyService.runNonEvacuatedEnergy(studyEntity.getId(), modificationNode.getId(), "userId");
+        }).when(studyService).runNonEvacuatedEnergy(any(), any(), any(), any());
+        studyService.runNonEvacuatedEnergy(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "userId");
 
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));

@@ -139,13 +139,14 @@ class ShortCircuitTest implements WithAssertions {
     @Autowired
     private ReportService reportService;
 
+    @Autowired
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
+
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String shortCircuitAnalysisResultDestination = "shortcircuitanalysis.result";
     private final String shortCircuitAnalysisStoppedDestination = "shortcircuitanalysis.stopped";
     private final String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.failed";
-    @Autowired
-    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @BeforeEach
     void setup(final MockWebServer server) throws Exception {
