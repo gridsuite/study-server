@@ -2,13 +2,16 @@ package org.gridsuite.study.server.dto;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 
 import java.util.Map;
 import java.util.UUID;
 
 @Builder
 @Getter
+@Setter
 public class RootNetworkNodeInfo {
     private UUID id;
 
@@ -37,4 +40,23 @@ public class RootNetworkNodeInfo {
     private UUID stateEstimationResultUuid;
 
     private NodeBuildStatus nodeBuildStatus;
+
+    public RootNetworkNodeInfoEntity toEntity() {
+        return RootNetworkNodeInfoEntity.builder()
+            .id(id)
+            .variantId(variantId)
+            .computationReports(computationReports)
+            .modificationReports(modificationReports)
+            .shortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid)
+            .oneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid)
+            .loadFlowResultUuid(loadFlowResultUuid)
+            .voltageInitResultUuid(voltageInitResultUuid)
+            .securityAnalysisResultUuid(securityAnalysisResultUuid)
+            .sensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid)
+            .nonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid)
+            .dynamicSimulationResultUuid(dynamicSimulationResultUuid)
+            .stateEstimationResultUuid(stateEstimationResultUuid)
+            .nodeBuildStatus(nodeBuildStatus.toEntity())
+            .build();
+    }
 }

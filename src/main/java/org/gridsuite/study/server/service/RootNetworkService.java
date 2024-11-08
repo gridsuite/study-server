@@ -6,14 +6,19 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.powsybl.iidm.network.Network;
+import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
+import org.gridsuite.study.server.dto.RootNetworkInfos;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +26,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -30,11 +36,22 @@ import java.util.stream.Stream;
 public class RootNetworkService {
     private final RootNetworkRepository rootNetworkRepository;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final NetworkService networkService;
+    private final CaseService caseService;
+
+    private final RootNetworkService self;
 
     public RootNetworkService(RootNetworkRepository rootNetworkRepository,
-                              RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+                              RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                              NetworkService networkService,
+                              CaseService caseService,
+                              //TODO: is there a better way to do so ?
+                              @Lazy RootNetworkService self) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.networkService = networkService;
+        this.caseService = caseService;
+        this.self = self;
     }
 
     public UUID getNetworkUuid(UUID rootNetworkUuid) {
@@ -50,20 +67,12 @@ public class RootNetworkService {
     }
 
     @Transactional
-    public void createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull NetworkInfos networkInfos, @NonNull CaseInfos caseInfos, @NonNull UUID importReportUuid) {
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(RootNetworkEntity.builder()
-                .networkUuid(networkInfos.getNetworkUuid())
-                .networkId(networkInfos.getNetworkId())
-                .caseFormat(caseInfos.getCaseFormat())
-                .caseUuid(caseInfos.getCaseUuid())
-                .caseName(caseInfos.getCaseName())
-                .reportUuid(importReportUuid)
-                .build()
-        );
+    public void createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
+        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
 
         studyEntity.addRootNetwork(rootNetworkEntity);
 
-        rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity);
+        rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity, NetworkModificationNode.builder().build());
     }
 
     // TODO move to study service
@@ -117,5 +126,27 @@ public class RootNetworkService {
 
             rootNetworkRepository.save(rootNetworkEntity);
         }
+    }
+
+    @Transactional
+    public void duplicateStudyRootNetworks(StudyEntity newStudyEntity, UUID sourceStudyUuid) {
+        List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllWithInfosByStudyId(sourceStudyUuid);
+        rootNetworkEntities.forEach(rootNetworkEntityToDuplicate -> {
+                List<VariantInfos> networkVariants = networkService.getNetworkVariants(rootNetworkEntityToDuplicate.getNetworkUuid());
+                List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(2).collect(Collectors.toList());
+                Network clonedNetwork = networkService.cloneNetwork(rootNetworkEntityToDuplicate.getNetworkUuid(), targetVariantIds);
+                UUID clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
+
+                UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkEntityToDuplicate.getCaseUuid(), false);
+
+                self.createRootNetwork(newStudyEntity,
+                    RootNetworkInfos.builder()
+                        .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getCaseName(), rootNetworkEntityToDuplicate.getCaseFormat()))
+                        .networkInfos(new NetworkInfos(clonedNetworkUuid, rootNetworkEntityToDuplicate.getNetworkId()))
+                        .reportUuid(UUID.randomUUID())
+                        .build()
+                );
+            }
+        );
     }
 }

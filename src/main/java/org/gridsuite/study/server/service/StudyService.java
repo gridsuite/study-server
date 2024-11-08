@@ -8,9 +8,7 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.iidm.network.Network;
 import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import lombok.NonNull;
@@ -41,7 +39,6 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
@@ -528,13 +525,7 @@ public class StudyService {
 
         StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
-        List<VariantInfos> networkVariants = networkStoreService.getNetworkVariants(sourceStudy.getFirstRootNetwork().getNetworkUuid());
-        List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(2).collect(Collectors.toList());
-        Network clonedNetwork = networkStoreService.cloneNetwork(sourceStudy.getFirstRootNetwork().getNetworkUuid(), targetVariantIds);
-        UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
-
-        UUID clonedCaseUuid = caseService.duplicateCase(sourceStudy.getFirstRootNetwork().getCaseUuid(), false);
-
+        // START duplicate study
         Map<String, String> newImportParameters = Map.copyOf(sourceStudy.getImportParameters());
 
         UUID copiedLoadFlowParametersUuid = null;
@@ -581,15 +572,15 @@ public class StudyService {
                 .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
                 .importParameters(newImportParameters)
                 .build();
+        // END DUPLICATE STUDY
 
-        rootNetworkService.createRootNetwork(newStudyEntity,
-                new NetworkInfos(clonedNetworkUuid, sourceStudy.getFirstRootNetwork().getNetworkId()),
-                new CaseInfos(clonedCaseUuid, sourceStudy.getFirstRootNetwork().getCaseName(), sourceStudy.getFirstRootNetwork().getCaseFormat()),
-                UUID.randomUUID());
-
+        // WILL BE MADE IN A DUPLICATE NODES ?
         UUID sourceStudyFirstRootNetworkUuid = self.getStudyFirstRootNetworkUuid(sourceStudyUuid);
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(insertDuplicatedStudy(newStudyEntity, sourceStudy.getId()), sourceStudyFirstRootNetworkUuid);
 
+        rootNetworkService.duplicateStudyRootNetworks(newStudyEntity, sourceStudyUuid);
+
+        // END WILL BE MADE
         studyInfosService.add(createdStudyBasicInfos);
         notificationService.emitStudiesChanged(studyInfos.getId(), userId);
 
@@ -1084,7 +1075,7 @@ public class StudyService {
                 .build();
 
         var study = studyRepository.save(studyEntity);
-        rootNetworkService.createRootNetwork(studyEntity, networkInfos, caseInfos, importReportUuid);
+        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).build());
         networkModificationTreeService.createBasicTree(study);
 
         return study;

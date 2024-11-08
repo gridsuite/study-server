@@ -18,6 +18,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
@@ -38,16 +39,47 @@ import static org.gridsuite.study.server.dto.ComputationType.*;
 public class RootNetworkNodeInfoService {
     private final RootNetworkRepository rootNetworkRepository;
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+    private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    public RootNetworkNodeInfoService(RootNetworkRepository rootNetworkRepository, RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository) {
+    public RootNetworkNodeInfoService(RootNetworkRepository rootNetworkRepository, RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
+        this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
     }
 
-    public void createRootNetworkLinks(@NonNull UUID studyUuid, @NonNull RootNetworkEntity rootNetworkEntity) {
+    public void createRootNetworkLinks(@NonNull UUID studyUuid, @NonNull RootNetworkEntity rootNetworkEntity, @NonNull NetworkModificationNode rootNetworkNodeInfo) {
         // For each network modification node (nodeInfoEntity) create a link with the root network
         // Create a default NetworkModificationNode (replace by the RootNetworkNodeInfo DTO)
         // addLink(nodeInfoEntity, rootNetworkEntity, newRootNetworkNodeInfoEntity);
+        if (Objects.isNull(rootNetworkNodeInfo.getNodeBuildStatus())) {
+            rootNetworkNodeInfo.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
+        }
+        if (rootNetworkNodeInfo.getVariantId() == null) {
+            rootNetworkNodeInfo.setVariantId(UUID.randomUUID().toString());
+        }
+        if (rootNetworkNodeInfo.getModificationReports() == null) {
+            rootNetworkNodeInfo.setModificationReports(new HashMap<>(Map.of(rootNetworkEntity.getId(), UUID.randomUUID())));
+        }
+
+        // For each root network create a link with the node
+        networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid).forEach(networkModificationNodeEntity -> {
+            RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = RootNetworkNodeInfoEntity.builder()
+                .nodeBuildStatus(rootNetworkNodeInfo.getNodeBuildStatus().toEntity())
+                .variantId(rootNetworkNodeInfo.getVariantId())
+                .dynamicSimulationResultUuid(rootNetworkNodeInfo.getDynamicSimulationResultUuid())
+                .loadFlowResultUuid(rootNetworkNodeInfo.getLoadFlowResultUuid())
+                .nonEvacuatedEnergyResultUuid(rootNetworkNodeInfo.getNonEvacuatedEnergyResultUuid())
+                .securityAnalysisResultUuid(rootNetworkNodeInfo.getSecurityAnalysisResultUuid())
+                .sensitivityAnalysisResultUuid(rootNetworkNodeInfo.getSensitivityAnalysisResultUuid())
+                .oneBusShortCircuitAnalysisResultUuid(rootNetworkNodeInfo.getOneBusShortCircuitAnalysisResultUuid())
+                .shortCircuitAnalysisResultUuid(rootNetworkNodeInfo.getShortCircuitAnalysisResultUuid())
+                .stateEstimationResultUuid(rootNetworkNodeInfo.getStateEstimationResultUuid())
+                .voltageInitResultUuid(rootNetworkNodeInfo.getVoltageInitResultUuid())
+                .computationReports(rootNetworkNodeInfo.getComputationsReports())
+                .modificationReports(rootNetworkNodeInfo.getModificationReports())
+                .build();
+            addLink(networkModificationNodeEntity, rootNetworkEntity, newRootNetworkNodeInfoEntity);
+        });
     }
 
     // TODO create a DTO RootNetworkNodeInfo

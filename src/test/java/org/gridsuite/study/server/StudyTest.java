@@ -1532,6 +1532,25 @@ class StudyTest {
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
         assertNull(studyRepository.findById(UUID.fromString(duplicatedStudyUuid)).orElse(null));
+
+        //now case are duplicated after parameters, case import error does not prevent parameters from being duplicated
+        int numberOfRequests = 0;
+        if (studyEntity.getSecurityAnalysisParametersUuid() != null) {
+            numberOfRequests++;
+        }
+        if (studyEntity.getVoltageInitParametersUuid() != null) {
+            numberOfRequests++;
+        }
+        if (studyEntity.getSensitivityAnalysisParametersUuid() != null) {
+            numberOfRequests++;
+        }
+        if (studyEntity.getLoadFlowParametersUuid() != null) {
+            numberOfRequests++;
+        }
+        if (studyEntity.getShortCircuitParametersUuid() != null) {
+            numberOfRequests++;
+        }
+        TestUtils.getRequestsWithBodyDone(numberOfRequests, mockWebServer);
     }
 
     private StudyEntity duplicateStudy(final MockWebServer server, UUID studyUuid) throws Exception {
