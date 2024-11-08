@@ -10,8 +10,11 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -32,20 +35,8 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "id")
     private UUID id;
 
-    @Column(name = "networkUuid", nullable = false)
-    private UUID networkUuid;
-
-    @Column(name = "networkId", nullable = false)
-    private String networkId;
-
-    @Column(name = "caseFormat", nullable = false)
-    private String caseFormat;
-
-    @Column(name = "caseUuid", nullable = false)
-    private UUID caseUuid;
-
-    @Column(name = "caseName", nullable = false)
-    private String caseName;
+    @OneToMany(mappedBy = "study", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RootNetworkEntity> rootNetworks;
 
     /**
      * @deprecated to remove when the data is migrated into the loadflow-server
@@ -88,10 +79,10 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "dynamicSimulationParametersEntity_id",
-            referencedColumnName = "id",
-            foreignKey = @ForeignKey(
-                    name = "dynamicSimulationParameters_id_fk"
-            ))
+        referencedColumnName = "id",
+        foreignKey = @ForeignKey(
+            name = "dynamicSimulationParameters_id_fk"
+        ))
     private DynamicSimulationParametersEntity dynamicSimulationParameters;
 
     @Column(name = "voltageInitParametersUuid")
@@ -113,8 +104,8 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     @ElementCollection
     @CollectionTable(name = "importParameters",
-            indexes = {@Index(name = "studyEntity_importParameters_idx1", columnList = "study_entity_id")},
-            foreignKey = @ForeignKey(name = "studyEntity_importParameters_fk1"))
+        indexes = {@Index(name = "studyEntity_importParameters_idx1", columnList = "study_entity_id")},
+        foreignKey = @ForeignKey(name = "studyEntity_importParameters_fk1"))
     private Map<String, String> importParameters;
 
     @Enumerated(EnumType.STRING)
@@ -131,6 +122,20 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Value
     public static class StudyNetworkUuid {
         UUID networkUuid;
+    }
+
+    //TODO temporary, for now we are only working with one rootNetwork
+    @Transient
+    public RootNetworkEntity getFirstRootNetwork() {
+        return rootNetworks.get(0);
+    }
+
+    public void addRootNetwork(RootNetworkEntity rootNetworkEntity) {
+        if (rootNetworks == null) {
+            rootNetworks = new ArrayList<>();
+        }
+        rootNetworkEntity.setStudy(this);
+        rootNetworks.add(rootNetworkEntity);
     }
 }
 

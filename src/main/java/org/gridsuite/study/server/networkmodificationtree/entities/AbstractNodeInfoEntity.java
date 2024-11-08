@@ -7,17 +7,13 @@
 
 package org.gridsuite.study.server.networkmodificationtree.entities;
 
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.repository.AbstractManuallyAssignedIdentifierEntity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.MappedSuperclass;
-import jakarta.persistence.OneToOne;
 import java.util.UUID;
 
 /**
@@ -27,13 +23,13 @@ import java.util.UUID;
 @Getter
 @Setter
 @MappedSuperclass
+@SuperBuilder
 public abstract class AbstractNodeInfoEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> {
 
     @Id
     @Column(name = "idNode", insertable = false, updatable = false)
     private UUID idNode; // don't bother with getter/setter since the `idNode` reference handles everything
 
-    @Override
     public UUID getId() {
         return idNode;
     }

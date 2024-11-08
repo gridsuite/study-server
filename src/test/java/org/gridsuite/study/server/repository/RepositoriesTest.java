@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.repository;
 
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -44,32 +46,45 @@ class RepositoriesTest {
         UUID shortCircuitParametersUuid2 = UUID.randomUUID();
         UUID shortCircuitParametersUuid3 = UUID.randomUUID();
 
-        StudyEntity studyEntity1 = studyRepository.save(StudyEntity.builder()
+        StudyEntity studyEntity = StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .networkUuid(UUID.randomUUID())
-                .networkId("networkId")
-                .caseFormat("caseFormat")
-                .caseUuid(UUID.randomUUID())
                 .shortCircuitParametersUuid(shortCircuitParametersUuid1)
-                .build());
+                .build();
+        RootNetworkEntity rootNetworkEntity1 = RootNetworkEntity.builder()
+            .networkUuid(UUID.randomUUID())
+            .networkId("networkId")
+            .caseFormat("caseFormat")
+            .caseName("caseName1")
+            .caseUuid(UUID.randomUUID()).build();
+        studyEntity.addRootNetwork(rootNetworkEntity1);
+        StudyEntity studyEntity1 = studyRepository.save(studyEntity);
 
         StudyEntity studyEntity2 = studyRepository.save(StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .networkUuid(UUID.randomUUID())
-                .networkId("networkId2")
-                .caseFormat("caseFormat2")
-                .caseUuid(UUID.randomUUID())
+                .rootNetworks(List.of(RootNetworkEntity.builder()
+                    .networkUuid(UUID.randomUUID())
+                    .networkId("networkId2")
+                    .caseFormat("caseFormat2")
+                    .caseName("caseName2")
+                    .caseUuid(UUID.randomUUID())
+                    .build()
+                ))
                 .shortCircuitParametersUuid(shortCircuitParametersUuid2)
                 .build());
 
-        studyRepository.save(StudyEntity.builder()
-                .id(UUID.randomUUID())
-                .networkUuid(UUID.randomUUID())
-                .networkId("networkId3")
-                .caseFormat("caseFormat3")
-                .caseUuid(UUID.randomUUID())
-                .shortCircuitParametersUuid(shortCircuitParametersUuid3)
-                .build());
+        StudyEntity studyEntity3 = StudyEntity.builder()
+            .id(UUID.randomUUID())
+            .shortCircuitParametersUuid(shortCircuitParametersUuid3)
+            .build();
+        RootNetworkEntity rootNetworkEntity3 = RootNetworkEntity.builder()
+            .networkUuid(UUID.randomUUID())
+            .networkId("networkId3")
+            .caseFormat("caseFormat3")
+            .caseName("caseName3")
+            .caseUuid(UUID.randomUUID())
+            .build();
+        studyEntity3.addRootNetwork(rootNetworkEntity3);
+        studyRepository.save(studyEntity3);
 
         assertThat(studyEntity1).as("studyEntity1").extracting(StudyEntity::getId).isNotNull();
         assertThat(studyEntity2).as("studyEntity2").extracting(StudyEntity::getId).isNotNull();
@@ -100,10 +115,12 @@ class RepositoriesTest {
         Map<String, String> importParametersExpected = Map.of("param1", "changedValue1, changedValue2", "param2", "changedValue");
         StudyEntity studyEntityToSave = StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .networkUuid(UUID.randomUUID())
-                .networkId("networkId")
-                .caseFormat("caseFormat")
-                .caseUuid(UUID.randomUUID())
+                .rootNetworks(List.of(RootNetworkEntity.builder()
+                    .networkUuid(UUID.randomUUID())
+                    .networkId("networkId")
+                    .caseFormat("caseFormat")
+                    .caseName("caseName")
+                    .caseUuid(UUID.randomUUID()).build()))
                 .importParameters(importParametersExpected)
                 .build();
 

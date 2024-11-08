@@ -4,6 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -22,6 +23,7 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationSer
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
@@ -66,6 +68,7 @@ public class ConsumerService {
     private final StudyRepository studyRepository;
     private final ShortCircuitService shortCircuitService;
 
+    @Autowired
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
                            StudyService studyService,
@@ -103,7 +106,7 @@ public class ConsumerService {
 
                     LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
 
-                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(),
+                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(),
                             NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
 
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
@@ -127,7 +130,7 @@ public class ConsumerService {
 
                     LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
 
-                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), NodeBuildStatus.from(BuildStatus.NOT_BUILT));
+                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), NodeBuildStatus.from(BuildStatus.NOT_BUILT));
 
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
@@ -151,7 +154,7 @@ public class ConsumerService {
 
                     LOGGER.info("Build failed for node '{}'", receiverObj.getNodeUuid());
 
-                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), NodeBuildStatus.from(BuildStatus.NOT_BUILT));
+                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), NodeBuildStatus.from(BuildStatus.NOT_BUILT));
 
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
@@ -177,7 +180,6 @@ public class ConsumerService {
             if (rawParameters != null) {
                 rawParameters.forEach((key, value) -> importParameters.put(key, value.toString()));
             }
-            NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
 
             if (receiverString != null) {
                 CaseImportReceiver receiver;
@@ -194,6 +196,8 @@ public class ConsumerService {
                 Long startTime = receiver.getStartTime();
                 UUID importReportUuid = receiver.getReportUuid();
 
+                CaseInfos caseInfos = new CaseInfos(caseUuid, caseName, caseFormat);
+                NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
                 StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
                 try {
                     if (studyEntity != null) {
@@ -206,7 +210,7 @@ public class ConsumerService {
                         UUID shortCircuitParametersUuid = createDefaultShortCircuitAnalysisParameters();
                         UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters();
                         UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters();
-                        studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, loadFlowParametersUuid, shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters, importReportUuid);
+                        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid, shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters, importReportUuid);
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
@@ -326,7 +330,7 @@ public class ConsumerService {
 
                 // delete computation results from the databases
                 // ==> will probably be removed soon because it prevents the front from recovering the resultId ; or 'null' parameter will be replaced by null like in VOLTAGE_INITIALIZATION
-                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, computationType);
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notification for failed computation
@@ -350,7 +354,7 @@ public class ConsumerService {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
                 // delete computation results from the database
-                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), null, computationType);
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), null, computationType);
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notification for stopped computation
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateStatusType());
@@ -396,7 +400,7 @@ public class ConsumerService {
                     receiverObj.getNodeUuid());
 
                 // update DB
-                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), resultUuid, computationType);
+                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notifications

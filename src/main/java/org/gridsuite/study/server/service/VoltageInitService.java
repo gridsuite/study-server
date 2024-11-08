@@ -4,6 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -15,6 +16,7 @@ import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -26,7 +28,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -51,6 +52,7 @@ public class VoltageInitService {
 
     private final RestTemplate restTemplate;
 
+    @Autowired
     public VoltageInitService(RemoteServicesProperties remoteServicesProperties,
                               NetworkModificationTreeService networkModificationTreeService,
                               RestTemplate restTemplate,
@@ -61,11 +63,11 @@ public class VoltageInitService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runVoltageInit(UUID networkUuid, String variantId, UUID parametersUuid, UUID reportUuid, UUID nodeUuid, String userId) {
+    public UUID runVoltageInit(UUID networkUuid, String variantId, UUID parametersUuid, UUID reportUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -93,16 +95,16 @@ public class VoltageInitService {
         return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
     }
 
-    private String getVoltageInitResultOrStatus(UUID nodeUuid, String suffix) {
+    private String getVoltageInitResultOrStatus(UUID nodeUuid, UUID rootNetworkUuid, String suffix) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.VOLTAGE_INITIALIZATION);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
 
-        if (resultUuidOpt.isEmpty()) {
+        if (resultUuid == null) {
             return null;
         }
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}" + suffix)
-            .buildAndExpand(resultUuidOpt.get()).toUriString();
+            .buildAndExpand(resultUuid).toUriString();
 
         try {
             result = restTemplate.getForObject(voltageInitServerBaseUri + path, String.class);
@@ -115,12 +117,12 @@ public class VoltageInitService {
         return result;
     }
 
-    public String getVoltageInitResult(UUID nodeUuid) {
-        return getVoltageInitResultOrStatus(nodeUuid, "");
+    public String getVoltageInitResult(UUID nodeUuid, UUID rootNetworkUuid) {
+        return getVoltageInitResultOrStatus(nodeUuid, rootNetworkUuid, "");
     }
 
-    public String getVoltageInitStatus(UUID nodeUuid) {
-        return getVoltageInitResultOrStatus(nodeUuid, "/status");
+    public String getVoltageInitStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        return getVoltageInitResultOrStatus(nodeUuid, rootNetworkUuid, "/status");
     }
 
     public VoltageInitParametersInfos getVoltageInitParameters(UUID parametersUuid) {
@@ -210,19 +212,19 @@ public class VoltageInitService {
         restTemplate.delete(voltageInitServerBaseUri + path);
     }
 
-    public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, String userId) {
+    public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(userId);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.VOLTAGE_INITIALIZATION);
-        if (resultUuidOpt.isEmpty()) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
+        if (resultUuid == null) {
             return;
         }
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -233,7 +235,7 @@ public class VoltageInitService {
 
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/stop")
-                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
+                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
         restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
@@ -266,22 +268,22 @@ public class VoltageInitService {
         return restTemplate.getForObject(voltageInitServerBaseUri + path, Integer.class);
     }
 
-    public void assertVoltageInitNotRunning(UUID nodeUuid) {
-        String scs = getVoltageInitStatus(nodeUuid);
+    public void assertVoltageInitNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
+        String scs = getVoltageInitStatus(nodeUuid, rootNetworkUuid);
         if (VoltageInitStatus.RUNNING.name().equals(scs)) {
             throw new StudyException(VOLTAGE_INIT_RUNNING);
         }
     }
 
-    public UUID getModificationsGroupUuid(UUID nodeUuid) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.VOLTAGE_INITIALIZATION);
-        if (resultUuidOpt.isEmpty()) {
+    public UUID getModificationsGroupUuid(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
+        if (resultUuid == null) {
             throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, THE_NODE + nodeUuid + " has no voltage init results");
         }
 
         UUID modificationsGroupUuid;
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group-uuid")
-            .buildAndExpand(resultUuidOpt.get()).toUriString();
+            .buildAndExpand(resultUuid).toUriString();
         try {
             modificationsGroupUuid = restTemplate.getForObject(voltageInitServerBaseUri + path, UUID.class);
         } catch (HttpStatusCodeException e) {
@@ -303,13 +305,13 @@ public class VoltageInitService {
         }
     }
 
-    public void resetModificationsGroupUuid(UUID nodeUuid) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.VOLTAGE_INITIALIZATION);
-        if (resultUuidOpt.isEmpty()) {
+    public void resetModificationsGroupUuid(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
+        if (resultUuid == null) {
             throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, THE_NODE + nodeUuid + " has no voltage init results");
         }
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group-uuid")
-            .buildAndExpand(resultUuidOpt.get()).toUriString();
+            .buildAndExpand(resultUuid).toUriString();
 
         restTemplate.put(voltageInitServerBaseUri + path, Void.class);
     }

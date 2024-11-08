@@ -13,9 +13,12 @@ import org.gridsuite.study.server.dto.AboutInfo;
 import org.gridsuite.study.server.dto.ServiceStatusInfos;
 import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
 import org.gridsuite.study.server.exception.PartialResultException;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.FrontService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RemoteServicesInspector;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.client.RemoteServiceName;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.MethodOrderer;
@@ -48,6 +51,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisableCloudStream
 @DisableJpa
 @MockBean(NetworkModificationTreeService.class) //strange error during bean initialization
+@MockBean(RootNetworkService.class) //TODO check with tristan why it is needed
+@MockBean(RootNetworkRepository.class)
+@MockBean(RootNetworkNodeInfoRepository.class)
 @SpringBootTest(classes = StudyApplication.class)
 @ExtendWith({MockitoExtension.class})
 @TestMethodOrder(MethodOrderer.MethodName.class)

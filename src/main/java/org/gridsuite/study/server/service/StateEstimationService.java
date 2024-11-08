@@ -31,7 +31,6 @@ import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
@@ -71,16 +70,16 @@ public class StateEstimationService {
         this.restTemplate = restTemplate;
     }
 
-    public String getStateEstimationResult(UUID nodeUuid) {
+    public String getStateEstimationResult(UUID nodeUuid, UUID rootNetworkUuid) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.STATE_ESTIMATION);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.STATE_ESTIMATION);
 
-        if (resultUuidOpt.isEmpty()) {
+        if (resultUuid == null) {
             return null;
         }
 
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}");
-        String path = pathBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+        String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
 
         try {
             result = restTemplate.getForObject(stateEstimationServerServerBaseUri + path, String.class);
@@ -115,40 +114,40 @@ public class StateEstimationService {
         return restTemplate.exchange(stateEstimationServerServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void stopStateEstimation(UUID studyUuid, UUID nodeUuid) {
+    public void stopStateEstimation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.STATE_ESTIMATION);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.STATE_ESTIMATION);
 
-        if (resultUuidOpt.isEmpty()) {
+        if (resultUuid == null) {
             return;
         }
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
 
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}/stop")
-                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
+                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
         restTemplate.put(stateEstimationServerServerBaseUri + path, Void.class);
     }
 
-    public String getStateEstimationStatus(UUID nodeUuid) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.STATE_ESTIMATION);
-        if (resultUuidOpt.isEmpty()) {
+    public String getStateEstimationStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.STATE_ESTIMATION);
+        if (resultUuid == null) {
             return null;
         }
         String status;
         try {
             String path = UriComponentsBuilder
                     .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}/status")
-                    .buildAndExpand(resultUuidOpt.get()).toUriString();
+                    .buildAndExpand(resultUuid).toUriString();
             status = restTemplate.getForObject(stateEstimationServerServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
@@ -182,8 +181,8 @@ public class StateEstimationService {
         return restTemplate.getForObject(stateEstimationServerServerBaseUri + path, Integer.class);
     }
 
-    public void assertStateEstimationNotRunning(UUID nodeUuid) {
-        String status = getStateEstimationStatus(nodeUuid);
+    public void assertStateEstimationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
+        String status = getStateEstimationStatus(nodeUuid, rootNetworkUuid);
         if (StateEstimationStatus.RUNNING.name().equals(status)) {
             throw new StudyException(STATE_ESTIMATION_RUNNING);
         }
