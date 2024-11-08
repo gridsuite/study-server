@@ -39,7 +39,6 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -118,7 +117,6 @@ public class StudyService {
     private final ActionsService actionsService;
     private final CaseService caseService;
     private final StateEstimationService stateEstimationService;
-    private final RootNetworkRepository rootNetworkRepository;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
@@ -177,7 +175,6 @@ public class StudyService {
         DynamicSimulationEventService dynamicSimulationEventService,
         FilterService filterService,
         StateEstimationService stateEstimationService,
-        RootNetworkRepository rootNetworkRepository,
         @Lazy StudyService studyService,
         RootNetworkService rootNetworkService,
         RootNetworkNodeInfoService rootNetworkNodeInfoService) {
@@ -212,7 +209,6 @@ public class StudyService {
         this.filterService = filterService;
         this.stateEstimationService = stateEstimationService;
         this.self = studyService;
-        this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }

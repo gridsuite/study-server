@@ -32,8 +32,6 @@
                                  validate="true"/>
         <addNotNullConstraint columnDataType="uuid" tableName="root_network_node_info" columnName="root_network_id"
                               validate="true"/>
-        <addNotNullConstraint columnDataType="uuid" tableName="root_network_node_info" columnName="node_info_id"
-                              validate="true"/>
     </changeSet>
     <changeSet author="amarsli (generated)" id="1730387191936-5">
         <dropForeignKeyConstraint baseTableName="root_network_node_info" constraintName="FK40i207mmx5ep57g7xnrv16t0a"/>
@@ -41,5 +39,7 @@
                                  constraintName="rootNetworkNode_node_id_fk_constraint" deferrable="false"
                                  initiallyDeferred="false" referencedColumnNames="id_node"
                                  referencedTableName="network_modification_node_info" validate="true"/>
+        <addNotNullConstraint columnDataType="uuid" tableName="root_network_node_info" columnName="node_info_id"
+                              validate="true"/>
     </changeSet>
 </databaseChangeLog>
