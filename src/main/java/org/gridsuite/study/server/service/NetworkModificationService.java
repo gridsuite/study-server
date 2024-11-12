@@ -55,7 +55,6 @@ public class NetworkModificationService {
     private static final String REPORTER_ID = "reporterId";
     private static final String VARIANT_ID = "variantId";
     private static final String QUERY_PARAM_ACTION = "action";
-    private final NetworkService networkStoreService;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final RootNetworkService rootNetworkService;
@@ -63,11 +62,9 @@ public class NetworkModificationService {
 
     @Autowired
     NetworkModificationService(RemoteServicesProperties remoteServicesProperties,
-                               NetworkService networkStoreService,
                                RestTemplate restTemplate,
                                ObjectMapper objectMapper, RootNetworkService rootNetworkService) {
         this.networkModificationServerBaseUri = remoteServicesProperties.getServiceUri("network-modification-server");
-        this.networkStoreService = networkStoreService;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.rootNetworkService = rootNetworkService;

@@ -39,8 +39,6 @@ public class SupervisionService {
     private static final Logger LOGGER = LoggerFactory.getLogger(SupervisionService.class);
     private static final String DELETION_LOG_MESSAGE = "{} results deletion for all studies : {} seconds";
 
-    private final NetworkService networkStoreService;
-
     private final StudyService studyService;
 
     private final NetworkModificationTreeService networkModificationTreeService;
@@ -69,11 +67,8 @@ public class SupervisionService {
 
     private final StateEstimationService stateEstimationService;
 
-    private final StudyRepository studyRepository;
-
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService,
-                              NetworkService networkStoreService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                               RootNetworkService rootNetworkService,
                               ReportService reportService,
@@ -85,9 +80,7 @@ public class SupervisionService {
                               ShortCircuitService shortCircuitService,
                               VoltageInitService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
-                              StateEstimationService stateEstimationService,
-                              StudyRepository studyRepository) {
-        this.networkStoreService = networkStoreService;
+                              StateEstimationService stateEstimationService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
@@ -102,7 +95,6 @@ public class SupervisionService {
         this.voltageInitService = voltageInitService;
         this.equipmentInfosService = equipmentInfosService;
         this.stateEstimationService = stateEstimationService;
-        this.studyRepository = studyRepository;
     }
 
     @Transactional

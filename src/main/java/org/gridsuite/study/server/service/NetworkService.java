@@ -41,14 +41,10 @@ public class NetworkService {
 
     private final EquipmentInfosService equipmentInfosService;
 
-    private final RootNetworkRepository rootNetworkRepository;
-
     NetworkService(NetworkStoreService networkStoreService,
-                   EquipmentInfosService equipmentInfosService,
-                   RootNetworkRepository rootNetworkRepository) {
+                   EquipmentInfosService equipmentInfosService) {
         this.networkStoreService = networkStoreService;
         this.equipmentInfosService = equipmentInfosService;
-        this.rootNetworkRepository = rootNetworkRepository;
     }
 
     public Network getNetwork(UUID networkUuid, PreloadingStrategy strategy, String variantId) {

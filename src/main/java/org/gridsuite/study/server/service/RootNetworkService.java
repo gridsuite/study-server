@@ -45,7 +45,6 @@ public class RootNetworkService {
                               RootNetworkNodeInfoService rootNetworkNodeInfoService,
                               NetworkService networkService,
                               CaseService caseService,
-                              //TODO: is there a better way to do so ?
                               @Lazy RootNetworkService self) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;

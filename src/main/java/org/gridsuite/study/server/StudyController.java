@@ -118,13 +118,12 @@ public class StudyController {
         webdataBinder.registerCustomEditor(ModificationType.class, new MyModificationTypeConverter());
     }
 
-    // does not seems to be used, why would we need to get ALL studies in database ?
-    /*@GetMapping(value = "/studies")
+    @GetMapping(value = "/studies")
     @Operation(summary = "Get all studies")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of studies")})
     public ResponseEntity<List<CreatedStudyBasicInfos>> getStudyList() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudies());
-    }*/
+    }
 
     @GetMapping(value = "/studies/{studyUuid}/case/name")
     @Operation(summary = "Get study case name")

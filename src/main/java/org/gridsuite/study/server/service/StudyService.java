@@ -234,12 +234,14 @@ public class StudyService {
                 .build();
     }
 
-    // does not seem to be used, check controller message
-    /*public List<CreatedStudyBasicInfos> getStudies() {
+    public List<CreatedStudyBasicInfos> getStudies() {
         return studyRepository.findAll().stream()
-                .map(this::toCreatedStudyBasicInfos)
+                .map(studyEntity -> {
+                    UUID rootNetworkUuid = self.getStudyFirstRootNetworkUuid(studyEntity.getId());
+                    return toCreatedStudyBasicInfos(studyEntity, rootNetworkUuid);
+                })
                 .collect(Collectors.toList());
-    }*/
+    }
 
     public List<UUID> getAllOrphanIndexedEquipmentsNetworkUuids() {
         return equipmentInfosService.getOrphanEquipmentInfosNetworkUuids(rootNetworkService.getAllNetworkUuids());
@@ -1462,9 +1464,6 @@ public class StudyService {
     public void deleteNodes(UUID studyUuid, List<UUID> nodeIds, boolean deleteChildren, String userId) {
 
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
-        //TODO: BUG WITH VARIANT/NETWORK DELETION IF MULTIPLE ROOTNETWORK - TO REFACTO
-        deleteNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(self.getStudyFirstRootNetworkUuid(studyUuid)));
-
         for (UUID nodeId : nodeIds) {
             AtomicReference<Long> startTime = new AtomicReference<>(null);
             startTime.set(System.nanoTime());
@@ -1485,7 +1484,7 @@ public class StudyService {
                     studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
                     studyServerExecutionService.runAsync(() -> deleteNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
                     studyServerExecutionService.runAsync(() -> deleteNodeInfos.getStateEstimationResultUuids().forEach(stateEstimationService::deleteStateEstimationResult)),
-                    studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds())),
+                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getNetworkUuidVariantIdMap().forEach(networkStoreService::deleteVariants)),
                     studyServerExecutionService.runAsync(() -> removedNodes.forEach(dynamicSimulationEventService::deleteEventsByNodeId))
             );
 

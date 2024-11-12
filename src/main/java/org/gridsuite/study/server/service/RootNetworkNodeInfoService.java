@@ -136,14 +136,15 @@ public class RootNetworkNodeInfoService {
 
     public void fillDeleteNodeInfo(UUID nodeUuid, DeleteNodeInfos deleteNodeInfos) {
         //get all rootnetworknodeinfo info linked to node
-        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByNodeInfoId(nodeUuid);
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllWithRootNetworkByNodeInfoId(nodeUuid);
         rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfoEntity -> {
             rootNetworkNodeInfoEntity.getModificationReports().forEach((key, value) -> deleteNodeInfos.addReportUuid(value));
             rootNetworkNodeInfoEntity.getComputationReports().forEach((key, value) -> deleteNodeInfos.addReportUuid(value));
 
             String variantId = rootNetworkNodeInfoEntity.getVariantId();
+            UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
             if (!StringUtils.isBlank(variantId)) {
-                deleteNodeInfos.addVariantId(variantId);
+                deleteNodeInfos.addVariantIdToNetworkUuidVariantIdMap(networkUuid, variantId);
             }
 
             UUID loadFlowResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, LOAD_FLOW);

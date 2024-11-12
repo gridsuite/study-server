@@ -10,9 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -22,13 +20,11 @@ import java.util.UUID;
 @Getter
 @Setter
 public class DeleteNodeInfos {
-    private UUID networkUuid;
-
     private List<UUID> modificationGroupUuids = new ArrayList<>();
 
     private List<UUID> reportUuids = new ArrayList<>();
 
-    private List<String> variantIds = new ArrayList<>();
+    private Map<UUID, List<String>> networkUuidVariantIdMap = new HashMap<>();
 
     private List<UUID> loadFlowResultUuids = new ArrayList<>();
 
@@ -53,8 +49,8 @@ public class DeleteNodeInfos {
         reportUuids.add(reportUuid);
     }
 
-    public void addVariantId(String variantId) {
-        variantIds.add(variantId);
+    public void addVariantIdToNetworkUuidVariantIdMap(UUID networkUuid, String variantId) {
+        networkUuidVariantIdMap.getOrDefault(networkUuid, new ArrayList<>()).add(variantId);
     }
 
     public void addLoadFlowResultUuid(UUID loadFlowResultUuid) {
