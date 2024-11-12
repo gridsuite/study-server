@@ -293,8 +293,6 @@ class StudyServiceTest {
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
-        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);  // message for first modification node creation
-
         // assert that the broker message has been sent a study creation message for creation
         message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(message.getPayload()));

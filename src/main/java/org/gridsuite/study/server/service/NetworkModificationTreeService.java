@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -117,11 +118,6 @@ public class NetworkModificationTreeService {
                     .filter(n -> !n.getIdNode().equals(node.getIdNode()))
                     .forEach(child -> child.setParentNode(node));
             }
-            notificationService.emitNodeInserted(study.getId(), parent.getIdNode(), node.getIdNode(), insertMode, nodeId);
-            // userId is null when creating initial nodes, we don't need to send element update notifications in this case
-            if (userId != null) {
-                notificationService.emitElementUpdated(study.getId(), userId);
-            }
             return nodeInfo;
         }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
@@ -193,20 +189,6 @@ public class NetworkModificationTreeService {
         rootNetworkNodeInfoService.createNodeLinks(Objects.requireNonNull(studyUuid), newNetworkModificationNodeInfoEntity, modificationNode);
 
         return node.getIdNode();
-    }
-
-    @Transactional
-    public UUID duplicateStudySubtree(UUID parentNodeToCopyUuid, UUID anchorNodeUuid, Set<UUID> newlyCreatedNodes) {
-        List<NodeEntity> children = getChildrenByParentUuid(parentNodeToCopyUuid);
-        UUID newParentUuid = duplicateNode(parentNodeToCopyUuid, anchorNodeUuid, InsertMode.CHILD);
-        newlyCreatedNodes.add(newParentUuid);
-
-        children.forEach(child -> {
-            if (!newlyCreatedNodes.contains(child.getIdNode())) {
-                self.duplicateStudySubtree(child.getIdNode(), newParentUuid, newlyCreatedNodes);
-            }
-        });
-        return newParentUuid;
     }
 
     @Transactional
@@ -374,25 +356,12 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public RootNode getStudyTree(UUID studyId) {
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
-        if (nodes.isEmpty()) {
-            throw new StudyException(ELEMENT_NOT_FOUND);
+        NodeEntity rootNode = nodesRepository.findByStudyIdAndType(studyId, NodeType.ROOT).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+        RootNode studyTree = (RootNode) getStudySubtree(studyId, rootNode.getIdNode());
+        if (studyTree != null) {
+            studyTree.setStudyId(studyId);
         }
-
-        List<AbstractNode> allNodeInfos = new ArrayList<>();
-        repositories.forEach((key, repository) -> allNodeInfos.addAll(repository.getAll(
-            nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()))));
-        completeNodeInfos(allNodeInfos, studyId);
-        Map<UUID, AbstractNode> fullMap = allNodeInfos.stream().collect(Collectors.toMap(AbstractNode::getId, Function.identity()));
-
-        nodes.stream()
-            .filter(n -> n.getParentNode() != null)
-            .forEach(node -> fullMap.get(node.getParentNode().getIdNode()).getChildren().add(fullMap.get(node.getIdNode())));
-        var root = (RootNode) fullMap.get(nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT)).findFirst().orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getIdNode());
-        if (root != null) {
-            root.setStudyId(studyId);
-        }
-        return root;
+        return studyTree;
     }
 
     private void completeNodeInfos(List<AbstractNode> nodes, UUID studyUuid) {
@@ -407,7 +376,11 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public NetworkModificationNode getStudySubtree(UUID studyId, UUID parentNodeUuid) {
+    public AbstractNode getStudySubtree(UUID studyId, UUID parentNodeUuid) {
+//        TODO: not working because of proxy appearing in tests TOFIX later
+//        List<UUID> nodeUuids = nodesRepository.findAllDescendants(parentNodeUuid).stream().map(UUID::fromString).toList();
+//        List<NodeEntity> nodes = nodesRepository.findAllById(nodeUuids);
+
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
 
         List<AbstractNode> allNodeInfos = new ArrayList<>();
@@ -419,44 +392,54 @@ public class NetworkModificationTreeService {
         nodes.stream()
             .filter(n -> n.getParentNode() != null)
             .forEach(node -> fullMap.get(node.getParentNode().getIdNode()).getChildren().add(fullMap.get(node.getIdNode())));
-        return (NetworkModificationNode) fullMap.get(parentNodeUuid);
+        return fullMap.get(parentNodeUuid);
     }
 
     @Transactional
-    public void cloneStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity study) {
+    public void duplicateStudyNodes(StudyEntity studyEntity, UUID sourceStudyUuid) {
+        createRoot(studyEntity);
+        AbstractNode rootNode = getStudyTree(sourceStudyUuid);
+        cloneStudyTree(rootNode, null, studyEntity);
+    }
+
+    @Transactional
+    public UUID cloneStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity study) {
         UUID rootId = null;
         if (NodeType.ROOT.equals(nodeToDuplicate.getType())) {
             rootId = getStudyRootNodeUuid(study.getId());
         }
-        UUID referenceParentNodeId = rootId != null ? rootId : nodeParentId;
+        UUID nextParentId;
+        UUID newModificationGroupId = UUID.randomUUID();
+        UUID newReportUuid = UUID.randomUUID();
 
-        nodeToDuplicate.getChildren().forEach(sourceNode -> {
-            UUID newModificationGroupId = UUID.randomUUID();
-            UUID newReportUuid = UUID.randomUUID();
-            UUID nextParentId = null;
+        if (nodeToDuplicate instanceof NetworkModificationNode model) {
+            UUID modificationGroupToDuplicateId = model.getModificationGroupUuid();
+            model.setModificationGroupUuid(newModificationGroupId);
+            model.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
+            model.setLoadFlowResultUuid(null);
+            model.setSecurityAnalysisResultUuid(null);
+            model.setSensitivityAnalysisResultUuid(null);
+            model.setNonEvacuatedEnergyResultUuid(null);
+            model.setShortCircuitAnalysisResultUuid(null);
+            model.setOneBusShortCircuitAnalysisResultUuid(null);
+            model.setVoltageInitResultUuid(null);
+            model.setStateEstimationResultUuid(null);
+            model.setModificationReports(new HashMap<>(Map.of(model.getId(), newReportUuid)));
+            model.setComputationsReports(new HashMap<>());
+            model.setName(getSuffixedNodeName(study.getId(), model.getName()));
 
-            if (sourceNode instanceof NetworkModificationNode model) {
-                UUID modificationGroupToDuplicateId = model.getModificationGroupUuid();
-                model.setModificationGroupUuid(newModificationGroupId);
-                model.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
-                model.setLoadFlowResultUuid(null);
-                model.setSecurityAnalysisResultUuid(null);
-                model.setSensitivityAnalysisResultUuid(null);
-                model.setNonEvacuatedEnergyResultUuid(null);
-                model.setShortCircuitAnalysisResultUuid(null);
-                model.setOneBusShortCircuitAnalysisResultUuid(null);
-                model.setVoltageInitResultUuid(null);
-                model.setStateEstimationResultUuid(null);
-                model.setModificationReports(new HashMap<>(Map.of(model.getId(), newReportUuid)));
-                model.setComputationsReports(new HashMap<>());
-
-                nextParentId = self.createNode(study, referenceParentNodeId, model, InsertMode.CHILD, null).getId();
-                networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId);
-            }
-            if (nextParentId != null) {
-                self.cloneStudyTree(sourceNode, nextParentId, study);
-            }
+            nextParentId = self.createNode(study, nodeParentId, model, InsertMode.CHILD, null).getId();
+            networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId);
+        } else {
+            // when cloning studyTree, we don't clone root node
+            // if cloning the whole study, the root node is previously created
+            nextParentId = rootId;
+        }
+        nodeToDuplicate.getChildren().forEach(childToDuplicate -> {
+            self.cloneStudyTree(childToDuplicate, nextParentId, study);
         });
+
+        return nextParentId;
     }
 
     @Transactional

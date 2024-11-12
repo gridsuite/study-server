@@ -334,11 +334,9 @@ public class StudyService {
         try {
             startTime.set(System.nanoTime());
 
-            StudyEntity duplicatedStudy = insertDuplicatedStudy(basicStudyInfos, sourceStudyUuid, userId);
+            StudyEntity duplicatedStudy = duplicateStudy(basicStudyInfos, sourceStudyUuid, userId);
 
-            rootNetworkService.getStudyRootNetworks(duplicatedStudy.getId()).forEach(rootNetwork ->
-                reindexStudy(duplicatedStudy, rootNetwork.getId())
-            );
+            reindexStudy(duplicatedStudy, getStudyFirstRootNetworkUuid(duplicatedStudy.getId()));
 
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
@@ -515,72 +513,71 @@ public class StudyService {
         return createdStudyBasicInfos;
     }
 
-    private StudyEntity insertDuplicatedStudy(BasicStudyInfos studyInfos, UUID sourceStudyUuid, String userId) {
+    private StudyEntity duplicateStudy(BasicStudyInfos studyInfos, UUID sourceStudyUuid, String userId) {
         Objects.requireNonNull(studyInfos.getId());
         Objects.requireNonNull(userId);
 
         StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
-        // START duplicate study
-        Map<String, String> newImportParameters = Map.copyOf(sourceStudy.getImportParameters());
-
-        UUID copiedLoadFlowParametersUuid = null;
-        if (sourceStudy.getLoadFlowParametersUuid() != null) {
-            copiedLoadFlowParametersUuid = loadflowService.duplicateLoadFlowParameters(sourceStudy.getLoadFlowParametersUuid());
-        }
-
-        UUID copiedShortCircuitParametersUuid = null;
-        if (sourceStudy.getShortCircuitParametersUuid() != null) {
-            copiedShortCircuitParametersUuid = shortCircuitService.duplicateParameters(sourceStudy.getShortCircuitParametersUuid());
-        }
-
-        UUID copiedSecurityAnalysisParametersUuid = null;
-        if (sourceStudy.getSecurityAnalysisParametersUuid() != null) {
-            copiedSecurityAnalysisParametersUuid = securityAnalysisService.duplicateSecurityAnalysisParameters(sourceStudy.getSecurityAnalysisParametersUuid());
-        }
-
-        UUID copiedSensitivityAnalysisParametersUuid = null;
-        if (sourceStudy.getSensitivityAnalysisParametersUuid() != null) {
-            copiedSensitivityAnalysisParametersUuid = sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(sourceStudy.getSensitivityAnalysisParametersUuid());
-        }
-
-        NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos = sourceStudy.getNonEvacuatedEnergyParameters() == null ?
-                NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos() :
-                NonEvacuatedEnergyService.fromEntity(sourceStudy.getNonEvacuatedEnergyParameters());
-
-        UUID copiedVoltageInitParametersUuid = null;
-        if (sourceStudy.getVoltageInitParametersUuid() != null) {
-            copiedVoltageInitParametersUuid = voltageInitService.duplicateVoltageInitParameters(sourceStudy.getVoltageInitParametersUuid());
-        }
-
-        DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudy.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
-
-        StudyEntity newStudyEntity = StudyEntity.builder()
-                .id(studyInfos.getId())
-                .loadFlowParametersUuid(copiedLoadFlowParametersUuid)
-                .securityAnalysisParametersUuid(copiedSecurityAnalysisParametersUuid)
-                .nonEvacuatedEnergyProvider(sourceStudy.getNonEvacuatedEnergyProvider())
-                .dynamicSimulationProvider(sourceStudy.getDynamicSimulationProvider())
-                .dynamicSimulationParameters(DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper))
-                .shortCircuitParametersUuid(copiedShortCircuitParametersUuid)
-                .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
-                .sensitivityAnalysisParametersUuid(copiedSensitivityAnalysisParametersUuid)
-                .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
-                .importParameters(newImportParameters)
-                .build();
-        // END DUPLICATE STUDY
-
-        // WILL BE MADE IN A DUPLICATE NODES ?
-        UUID sourceStudyFirstRootNetworkUuid = self.getStudyFirstRootNetworkUuid(sourceStudyUuid);
-        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(insertDuplicatedStudy(newStudyEntity, sourceStudy.getId()), sourceStudyFirstRootNetworkUuid);
-
+        StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId());
+        networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudyUuid);
         rootNetworkService.duplicateStudyRootNetworks(newStudyEntity, sourceStudyUuid);
 
-        // END WILL BE MADE
+        UUID sourceStudyFirstRootNetworkUuid = self.getStudyFirstRootNetworkUuid(newStudyEntity.getId());
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(newStudyEntity, sourceStudyFirstRootNetworkUuid);
         studyInfosService.add(createdStudyBasicInfos);
         notificationService.emitStudiesChanged(studyInfos.getId(), userId);
 
         return newStudyEntity;
+    }
+
+    private StudyEntity duplicateStudyEntity(StudyEntity sourceStudyEntity, UUID newStudyId) {
+        Map<String, String> newImportParameters = Map.copyOf(sourceStudyEntity.getImportParameters());
+
+        UUID copiedLoadFlowParametersUuid = null;
+        if (sourceStudyEntity.getLoadFlowParametersUuid() != null) {
+            copiedLoadFlowParametersUuid = loadflowService.duplicateLoadFlowParameters(sourceStudyEntity.getLoadFlowParametersUuid());
+        }
+
+        UUID copiedShortCircuitParametersUuid = null;
+        if (sourceStudyEntity.getShortCircuitParametersUuid() != null) {
+            copiedShortCircuitParametersUuid = shortCircuitService.duplicateParameters(sourceStudyEntity.getShortCircuitParametersUuid());
+        }
+
+        UUID copiedSecurityAnalysisParametersUuid = null;
+        if (sourceStudyEntity.getSecurityAnalysisParametersUuid() != null) {
+            copiedSecurityAnalysisParametersUuid = securityAnalysisService.duplicateSecurityAnalysisParameters(sourceStudyEntity.getSecurityAnalysisParametersUuid());
+        }
+
+        UUID copiedSensitivityAnalysisParametersUuid = null;
+        if (sourceStudyEntity.getSensitivityAnalysisParametersUuid() != null) {
+            copiedSensitivityAnalysisParametersUuid = sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(sourceStudyEntity.getSensitivityAnalysisParametersUuid());
+        }
+
+        NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos = sourceStudyEntity.getNonEvacuatedEnergyParameters() == null ?
+            NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos() :
+            NonEvacuatedEnergyService.fromEntity(sourceStudyEntity.getNonEvacuatedEnergyParameters());
+
+        UUID copiedVoltageInitParametersUuid = null;
+        if (sourceStudyEntity.getVoltageInitParametersUuid() != null) {
+            copiedVoltageInitParametersUuid = voltageInitService.duplicateVoltageInitParameters(sourceStudyEntity.getVoltageInitParametersUuid());
+        }
+
+        DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
+
+        return studyRepository.save(StudyEntity.builder()
+            .id(newStudyId)
+            .loadFlowParametersUuid(copiedLoadFlowParametersUuid)
+            .securityAnalysisParametersUuid(copiedSecurityAnalysisParametersUuid)
+            .nonEvacuatedEnergyProvider(sourceStudyEntity.getNonEvacuatedEnergyProvider())
+            .dynamicSimulationProvider(sourceStudyEntity.getDynamicSimulationProvider())
+            .dynamicSimulationParameters(DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper))
+            .shortCircuitParametersUuid(copiedShortCircuitParametersUuid)
+            .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
+            .sensitivityAnalysisParametersUuid(copiedSensitivityAnalysisParametersUuid)
+            .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
+            .importParameters(newImportParameters)
+            .build());
     }
 
     private StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid) {
@@ -1077,15 +1074,6 @@ public class StudyService {
         return study;
     }
 
-    private StudyEntity insertDuplicatedStudy(StudyEntity studyEntity, UUID sourceStudyUuid) {
-        var study = studyRepository.save(studyEntity);
-
-        networkModificationTreeService.createRoot(study);
-        AbstractNode rootNode = networkModificationTreeService.getStudyTree(sourceStudyUuid);
-        networkModificationTreeService.cloneStudyTree(rootNode, null, studyEntity);
-        return study;
-    }
-
     void updateComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID computationResultUuid, ComputationType computationType) {
         rootNetworkNodeInfoService.updateComputationResultUuid(nodeUuid, rootNetworkUuid, computationResultUuid, computationType);
     }
@@ -1317,7 +1305,9 @@ public class StudyService {
         checkStudyContainsNode(sourceStudyUuid, parentNodeToCopyUuid);
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
 
-        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudySubtree(parentNodeToCopyUuid, referenceNodeUuid, new HashSet<>());
+        StudyEntity studyEntity = studyRepository.findById(targetStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid);
+        UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity);
         notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
@@ -2230,7 +2220,15 @@ public class StudyService {
 
     public NetworkModificationNode createNode(UUID studyUuid, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        return networkModificationTreeService.createNode(study, nodeId, nodeInfo, insertMode, userId);
+        NetworkModificationNode newNode = networkModificationTreeService.createNode(study, nodeId, nodeInfo, insertMode, userId);
+
+        UUID parentUuid = networkModificationTreeService.getParentNodeUuid(newNode.getId()).orElse(null);
+        notificationService.emitNodeInserted(study.getId(), parentUuid, newNode.getId(), insertMode, nodeId);
+        // userId is null when creating initial nodes, we don't need to send element update notifications in this case
+        if (userId != null) {
+            notificationService.emitElementUpdated(study.getId(), userId);
+        }
+        return newNode;
     }
 
     //TODO: temporary method, once frontend had been implemented, each operation will need to target a specific rootNetwork UUID, here we manually target the first one
