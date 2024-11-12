@@ -148,46 +148,28 @@ public class NetworkModificationTreeService {
             throw new StudyException(NOT_ALLOWED);
         }
 
-        Optional<NodeEntity> nodeToCopyOpt = nodesRepository.findById(nodeToCopyUuid);
-        NodeEntity nodeToCopyEntity = nodeToCopyOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
-
         UUID newGroupUuid = UUID.randomUUID();
         UUID modificationGroupUuid = self.getModificationGroupUuid(nodeToCopyUuid);
-        UUID newReportUuid = UUID.randomUUID();
         //First we create the modification group
         networkModificationService.createModifications(modificationGroupUuid, newGroupUuid);
 
-        NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ?
-            anchorNodeEntity.getParentNode() : anchorNodeEntity;
         //Then we create the node
-        NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeToCopyEntity.getType(), anchorNodeEntity.getStudy(), false, null));
-
-        if (insertMode.equals(InsertMode.BEFORE)) {
-            anchorNodeEntity.setParentNode(node);
-        } else if (insertMode.equals(InsertMode.AFTER)) {
-            nodesRepository.findAllByParentNodeIdNode(anchorNodeUuid).stream()
-                .filter(n -> !n.getIdNode().equals(node.getIdNode()))
-                .forEach(child -> child.setParentNode(node));
-        }
-
-        //And the modification node info
         NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationNodeInfoRepository.findById(nodeToCopyUuid).orElseThrow(() -> new StudyException(GET_MODIFICATIONS_FAILED));
         UUID studyUuid = anchorNodeEntity.getStudy().getId();
-        NetworkModificationNodeInfoEntity newNetworkModificationNodeInfoEntity = networkModificationNodeInfoRepository.save(
-            NetworkModificationNodeInfoEntity.builder()
+
+        NetworkModificationNode node = self.createNode(
+            anchorNodeEntity.getStudy(),
+            anchorNodeUuid,
+            NetworkModificationNode.builder()
                 .modificationGroupUuid(newGroupUuid)
                 .name(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()))
                 .description(networkModificationNodeInfoEntity.getDescription())
-                .idNode(node.getIdNode())
-                .build()
+                .build(),
+                insertMode,
+                null
         );
 
-        NetworkModificationNode modificationNode = NetworkModificationNode.builder()
-            .modificationReports(new HashMap<>(Map.of(node.getIdNode(), newReportUuid)))
-            .build();
-        rootNetworkNodeInfoService.createNodeLinks(Objects.requireNonNull(studyUuid), newNetworkModificationNodeInfoEntity, modificationNode);
-
-        return node.getIdNode();
+        return node.getId();
     }
 
     @Transactional
