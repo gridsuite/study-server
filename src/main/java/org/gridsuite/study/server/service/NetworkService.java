@@ -17,7 +17,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.NetworkVariantsListener;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
