@@ -30,7 +30,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -66,11 +65,11 @@ public class SecurityAnalysisService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public String getSecurityAnalysisResult(UUID nodeUuid, SecurityAnalysisResultType resultType, String filters, Pageable pageable) {
+    public String getSecurityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String filters, Pageable pageable) {
         String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
 
-        if (resultUuidOpt.isEmpty()) {
+        if (resultUuid == null) {
             return null;
         }
 
@@ -86,7 +85,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
             pathBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection());
         }
 
-        String path = pathBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+        String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
 
         try {
             result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
@@ -101,17 +100,17 @@ public class SecurityAnalysisService extends AbstractComputationService {
         return result;
     }
 
-    public byte[] getSecurityAnalysisResultCsv(UUID nodeUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
+    public byte[] getSecurityAnalysisResultCsv(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
         ResponseEntity<byte[]> result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
+        UUID resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
 
-        if (resultUuidOpt.isEmpty()) {
+        if (resultUuidOpt == null) {
             throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
         }
 
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getExportPathFromResultType(resultType));
 
-        String path = pathBuilder.buildAndExpand(resultUuidOpt.get()).toUriString();
+        String path = pathBuilder.buildAndExpand(resultUuidOpt).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -173,20 +172,20 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 .exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid, String userId) {
+    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(userId);
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
 
-        if (resultUuidOpt.isEmpty()) {
+        if (resultUuid == null) {
             return;
         }
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
@@ -194,7 +193,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
-                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
+                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
@@ -203,18 +202,18 @@ public class SecurityAnalysisService extends AbstractComputationService {
         restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
-    public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID nodeUuid) {
+    public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         SecurityAnalysisStatus status;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.SECURITY_ANALYSIS);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
 
-        if (resultUuidOpt.isEmpty()) {
+        if (resultUuid == null) {
             return null;
         }
 
         try {
             String path = UriComponentsBuilder
                     .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
-                    .buildAndExpand(resultUuidOpt.get()).toUriString();
+                    .buildAndExpand(resultUuid).toUriString();
 
             status = restTemplate.getForObject(securityAnalysisServerBaseUri + path, SecurityAnalysisStatus.class);
         } catch (HttpStatusCodeException e) {
@@ -260,8 +259,8 @@ public class SecurityAnalysisService extends AbstractComputationService {
         }
     }
 
-    public void assertSecurityAnalysisNotRunning(UUID nodeUuid) {
-        SecurityAnalysisStatus sas = getSecurityAnalysisStatus(nodeUuid);
+    public void assertSecurityAnalysisNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
+        SecurityAnalysisStatus sas = getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid);
         if (sas == SecurityAnalysisStatus.RUNNING) {
             throw new StudyException(SECURITY_ANALYSIS_RUNNING);
         }
