@@ -1,0 +1,45 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="amarsli (generated)" id="1730387191936-1">
+        <createIndex indexName="rootNetworkEntity_studyId_idx" tableName="root_network">
+            <column name="study_uuid"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="amarsli (generated)" id="1730387191936-2">
+        <dropForeignKeyConstraint baseTableName="root_network" constraintName="FKc0x0spv4eajo2ri2nomlxp9uv"/>
+        <addForeignKeyConstraint baseTableName="root_network" baseColumnNames="study_uuid"
+                                 constraintName="rootNetwork_study_id_fk_constraint" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="study"
+                                 validate="true"/>
+    </changeSet>
+
+    <changeSet author="amarsli (generated)" id="1730387191936-3">
+        <createIndex indexName="rootNetworkNodeEntity_rootNetworkId_idx" tableName="root_network_node_info">
+            <column name="root_network_id"/>
+        </createIndex>
+        <createIndex indexName="rootNetworkNodeEntity_nodeId_idx" tableName="root_network_node_info">
+            <column name="node_info_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="amarsli (generated)" id="1730387191936-4">
+        <dropForeignKeyConstraint baseTableName="root_network_node_info" constraintName="fk_root_network_node_info"/>
+        <addForeignKeyConstraint baseTableName="root_network_node_info" baseColumnNames="root_network_id"
+                                 constraintName="rootNetworkNode_rootNetwork_id_fk_constraint" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id" referencedTableName="root_network"
+                                 validate="true"/>
+        <addNotNullConstraint columnDataType="uuid" tableName="root_network_node_info" columnName="root_network_id"
+                              validate="true"/>
+    </changeSet>
+    <changeSet author="amarsli (generated)" id="1730387191936-5">
+        <dropForeignKeyConstraint baseTableName="root_network_node_info" constraintName="FK40i207mmx5ep57g7xnrv16t0a"/>
+        <addForeignKeyConstraint baseTableName="root_network_node_info" baseColumnNames="node_info_id"
+                                 constraintName="rootNetworkNode_node_id_fk_constraint" deferrable="false"
+                                 initiallyDeferred="false" referencedColumnNames="id_node"
+                                 referencedTableName="network_modification_node_info" validate="true"/>
+        <addNotNullConstraint columnDataType="uuid" tableName="root_network_node_info" columnName="node_info_id"
+                              validate="true"/>
+    </changeSet>
+</databaseChangeLog>
