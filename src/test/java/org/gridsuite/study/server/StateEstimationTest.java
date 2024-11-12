@@ -25,6 +25,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.service.*;
@@ -121,6 +122,8 @@ class StateEstimationTest {
     private ReportService reportService;
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+    @Autowired
+    private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
     @AllArgsConstructor
     private static class StudyNodeIds {
@@ -153,13 +156,13 @@ class StateEstimationTest {
                     // estim with success
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", STATE_ESTIMATION_RESULT_UUID)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), ESTIM_RESULT_JSON_DESTINATION);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimResultUuidStr);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID_2 + "&receiver=.*")) {
                     // estim with failure
                     input.send(MessageBuilder.withPayload("")
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), ESTIM_FAILED_DESTINATION);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimErrorResultUuidStr);
                 } else if (path.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID)) {
@@ -169,7 +172,7 @@ class StateEstimationTest {
                 } else if (path.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/stop.*")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", STATE_ESTIMATION_RESULT_UUID)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), ESTIM_STOPPED_DESTINATION);
                     return new MockResponse(200);
                 } else if (path.matches("/v1/supervision/results-count")) {
@@ -204,11 +207,11 @@ class StateEstimationTest {
     private StudyNodeIds createStudyAndNode(String variantId, String nodeName) throws Exception {
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
         // create a study
-        StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, "",
+        StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.fromString(NETWORK_UUID_STRING), "netId", CASE_LOADFLOW_UUID, "", "", null,
                 LOADFLOW_PARAMETERS_UUID, null, null, null,
                 defaultNonEvacuatedEnergyParametersEntity);
         studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity, null);
+        networkModificationTreeService.createRoot(studyEntity);
         // with a node
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
@@ -294,7 +297,7 @@ class StateEstimationTest {
         runEstim(server, ids);
 
         // we have one Estim result
-        assertEquals(1, networkModificationNodeInfoRepository.findAllByStateEstimationResultUuidNotNull().size());
+        assertEquals(1, rootNetworkNodeInfoRepository.findAllByStateEstimationResultUuidNotNull().size());
 
         // supervision deletion result, with dry-mode (only count)
         mockMvc.perform(delete("/v1/supervision/computation/results")
@@ -312,7 +315,7 @@ class StateEstimationTest {
         assertTrue(requests.contains("/v1/results"));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         // no more result
-        assertEquals(0, networkModificationNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
+        assertEquals(0, rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
     }
 
     @Test

@@ -285,7 +285,7 @@ public class WireMockUtils {
         }
     }
 
-    public UUID stubVoltageLevelIdForBranchOr3WTBySideGet(String networkUuid, String equipmentId, String responseBody) {
+    public UUID stubBranchOr3WTVoltageLevelIdGet(String networkUuid, String equipmentId, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/branch-or-3wt/" + equipmentId + "/voltage-level-id"))
                 .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
@@ -309,7 +309,7 @@ public class WireMockUtils {
         removeRequestForStub(stubUuid, 1);
     }
 
-    public void verifyVoltageLevelIdByEquipmentIdAndSideGet(UUID stubUuid, String networkUuid, String equipmentId) {
+    public void verifyBranchOr3WTVoltageLevelIdGet(UUID stubUuid, String networkUuid, String equipmentId) {
         RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/branch-or-3wt/" + equipmentId + "/voltage-level-id"));
         wireMock.verify(1, requestBuilder);
         removeRequestForStub(stubUuid, 1);
@@ -328,7 +328,7 @@ public class WireMockUtils {
         removeRequestForStub(stubUuid, 1);
     }
 
-    public UUID stubImportNetwork(String caseUuid, Map<String, Object> importParameters, String networkUuid, String networkId, String caseFormat, CountDownLatch countDownLatch) {
+    public UUID stubImportNetwork(String caseUuid, Map<String, Object> importParameters, String networkUuid, String networkId, String caseFormat, String caseName, CountDownLatch countDownLatch) {
         UUID importNetworkStubId = wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
             .withQueryParam("caseUuid", WireMock.equalTo(caseUuid))
             .withQueryParam("variantId", WireMock.equalTo(FIRST_VARIANT_ID))
@@ -341,6 +341,7 @@ public class WireMockUtils {
                         "networkUuid", networkUuid,
                         "networkId", networkId,
                         "caseFormat", caseFormat,
+                        "caseName", caseName,
                         "importParameters", importParameters,
                         "latch", countDownLatch
                     )

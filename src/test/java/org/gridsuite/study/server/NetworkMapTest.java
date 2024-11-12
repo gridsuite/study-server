@@ -421,9 +421,9 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetVoltageLevelIdForBranchOr3WTBySide() throws Exception {
+    void testGetBranchOr3WTVoltageLevelId() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
-        UUID stubUuid = wireMockUtils.stubVoltageLevelIdForBranchOr3WTBySideGet(NETWORK_UUID_STRING, LINE_ID_1, VL_ID_1);
+        UUID stubUuid = wireMockUtils.stubBranchOr3WTVoltageLevelIdGet(NETWORK_UUID_STRING, LINE_ID_1, VL_ID_1);
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
@@ -434,7 +434,7 @@ class NetworkMapTest {
                 .andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         assertEquals(VL_ID_1, resultAsString);
-        wireMockUtils.verifyVoltageLevelIdByEquipmentIdAndSideGet(stubUuid, NETWORK_UUID_STRING, LINE_ID_1);
+        wireMockUtils.verifyBranchOr3WTVoltageLevelIdGet(stubUuid, NETWORK_UUID_STRING, LINE_ID_1);
     }
 
     @Test
@@ -494,9 +494,9 @@ class NetworkMapTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", LOADFLOW_PARAMETERS_UUID, null, null, null, null);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null, LOADFLOW_PARAMETERS_UUID, null, null, null, null);
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity, null);
+        networkModificationTreeService.createRoot(studyEntity);
         return study;
     }
 

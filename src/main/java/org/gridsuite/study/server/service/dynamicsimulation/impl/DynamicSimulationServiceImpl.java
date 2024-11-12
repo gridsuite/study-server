@@ -76,14 +76,14 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public UUID runDynamicSimulation(String provider, UUID studyUuid, UUID nodeUuid, UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId) {
+    public UUID runDynamicSimulation(String provider, UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId) {
         UUID networkUuid = networkService.getNetworkUuid(studyUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
 
         // create receiver for getting back the notification in rabbitmq
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
@@ -93,13 +93,13 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid) {
+    public List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid, UUID rootNetworkUuid) {
         List<TimeSeriesMetadataInfos> metadataList = new ArrayList<>();
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.DYNAMIC_SIMULATION);
 
-        if (resultUuidOpt.isPresent()) {
-            UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
+        if (resultUuid != null) {
+            UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuid); // get timeseries uuid
             if (timeSeriesUuid != null) {
                 // get timeseries metadata
                 TimeSeriesGroupRest timeSeriesGroupMetadata = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid);
@@ -119,13 +119,13 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, List<String> timeSeriesNames) {
+    public List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, UUID rootNetworkUuid, List<String> timeSeriesNames) {
         List<TimeSeries> timeSeries = new ArrayList<>();
 
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.DYNAMIC_SIMULATION);
 
-        if (resultUuidOpt.isPresent()) {
-            UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
+        if (resultUuid != null) {
+            UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuid); // get timeseries uuid
             if (timeSeriesUuid != null) {
                 // get timeseries data
                 timeSeries = timeSeriesClient.getTimeSeriesGroup(timeSeriesUuid, timeSeriesNames);
@@ -144,11 +144,11 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public List<TimelineEventInfos> getTimelineResult(UUID nodeUuid) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION);
+    public List<TimelineEventInfos> getTimelineResult(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.DYNAMIC_SIMULATION);
 
-        if (resultUuidOpt.isPresent()) {
-            UUID timelineUuid = dynamicSimulationClient.getTimelineResult(resultUuidOpt.get()); // get timeline uuid
+        if (resultUuid != null) {
+            UUID timelineUuid = dynamicSimulationClient.getTimelineResult(resultUuid); // get timeline uuid
             if (timelineUuid != null) {
                 // get timeline data
                 List<TimeSeries> timelines = timeSeriesClient.getTimeSeriesGroup(timelineUuid, null);
@@ -179,10 +179,12 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public DynamicSimulationStatus getStatus(UUID nodeUuid) {
-        return networkModificationTreeService.getComputationResultUuid(nodeUuid, ComputationType.DYNAMIC_SIMULATION)
-                .map(dynamicSimulationClient::getStatus)
-                .orElse(null);
+    public DynamicSimulationStatus getStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.DYNAMIC_SIMULATION);
+        if (resultUuid == null) {
+            return null;
+        }
+        return dynamicSimulationClient.getStatus(resultUuid);
     }
 
     @Override
@@ -216,8 +218,8 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public void assertDynamicSimulationNotRunning(UUID nodeUuid) {
-        DynamicSimulationStatus status = getStatus(nodeUuid);
+    public void assertDynamicSimulationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
+        DynamicSimulationStatus status = getStatus(nodeUuid, rootNetworkUuid);
         if (DynamicSimulationStatus.RUNNING == status) {
             throw new StudyException(DYNAMIC_SIMULATION_RUNNING);
         }

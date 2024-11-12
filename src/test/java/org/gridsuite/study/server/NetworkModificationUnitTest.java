@@ -6,25 +6,21 @@
  */
 package org.gridsuite.study.server;
 
-import com.powsybl.network.store.client.NetworkStoreService;
+import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
-import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
+import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.NetworkService;
-import org.gridsuite.study.server.service.NonEvacuatedEnergyService;
-import org.gridsuite.study.server.service.ReportService;
-import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,8 +36,8 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -63,15 +59,9 @@ class NetworkModificationUnitTest {
     @Autowired
     private RootNodeInfoRepository rootNodeInfoRepository;
     @Autowired
-    private NetworkModificationTreeService networkModificationTreeService;
-    @Autowired
     private StudyRepository studyRepository;
     @Autowired
     private StudyController studyController;
-    @MockBean
-    private ReportService reportService;
-    @MockBean
-    private NetworkStoreService networkStoreService;
     @MockBean
     private NetworkService networkService;
     @MockBean
@@ -85,6 +75,12 @@ class NetworkModificationUnitTest {
 
     private static final long TIMEOUT = 1000;
     private static final String VARIANT_1 = "variant_1";
+    private static final String VARIANT_2 = "variant_2";
+    private static final String VARIANT_3 = "variant_3";
+
+    private static final UUID REPORT_UUID_1 = UUID.randomUUID();
+    private static final UUID REPORT_UUID_2 = UUID.randomUUID();
+    private static final UUID REPORT_UUID_3 = UUID.randomUUID();
 
     private UUID studyUuid;
     private UUID node1Uuid;
@@ -95,17 +91,31 @@ class NetworkModificationUnitTest {
     @Autowired
     private OutputDestination output;
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
+    @Autowired
+    private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+    @Autowired
+    private RootNetworkRepository rootNetworkRepository;
 
     @BeforeEach
     void setup() {
-        StudyEntity study = insertStudy(NETWORK_UUID, CASE_LOADFLOW_UUID);
+        StudyEntity study = insertStudy();
+
+        RootNetworkEntity firstRootNetworkEntity = RootNetworkEntity.builder()
+            .networkUuid(NETWORK_UUID)
+            .networkId("netId")
+            .caseUuid(CASE_LOADFLOW_UUID)
+            .caseFormat("caseFormat")
+            .caseName("caseName")
+            .build();
+
+        study.addRootNetwork(firstRootNetworkEntity);
+        studyRepository.save(study);
         studyUuid = study.getId();
-
         NodeEntity rootNode = insertRootNode(study, UUID.randomUUID());
-
-        NodeEntity node1 = insertNode(study, node1Uuid, rootNode, BuildStatus.BUILT);
-        NodeEntity node2 = insertNode(study, node2Uuid, node1, BuildStatus.BUILT);
-        NodeEntity node3 = insertNode(study, node3Uuid, node1, BuildStatus.NOT_BUILT);
+        NodeEntity node1 = insertNode(study, node1Uuid, VARIANT_1, REPORT_UUID_1, rootNode, firstRootNetworkEntity, BuildStatus.BUILT);
+        NodeEntity node2 = insertNode(study, node2Uuid, VARIANT_2, REPORT_UUID_2, node1, firstRootNetworkEntity, BuildStatus.BUILT);
+        NodeEntity node3 = insertNode(study, node3Uuid, VARIANT_3, REPORT_UUID_3, node1, firstRootNetworkEntity, BuildStatus.NOT_BUILT);
+        rootNetworkRepository.save(firstRootNetworkEntity);
 
         node1Uuid = node1.getIdNode();
         node2Uuid = node2.getIdNode();
@@ -120,14 +130,12 @@ class NetworkModificationUnitTest {
          *     |         |
          *  node2(B)   node3
          */
-        List<NetworkModificationNodeInfoEntity> nodesInfos = networkModificationNodeInfoRepository.findAll();
-        NetworkModificationNodeInfoEntity node1Infos = nodesInfos.stream().filter(n -> n.getIdNode().equals(node1Uuid)).findAny().orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-        NetworkModificationNodeInfoEntity node2Infos = nodesInfos.stream().filter(n -> n.getIdNode().equals(node2Uuid)).findAny().orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-        NetworkModificationNodeInfoEntity node3Infos = nodesInfos.stream().filter(n -> n.getIdNode().equals(node3Uuid)).findAny().orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-
-        assertEquals(BuildStatus.BUILT, node1Infos.getNodeBuildStatus().getLocalBuildStatus());
-        assertEquals(BuildStatus.BUILT, node2Infos.getNodeBuildStatus().getLocalBuildStatus());
-        assertEquals(BuildStatus.NOT_BUILT, node3Infos.getNodeBuildStatus().getLocalBuildStatus());
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findAllByNodeInfoId(node1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findAllByNodeInfoId(node2Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity3 = rootNetworkNodeInfoRepository.findAllByNodeInfoId(node3Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        assertEquals(BuildStatus.BUILT, rootNetworkNodeInfoEntity1.getNodeBuildStatus().getLocalBuildStatus());
+        assertEquals(BuildStatus.BUILT, rootNetworkNodeInfoEntity2.getNodeBuildStatus().getLocalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, rootNetworkNodeInfoEntity3.getNodeBuildStatus().getLocalBuildStatus());
 
         studyController.unbuildNode(studyUuid, node1Uuid);
 
@@ -137,19 +145,17 @@ class NetworkModificationUnitTest {
          *     |         |
          *  node2(B)   node3
          */
-        nodesInfos = networkModificationNodeInfoRepository.findAll();
-        node1Infos = nodesInfos.stream().filter(n -> n.getIdNode().equals(node1Uuid)).findAny().orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-        node2Infos = nodesInfos.stream().filter(n -> n.getIdNode().equals(node2Uuid)).findAny().orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-        node3Infos = nodesInfos.stream().filter(n -> n.getIdNode().equals(node3Uuid)).findAny().orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-
-        assertEquals(BuildStatus.NOT_BUILT, node1Infos.getNodeBuildStatus().getLocalBuildStatus());
-        assertEquals(BuildStatus.BUILT, node2Infos.getNodeBuildStatus().getLocalBuildStatus());
-        assertEquals(BuildStatus.NOT_BUILT, node3Infos.getNodeBuildStatus().getLocalBuildStatus());
+        rootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findAllByNodeInfoId(node1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        rootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findAllByNodeInfoId(node2Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        rootNetworkNodeInfoEntity3 = rootNetworkNodeInfoRepository.findAllByNodeInfoId(node3Uuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        assertEquals(BuildStatus.NOT_BUILT, rootNetworkNodeInfoEntity1.getNodeBuildStatus().getLocalBuildStatus());
+        assertEquals(BuildStatus.BUILT, rootNetworkNodeInfoEntity2.getNodeBuildStatus().getLocalBuildStatus());
+        assertEquals(BuildStatus.NOT_BUILT, rootNetworkNodeInfoEntity3.getNodeBuildStatus().getLocalBuildStatus());
 
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid));
         checkUpdateModelsStatusMessagesReceived(studyUuid, node1Uuid);
 
-        Mockito.verify(networkService).deleteVariants(null, List.of(VARIANT_1));
+        Mockito.verify(networkService).deleteVariants(NETWORK_UUID, List.of(VARIANT_1));
     }
 
     @Test
@@ -224,18 +230,24 @@ class NetworkModificationUnitTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
     }
 
-    private StudyEntity insertStudy(UUID networkUuid, UUID caseUuid) {
-        NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "",
-            UUID.randomUUID(), null, null, null, defaultNonEvacuatedEnergyParametersEntity);
-        return studyRepository.save(studyEntity);
+    private StudyEntity insertStudy() {
+        return StudyEntity.builder()
+            .id(UUID.randomUUID())
+            .indexationStatus(StudyIndexationStatus.INDEXED)
+            .voltageInitParameters(new StudyVoltageInitParametersEntity())
+            .build();
     }
 
-    private NodeEntity insertNode(StudyEntity study, UUID nodeId, NodeEntity parentNode, BuildStatus buildStatus) {
+    private NodeEntity insertNode(StudyEntity study, UUID nodeId, String variantId, UUID reportUuid, NodeEntity parentNode, RootNetworkEntity rootNetworkEntity, BuildStatus buildStatus) {
         NodeEntity node = nodeRepository.save(new NodeEntity(nodeId, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
-        NetworkModificationNodeInfoEntity nodeInfos = new NetworkModificationNodeInfoEntity(UUID.randomUUID(), VARIANT_1, null, null, null, null, null, null, null, null, null, NodeBuildStatus.from(buildStatus).toEntity(), new HashMap<>(), new HashMap<>());
+        NetworkModificationNodeInfoEntity nodeInfos = NetworkModificationNodeInfoEntity.builder().modificationGroupUuid(UUID.randomUUID()).build();
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = RootNetworkNodeInfoEntity.builder().variantId(variantId).modificationReports(Map.of(node.getIdNode(), reportUuid)).nodeBuildStatus(NodeBuildStatus.from(buildStatus).toEntity()).build();
+        nodeInfos.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
+        rootNetworkEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
+
         nodeInfos.setIdNode(node.getIdNode());
         networkModificationNodeInfoRepository.save(nodeInfos);
+        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
         return node;
     }
 
