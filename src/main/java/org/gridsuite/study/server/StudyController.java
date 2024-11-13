@@ -500,7 +500,7 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("equipmentId") String equipmentId,
-            @RequestParam(value = "side", required = false, defaultValue = "") ThreeSides side,
+            @RequestParam(value = "side") ThreeSides side,
             @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
         String voltageLevelId = studyService.getBranchOr3WTVoltageLevelId(studyUuid, nodeUuid, inUpstreamBuiltParentNode, equipmentId, side);
         return StringUtils.isEmpty(voltageLevelId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(voltageLevelId);

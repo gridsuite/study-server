@@ -185,10 +185,11 @@ public class NetworkMapService {
     }
 
     public String getBranchOr3WTVoltageLevelId(UUID networkUuid, String variantId, String equipmentId, ThreeSides side) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(
-                DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/branch-or-3wt/{equipmentId}/voltage-level-id");
+        UriComponentsBuilder builder = UriComponentsBuilder
+            .fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/branch-or-3wt/{equipmentId}/voltage-level-id")
+            .queryParam(QUERY_PARAM_SIDE, side.name());
         if (!StringUtils.isBlank(variantId)) {
-            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId).queryParam(QUERY_PARAM_SIDE, side.name());
+            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         String path = builder.buildAndExpand(networkUuid, equipmentId).toUriString();
         String equipmentMapData;

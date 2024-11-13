@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.iidm.network.TwoSides;
 import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.SneakyThrows;
 import mockwebserver3.Dispatcher;
@@ -21,6 +22,7 @@ import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
+import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -41,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -100,6 +103,9 @@ class NetworkMapTest {
     private WireMockServer wireMockServer;
 
     private WireMockUtils wireMockUtils;
+
+    @Autowired
+    private OutputDestination output;
 
     @Autowired
     private ObjectMapper mapper;
@@ -425,13 +431,13 @@ class NetworkMapTest {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         UUID stubUuid = wireMockUtils.stubBranchOr3WTVoltageLevelIdGet(NETWORK_UUID_STRING, LINE_ID_1, VL_ID_1);
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
-        UUID studyNameUserIdUuid = studyEntity.getId();
-        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        AbstractNode node = getRootNode(studyEntity.getId()).getChildren().stream().findFirst().orElseThrow();
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}/voltage-level-id",
-                        studyNameUserIdUuid, rootNodeUuid, LINE_ID_1))
-                .andExpect(status().isOk())
-                .andReturn();
+        MvcResult mvcResult = mockMvc
+            .perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}/voltage-level-id", studyEntity.getId(), node.getId(), LINE_ID_1)
+                .queryParam(QUERY_PARAM_SIDE, TwoSides.ONE.name()))
+            .andExpect(status().isOk())
+            .andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         assertEquals(VL_ID_1, resultAsString);
         wireMockUtils.verifyBranchOr3WTVoltageLevelIdGet(stubUuid, NETWORK_UUID_STRING, LINE_ID_1);
@@ -496,7 +502,7 @@ class NetworkMapTest {
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null, LOADFLOW_PARAMETERS_UUID, null, null, null, null);
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity);
+        networkModificationTreeService.createBasicTree(studyEntity);
         return study;
     }
 
@@ -584,15 +590,6 @@ class NetworkMapTest {
             )
                 .andExpectAll(status().isInternalServerError(), content().string("Internal Server Error"));
         wireMockUtils.verifyNetworkElementInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType, elementId);
-    }
-
-    private MvcResult getNetworkEquipmentInfos(UUID studyUuid, UUID rootNodeUuid, String infoTypePath, String equipmentId, String responseBody) throws Exception {
-        UUID stubUuid = wireMockUtils.stubNetworkEquipmentInfosGet(NETWORK_UUID_STRING, infoTypePath, equipmentId, responseBody);
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/{infoTypePath}/{equipmentId}", studyUuid, rootNodeUuid, infoTypePath, equipmentId))
-                .andExpect(status().isOk())
-                .andReturn();
-        wireMockUtils.verifyNetworkEquipmentInfosGet(stubUuid, NETWORK_UUID_STRING, infoTypePath, equipmentId);
-        return mvcResult;
     }
 
     @Test
@@ -711,6 +708,8 @@ class NetworkMapTest {
     void tearDown(final MockWebServer server) {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
+
+        output.clear();
 
         try {
             TestUtils.assertServerRequestsEmptyThenShutdown(server);

@@ -14,6 +14,7 @@ import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import com.powsybl.iidm.network.TwoSides;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
@@ -287,7 +288,9 @@ public class WireMockUtils {
 
     public UUID stubBranchOr3WTVoltageLevelIdGet(String networkUuid, String equipmentId, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/branch-or-3wt/" + equipmentId + "/voltage-level-id"))
-                .willReturn(WireMock.ok().withBody(responseBody))
+            .withQueryParam(QUERY_PARAM_SIDE, WireMock.equalTo(TwoSides.ONE.name()))
+            .withQueryParam(QUERY_PARAM_VARIANT_ID, WireMock.equalTo(FIRST_VARIANT_ID))
+            .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
 
