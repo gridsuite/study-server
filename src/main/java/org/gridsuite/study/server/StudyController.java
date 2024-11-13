@@ -371,26 +371,15 @@ public class StudyController {
             ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/buses")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/buses-or-busbar-sections")
     @Operation(summary = "get buses the for a given network and a given voltage level")
     @ApiResponse(responseCode = "200", description = "The buses list of the network for given voltage level")
-    public ResponseEntity<List<IdentifiableInfos>> getVoltageLevelBuses(
+    public ResponseEntity<List<IdentifiableInfos>> getVoltageLevelBusesOrBusbarSections(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBuses(studyUuid, nodeUuid, voltageLevelId, inUpstreamBuiltParentNode));
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/busbar-sections")
-    @Operation(summary = "get the busbar sections for a given network and a given voltage level")
-    @ApiResponse(responseCode = "200", description = "The busbar sections list of the network for given voltage level")
-    public ResponseEntity<List<IdentifiableInfos>> getVoltageLevelBusbarSections(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("nodeUuid") UUID nodeUuid,
-            @PathVariable("voltageLevelId") String voltageLevelId,
-            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusbarSections(studyUuid, nodeUuid, voltageLevelId, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuid, voltageLevelId, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/substation-id")
