@@ -221,7 +221,7 @@ public interface DynamicSimulationService {
 
     /**
      * Run a dynamic simulation from a given study, node UUID and some configured parameters
-     * @param provider name of the dynamic simulation provider, e.g. DynaWaltz
+     * @param provider name of the dynamic simulation provider, e.g. Dynawo
      * @param studyUuid study uuid
      * @param nodeUuid node uuid
      * @param parameters parameters of dynamic simulation
