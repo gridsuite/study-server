@@ -217,6 +217,18 @@ public class NetworkMapService {
         return equipmentMapData;
     }
 
+    public String getVoltageLevelSubstationId(UUID networkUuid, String variantId,
+                                              String voltageLevelId) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION
+                + "/networks/{networkUuid}/voltage-levels/{voltageLevelId}/substation-id");
+        if (!StringUtils.isBlank(variantId)) {
+            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        return restTemplate.exchange(networkMapServerBaseUri + builder.build().toUriString(), HttpMethod.GET, null,
+                new ParameterizedTypeReference<String>() {
+                }, networkUuid, voltageLevelId).getBody();
+    }
+
     public List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID networkUuid, String variantId,
                                                                         String voltageLevelId,
                                                                         String busPath) {
