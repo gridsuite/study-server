@@ -127,7 +127,7 @@ public class NetworkModificationTreeService {
         NetworkModificationNode newNode = createAndInsertNode(study, nodeId, nodeInfo, insertMode, userId);
 
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
-        rootNetworkNodeInfoService.createNodeLinks(Objects.requireNonNull(study.getId()), newNodeInfoEntity, nodeInfo);
+        rootNetworkNodeInfoService.createNodeLinks(Objects.requireNonNull(study.getId()), newNodeInfoEntity);
 
         return newNode;
     }
@@ -359,10 +359,10 @@ public class NetworkModificationTreeService {
     @Transactional
     public AbstractNode getStudySubtree(UUID studyId, UUID parentNodeUuid) {
 //        TODO: not working because of proxy appearing in tests TOFIX later
-//        List<UUID> nodeUuids = nodesRepository.findAllDescendants(parentNodeUuid).stream().map(UUID::fromString).toList();
-//        List<NodeEntity> nodes = nodesRepository.findAllById(nodeUuids);
+        List<UUID> nodeUuids = nodesRepository.findAllDescendants(parentNodeUuid).stream().map(UUID::fromString).toList();
+        List<NodeEntity> nodes = nodesRepository.findAllById(nodeUuids);
 
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
+//        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
 
         List<AbstractNode> allNodeInfos = new ArrayList<>();
         repositories.forEach((key, repository) -> allNodeInfos.addAll(repository.getAll(
