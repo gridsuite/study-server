@@ -169,7 +169,7 @@ public class NetworkMapService {
         return restTemplate.postForObject(networkMapServerBaseUri + url, httpEntity, String.class);
     }
 
-    public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds,
+    public String getNetworkElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds,
                                        String equipmentPath) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath;
         UriComponentsBuilder builder = UriComponentsBuilder
