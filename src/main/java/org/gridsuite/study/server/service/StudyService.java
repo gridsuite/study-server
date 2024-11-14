@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.Network;
+import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
@@ -646,12 +647,6 @@ public class StudyService {
         return geoDataService.getSubstationsGraphics(networkUuid, variantId, substationsIds);
     }
 
-    public String getSubstationMapData(UUID studyUuid, UUID nodeUuid, String substationId, boolean inUpstreamBuiltParentNode) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode);
-        return networkMapService.getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, self.getStudyFirstRootNetworkUuid(studyUuid)),
-                "substations", substationId);
-    }
-
     public String getNetworkElementsInfos(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, String infoType, String elementType, boolean inUpstreamBuiltParentNode, List<Double> nominalVoltages) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
@@ -692,10 +687,11 @@ public class StudyService {
         return networkMapService.getHvdcLineShuntCompensators(networkUuid, variantId, hvdcId);
     }
 
-    public String getBranchOrThreeWindingsTransformer(UUID studyUuid, UUID nodeUuid, String equipmentId) {
+    public String getBranchOr3WTVoltageLevelId(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode, String equipmentId, ThreeSides side) {
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode);
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid));
-        return networkMapService.getEquipmentMapData(networkUuid, variantId, "branch-or-3wt", equipmentId);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn, self.getStudyFirstRootNetworkUuid(studyUuid));
+        return networkMapService.getBranchOr3WTVoltageLevelId(networkUuid, variantId, equipmentId, side);
     }
 
     public String getAllMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
@@ -1270,19 +1266,14 @@ public class StudyService {
         return networkMapService.getVoltageLevelBusesOrBusbarSections(networkUuid, variantId, voltageLevelId, busPath);
     }
 
-    public List<IdentifiableInfos> getVoltageLevelBuses(UUID studyUuid, UUID nodeUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
-        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode);
-        return getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuidToSearchIn, voltageLevelId, "configured-buses");
-    }
-
     public String getVoltageLevelSubstationId(UUID studyUuid, UUID nodeUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode);
         return getVoltageLevelSubstationId(studyUuid, nodeUuidToSearchIn, voltageLevelId);
     }
 
-    public List<IdentifiableInfos> getVoltageLevelBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
+    public List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, self.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode);
-        return getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuidToSearchIn, voltageLevelId, "busbar-sections");
+        return getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuidToSearchIn, voltageLevelId, "buses-or-busbar-sections");
     }
 
     @Transactional(readOnly = true)

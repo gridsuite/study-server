@@ -11,6 +11,7 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
+import com.powsybl.iidm.network.ThreeSides;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
@@ -149,21 +150,6 @@ public class NetworkMapService {
         }
     }
 
-    public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds,
-                                       String equipmentPath) {
-        String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath;
-        UriComponentsBuilder builder = UriComponentsBuilder
-                .fromPath(path);
-        if (substationsIds != null) {
-            builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        String url = builder.buildAndExpand(networkUuid).toUriString();
-        return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
-    }
-
     public String getElementsIds(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, List<Double> nominalVoltages) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements-ids";
 
@@ -183,23 +169,34 @@ public class NetworkMapService {
         return restTemplate.postForObject(networkMapServerBaseUri + url, httpEntity, String.class);
     }
 
-    public String getEquipmentMapData(UUID networkUuid, String variantId, String equipmentPath, String equipmentId) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(
-                DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath + "/{equipmentId}");
+    public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds,
+                                       String equipmentPath) {
+        String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath;
+        UriComponentsBuilder builder = UriComponentsBuilder
+            .fromPath(path);
+        if (substationsIds != null) {
+            builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
+        }
+        if (!StringUtils.isBlank(variantId)) {
+            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        String url = builder.buildAndExpand(networkUuid).toUriString();
+        return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
+    }
+
+    public String getBranchOr3WTVoltageLevelId(UUID networkUuid, String variantId, String equipmentId, ThreeSides side) {
+        UriComponentsBuilder builder = UriComponentsBuilder
+            .fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/branch-or-3wt/{equipmentId}/voltage-level-id")
+            .queryParam(QUERY_PARAM_SIDE, side.name());
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         String path = builder.buildAndExpand(networkUuid, equipmentId).toUriString();
-
         String equipmentMapData;
         try {
             equipmentMapData = restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(EQUIPMENT_NOT_FOUND);
-            } else {
-                throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
-            }
+            throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
         }
         return equipmentMapData;
     }
