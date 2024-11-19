@@ -137,13 +137,6 @@ public final class TestUtils {
             .name(name)
             .description("")
             .modificationGroupUuid(UUID.randomUUID())
-            .variantId(UUID.randomUUID().toString())
-            .loadFlowResultUuid(UUID.randomUUID())
-            .securityAnalysisResultUuid(UUID.randomUUID())
-            .sensitivityAnalysisResultUuid(UUID.randomUUID())
-            .nonEvacuatedEnergyResultUuid(UUID.randomUUID())
-            .stateEstimationResultUuid(UUID.randomUUID())
-            .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT))
             .children(Collections.emptyList()).build();
     }
 

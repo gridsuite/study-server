@@ -35,6 +35,8 @@ import static org.gridsuite.study.server.dto.ComputationType.*;
  */
 @Service
 public class RootNetworkNodeInfoService {
+    private static final String FIRST_VARIANT_ID = "first_variant_id";
+
     private final RootNetworkRepository rootNetworkRepository;
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
@@ -278,6 +280,16 @@ public class RootNetworkNodeInfoService {
     public void assertNoRootNetworkModificationInfoIsBuilding(UUID studyUuid) {
         if (rootNetworkNodeInfoRepository.existsByStudyUuidAndBuildStatus(studyUuid, BuildStatus.BUILDING)) {
             throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
+        }
+    }
+
+    public void fillFirstRootNetworkNodeInfos(UUID studyUuid) {
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByRootNetworkStudyId(studyUuid);
+        if (rootNetworkNodeInfoEntities.size() == 1) {
+            rootNetworkNodeInfoEntities.stream().findFirst().ifPresent(rootNetworkNodeInfoEntity -> {
+                rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
+                rootNetworkNodeInfoEntity.setVariantId(FIRST_VARIANT_ID);
+            });
         }
     }
 

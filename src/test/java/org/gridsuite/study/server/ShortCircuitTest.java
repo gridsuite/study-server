@@ -22,6 +22,7 @@ import org.assertj.core.api.WithAssertions;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -147,6 +148,8 @@ class ShortCircuitTest implements WithAssertions {
     private final String shortCircuitAnalysisResultDestination = "shortcircuitanalysis.result";
     private final String shortCircuitAnalysisStoppedDestination = "shortcircuitanalysis.stopped";
     private final String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.failed";
+    @Autowired
+    private StudyService studyService;
 
     @BeforeEach
     void setup(final MockWebServer server) throws Exception {
@@ -741,6 +744,17 @@ class ShortCircuitTest implements WithAssertions {
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
+
+        // it's now not possible to create node with already defined variantId / build status since they are now set in rootNetworkNodeInfoEntity
+        // to make the test work, we need to do this this way
+        rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid)).ifPresent(
+            rootNetworkNodeInfoEntity -> {
+                rootNetworkNodeInfoEntity.setVariantId(variantId);
+                rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(buildStatus));
+                rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
+            }
+        );
+
         return modificationNode;
     }
 

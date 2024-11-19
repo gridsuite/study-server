@@ -22,6 +22,7 @@ import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -161,6 +162,8 @@ class SecurityAnalysisTest {
     private final String saFailedDestination = "sa.failed";
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    @Autowired
+    private StudyService studyService;
 
     @BeforeEach
     void setup(final MockWebServer server) throws Exception {
@@ -562,7 +565,6 @@ class SecurityAnalysisTest {
         // Only for tests
         String mnBodyJson = objectWriter.writeValueAsString(modificationNode);
         JSONObject jsonObject = new JSONObject(mnBodyJson);
-        jsonObject.put("variantId", variantId);
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
@@ -572,6 +574,17 @@ class SecurityAnalysisTest {
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
+
+        // it's now not possible to create node with already defined variantId / build status since they are now set in rootNetworkNodeInfoEntity
+        // to make the test work, we need to do this this way
+        rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid)).ifPresent(
+            rootNetworkNodeInfoEntity -> {
+                rootNetworkNodeInfoEntity.setVariantId(variantId);
+                rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(buildStatus));
+                rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
+            }
+        );
+
         return modificationNode;
     }
 

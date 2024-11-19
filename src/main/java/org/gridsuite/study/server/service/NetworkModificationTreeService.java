@@ -42,7 +42,6 @@ import static org.gridsuite.study.server.StudyException.Type.*;
 public class NetworkModificationTreeService {
 
     public static final String ROOT_NODE_NAME = "Root";
-    private static final String FIRST_VARIANT_ID = "first_variant_id";
 
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
@@ -359,10 +358,10 @@ public class NetworkModificationTreeService {
     @Transactional
     public AbstractNode getStudySubtree(UUID studyId, UUID parentNodeUuid) {
 //        TODO: not working because of proxy appearing in tests TOFIX later
-        List<UUID> nodeUuids = nodesRepository.findAllDescendants(parentNodeUuid).stream().map(UUID::fromString).toList();
-        List<NodeEntity> nodes = nodesRepository.findAllById(nodeUuids);
+//        List<UUID> nodeUuids = nodesRepository.findAllDescendants(parentNodeUuid).stream().map(UUID::fromString).toList();
+//        List<NodeEntity> nodes = nodesRepository.findAllById(nodeUuids);
 
-//        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
 
         List<AbstractNode> allNodeInfos = new ArrayList<>();
         repositories.forEach((key, repository) -> allNodeInfos.addAll(repository.getAll(
@@ -391,22 +390,10 @@ public class NetworkModificationTreeService {
         }
         UUID nextParentId;
         UUID newModificationGroupId = UUID.randomUUID();
-        UUID newReportUuid = UUID.randomUUID();
 
         if (nodeToDuplicate instanceof NetworkModificationNode model) {
             UUID modificationGroupToDuplicateId = model.getModificationGroupUuid();
             model.setModificationGroupUuid(newModificationGroupId);
-            model.setNodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
-            model.setLoadFlowResultUuid(null);
-            model.setSecurityAnalysisResultUuid(null);
-            model.setSensitivityAnalysisResultUuid(null);
-            model.setNonEvacuatedEnergyResultUuid(null);
-            model.setShortCircuitAnalysisResultUuid(null);
-            model.setOneBusShortCircuitAnalysisResultUuid(null);
-            model.setVoltageInitResultUuid(null);
-            model.setStateEstimationResultUuid(null);
-            model.setModificationReports(new HashMap<>(Map.of(model.getId(), newReportUuid)));
-            model.setComputationsReports(new HashMap<>());
             model.setName(getSuffixedNodeName(study.getId(), model.getName()));
 
             nextParentId = self.createNode(study, nodeParentId, model, InsertMode.CHILD, null).getId();
@@ -430,11 +417,12 @@ public class NetworkModificationTreeService {
         NetworkModificationNode modificationNode = NetworkModificationNode
             .builder()
             .name("N1")
-            .variantId(FIRST_VARIANT_ID)
-            .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT, BuildStatus.BUILT))
             .build();
 
         createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
+
+        // variantId and buildStatus are exceptionally set when creating first node
+        rootNetworkNodeInfoService.fillFirstRootNetworkNodeInfos(studyEntity.getId());
     }
 
     @Transactional

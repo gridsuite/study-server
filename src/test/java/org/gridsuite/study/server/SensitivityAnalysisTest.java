@@ -26,6 +26,7 @@ import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -165,6 +166,8 @@ class SensitivityAnalysisTest {
     private static final UUID SENSITIVITY_ANALYSIS_PARAMETERS_UUID = UUID.randomUUID();
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    @Autowired
+    private StudyService studyService;
 
     @BeforeEach
     void setup(final MockWebServer server) {
@@ -567,6 +570,16 @@ class SensitivityAnalysisTest {
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
+
+        // it's now not possible to create node with already defined variantId / build status since they are now set in rootNetworkNodeInfoEntity
+        // to make the test work, we need to do this this way
+        rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid)).ifPresent(
+            rootNetworkNodeInfoEntity -> {
+                rootNetworkNodeInfoEntity.setVariantId(variantId);
+                rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
+            }
+        );
+
         return modificationNode;
     }
 
