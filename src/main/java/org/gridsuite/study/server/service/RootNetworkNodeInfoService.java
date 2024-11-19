@@ -290,6 +290,8 @@ public class RootNetworkNodeInfoService {
                 rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
                 rootNetworkNodeInfoEntity.setVariantId(FIRST_VARIANT_ID);
             });
+        } else {
+            throw new StudyException(NOT_ALLOWED, "This method should be called for first network modification node only and should not be called otherwise");
         }
     }
 
