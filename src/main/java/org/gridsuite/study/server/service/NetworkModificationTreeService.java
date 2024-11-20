@@ -54,7 +54,7 @@ public class NetworkModificationTreeService {
 
     private final NetworkModificationService networkModificationService;
     private final NotificationService notificationService;
-    private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+    private final RootNetworkNodeInfoRepository coucou;
 
     private final NetworkModificationTreeService self;
     private final RootNetworkRepository rootNetworkRepository;
@@ -67,7 +67,7 @@ public class NetworkModificationTreeService {
                                           NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                                           NotificationService notificationService,
                                           NetworkModificationService networkModificationService,
-                                          RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
+                                          RootNetworkNodeInfoRepository coucou,
                                           @Lazy NetworkModificationTreeService networkModificationTreeService,
                                           RootNetworkRepository rootNetworkRepository,
                                           RootNetworkService rootNetworkService,
@@ -76,7 +76,7 @@ public class NetworkModificationTreeService {
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
         this.notificationService = notificationService;
-        this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
+        this.coucou = coucou;
         repositories.put(NodeType.ROOT, new RootNodeInfoRepositoryProxy(rootNodeInfoRepository));
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
         this.self = networkModificationTreeService;
@@ -332,7 +332,7 @@ public class NetworkModificationTreeService {
             deleteNodeInfos.addModificationGroupUuid(modificationGroupUuid);
 
             //get all rootnetworknodeinfo info linked to node
-            List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findAllByNodeInfoId(id);
+            List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntity = coucou.findAllByNodeInfoId(id);
             rootNetworkNodeInfoEntity.forEach(tpNodeinfo -> {
                 tpNodeinfo.getModificationReports().forEach((key, value) -> deleteNodeInfos.addReportUuid(value));
                 tpNodeinfo.getComputationReports().forEach((key, value) -> deleteNodeInfos.addReportUuid(value));
@@ -540,7 +540,7 @@ public class NetworkModificationTreeService {
             assertNodeNameNotExist(studyUuid, node.getName());
         }
 
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findAllByNodeInfoId(networkModificationNodeEntity.getId()).stream().findFirst().orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = coucou.findAllByNodeInfoId(networkModificationNodeEntity.getId()).stream().findFirst().orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
         if (node.getVoltageInitResultUuid() != null) {
             rootNetworkNodeInfoEntity.setVoltageInitResultUuid(node.getVoltageInitResultUuid());
         }
@@ -673,7 +673,7 @@ public class NetworkModificationTreeService {
             return "";
         }
 
-        return rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND)).getVariantId();
+        return coucou.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND)).getVariantId();
     }
 
     @Transactional(readOnly = true)
@@ -721,7 +721,7 @@ public class NetworkModificationTreeService {
                     nodesModificationInfos.add(nodeModificationInfos);
                 });
             } else {
-                rootNetworkNodeInfoRepository.findAllByNodeInfoId(n.getIdNode()).forEach(
+                coucou.findAllByNodeInfoId(n.getIdNode()).forEach(
                     tpNodeInfo -> {
                         NodeModificationInfos nodeModificationInfos = NodeModificationInfos.builder()
                             .id(n.getIdNode())
@@ -821,7 +821,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void updateComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID computationResultUuid, ComputationType computationType) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = coucou.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
         switch (computationType) {
             case LOAD_FLOW -> rootNetworkNodeInfoEntity.setLoadFlowResultUuid(computationResultUuid);
             case SECURITY_ANALYSIS -> rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(computationResultUuid);
@@ -844,7 +844,7 @@ public class NetworkModificationTreeService {
             return null;
         }
 
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = coucou.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
         return getComputationResultUuid(rootNetworkNodeInfoEntity, computationType);
     }
 
@@ -866,7 +866,7 @@ public class NetworkModificationTreeService {
     public List<UUID> getComputationResultUuids(UUID studyUuid, ComputationType computationType) {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.forEach(n -> rootNetworkNodeInfoRepository.findAllByNodeInfoId(n.getIdNode()).forEach(tpNodeInfo -> {
+        nodes.forEach(n -> coucou.findAllByNodeInfoId(n.getIdNode()).forEach(tpNodeInfo -> {
             UUID uuid = getComputationResultUuid(tpNodeInfo, computationType);
             if (uuid != null) {
                 uuids.add(uuid);
@@ -876,7 +876,7 @@ public class NetworkModificationTreeService {
     }
 
     private void getSecurityAnalysisResultUuids(UUID nodeUuid, List<UUID> uuids) {
-        rootNetworkNodeInfoRepository.findAllByNodeInfoId(nodeUuid).forEach(tpNodeInfo -> {
+        coucou.findAllByNodeInfoId(nodeUuid).forEach(tpNodeInfo -> {
             nodesRepository.findById(nodeUuid).flatMap(n -> Optional.ofNullable(getComputationResultUuid(tpNodeInfo, SECURITY_ANALYSIS))).ifPresent(uuids::add);
             nodesRepository.findAllByParentNodeIdNode(nodeUuid)
                 .forEach(child -> getSecurityAnalysisResultUuids(child.getIdNode(), uuids));
@@ -894,7 +894,7 @@ public class NetworkModificationTreeService {
     public List<UUID> getShortCircuitResultUuids(UUID studyUuid) {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.forEach(n -> rootNetworkNodeInfoRepository.findAllByNodeInfoId(n.getIdNode()).forEach(tpNodeInfo -> {
+        nodes.forEach(n -> coucou.findAllByNodeInfoId(n.getIdNode()).forEach(tpNodeInfo -> {
             // we need to check one bus and all bus
             UUID uuidOneBus = getComputationResultUuid(tpNodeInfo, SHORT_CIRCUIT_ONE_BUS);
             UUID uuidAllBus = getComputationResultUuid(tpNodeInfo, SHORT_CIRCUIT);
@@ -1045,7 +1045,7 @@ public class NetworkModificationTreeService {
         UUID childUuid = child.getIdNode();
         // No need to invalidate a node with a status different of "BUILT"
         if (self.getNodeBuildStatus(childUuid, rootNetworkEntity.getId()).isBuilt()) {
-            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(childUuid, rootNetworkEntity.getId()).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = coucou.findByNodeInfoIdAndRootNetworkId(childUuid, rootNetworkEntity.getId()).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
             fillInvalidateNodeInfos(child, rootNetworkEntity.getId(), invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, deleteVoltageInitResults);
             if (!invalidateOnlyChildrenBuildStatus) {
                 invalidateNodeBuildStatus(childUuid, rootNetworkNodeInfoEntity, changedNodes);
@@ -1089,7 +1089,7 @@ public class NetworkModificationTreeService {
     public void updateNodeBuildStatus(UUID nodeUuid, UUID rootNetworkUuid, NodeBuildStatus nodeBuildStatus) {
         List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = coucou.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
         NodeBuildStatusEmbeddable currentNodeStatus = rootNetworkNodeInfoEntity.getNodeBuildStatus();
 
