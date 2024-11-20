@@ -14,7 +14,7 @@ public class RootNetworkInfos {
 
     private List<RootNetworkNodeInfo> rootNetworkNodeInfos;
 
-    NetworkInfos networkInfos;
+    private NetworkInfos networkInfos;
 
     private CaseInfos caseInfos;
 
