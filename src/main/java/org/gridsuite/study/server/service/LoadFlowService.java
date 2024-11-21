@@ -61,7 +61,7 @@ public class LoadFlowService extends AbstractComputationService {
         this.rootNetworkService = rootNetworkService;
     }
 
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID parametersUuid, UUID reportUuid, String userId, Float limitReduction) {
+    public UUID runLoadFlow(UUID nodeUuid, UUID rootNetworkUuid, UUID parametersUuid, UUID reportUuid, String userId, Float limitReduction) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = getVariantId(nodeUuid, rootNetworkUuid);
 

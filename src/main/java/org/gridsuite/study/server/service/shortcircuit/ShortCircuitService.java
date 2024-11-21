@@ -58,7 +58,6 @@ public class ShortCircuitService extends AbstractComputationService {
     @Setter
     private String shortCircuitServerBaseUri;
 
-    private final NetworkService networkStoreService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
@@ -70,14 +69,13 @@ public class ShortCircuitService extends AbstractComputationService {
                                RestTemplate restTemplate,
                                ObjectMapper objectMapper, RootNetworkService rootNetworkService) {
         this.shortCircuitServerBaseUri = remoteServicesProperties.getServiceUri("shortcircuit-server");
-        this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.rootNetworkService = rootNetworkService;
     }
 
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String busId, Optional<UUID> parametersUuid, UUID reportUuid, String userId) {
+    public UUID runShortCircuit(UUID nodeUuid, UUID rootNetworkUuid, String busId, Optional<UUID> parametersUuid, UUID reportUuid, String userId) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = getVariantId(nodeUuid, rootNetworkUuid);
 

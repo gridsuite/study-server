@@ -232,7 +232,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
-    public List<UUID> doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
+    public List<UUID> doDeleteNode(UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
         List<UUID> removedNodes = new ArrayList<>();
         UUID studyId = self.getStudyUuidForNodeId(nodeId);
         deleteNodes(nodeId, deleteChildren, false, removedNodes, deleteNodeInfos);
@@ -242,7 +242,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
-    public void doStashNode(UUID studyUuid, UUID nodeId, boolean stashChildren) {
+    public void doStashNode(UUID nodeId, boolean stashChildren) {
         List<UUID> stashedNodes = new ArrayList<>();
         UUID studyId = self.getStudyUuidForNodeId(nodeId);
         stashNodes(nodeId, stashChildren, stashedNodes, true);
@@ -403,9 +403,7 @@ public class NetworkModificationTreeService {
             // if cloning the whole study, the root node is previously created
             nextParentId = rootId;
         }
-        nodeToDuplicate.getChildren().forEach(childToDuplicate -> {
-            self.cloneStudyTree(childToDuplicate, nextParentId, study);
-        });
+        nodeToDuplicate.getChildren().forEach(childToDuplicate -> self.cloneStudyTree(childToDuplicate, nextParentId, study));
 
         return nextParentId;
     }
@@ -851,6 +849,7 @@ public class NetworkModificationTreeService {
         }
     }
 
+    // TODO Need to deal with all root networks : use one DB request count by root network
     public long countBuiltNodes(UUID studyUuid, UUID rootNetworkUuid) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
         // perform N queries, but it's fast: 25 ms for 400 nodes

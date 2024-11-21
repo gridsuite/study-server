@@ -58,8 +58,6 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     private final DynamicSimulationClient dynamicSimulationClient;
 
-    private final NetworkService networkService;
-
     private final NetworkModificationTreeService networkModificationTreeService;
     private final RootNetworkService rootNetworkService;
 
@@ -73,7 +71,6 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         this.dynamicMappingClient = dynamicMappingClient;
         this.timeSeriesClient = timeSeriesClient;
         this.dynamicSimulationClient = dynamicSimulationClient;
-        this.networkService = networkService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkService = rootNetworkService;
     }
