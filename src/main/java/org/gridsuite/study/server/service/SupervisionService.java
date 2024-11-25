@@ -10,9 +10,6 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
-import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -31,7 +28,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
@@ -41,8 +37,6 @@ public class SupervisionService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SupervisionService.class);
     private static final String DELETION_LOG_MESSAGE = "{} results deletion for all studies : {} seconds";
-
-    private final NetworkService networkStoreService;
 
     private final StudyService studyService;
 
@@ -68,14 +62,14 @@ public class SupervisionService {
 
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
-    private final StateEstimationService stateEstimationService;
+    private final RootNetworkService rootNetworkService;
 
-    private final StudyRepository studyRepository;
+    private final StateEstimationService stateEstimationService;
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService,
-                              NetworkService networkStoreService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
+                              RootNetworkService rootNetworkService,
                               ReportService reportService,
                               LoadFlowService loadFlowService,
                               DynamicSimulationService dynamicSimulationService,
@@ -85,12 +79,11 @@ public class SupervisionService {
                               ShortCircuitService shortCircuitService,
                               VoltageInitService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
-                              StateEstimationService stateEstimationService,
-                              StudyRepository studyRepository) {
-        this.networkStoreService = networkStoreService;
+                              StateEstimationService stateEstimationService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
+        this.rootNetworkService = rootNetworkService;
         this.reportService = reportService;
         this.loadFlowService = loadFlowService;
         this.dynamicSimulationService = dynamicSimulationService;
@@ -101,7 +94,6 @@ public class SupervisionService {
         this.voltageInitService = voltageInitService;
         this.equipmentInfosService = equipmentInfosService;
         this.stateEstimationService = stateEstimationService;
-        this.studyRepository = studyRepository;
     }
 
     @Transactional
@@ -143,11 +135,11 @@ public class SupervisionService {
     }
 
     @Transactional
-    public Long deleteStudyIndexedEquipmentsAndTombstoned(UUID studyUuid) {
+    public Long deleteStudyIndexedEquipmentsAndTombstoned(UUID studyUuid, UUID rootNetworkUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
 
-        UUID networkUUID = networkStoreService.getNetworkUuid(studyUuid);
+        UUID networkUUID = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         Long nbIndexesToDelete = getStudyIndexedEquipmentsCount(networkUUID) + getStudyIndexedTombstonedEquipmentsCount(networkUUID);
         equipmentInfosService.deleteAllByNetworkUuid(networkUUID);
         studyService.updateStudyIndexationStatus(studyUuid, StudyIndexationStatus.NOT_INDEXED);
@@ -309,8 +301,11 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
-        RootNetworkEntity rootNetworkEntity = studyRepository.findById(studyUuid).map(StudyEntity::getFirstRootNetwork).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        studyService.invalidateBuild(studyUuid, rootNode.getId(), rootNetworkEntity.getId(), false, false, true);
+        //TODO: to parallelize ?
+        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
+            studyService.invalidateBuild(studyUuid, rootNode.getId(), rootNetworkEntity.getId(), false, false, true)
+        );
+
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 }

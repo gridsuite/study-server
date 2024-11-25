@@ -25,6 +25,7 @@ import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
@@ -57,27 +58,26 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     private final DynamicSimulationClient dynamicSimulationClient;
 
-    private final NetworkService networkService;
-
     private final NetworkModificationTreeService networkModificationTreeService;
+    private final RootNetworkService rootNetworkService;
 
     public DynamicSimulationServiceImpl(ObjectMapper objectMapper,
                                         DynamicMappingClient dynamicMappingClient,
                                         TimeSeriesClient timeSeriesClient,
                                         DynamicSimulationClient dynamicSimulationClient,
                                         NetworkService networkService,
-                                        NetworkModificationTreeService networkModificationTreeService) {
+                                        NetworkModificationTreeService networkModificationTreeService, RootNetworkService rootNetworkService) {
         this.objectMapper = objectMapper;
         this.dynamicMappingClient = dynamicMappingClient;
         this.timeSeriesClient = timeSeriesClient;
         this.dynamicSimulationClient = dynamicSimulationClient;
-        this.networkService = networkService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.rootNetworkService = rootNetworkService;
     }
 
     @Override
     public UUID runDynamicSimulation(String provider, UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId) {
-        UUID networkUuid = networkService.getNetworkUuid(studyUuid);
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
 
         // create receiver for getting back the notification in rabbitmq
