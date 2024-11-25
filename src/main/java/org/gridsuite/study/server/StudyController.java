@@ -335,7 +335,7 @@ public class StudyController {
                 voltageLevelId,
                 diagramParameters,
                 nodeUuid);
-        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
+        return result != null ? ResponseEntity.ok().contentType(IMAGE_SVG).body(result) :
             ResponseEntity.noContent().build();
     }
 
@@ -924,7 +924,7 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getShortCircuitParametersInfo(studyUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg", produces = IMAGE_SVG_VALUE)
     @Operation(summary = "get the substation diagram for the given network and substation")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg"),
         @ApiResponse(responseCode = "404", description = "The substation has not been found")})
@@ -949,7 +949,7 @@ public class StudyController {
                 .build();
         byte[] result = studyService.getSubstationSvg(studyUuid, substationId,
                 diagramParameters, substationLayout, nodeUuid);
-        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
+        return result != null ? ResponseEntity.ok().contentType(IMAGE_SVG).body(result) :
                 ResponseEntity.noContent().build();
     }
 

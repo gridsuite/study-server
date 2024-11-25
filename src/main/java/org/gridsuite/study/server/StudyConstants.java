@@ -6,14 +6,18 @@
  */
 package org.gridsuite.study.server;
 
+import org.springframework.http.MediaType;
+
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-
 public final class StudyConstants {
 
     private StudyConstants() {
     }
+
+    public static final String IMAGE_SVG_VALUE = "image/svg+xml";
+    public static final MediaType IMAGE_SVG = MediaType.parseMediaType(IMAGE_SVG_VALUE);
 
     public static final String CASE_API_VERSION = "v1";
     public static final String SINGLE_LINE_DIAGRAM_API_VERSION = "v1";

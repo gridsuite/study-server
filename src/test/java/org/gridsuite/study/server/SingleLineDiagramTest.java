@@ -247,7 +247,7 @@ class SingleLineDiagramTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false&language=en",
                 studyNameUserIdUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
                         status().isOk(),
-                        content().contentType(MediaType.APPLICATION_XML),
+                        content().contentType(IMAGE_SVG),
                         content().string("byte"));
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format(
@@ -258,7 +258,7 @@ class SingleLineDiagramTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false",
                 studyNameUserIdUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
                 status().isOk(),
-                content().contentType(MediaType.APPLICATION_XML),
+                content().contentType(IMAGE_SVG),
                 content().string("byte"));
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format(
@@ -310,7 +310,7 @@ class SingleLineDiagramTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false",
                         studyNameUserIdUuid, rootNodeUuid, "substationId")).andExpectAll(
                                 status().isOk(),
-                                content().contentType(MediaType.APPLICATION_XML),
+                                content().contentType(IMAGE_SVG),
                                 content().string("substation-byte"));
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format(
