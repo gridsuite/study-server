@@ -299,7 +299,7 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional
-    public void initRootNetworkNode(UUID nodeUuid, UUID rootNetworkUuid, RootNetworkNodeInfo rootNetworkNodeInfo) {
+    public void updateRootNetworkNode(UUID nodeUuid, UUID rootNetworkUuid, RootNetworkNodeInfo rootNetworkNodeInfo) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
         if (rootNetworkNodeInfo.getVariantId() != null) {
             rootNetworkNodeInfoEntity.setVariantId(rootNetworkNodeInfo.getVariantId());

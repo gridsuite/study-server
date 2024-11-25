@@ -418,7 +418,7 @@ public class NetworkModificationTreeService {
 
         NetworkModificationNode networkModificationNode = createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
 
-        rootNetworkNodeInfoService.initRootNetworkNode(networkModificationNode.getId(), studyEntity.getFirstRootNetwork().getId(),
+        rootNetworkNodeInfoService.updateRootNetworkNode(networkModificationNode.getId(), studyEntity.getFirstRootNetwork().getId(),
             RootNetworkNodeInfo.builder().variantId(FIRST_VARIANT_ID).nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
     }
 
