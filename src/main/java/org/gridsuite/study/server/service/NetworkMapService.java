@@ -19,22 +19,20 @@ import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.InfoTypeParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.HttpEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR;
-import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_OPERATION;
+import static org.gridsuite.study.server.dto.InfoTypeParameters.*;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
@@ -78,7 +76,8 @@ public class NetworkMapService {
         return restTemplate.postForObject(networkMapServerBaseUri + url, httpEntity, String.class);
     }
 
-    public String getElementInfos(UUID networkUuid, String variantId, String elementType, String infoType, String operation, double dcPowerFactor, String elementId) {
+    public String getElementInfos(UUID networkUuid, String variantId, String elementType, String infoType,
+                                  double dcPowerFactor, String hvdcType, String elementId) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements/{elementId}";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (!StringUtils.isBlank(variantId)) {
@@ -87,11 +86,8 @@ public class NetworkMapService {
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
         Map<String, String> optionalParams = new HashMap<>();
-        if (operation != null) {
-            optionalParams.put(QUERY_PARAM_OPERATION, operation);
-        }
-
         optionalParams.put(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor));
+        optionalParams.put(QUERY_PARAM_CONVERTER_STATION_TYPE, hvdcType);
         InfoTypeParameters infoTypeParameters = InfoTypeParameters.builder()
                 .optionalParameters(optionalParams)
                 .build();
