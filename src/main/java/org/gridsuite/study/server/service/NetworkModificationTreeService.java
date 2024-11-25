@@ -359,8 +359,10 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public AbstractNode getStudySubtree(UUID studyId, UUID parentNodeUuid) {
-        List<UUID> nodeUuids = nodesRepository.findAllDescendants(parentNodeUuid).stream().map(UUID::fromString).toList();
-        List<NodeEntity> nodes = nodesRepository.findAllByIdNodeIn(nodeUuids);
+//        TODO: not working because of proxy appearing in tests TOFIX later
+//        List<UUID> nodeUuids = nodesRepository.findAllDescendants(parentNodeUuid).stream().map(UUID::fromString).toList();
+//        List<NodeEntity> nodes = nodesRepository.findAllById(nodeUuids);
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
 
         List<AbstractNode> allNodeInfos = new ArrayList<>();
         repositories.forEach((key, repository) -> allNodeInfos.addAll(repository.getAll(
@@ -369,7 +371,7 @@ public class NetworkModificationTreeService {
         Map<UUID, AbstractNode> fullMap = allNodeInfos.stream().collect(Collectors.toMap(AbstractNode::getId, Function.identity()));
 
         nodes.stream()
-            .filter(n -> n.getParentNode() != null && fullMap.get(n .getParentNode().getIdNode()) != null)
+            .filter(n -> n.getParentNode() != null)
             .forEach(node -> fullMap.get(node.getParentNode().getIdNode()).getChildren().add(fullMap.get(node.getIdNode())));
         return fullMap.get(parentNodeUuid);
     }
