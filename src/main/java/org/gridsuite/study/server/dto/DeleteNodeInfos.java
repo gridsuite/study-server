@@ -24,7 +24,7 @@ public class DeleteNodeInfos {
 
     private List<UUID> reportUuids = new ArrayList<>();
 
-    private Map<UUID, List<String>> networkUuidVariantIdMap = new HashMap<>();
+    private Map<UUID, List<String>> variantIds = new HashMap<>();
 
     private List<UUID> loadFlowResultUuids = new ArrayList<>();
 
@@ -49,8 +49,8 @@ public class DeleteNodeInfos {
         reportUuids.add(reportUuid);
     }
 
-    public void addVariantIdToNetworkUuidVariantIdMap(UUID networkUuid, String variantId) {
-        networkUuidVariantIdMap.getOrDefault(networkUuid, new ArrayList<>()).add(variantId);
+    public void addVariantId(UUID networkUuid, String variantId) {
+        variantIds.getOrDefault(networkUuid, new ArrayList<>()).add(variantId);
     }
 
     public void addLoadFlowResultUuid(UUID loadFlowResultUuid) {

@@ -383,9 +383,9 @@ public class StudyService {
         if (studyCreationRequestEntity.isEmpty()) {
             List<UUID> casesToDeleteUuids = new ArrayList<>();
             List<UUID> networksToDeleteUuids = rootNetworkService.getStudyNetworkUuids(studyUuid);
-            List<RootNetworkNodeInfo> rootNetworkNodeInfos = rootNetworkNodeInfoService.getAllStudyRootNetworkNodeInfos(studyUuid).stream().map(RootNetworkNodeInfoEntity::toDto).toList();
+            List<RootNetworkNodeInfo> rootNetworkNodeInfos = rootNetworkNodeInfoService.getStudyRootNetworkNodeInfos(studyUuid).stream().map(RootNetworkNodeInfoEntity::toDto).toList();
             // get all reports related to the study
-            List<UUID> reportUuids = rootNetworkService.getAllReportUuids(studyUuid);
+            List<UUID> reportUuids = rootNetworkService.getStudyReportUuids(studyUuid);
             // get all modification groups related to the study
             List<UUID> modificationGroupUuids = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream().map(NetworkModificationNodeInfoEntity::getModificationGroupUuid).toList();
             studyEntity.ifPresent(s -> {
@@ -1489,7 +1489,7 @@ public class StudyService {
                     studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
                     studyServerExecutionService.runAsync(() -> deleteNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
                     studyServerExecutionService.runAsync(() -> deleteNodeInfos.getStateEstimationResultUuids().forEach(stateEstimationService::deleteStateEstimationResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getNetworkUuidVariantIdMap().forEach(networkStoreService::deleteVariants)),
+                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)),
                     studyServerExecutionService.runAsync(() -> removedNodes.forEach(dynamicSimulationEventService::deleteEventsByNodeId))
             );
 

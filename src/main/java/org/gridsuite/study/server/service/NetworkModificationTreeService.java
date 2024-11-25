@@ -43,6 +43,8 @@ public class NetworkModificationTreeService {
 
     public static final String ROOT_NODE_NAME = "Root";
 
+    private static final String FIRST_VARIANT_ID = "first_variant_id";
+
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
     private final NodeRepository nodesRepository;
@@ -357,11 +359,8 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public AbstractNode getStudySubtree(UUID studyId, UUID parentNodeUuid) {
-//        TODO: not working because of proxy appearing in tests TOFIX later
-//        List<UUID> nodeUuids = nodesRepository.findAllDescendants(parentNodeUuid).stream().map(UUID::fromString).toList();
-//        List<NodeEntity> nodes = nodesRepository.findAllById(nodeUuids);
-
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
+        List<UUID> nodeUuids = nodesRepository.findAllDescendants(parentNodeUuid).stream().map(UUID::fromString).toList();
+        List<NodeEntity> nodes = nodesRepository.findAllByIdNodeIn(nodeUuids);
 
         List<AbstractNode> allNodeInfos = new ArrayList<>();
         repositories.forEach((key, repository) -> allNodeInfos.addAll(repository.getAll(
@@ -370,7 +369,7 @@ public class NetworkModificationTreeService {
         Map<UUID, AbstractNode> fullMap = allNodeInfos.stream().collect(Collectors.toMap(AbstractNode::getId, Function.identity()));
 
         nodes.stream()
-            .filter(n -> n.getParentNode() != null)
+            .filter(n -> n.getParentNode() != null && fullMap.get(n .getParentNode().getIdNode()) != null)
             .forEach(node -> fullMap.get(node.getParentNode().getIdNode()).getChildren().add(fullMap.get(node.getIdNode())));
         return fullMap.get(parentNodeUuid);
     }
@@ -417,10 +416,10 @@ public class NetworkModificationTreeService {
             .name("N1")
             .build();
 
-        createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
+        NetworkModificationNode networkModificationNode = createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
 
-        // variantId and buildStatus are exceptionally set when creating first node
-        rootNetworkNodeInfoService.fillFirstRootNetworkNodeInfos(studyEntity.getId());
+        rootNetworkNodeInfoService.initRootNetworkNode(networkModificationNode.getId(), studyEntity.getFirstRootNetwork().getId(),
+            RootNetworkNodeInfo.builder().variantId(FIRST_VARIANT_ID).nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
     }
 
     @Transactional

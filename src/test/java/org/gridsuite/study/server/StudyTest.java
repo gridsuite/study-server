@@ -39,9 +39,7 @@ import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -94,8 +92,8 @@ import java.util.stream.Stream;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.ROOTNETWORK_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.DEFAULT_ERROR_MESSAGE;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
@@ -278,6 +276,8 @@ class StudyTest {
     private RootNetworkRepository rootNetworkRepository;
     @Autowired
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+    @Autowired
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     private static EquipmentInfos toEquipmentInfos(Line line) {
         return EquipmentInfos.builder()
@@ -771,9 +771,8 @@ class StudyTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM"))
             .andExpect(status().isInternalServerError());
 
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1.getId(), studyService.getStudyFirstRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
-        rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
-        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
+        rootNetworkNodeInfoService.initRootNetworkNode(modificationNode1.getId(), studyService.getStudyFirstRootNetworkUuid(studyNameUserIdUuid),
+            RootNetworkNodeInfo.builder().nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
                         studyNameUserIdUuid,
@@ -1034,15 +1033,8 @@ class StudyTest {
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        // it's now not possible to create node with already defined variantId / build status since they are now set in rootNetworkNodeInfoEntity
-        // to make the test work, we need to do this this way
-        rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid)).ifPresent(
-            rootNetworkNodeInfoEntity -> {
-                rootNetworkNodeInfoEntity.setVariantId(variantId);
-                rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(buildStatus));
-                rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
-            }
-        );
+        rootNetworkNodeInfoService.initRootNetworkNode(modificationNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid),
+            RootNetworkNodeInfo.builder().variantId(variantId).nodeBuildStatus(NodeBuildStatus.from(buildStatus)).build());
 
         return modificationNode;
     }
@@ -1471,15 +1463,17 @@ class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
 
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(node2.getId(), studyService.getStudyFirstRootNetworkUuid(study1Uuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
-        rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoEntity.setVoltageInitResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoEntity.setStateEstimationResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
+        rootNetworkNodeInfoService.initRootNetworkNode(node2.getId(), studyService.getStudyFirstRootNetworkUuid(study1Uuid),
+            RootNetworkNodeInfo.builder()
+                .securityAnalysisResultUuid(UUID.randomUUID())
+                .sensitivityAnalysisResultUuid(UUID.randomUUID())
+                .shortCircuitAnalysisResultUuid(UUID.randomUUID())
+                .oneBusShortCircuitAnalysisResultUuid(UUID.randomUUID())
+                .dynamicSimulationResultUuid(UUID.randomUUID())
+                .voltageInitResultUuid(UUID.randomUUID())
+                .stateEstimationResultUuid(UUID.randomUUID())
+                .build()
+        );
 
         // duplicate the study
         StudyEntity duplicatedStudy = duplicateStudy(mockWebServer, study1Uuid);
@@ -1703,11 +1697,13 @@ class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPost(stubUuid, createLoadAttributes, NETWORK_UUID_STRING);
 
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(node2.getId(), studyService.getStudyFirstRootNetworkUuid(study1Uuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
-        rootNetworkNodeInfoEntity.setLoadFlowResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoEntity.setStateEstimationResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
+        rootNetworkNodeInfoService.initRootNetworkNode(node2.getId(), studyService.getStudyFirstRootNetworkUuid(study1Uuid),
+            RootNetworkNodeInfo.builder()
+                .loadFlowResultUuid(UUID.randomUUID())
+                .securityAnalysisResultUuid(UUID.randomUUID())
+                .stateEstimationResultUuid(UUID.randomUUID())
+                .build()
+        );
 
         // node2 should not have any child
         List<NodeEntity> allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
@@ -2027,11 +2023,13 @@ class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
 
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(node2.getId(), studyService.getStudyFirstRootNetworkUuid(study1Uuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
-        rootNetworkNodeInfoEntity.setLoadFlowResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoEntity.setStateEstimationResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
+        rootNetworkNodeInfoService.initRootNetworkNode(node2.getId(), studyService.getStudyFirstRootNetworkUuid(study1Uuid),
+            RootNetworkNodeInfo.builder()
+                .loadFlowResultUuid(UUID.randomUUID())
+                .securityAnalysisResultUuid(UUID.randomUUID())
+                .stateEstimationResultUuid(UUID.randomUUID())
+                .build()
+        );
 
         //node2 should not have any child
         List<NodeEntity> allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
@@ -2154,12 +2152,14 @@ class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
 
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(node2.getId(), rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
-        rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
-        rootNetworkNodeInfoEntity.setLoadFlowResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoEntity.setStateEstimationResultUuid(UUID.randomUUID());
-        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
+        rootNetworkNodeInfoService.initRootNetworkNode(node2.getId(), rootNetworkUuid,
+            RootNetworkNodeInfo.builder()
+                .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT))
+                .loadFlowResultUuid(UUID.randomUUID())
+                .securityAnalysisResultUuid(UUID.randomUUID())
+                .stateEstimationResultUuid(UUID.randomUUID())
+                .build()
+        );
 
         //node 4 should not have any children
         List<NodeEntity> allNodes = networkModificationTreeService.getAllNodes(study1Uuid);

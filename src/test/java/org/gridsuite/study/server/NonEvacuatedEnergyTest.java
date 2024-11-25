@@ -22,6 +22,7 @@ import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
 import org.gridsuite.study.server.dto.sensianalysis.EquipmentsContainer;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -524,14 +525,8 @@ class NonEvacuatedEnergyTest {
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        // it's now not possible to create node with already defined variantId / build status since they are now set in rootNetworkNodeInfoEntity
-        // to make the test work, we need to do this this way
-        rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid)).ifPresent(
-            rootNetworkNodeInfoEntity -> {
-                rootNetworkNodeInfoEntity.setVariantId(variantId);
-                rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
-            }
-        );
+        rootNetworkNodeInfoService.initRootNetworkNode(modificationNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid),
+            RootNetworkNodeInfo.builder().variantId(variantId).build());
 
         return modificationNode;
     }

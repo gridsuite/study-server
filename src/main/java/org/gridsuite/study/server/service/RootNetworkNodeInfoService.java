@@ -12,6 +12,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.DeleteNodeInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeInfos;
+import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
@@ -35,8 +36,6 @@ import static org.gridsuite.study.server.dto.ComputationType.*;
  */
 @Service
 public class RootNetworkNodeInfoService {
-    private static final String FIRST_VARIANT_ID = "first_variant_id";
-
     private final RootNetworkRepository rootNetworkRepository;
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
@@ -55,7 +54,6 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    // TODO create a DTO RootNetworkNodeInfo
     public void createNodeLinks(@NonNull UUID studyUuid, @NonNull NetworkModificationNodeInfoEntity modificationNodeInfoEntity) {
         // For each root network create a link with the node
         rootNetworkRepository.findAllByStudyId(studyUuid).forEach(rootNetworkEntity -> {
@@ -64,11 +62,11 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    private RootNetworkNodeInfoEntity createDefaultEntity(UUID linkedNodeUuid) {
+    private static RootNetworkNodeInfoEntity createDefaultEntity(UUID nodeUuid) {
         return RootNetworkNodeInfoEntity.builder()
             .nodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT))
             .variantId(UUID.randomUUID().toString())
-            .modificationReports(new HashMap<>(Map.of(linkedNodeUuid, UUID.randomUUID())))
+            .modificationReports(new HashMap<>(Map.of(nodeUuid, UUID.randomUUID())))
             .build();
     }
 
@@ -101,7 +99,7 @@ public class RootNetworkNodeInfoService {
             String variantId = rootNetworkNodeInfoEntity.getVariantId();
             UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
             if (!StringUtils.isBlank(variantId)) {
-                deleteNodeInfos.addVariantIdToNetworkUuidVariantIdMap(networkUuid, variantId);
+                deleteNodeInfos.addVariantId(networkUuid, variantId);
             }
 
             UUID loadFlowResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, LOAD_FLOW);
@@ -184,7 +182,7 @@ public class RootNetworkNodeInfoService {
         }
     }
 
-    public void fillInvalidateNodeInfos(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
+    private void fillInvalidateNodeInfos(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
                                          boolean deleteVoltageInitResults) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
         if (!invalidateOnlyChildrenBuildStatus) {
@@ -252,7 +250,7 @@ public class RootNetworkNodeInfoService {
         return getComputationResultUuid(rootNetworkNodeInfoEntity, computationType);
     }
 
-    public UUID getComputationResultUuid(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, ComputationType computationType) {
+    private static UUID getComputationResultUuid(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, ComputationType computationType) {
         return switch (computationType) {
             case LOAD_FLOW -> rootNetworkNodeInfoEntity.getLoadFlowResultUuid();
             case SECURITY_ANALYSIS -> rootNetworkNodeInfoEntity.getSecurityAnalysisResultUuid();
@@ -273,7 +271,7 @@ public class RootNetworkNodeInfoService {
             .toList();
     }
 
-    public List<RootNetworkNodeInfoEntity> getAllStudyRootNetworkNodeInfos(UUID studyUuid) {
+    public List<RootNetworkNodeInfoEntity> getStudyRootNetworkNodeInfos(UUID studyUuid) {
         return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyId(studyUuid);
     }
 
@@ -283,25 +281,13 @@ public class RootNetworkNodeInfoService {
         }
     }
 
-    public void fillFirstRootNetworkNodeInfos(UUID studyUuid) {
-        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByRootNetworkStudyId(studyUuid);
-        if (rootNetworkNodeInfoEntities.size() == 1) {
-            rootNetworkNodeInfoEntities.stream().findFirst().ifPresent(rootNetworkNodeInfoEntity -> {
-                rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
-                rootNetworkNodeInfoEntity.setVariantId(FIRST_VARIANT_ID);
-            });
-        } else {
-            throw new StudyException(NOT_ALLOWED, "This method should be called for first network modification node only and should not be called otherwise");
-        }
-    }
-
     private void addLink(NetworkModificationNodeInfoEntity nodeInfoEntity, RootNetworkEntity rootNetworkEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         nodeInfoEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
     }
 
-    private void invalidateRootNetworkNodeInfoBuildStatus(UUID nodeUuid, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, List<UUID> changedNodes) {
+    private static void invalidateRootNetworkNodeInfoBuildStatus(UUID nodeUuid, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, List<UUID> changedNodes) {
         if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
             return;
         }
@@ -310,5 +296,40 @@ public class RootNetworkNodeInfoService {
         rootNetworkNodeInfoEntity.setVariantId(UUID.randomUUID().toString());
         rootNetworkNodeInfoEntity.setModificationReports(new HashMap<>(Map.of(nodeUuid, UUID.randomUUID())));
         changedNodes.add(nodeUuid);
+    }
+
+    @Transactional
+    public void initRootNetworkNode(UUID nodeUuid, UUID rootNetworkUuid, RootNetworkNodeInfo rootNetworkNodeInfo) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+        if (rootNetworkNodeInfo.getVariantId() != null) {
+            rootNetworkNodeInfoEntity.setVariantId(rootNetworkNodeInfo.getVariantId());
+        }
+        if (rootNetworkNodeInfo.getNodeBuildStatus() != null) {
+            rootNetworkNodeInfoEntity.setNodeBuildStatus(rootNetworkNodeInfo.getNodeBuildStatus().toEntity());
+        }
+        if (rootNetworkNodeInfo.getLoadFlowResultUuid() != null) {
+            rootNetworkNodeInfoEntity.setLoadFlowResultUuid(rootNetworkNodeInfo.getLoadFlowResultUuid());
+        }
+        if (rootNetworkNodeInfo.getSecurityAnalysisResultUuid() != null) {
+            rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(rootNetworkNodeInfo.getSecurityAnalysisResultUuid());
+        }
+        if (rootNetworkNodeInfo.getSensitivityAnalysisResultUuid() != null) {
+            rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(rootNetworkNodeInfo.getSensitivityAnalysisResultUuid());
+        }
+        if (rootNetworkNodeInfo.getNonEvacuatedEnergyResultUuid() != null) {
+            rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(rootNetworkNodeInfo.getNonEvacuatedEnergyResultUuid());
+        }
+        if (rootNetworkNodeInfo.getShortCircuitAnalysisResultUuid() != null) {
+            rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(rootNetworkNodeInfo.getShortCircuitAnalysisResultUuid());
+        }
+        if (rootNetworkNodeInfo.getOneBusShortCircuitAnalysisResultUuid() != null) {
+            rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(rootNetworkNodeInfo.getOneBusShortCircuitAnalysisResultUuid());
+        }
+        if (rootNetworkNodeInfo.getStateEstimationResultUuid() != null) {
+            rootNetworkNodeInfoEntity.setStateEstimationResultUuid(rootNetworkNodeInfo.getStateEstimationResultUuid());
+        }
+        if (rootNetworkNodeInfo.getDynamicSimulationResultUuid() != null) {
+            rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(rootNetworkNodeInfo.getDynamicSimulationResultUuid());
+        }
     }
 }

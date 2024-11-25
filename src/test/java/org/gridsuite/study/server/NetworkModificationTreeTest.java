@@ -28,16 +28,20 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
+import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
@@ -185,6 +189,8 @@ class NetworkModificationTreeTest {
 
     @Autowired
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+    @Autowired
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
     @Autowired
@@ -807,7 +813,7 @@ class NetworkModificationTreeTest {
         assertNotNull(networkModificationTreeService.getReportUuid(nodeUuid, rootNetworkUuid));
         assertFalse(networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid).isEmpty());
 
-        assertEquals(4, rootNetworkService.getAllReportUuids(root.getStudyId()).stream().filter(Objects::nonNull).toList().size());
+        assertEquals(4, rootNetworkService.getStudyReportUuids(root.getStudyId()).stream().filter(Objects::nonNull).toList().size());
     }
 
     @Test
@@ -982,23 +988,19 @@ class NetworkModificationTreeTest {
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        // it's now not possible to create node with already defined variantId / build status since they are now set in rootNetworkNodeInfoEntity
-        // to make the test work, we need to do this this way
-        rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(newNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid)).ifPresent(
-            rootNetworkNodeInfoEntity -> {
-                rootNetworkNodeInfoEntity.setVariantId(newNode.getVariantId());
-                rootNetworkNodeInfoEntity.setNodeBuildStatus(newNode.getNodeBuildStatus().toEntity());
-                rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(newNode.getDynamicSimulationResultUuid());
-                rootNetworkNodeInfoEntity.setLoadFlowResultUuid(newNode.getLoadFlowResultUuid());
-                rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(newNode.getSecurityAnalysisResultUuid());
-                rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(newNode.getSensitivityAnalysisResultUuid());
-                rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(newNode.getNonEvacuatedEnergyResultUuid());
-                rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(newNode.getShortCircuitAnalysisResultUuid());
-                rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(newNode.getOneBusShortCircuitAnalysisResultUuid());
-                rootNetworkNodeInfoEntity.setStateEstimationResultUuid(newNode.getStateEstimationResultUuid());
-
-                rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
-            }
+        rootNetworkNodeInfoService.initRootNetworkNode(newNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid),
+            RootNetworkNodeInfo.builder()
+                .variantId(newNode.getVariantId())
+                .nodeBuildStatus(newNode.getNodeBuildStatus())
+                .dynamicSimulationResultUuid(newNode.getDynamicSimulationResultUuid())
+                .loadFlowResultUuid(newNode.getLoadFlowResultUuid())
+                .securityAnalysisResultUuid(newNode.getSecurityAnalysisResultUuid())
+                .sensitivityAnalysisResultUuid(newNode.getSensitivityAnalysisResultUuid())
+                .nonEvacuatedEnergyResultUuid(newNode.getNonEvacuatedEnergyResultUuid())
+                .shortCircuitAnalysisResultUuid(newNode.getShortCircuitAnalysisResultUuid())
+                .oneBusShortCircuitAnalysisResultUuid(newNode.getOneBusShortCircuitAnalysisResultUuid())
+                .stateEstimationResultUuid(newNode.getStateEstimationResultUuid())
+                .build()
         );
     }
 
@@ -1030,15 +1032,8 @@ class NetworkModificationTreeTest {
 
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
 
-        // it's now not possible to create node with already defined variantId / build status since they are now set in rootNetworkNodeInfoEntity
-        // to make the test work, we need to do this this way
-        rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(newNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid)).ifPresent(
-            rootNetworkNodeInfoEntity -> {
-                rootNetworkNodeInfoEntity.setVariantId(variantId);
-                rootNetworkNodeInfoEntity.setNodeBuildStatus(newNode.getNodeBuildStatus().toEntity());
-                rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
-            }
-        );
+        rootNetworkNodeInfoService.initRootNetworkNode(newNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid),
+            RootNetworkNodeInfo.builder().variantId(variantId).nodeBuildStatus(newNode.getNodeBuildStatus()).build());
     }
 
     @NotNull
