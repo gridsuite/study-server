@@ -28,20 +28,20 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
-import org.gridsuite.study.server.dto.NodeModificationInfos;
+import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
@@ -190,7 +190,13 @@ class NetworkModificationTreeTest {
     @Autowired
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     @Autowired
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    @Autowired
     private RootNetworkRepository rootNetworkRepository;
+    @Autowired
+    private RootNetworkService rootNetworkService;
+    @Autowired
+    private StudyService studyService;
 
     @BeforeEach
     void setUp(final MockWebServer server) {
@@ -807,7 +813,7 @@ class NetworkModificationTreeTest {
         assertNotNull(networkModificationTreeService.getReportUuid(nodeUuid, rootNetworkUuid));
         assertFalse(networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid).isEmpty());
 
-        assertEquals(4, networkModificationTreeService.getAllNodesModificationInfos(root.getStudyId()).stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).collect(Collectors.toList()).size());
+        assertEquals(4, rootNetworkService.getStudyReportUuids(root.getStudyId()).stream().filter(Objects::nonNull).toList().size());
     }
 
     @Test
@@ -965,11 +971,9 @@ class NetworkModificationTreeTest {
         newNode.setId(null);
 
         // Only for tests. Need to remove when all tests are rewritten without the variantID to identify a test in the MockWebServer
-        String variantId = newNode.getVariantId();
         UUID modificationGroupUuid = newNode.getModificationGroupUuid();
         String newNodeBodyJson = objectWriter.writeValueAsString(newNode);
         JSONObject jsonObject = new JSONObject(newNodeBodyJson);
-        jsonObject.put("variantId", variantId);
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         newNodeBodyJson = jsonObject.toString();
 
@@ -983,6 +987,21 @@ class NetworkModificationTreeTest {
         assertNotNull(mess);
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
+
+        rootNetworkNodeInfoService.updateRootNetworkNode(newNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid),
+            RootNetworkNodeInfo.builder()
+                .variantId(newNode.getVariantId())
+                .nodeBuildStatus(newNode.getNodeBuildStatus())
+                .dynamicSimulationResultUuid(newNode.getDynamicSimulationResultUuid())
+                .loadFlowResultUuid(newNode.getLoadFlowResultUuid())
+                .securityAnalysisResultUuid(newNode.getSecurityAnalysisResultUuid())
+                .sensitivityAnalysisResultUuid(newNode.getSensitivityAnalysisResultUuid())
+                .nonEvacuatedEnergyResultUuid(newNode.getNonEvacuatedEnergyResultUuid())
+                .shortCircuitAnalysisResultUuid(newNode.getShortCircuitAnalysisResultUuid())
+                .oneBusShortCircuitAnalysisResultUuid(newNode.getOneBusShortCircuitAnalysisResultUuid())
+                .stateEstimationResultUuid(newNode.getStateEstimationResultUuid())
+                .build()
+        );
     }
 
     private void insertNode(UUID studyUuid, AbstractNode parentNode, NetworkModificationNode newNode, InsertMode mode, AbstractNode newParentNode, String userId) throws Exception {
@@ -1012,6 +1031,9 @@ class NetworkModificationTreeTest {
         assertEquals(parentNode.getId(), mess.getHeaders().get(NotificationService.HEADER_REFERENCE_NODE_UUID));
 
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
+
+        rootNetworkNodeInfoService.updateRootNetworkNode(newNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid),
+            RootNetworkNodeInfo.builder().variantId(variantId).nodeBuildStatus(newNode.getNodeBuildStatus()).build());
     }
 
     @NotNull

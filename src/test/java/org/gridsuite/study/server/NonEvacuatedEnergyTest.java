@@ -22,6 +22,7 @@ import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
 import org.gridsuite.study.server.dto.sensianalysis.EquipmentsContainer;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -30,8 +31,8 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -154,6 +155,10 @@ class NonEvacuatedEnergyTest {
     private static final String NON_EVACUATED_ENERGY_RESULT_DESTINATION = "nonEvacuatedEnergy.result";
     private static final String NON_EVACUATED_ENERGY_STOPPED_DESTINATION = "nonEvacuatedEnergy.stopped";
     private static final String NON_EVACUATED_ENERGY_FAILED_DESTINATION = "nonEvacuatedEnergy.failed";
+    @Autowired
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    @Autowired
+    private StudyService studyService;
 
     @BeforeEach
     void setup(final MockWebServer server) {
@@ -384,7 +389,7 @@ class NonEvacuatedEnergyTest {
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNodeUuid = modificationNode1.getId();
-        networkModificationTreeService.updateComputationResultUuid(modificationNodeUuid, rootNetworkUuid, notFoundSensitivityUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        rootNetworkNodeInfoService.updateComputationResultUuid(modificationNodeUuid, rootNetworkUuid, notFoundSensitivityUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
         assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS));
         assertEquals(notFoundSensitivityUuid, networkModificationTreeService.getComputationResultUuid(modificationNodeUuid, rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS));
 
@@ -406,7 +411,7 @@ class NonEvacuatedEnergyTest {
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), rootNetworkUuid));
 
         // Set an uuid result in the database
-        networkModificationTreeService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        rootNetworkNodeInfoService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
         assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS));
         assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS));
 
@@ -414,8 +419,8 @@ class NonEvacuatedEnergyTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), NON_EVACUATED_ENERGY_FAILED_DESTINATION);
             return resultUuid;
-        }).when(studyService).runNonEvacuatedEnergy(any(), any(), any());
-        studyService.runNonEvacuatedEnergy(studyEntity.getId(), modificationNode.getId(), "userId");
+        }).when(studyService).runNonEvacuatedEnergy(any(), any(), any(), any());
+        studyService.runNonEvacuatedEnergy(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "userId");
 
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -519,6 +524,10 @@ class NonEvacuatedEnergyTest {
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
+
+        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid),
+            RootNetworkNodeInfo.builder().variantId(variantId).build());
+
         return modificationNode;
     }
 

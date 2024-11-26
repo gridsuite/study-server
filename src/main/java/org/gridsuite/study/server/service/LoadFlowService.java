@@ -42,26 +42,27 @@ public class LoadFlowService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
-    private final NetworkService networkStoreService;
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
     private final NetworkModificationTreeService networkModificationTreeService;
+    private final RootNetworkService rootNetworkService;
     private String loadFlowServerBaseUri;
 
     @Autowired
     public LoadFlowService(RemoteServicesProperties remoteServicesProperties,
                            NetworkModificationTreeService networkModificationTreeService,
-                           NetworkService networkStoreService, ObjectMapper objectMapper,
-                           RestTemplate restTemplate) {
+                           ObjectMapper objectMapper,
+                           RestTemplate restTemplate,
+                           RootNetworkService rootNetworkService) {
         this.loadFlowServerBaseUri = remoteServicesProperties.getServiceUri("loadflow-server");
-        this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;
+        this.rootNetworkService = rootNetworkService;
     }
 
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID parametersUuid, UUID reportUuid, String userId, Float limitReduction) {
-        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+    public UUID runLoadFlow(UUID nodeUuid, UUID rootNetworkUuid, UUID parametersUuid, UUID reportUuid, String userId, Float limitReduction) {
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = getVariantId(nodeUuid, rootNetworkUuid);
 
         String receiver;

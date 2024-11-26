@@ -6,14 +6,18 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.powsybl.iidm.network.Network;
+import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
+import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +25,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -28,45 +33,51 @@ import java.util.stream.Stream;
  */
 @Service
 public class RootNetworkService {
-    private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     private final RootNetworkRepository rootNetworkRepository;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final NetworkService networkService;
+    private final CaseService caseService;
 
-    public RootNetworkService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository, RootNetworkRepository rootNetworkRepository,
-                              RootNetworkNodeInfoService rootNetworkNodeInfoService) {
-        this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
+    private final RootNetworkService self;
+
+    public RootNetworkService(RootNetworkRepository rootNetworkRepository,
+                              RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                              NetworkService networkService,
+                              CaseService caseService,
+                              @Lazy RootNetworkService self) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.networkService = networkService;
+        this.caseService = caseService;
+        this.self = self;
     }
 
     public UUID getNetworkUuid(UUID rootNetworkUuid) {
-        return rootNetworkRepository.findById(rootNetworkUuid).map(RootNetworkEntity::getNetworkUuid).orElse(null);
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getNetworkUuid).orElse(null);
+    }
+
+    public UUID getRootReportUuid(UUID rootNetworkUuid) {
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getReportUuid).orElse(null);
+    }
+
+    public boolean exists(UUID rootNetworkUuid) {
+        return rootNetworkRepository.existsById(rootNetworkUuid);
     }
 
     @Transactional
-    public void createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull NetworkInfos networkInfos, @NonNull CaseInfos caseInfos, @NonNull UUID importReportUuid) {
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(RootNetworkEntity.builder()
-                .networkUuid(networkInfos.getNetworkUuid())
-                .networkId(networkInfos.getNetworkId())
-                .caseFormat(caseInfos.getCaseFormat())
-                .caseUuid(caseInfos.getCaseUuid())
-                .caseName(caseInfos.getCaseName())
-                .reportUuid(importReportUuid)
-                .build()
-        );
+    public RootNetworkEntity createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
+        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
 
         studyEntity.addRootNetwork(rootNetworkEntity);
 
         rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity);
-    }
 
-    // TODO move to RootNetworkNodeLinkService
-    public Optional<RootNetworkNodeInfoEntity> getRootNetworkNodeInfo(UUID nodeUuid, UUID rootNetworkUuid) {
-        return rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid);
+        return rootNetworkEntity;
     }
 
     // TODO move to study service
-    public List<UUID> getAllReportUuids(UUID studyUuid) {
+    @Transactional
+    public List<UUID> getStudyReportUuids(UUID studyUuid) {
         List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllWithInfosByStudyId(studyUuid);
         List<UUID> rootNodeReportUuids = rootNetworkEntities.stream().map(RootNetworkEntity::getReportUuid).toList();
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkEntities.stream().flatMap(rootNetworkEntity -> rootNetworkEntity.getRootNetworkNodeInfos().stream()).toList();
@@ -81,5 +92,61 @@ public class RootNetworkService {
             .orElse(Stream.empty()).toList();
 
         return Stream.concat(rootNodeReportUuids.stream(), networkModificationNodeReportUuids.stream()).toList();
+    }
+
+    public List<UUID> getAllNetworkUuids() {
+        return rootNetworkRepository.findAll().stream().map(RootNetworkEntity::getNetworkUuid).toList();
+    }
+
+    public Optional<RootNetworkEntity> getRootNetwork(UUID rootNetworkUuid) {
+        return rootNetworkRepository.findById(rootNetworkUuid);
+    }
+
+    public String getCaseName(UUID rootNetworkUuid) {
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getCaseName).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+    }
+
+    public List<UUID> getStudyCaseUuids(UUID studyUuid) {
+        return getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::getCaseUuid).toList();
+    }
+
+    public List<UUID> getStudyNetworkUuids(UUID studyUuid) {
+        return getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::getNetworkUuid).toList();
+    }
+
+    public List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
+        return rootNetworkRepository.findAllByStudyId(studyUuid);
+    }
+
+    @Transactional
+    public void updateStudyEntityNetwork(RootNetworkEntity rootNetworkEntity, NetworkInfos networkInfos) {
+        if (networkInfos != null) {
+            rootNetworkEntity.setNetworkId(networkInfos.getNetworkId());
+            rootNetworkEntity.setNetworkUuid(networkInfos.getNetworkUuid());
+
+            rootNetworkRepository.save(rootNetworkEntity);
+        }
+    }
+
+    @Transactional
+    public void duplicateStudyRootNetworks(StudyEntity newStudyEntity, UUID sourceStudyUuid) {
+        List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllWithInfosByStudyId(sourceStudyUuid);
+        rootNetworkEntities.forEach(rootNetworkEntityToDuplicate -> {
+                List<VariantInfos> networkVariants = networkService.getNetworkVariants(rootNetworkEntityToDuplicate.getNetworkUuid());
+                List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(2).collect(Collectors.toList());
+                Network clonedNetwork = networkService.cloneNetwork(rootNetworkEntityToDuplicate.getNetworkUuid(), targetVariantIds);
+                UUID clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
+
+                UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkEntityToDuplicate.getCaseUuid(), false);
+
+                self.createRootNetwork(newStudyEntity,
+                    RootNetworkInfos.builder()
+                        .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getCaseName(), rootNetworkEntityToDuplicate.getCaseFormat()))
+                        .networkInfos(new NetworkInfos(clonedNetworkUuid, rootNetworkEntityToDuplicate.getNetworkId()))
+                        .reportUuid(UUID.randomUUID())
+                        .build()
+                );
+            }
+        );
     }
 }

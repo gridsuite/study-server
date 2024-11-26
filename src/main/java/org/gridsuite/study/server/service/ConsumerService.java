@@ -67,6 +67,7 @@ public class ConsumerService {
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyRepository studyRepository;
     private final ShortCircuitService shortCircuitService;
+    private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -79,7 +80,7 @@ public class ConsumerService {
                            UserAdminService userAdminService,
                            NetworkModificationTreeService networkModificationTreeService,
                            SensitivityAnalysisService sensitivityAnalysisService,
-                           StudyRepository studyRepository) {
+                           StudyRepository studyRepository, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -91,6 +92,7 @@ public class ConsumerService {
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.studyRepository = studyRepository;
         this.shortCircuitService = shortCircuitService;
+        this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
 
     @Bean
@@ -166,6 +168,7 @@ public class ConsumerService {
         };
     }
 
+    //TODO: should be linked to a specific rootNetwork
     @Bean
     public Consumer<Message<String>> consumeCaseImportSucceeded() {
         return message -> {
@@ -330,7 +333,7 @@ public class ConsumerService {
 
                 // delete computation results from the databases
                 // ==> will probably be removed soon because it prevents the front from recovering the resultId ; or 'null' parameter will be replaced by null like in VOLTAGE_INITIALIZATION
-                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
+                rootNetworkNodeInfoService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notification for failed computation
@@ -354,7 +357,7 @@ public class ConsumerService {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
                 // delete computation results from the database
-                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), null, computationType);
+                rootNetworkNodeInfoService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), null, computationType);
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notification for stopped computation
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateStatusType());
@@ -400,7 +403,7 @@ public class ConsumerService {
                     receiverObj.getNodeUuid());
 
                 // update DB
-                networkModificationTreeService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
+                rootNetworkNodeInfoService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notifications

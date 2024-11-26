@@ -97,7 +97,7 @@ public class SupervisionController {
     @Operation(summary = "delete indexed equipments and tombstoned equipments for the given study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed equipments and tombstoned equipments for the given study have been deleted")})
     public ResponseEntity<String> deleteStudyIndexedEquipmentsAndTombstoned(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.deleteStudyIndexedEquipmentsAndTombstoned(studyUuid)));
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.deleteStudyIndexedEquipmentsAndTombstoned(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid))));
     }
 
     @GetMapping(value = "/orphan_indexed_network_uuids")
