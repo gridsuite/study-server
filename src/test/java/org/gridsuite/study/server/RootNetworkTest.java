@@ -5,8 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
+import org.gridsuite.study.server.dto.RootNetworkCreationRequestInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.CaseService;
 import org.gridsuite.study.server.service.ConsumerService;
@@ -35,6 +38,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.gridsuite.study.server.StudyConstants.HEADER_IMPORT_PARAMETERS;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -43,6 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
 public class RootNetworkTest {
+    private static final String USER_ID = "userId";
     // 1st root network
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID CASE_UUID = UUID.randomUUID();
@@ -80,6 +85,8 @@ public class RootNetworkTest {
     private StudyRepository studyRepository;
     @Autowired
     private RootNetworkService rootNetworkService;
+    @Autowired
+    private RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -94,9 +101,11 @@ public class RootNetworkTest {
 
     @Test
     void testCreateRootNetworkRequest() throws Exception {
+        // create study with first root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
 
+        // prepare headers for 2nd root network creation request
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
         Map<String, String> importParameters = new HashMap<>();
@@ -105,11 +114,14 @@ public class RootNetworkTest {
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
             .willReturn(WireMock.ok())).getId();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}", studyEntity.getId(), caseUuid, caseFormat)
-                .header("userId", "userId")
+        // request execution - returns RootNetworkCreationRequestInfos
+        String response = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}", studyEntity.getId(), caseUuid, caseFormat)
+                .header("userId", USER_ID)
                 .header("content-type", "application/json")
                 .content(objectMapper.writeValueAsString(importParameters)))
-            .andExpect(status().isOk());
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        RootNetworkCreationRequestInfos result = objectMapper.readValue(response, RootNetworkCreationRequestInfos.class);
 
         wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
             false,
@@ -118,6 +130,11 @@ public class RootNetworkTest {
                 "receiver", WireMock.matching(".*rootNetworkUuid.*")),
                 objectMapper.writeValueAsString(importParameters)
         );
+
+        // check result values and check it has been saved in database
+        assertEquals(USER_ID, result.getUserId());
+        assertEquals(studyEntity.getId(), result.getStudyUuid());
+        assertNotNull(rootNetworkCreationRequestRepository.findById(result.getId()));
     }
 
     @Test
@@ -128,6 +145,9 @@ public class RootNetworkTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}", UUID.randomUUID(), caseUuid, caseFormat)
                 .header("userId", "userId"))
             .andExpect(status().isNotFound());
+
+        // check no rootNetworkCreationRequest has been saved
+        assertEquals(0, rootNetworkCreationRequestRepository.count());
     }
 
     @Test

@@ -15,6 +15,8 @@ import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.springframework.context.annotation.Lazy;
@@ -36,17 +38,19 @@ public class RootNetworkService {
     private final CaseService caseService;
 
     private final RootNetworkService self;
+    private final RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository;
 
     public RootNetworkService(RootNetworkRepository rootNetworkRepository,
                               RootNetworkNodeInfoService rootNetworkNodeInfoService,
                               NetworkService networkService,
                               CaseService caseService,
-                              @Lazy RootNetworkService self) {
+                              @Lazy RootNetworkService self, RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.networkService = networkService;
         this.caseService = caseService;
         this.self = self;
+        this.rootNetworkCreationRequestRepository = rootNetworkCreationRequestRepository;
     }
 
     public UUID getNetworkUuid(UUID rootNetworkUuid) {
@@ -152,5 +156,9 @@ public class RootNetworkService {
                 );
             }
         );
+    }
+
+    public RootNetworkCreationRequestEntity insertCreationRequest(UUID rootNetworkInCreationUuid, StudyEntity studyEntity, String userId) {
+        return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).studyEntity(studyEntity).userId(userId).build());
     }
 }
