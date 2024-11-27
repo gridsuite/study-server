@@ -13,6 +13,7 @@ import org.gridsuite.study.server.service.ConsumerService;
 import org.gridsuite.study.server.service.NetworkConversionService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,6 +63,8 @@ public class RootNetworkTest {
 
     private WireMockServer wireMockServer;
 
+    private WireMockUtils wireMockUtils;
+
     @MockBean
     CaseService caseService;
 
@@ -86,30 +89,47 @@ public class RootNetworkTest {
         wireMockServer.start();
         String baseUrlWireMock = wireMockServer.baseUrl();
         networkConversionService.setNetworkConversionServerBaseUri(baseUrlWireMock);
+        wireMockUtils = new WireMockUtils(wireMockServer);
     }
 
     @Test
     void testCreateRootNetworkRequest() throws Exception {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
 
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
-        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks\\?caseUuid=.*"))
-            .willReturn(WireMock.ok()));
+        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
+            .willReturn(WireMock.ok())).getId();
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}", studyEntity.getId(), caseUuid, caseFormat)
                 .header("userId", "userId"))
             .andExpect(status().isOk());
 
-//        wireMockUtils.verifyPostRequest();
+        wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
+            Map.of("caseUuid", WireMock.equalTo(caseUuid.toString()),
+                "caseFormat", WireMock.equalTo(caseFormat),
+                "receiver", WireMock.matching(".*rootNetworkUuid.*")));
+    }
+
+    @Test
+    void testCreateRootNetworkRequestOnNotExistingStudy() throws Exception {
+        UUID caseUuid = UUID.randomUUID();
+        String caseFormat = "newCaseFormat";
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}", UUID.randomUUID(), caseUuid, caseFormat)
+                .header("userId", "userId"))
+            .andExpect(status().isNotFound());
     }
 
     @Test
     void testCreateRootNetworkConsumer() throws Exception {
+        // create study with first root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
-        UUID newRootNetworkUuid = UUID.randomUUID();
 
+        // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
+        UUID newRootNetworkUuid = UUID.randomUUID();
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
         CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, REPORT_UUID2, "userId", 0L);
         Map<String, String> importParameters = new HashMap<>();
@@ -117,9 +137,11 @@ public class RootNetworkTest {
         importParameters.put("param2", "value2");
         Map<String, Object> headers = createConsumeCaseImportSucceededHeaders(NETWORK_UUID2.toString(), NETWORK_ID2, CASE_FORMAT2, CASE_NAME2, caseImportReceiver, importParameters);
 
+        // send message to consumer
         Mockito.doNothing().when(caseService).disableCaseExpiration(CASE_UUID2);
         messageConsumer.accept(new GenericMessage<>("", headers));
 
+        // get study from database and check new root network has been created with correct values
         StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
         assertEquals(2, updatedStudyEntity.getRootNetworks().size());
 
