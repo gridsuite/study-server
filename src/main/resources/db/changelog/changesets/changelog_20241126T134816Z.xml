@@ -3,6 +3,7 @@
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet author="phamquy (generated)" id="1732628915649-1">
+        <comment>DynaWaltz provider has been replaced by Dynawo in dynamic-simulation-server</comment>
         <update tableName="study">
             <column name="dynamic_simulation_provider" value="Dynawo"/>
             <where>dynamic_simulation_provider='DynaWaltz'</where>
