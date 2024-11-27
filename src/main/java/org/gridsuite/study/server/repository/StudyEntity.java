@@ -15,7 +15,6 @@ import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParamet
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -101,12 +100,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             name = "nonEvacuatedEnergyParameters_id_fk"
         ))
     private NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParameters;
-
-    @ElementCollection
-    @CollectionTable(name = "importParameters",
-        indexes = {@Index(name = "studyEntity_importParameters_idx1", columnList = "study_entity_id")},
-        foreignKey = @ForeignKey(name = "studyEntity_importParameters_fk1"))
-    private Map<String, String> importParameters;
 
     @Enumerated(EnumType.STRING)
     @Builder.Default

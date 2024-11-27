@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.repository;
 
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,9 @@ class RepositoriesTest {
 
     @Autowired
     private StudyCreationRequestRepository studyCreationRequestRepository;
+
+    @Autowired
+    private RootNetworkRepository rootNetworkRepository;
 
     @AfterEach
     void tearDown() {
@@ -115,19 +119,22 @@ class RepositoriesTest {
         Map<String, String> importParametersExpected = Map.of("param1", "changedValue1, changedValue2", "param2", "changedValue");
         StudyEntity studyEntityToSave = StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .rootNetworks(List.of(RootNetworkEntity.builder()
-                    .networkUuid(UUID.randomUUID())
-                    .networkId("networkId")
-                    .caseFormat("caseFormat")
-                    .caseName("caseName")
-                    .caseUuid(UUID.randomUUID()).build()))
-                .importParameters(importParametersExpected)
                 .build();
 
-        studyRepository.save(studyEntityToSave);
+        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder()
+            .networkUuid(UUID.randomUUID())
+            .networkId("networkId")
+            .caseFormat("caseFormat")
+            .caseName("caseName")
+            .importParameters(importParametersExpected)
+            .caseUuid(UUID.randomUUID()).build();
 
-        StudyEntity studyEntity = studyRepository.findAll().get(0);
-        Map<String, String> savedImportParameters = studyEntity.getImportParameters();
+        studyEntityToSave.addRootNetwork(rootNetworkEntity);
+
+        StudyEntity newStudy = studyRepository.save(studyEntityToSave);
+
+        RootNetworkEntity newRootNetworkEntity = rootNetworkRepository.findAllByStudyId(newStudy.getId()).get(0);
+        Map<String, String> savedImportParameters = newRootNetworkEntity.getImportParameters();
         assertEquals(2, savedImportParameters.size());
         assertEquals("changedValue1, changedValue2", savedImportParameters.get("param1"), "param1");
         assertEquals("changedValue", savedImportParameters.get("param2"));
