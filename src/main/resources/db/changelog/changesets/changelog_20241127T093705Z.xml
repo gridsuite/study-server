@@ -2,10 +2,19 @@
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet author="lesaulnierkev (generated)" id="1732700251866-12">
         <addColumn tableName="import_parameters">
-            <column name="root_network_entity_id" type="uuid">
-                <constraints nullable="false"/>
-            </column>
+            <column name="root_network_entity_id" type="uuid"/>
         </addColumn>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1732700251866-13">
+        <sqlFile
+                encoding="UTF-8"
+                path="migrationImportParamsToRootNetworks.sql"
+                relativeToChangelogFile="true"
+                splitStatements="true"
+                stripComments="true"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1732700251866-14">
+        <addNotNullConstraint tableName="import_parameters" columnName="root_network_entity_id"/>
     </changeSet>
     <changeSet author="lesaulnierkev (generated)" id="1732700251866-16">
         <createIndex indexName="IX_import_parametersPK" tableName="import_parameters" unique="true">
@@ -22,16 +31,13 @@
         <addForeignKeyConstraint baseColumnNames="root_network_entity_id" baseTableName="import_parameters" constraintName="rootNetworkEntity_importParameters_fk1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="root_network" validate="true"/>
     </changeSet>
     <changeSet author="lesaulnierkev (generated)" id="1732700251866-19">
-        <dropForeignKeyConstraint baseTableName="IMPORT_PARAMETERS" constraintName="STUDYENTITY_IMPORTPARAMETERS_FK1"/>
+        <dropForeignKeyConstraint baseTableName="IMPORT_PARAMETERS" constraintName="studyEntity_importParameters_fk1"/>
     </changeSet>
     <changeSet author="lesaulnierkev (generated)" id="1732700251866-4">
         <dropPrimaryKey tableName="import_parameters"/>
     </changeSet>
     <changeSet author="lesaulnierkev (generated)" id="1732700251866-20">
         <dropColumn columnName="STUDY_ENTITY_ID" tableName="import_parameters"/>
-    </changeSet>
-    <changeSet author="lesaulnierkev (generated)" id="1732700251866-1">
-        <modifyDataType columnName="import_parameters" newDataType="varchar(255)" tableName="import_parameters"/>
     </changeSet>
     <changeSet author="lesaulnierkev (generated)" id="1732700251866-5">
         <addPrimaryKey columnNames="root_network_entity_id, import_parameters_key" constraintName="import_parametersPK" tableName="import_parameters"/>
