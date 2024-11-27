@@ -3,12 +3,9 @@
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet author="phamquy (generated)" id="1732628915649-1">
-        <sqlFile
-                dbms="postgresql"
-                encoding="UTF-8"
-                path="migrationDataDynamicSimulationProvider.sql"
-                relativeToChangelogFile="true"
-                splitStatements="true"
-                stripComments="true"/>
+        <update tableName="study">
+            <column name="dynamic_simulation_provider" value="Dynawo"/>
+            <where>dynamic_simulation_provider='DynaWaltz'</where>
+        </update>
     </changeSet>
 </databaseChangeLog>
