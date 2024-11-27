@@ -7,8 +7,16 @@
     </changeSet>
     <changeSet author="lesaulnierkev (generated)" id="1732700251866-13">
         <sqlFile
+                dbms="postgresql"
                 encoding="UTF-8"
-                path="migrationImportParamsToRootNetworks.sql"
+                path="migrationImportParamsToRootNetworkPostgres.sql"
+                relativeToChangelogFile="true"
+                splitStatements="true"
+                stripComments="true"/>
+        <sqlFile
+                dbms="!postgresql"
+                encoding="UTF-8"
+                path="migrationImportParamsToRootNetworkH2.sql"
                 relativeToChangelogFile="true"
                 splitStatements="true"
                 stripComments="true"/>
