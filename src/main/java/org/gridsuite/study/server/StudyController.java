@@ -198,10 +198,11 @@ public class StudyController {
     @Operation(summary = "Create root network for study")
     @ApiResponse(responseCode = "200", description = "Root network created")
     public ResponseEntity<UUID> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
-                                              @RequestParam(value = CASE_UUID) UUID caseUuid,
-                                              @RequestParam(value = CASE_FORMAT) String caseFormat,
-                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.createRootNetwork(studyUuid, caseUuid, caseFormat, userId));
+                                          @RequestParam(value = CASE_UUID) UUID caseUuid,
+                                          @RequestParam(value = CASE_FORMAT) String caseFormat,
+                                          @RequestBody(required = false) Map<String, Object> importParameters,
+                                          @RequestHeader(HEADER_USER_ID) String userId) {
+        return ResponseEntity.ok().body(studyService.createRootNetwork(studyUuid, caseUuid, caseFormat, importParameters, userId));
     }
 
     @PostMapping(value = "/studies/{targetStudyUuid}/tree/nodes", params = {"nodeToCopyUuid", "referenceNodeUuid", "insertMode"})

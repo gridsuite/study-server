@@ -281,14 +281,14 @@ public class StudyService {
         return basicStudyInfos;
     }
 
-    public UUID createRootNetwork(UUID studyUuid, UUID caseUuid, String caseFormat, String userId) {
+    public UUID createRootNetwork(UUID studyUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
         assertIsStudyExist(studyUuid);
 //        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         UUID importReportUuid = UUID.randomUUID();
         UUID rootNetworkUuid = UUID.randomUUID();
         String variantId = UUID.randomUUID().toString();
         try {
-            networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, variantId, userId, importReportUuid, caseFormat, null);
+            networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, variantId, userId, importReportUuid, caseFormat, importParameters);
         } catch (Exception e) {
 //            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             throw e;

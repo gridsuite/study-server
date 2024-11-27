@@ -175,7 +175,6 @@ public class ConsumerService {
     }
 
     //TODO: should be linked to a specific rootNetwork
-    @Transactional
     @Bean
     public Consumer<Message<String>> consumeCaseImportSucceeded() {
         return message -> {

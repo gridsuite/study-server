@@ -99,17 +99,25 @@ public class RootNetworkTest {
 
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
+        Map<String, String> importParameters = new HashMap<>();
+        importParameters.put("param1", "value1");
+        importParameters.put("param2", "value2");
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
             .willReturn(WireMock.ok())).getId();
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}", studyEntity.getId(), caseUuid, caseFormat)
-                .header("userId", "userId"))
+                .header("userId", "userId")
+                .header("content-type", "application/json")
+                .content(objectMapper.writeValueAsString(importParameters)))
             .andExpect(status().isOk());
 
         wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
+            false,
             Map.of("caseUuid", WireMock.equalTo(caseUuid.toString()),
                 "caseFormat", WireMock.equalTo(caseFormat),
-                "receiver", WireMock.matching(".*rootNetworkUuid.*")));
+                "receiver", WireMock.matching(".*rootNetworkUuid.*")),
+                objectMapper.writeValueAsString(importParameters)
+        );
     }
 
     @Test
