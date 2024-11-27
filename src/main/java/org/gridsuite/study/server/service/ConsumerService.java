@@ -224,6 +224,7 @@ public class ConsumerService {
                                     .caseInfos(caseInfos)
                                     .reportUuid(importReportUuid)
                                     .networkInfos(networkInfos)
+                                    .importParameters(importParameters)
                                     .build())
                         );
                     } else {

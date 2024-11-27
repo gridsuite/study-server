@@ -29,7 +29,6 @@ import java.util.UUID;
         indexes = {@Index(name = "rootNetworkEntity_studyId_idx", columnList = "study_uuid")})
 public class RootNetworkEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
 

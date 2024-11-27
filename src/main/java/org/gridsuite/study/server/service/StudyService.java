@@ -1079,7 +1079,7 @@ public class StudyService {
                 .build();
 
         var study = studyRepository.save(studyEntity);
-        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).build());
+        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().id(UUID.randomUUID()).networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).build());
         networkModificationTreeService.createBasicTree(study);
 
         return study;

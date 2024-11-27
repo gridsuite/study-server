@@ -55,6 +55,7 @@ class RepositoriesTest {
                 .shortCircuitParametersUuid(shortCircuitParametersUuid1)
                 .build();
         RootNetworkEntity rootNetworkEntity1 = RootNetworkEntity.builder()
+            .id(UUID.randomUUID())
             .networkUuid(UUID.randomUUID())
             .networkId("networkId")
             .caseFormat("caseFormat")
@@ -66,6 +67,7 @@ class RepositoriesTest {
         StudyEntity studyEntity2 = studyRepository.save(StudyEntity.builder()
                 .id(UUID.randomUUID())
                 .rootNetworks(List.of(RootNetworkEntity.builder()
+                    .id(UUID.randomUUID())
                     .networkUuid(UUID.randomUUID())
                     .networkId("networkId2")
                     .caseFormat("caseFormat2")
@@ -81,6 +83,7 @@ class RepositoriesTest {
             .shortCircuitParametersUuid(shortCircuitParametersUuid3)
             .build();
         RootNetworkEntity rootNetworkEntity3 = RootNetworkEntity.builder()
+            .id(UUID.randomUUID())
             .networkUuid(UUID.randomUUID())
             .networkId("networkId3")
             .caseFormat("caseFormat3")
@@ -122,6 +125,7 @@ class RepositoriesTest {
                 .build();
 
         RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder()
+            .id(UUID.randomUUID())
             .networkUuid(UUID.randomUUID())
             .networkId("networkId")
             .caseFormat("caseFormat")

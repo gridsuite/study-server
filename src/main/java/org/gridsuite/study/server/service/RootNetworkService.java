@@ -104,7 +104,7 @@ public class RootNetworkService {
     }
 
     public Map<String, String> getImportParameters(UUID rootNetworkUuid) {
-        return rootNetworkRepository.findById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
     }
 
     public List<UUID> getStudyCaseUuids(UUID studyUuid) {
@@ -143,6 +143,7 @@ public class RootNetworkService {
 
                 self.createRootNetwork(newStudyEntity,
                     RootNetworkInfos.builder()
+                        .id(UUID.randomUUID())
                         .importParameters(newImportParameters)
                         .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getCaseName(), rootNetworkEntityToDuplicate.getCaseFormat()))
                         .networkInfos(new NetworkInfos(clonedNetworkUuid, rootNetworkEntityToDuplicate.getNetworkId()))
