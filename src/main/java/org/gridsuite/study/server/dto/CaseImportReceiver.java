@@ -22,6 +22,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CaseImportReceiver {
     private UUID studyUuid;
+    private UUID rootNetworkUuid;
     private UUID caseUuid;
     private UUID reportUuid;
     private String userId;

@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.transaction.Transactional;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.*;
@@ -19,6 +20,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
@@ -68,6 +70,7 @@ public class ConsumerService {
     private final StudyRepository studyRepository;
     private final ShortCircuitService shortCircuitService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final RootNetworkService rootNetworkService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -80,7 +83,9 @@ public class ConsumerService {
                            UserAdminService userAdminService,
                            NetworkModificationTreeService networkModificationTreeService,
                            SensitivityAnalysisService sensitivityAnalysisService,
-                           StudyRepository studyRepository, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+                           StudyRepository studyRepository,
+                           RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                           RootNetworkService rootNetworkservice) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -93,6 +98,7 @@ public class ConsumerService {
         this.studyRepository = studyRepository;
         this.shortCircuitService = shortCircuitService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.rootNetworkService = rootNetworkservice;
     }
 
     @Bean
@@ -169,6 +175,7 @@ public class ConsumerService {
     }
 
     //TODO: should be linked to a specific rootNetwork
+    @Transactional
     @Bean
     public Consumer<Message<String>> consumeCaseImportSucceeded() {
         return message -> {
@@ -198,15 +205,27 @@ public class ConsumerService {
                 String userId = receiver.getUserId();
                 Long startTime = receiver.getStartTime();
                 UUID importReportUuid = receiver.getReportUuid();
+                UUID rootNetworkUuid = receiver.getRootNetworkUuid();
 
                 CaseInfos caseInfos = new CaseInfos(caseUuid, caseName, caseFormat);
                 NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
-                StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
+                StudyEntity studyEntity = studyRepository.findWithRootNetworksById(studyUuid).orElse(null);
                 try {
                     if (studyEntity != null) {
-                        // if studyEntity is not null, it means we are recreating network for existing study
-                        // we only update network infos sent by network conversion server
-                        studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
+                        // if studyEntity is not null, it means we are either :
+                        // - recreating network for existing study
+                        //   we only update network infos sent by network conversion server
+                        // - creating a new root network
+                        Optional<RootNetworkEntity> rootNetworkEntityOpt = rootNetworkService.getRootNetwork(rootNetworkUuid);
+                        rootNetworkEntityOpt.ifPresentOrElse(
+                            rootNetworkEntity -> studyService.updateStudyNetwork(studyEntity, rootNetworkEntity, userId, networkInfos),
+                            () -> rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
+                                    .id(rootNetworkUuid)
+                                    .caseInfos(caseInfos)
+                                    .reportUuid(importReportUuid)
+                                    .networkInfos(networkInfos)
+                                    .build())
+                        );
                     } else {
                         DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
                         UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId, getUserProfile(userId));
