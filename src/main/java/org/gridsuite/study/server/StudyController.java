@@ -36,7 +36,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
@@ -203,17 +202,6 @@ public class StudyController {
                                                                               @RequestParam(value = CASE_FORMAT) String caseFormat,
                                                                               @RequestBody(required = false) Map<String, Object> importParameters,
                                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.createRootNetwork(studyUuid, caseUuid, caseFormat, importParameters, userId));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/root-networks")
-    @Operation(summary = "Create root network for study")
-    @ApiResponse(responseCode = "200", description = "Root network created")
-    public ResponseEntity<RootNetworkCreationRequestInfos> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
-                                                                             @RequestParam(value = CASE_UUID) UUID caseUuid,
-                                                                             @RequestParam(value = CASE_FORMAT) String caseFormat,
-                                                                             @RequestBody(required = false) Map<String, Object> importParameters,
-                                                                             @RequestHeader(HEADER_USER_ID) String userId) {
         return ResponseEntity.ok().body(studyService.createRootNetwork(studyUuid, caseUuid, caseFormat, importParameters, userId));
     }
 

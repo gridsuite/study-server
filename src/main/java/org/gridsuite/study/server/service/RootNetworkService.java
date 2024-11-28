@@ -67,13 +67,19 @@ public class RootNetworkService {
 
     @Transactional
     public RootNetworkEntity createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
+        Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntity = rootNetworkCreationRequestRepository.findById(rootNetworkInfos.getId());
+        if (rootNetworkCreationRequestEntity.isPresent()) {
+            RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
+            studyEntity.addRootNetwork(rootNetworkEntity);
 
-        studyEntity.addRootNetwork(rootNetworkEntity);
+            rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity);
 
-        rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity);
-
-        return rootNetworkEntity;
+            rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity.get());
+            return rootNetworkEntity;
+        } else {
+            // TODO: delete remote resources here
+            throw new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND);
+        }
     }
 
     // TODO move to study service

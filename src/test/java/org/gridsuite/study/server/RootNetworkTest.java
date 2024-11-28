@@ -37,8 +37,7 @@ import java.util.function.Consumer;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_IMPORT_PARAMETERS;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -46,7 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-public class RootNetworkTest {
+class RootNetworkTest {
     private static final String USER_ID = "userId";
     // 1st root network
     private static final UUID NETWORK_UUID = UUID.randomUUID();
@@ -89,7 +88,7 @@ public class RootNetworkTest {
     private RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository;
 
     @BeforeEach
-    void setUp() throws Exception {
+    void setUp() {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
 
         // start server
@@ -156,10 +155,14 @@ public class RootNetworkTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
 
-        // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
         UUID newRootNetworkUuid = UUID.randomUUID();
+
+        // insert creation request as it should be when receiving a caseImportSucceeded with a rootNetworkUuid set
+        rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(newRootNetworkUuid).studyEntity(studyEntity).userId(USER_ID).build());
+
+        // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
-        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, REPORT_UUID2, "userId", 0L);
+        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, REPORT_UUID2, USER_ID, 0L);
         Map<String, String> importParameters = new HashMap<>();
         importParameters.put("param1", "value1");
         importParameters.put("param2", "value2");
@@ -182,6 +185,9 @@ public class RootNetworkTest {
         assertEquals(CASE_UUID2, rootNetworkEntity.getCaseUuid());
         assertEquals(REPORT_UUID2, rootNetworkEntity.getReportUuid());
         assertEquals(importParameters, rootNetworkService.getImportParameters(newRootNetworkUuid));
+
+        // corresponding rootNetworkCreationRequestRepository should be emptied when root network creation is done
+        assertFalse(rootNetworkCreationRequestRepository.existsById(newRootNetworkUuid));
     }
 
     private Map<String, Object> createConsumeCaseImportSucceededHeaders(String networkUuid, String networkId, String caseFormat, String caseName, CaseImportReceiver caseImportReceiver, Map<String, String> importParameters) throws JsonProcessingException {
