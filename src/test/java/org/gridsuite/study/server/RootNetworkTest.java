@@ -158,7 +158,7 @@ class RootNetworkTest {
         UUID newRootNetworkUuid = UUID.randomUUID();
 
         // insert creation request as it should be when receiving a caseImportSucceeded with a rootNetworkUuid set
-        rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(newRootNetworkUuid).studyEntity(studyEntity).userId(USER_ID).build());
+        rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(newRootNetworkUuid).studyUuid(studyEntity.getId()).userId(USER_ID).build());
 
         // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();

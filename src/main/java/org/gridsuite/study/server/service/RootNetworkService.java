@@ -175,6 +175,6 @@ public class RootNetworkService {
     }
 
     public RootNetworkCreationRequestEntity insertCreationRequest(UUID rootNetworkInCreationUuid, StudyEntity studyEntity, String userId) {
-        return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).studyEntity(studyEntity).userId(userId).build());
+        return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).studyUuid(studyEntity.getId()).userId(userId).build());
     }
 }

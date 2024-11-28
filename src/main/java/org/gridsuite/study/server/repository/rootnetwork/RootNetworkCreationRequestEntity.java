@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.RootNetworkCreationRequestInfos;
-import org.gridsuite.study.server.repository.StudyEntity;
 
 import java.util.UUID;
 
@@ -20,16 +19,14 @@ public class RootNetworkCreationRequestEntity {
     @Id
     private UUID id;
 
-    @ManyToOne
-    @JoinColumn(name = "study_entity_id", foreignKey = @ForeignKey(name = "rootNetworkCreationRequest_study_id_fk_constraint"))
-    private StudyEntity studyEntity;
+    private UUID studyUuid;
 
     private String userId;
 
     public RootNetworkCreationRequestInfos toDto() {
         return RootNetworkCreationRequestInfos.builder()
             .id(this.getId())
-            .studyUuid(this.getStudyEntity().getId())
+            .studyUuid(this.getStudyUuid())
             .userId(this.getUserId())
             .build();
     }

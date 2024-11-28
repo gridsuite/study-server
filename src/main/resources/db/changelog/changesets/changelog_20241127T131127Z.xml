@@ -6,10 +6,7 @@
                 <constraints nullable="false" primaryKey="true" primaryKeyName="root_network_creation_requestPK"/>
             </column>
             <column name="user_id" type="VARCHAR(255)"/>
-            <column name="study_entity_id" type="UUID"/>
+            <column name="study_uuid" type="UUID"/>
         </createTable>
-    </changeSet>
-    <changeSet author="lesaulnierkev (generated)" id="1732713122916-14">
-        <addForeignKeyConstraint baseColumnNames="study_entity_id" baseTableName="root_network_creation_request" constraintName="rootNetworkCreationRequest_study_id_fk_constraint" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="study" validate="true"/>
     </changeSet>
 </databaseChangeLog>
