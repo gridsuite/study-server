@@ -13,6 +13,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -57,6 +58,12 @@ public class RootNetworkEntity {
     // reportUuid of network import, root node one
     @Column(name = "reportUuid")
     private UUID reportUuid;
+
+    @ElementCollection
+    @CollectionTable(name = "importParameters",
+        indexes = {@Index(name = "rootNetworkEntity_importParameters_idx1", columnList = "root_network_entity_id")},
+        foreignKey = @ForeignKey(name = "rootNetworkEntity_importParameters_fk1"))
+    private Map<String, String> importParameters;
 
     public void addRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         if (rootNetworkNodeInfos == null) {

@@ -251,7 +251,7 @@ public class StudyController {
                                                                  @RequestParam(value = "caseUuid") UUID caseUuid,
                                                                  @Parameter(description = "case format") @RequestParam(name = "caseFormat", required = false) String caseFormat,
                                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.recreateStudyRootNetwork(caseUuid, userId, studyUuid, caseFormat, importParameters);
+        studyService.recreateStudyRootNetwork(caseUuid, userId, studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), caseFormat, importParameters);
         return ResponseEntity.ok().build();
     }
 
@@ -264,7 +264,7 @@ public class StudyController {
                                                                 @RequestHeader(HEADER_USER_ID) String userId,
                                                                 @Parameter(description = "case format") @RequestParam(name = "caseFormat", required = false) String caseFormat
     ) {
-        studyService.recreateStudyRootNetwork(userId, studyUuid, caseFormat);
+        studyService.recreateStudyRootNetwork(userId, studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), caseFormat);
         return ResponseEntity.ok().build();
     }
 

@@ -280,11 +280,6 @@ public class StudyService {
         return basicStudyInfos;
     }
 
-    @Transactional(readOnly = true)
-    public Map<String, String> getStudyImportParameters(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getImportParameters();
-    }
-
     /**
      * Recreates study network from <caseUuid> and <importParameters>
      * @param caseUuid
@@ -292,8 +287,8 @@ public class StudyService {
      * @param studyUuid
      * @param importParameters
      */
-    public void recreateStudyRootNetwork(UUID caseUuid, String userId, UUID studyUuid, String caseFormat, Map<String, Object> importParameters) {
-        recreateStudyRootNetwork(caseUuid, userId, studyUuid, caseFormat, importParameters, false);
+    public void recreateStudyRootNetwork(UUID caseUuid, String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat, Map<String, Object> importParameters) {
+        recreateStudyRootNetwork(caseUuid, userId, studyUuid, rootNetworkUuid, caseFormat, importParameters, false);
     }
 
     /**
@@ -301,17 +296,16 @@ public class StudyService {
      * @param userId
      * @param studyUuid
      */
-    //TODO : how should it work now a study can have several networks ? For now, only recreating first rootNetwork
-    public void recreateStudyRootNetwork(String userId, UUID studyUuid, String caseFormat) {
+    public void recreateStudyRootNetwork(String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat) {
         UUID caseUuid = rootNetworkService.getRootNetwork(self.getStudyFirstRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND)).getCaseUuid();
-        recreateStudyRootNetwork(caseUuid, userId, studyUuid, caseFormat, null, true);
+        recreateStudyRootNetwork(caseUuid, userId, studyUuid, rootNetworkUuid, caseFormat, null, true);
     }
 
-    private void recreateStudyRootNetwork(UUID caseUuid, String userId, UUID studyUuid, String caseFormat, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters) {
+    private void recreateStudyRootNetwork(UUID caseUuid, String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters) {
         caseService.assertCaseExists(caseUuid);
         UUID importReportUuid = UUID.randomUUID();
         Map<String, Object> importParametersToUse = shouldLoadPreviousImportParameters
-            ? new HashMap<>(self.getStudyImportParameters(studyUuid))
+            ? new HashMap<>(rootNetworkService.getImportParameters(rootNetworkUuid))
             : importParameters;
 
         persistentStoreWithNotificationOnError(caseUuid, studyUuid, userId, importReportUuid, caseFormat, importParametersToUse);
@@ -534,8 +528,6 @@ public class StudyService {
     }
 
     private StudyEntity duplicateStudyEntity(StudyEntity sourceStudyEntity, UUID newStudyId) {
-        Map<String, String> newImportParameters = Map.copyOf(sourceStudyEntity.getImportParameters());
-
         UUID copiedLoadFlowParametersUuid = null;
         if (sourceStudyEntity.getLoadFlowParametersUuid() != null) {
             copiedLoadFlowParametersUuid = loadflowService.duplicateLoadFlowParameters(sourceStudyEntity.getLoadFlowParametersUuid());
@@ -578,7 +570,6 @@ public class StudyService {
             .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
             .sensitivityAnalysisParametersUuid(copiedSensitivityAnalysisParametersUuid)
             .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
-            .importParameters(newImportParameters)
             .build());
     }
 
@@ -1060,13 +1051,12 @@ public class StudyService {
                 .voltageInitParametersUuid(voltageInitParametersUuid)
                 .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
                 .sensitivityAnalysisParametersUuid(sensitivityAnalysisParametersUuid)
-                .importParameters(importParameters)
                 .indexationStatus(StudyIndexationStatus.INDEXED)
                 .voltageInitParameters(new StudyVoltageInitParametersEntity())
                 .build();
 
         var study = studyRepository.save(studyEntity);
-        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).build());
+        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).build());
         networkModificationTreeService.createBasicTree(study);
 
         return study;

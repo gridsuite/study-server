@@ -5,6 +5,7 @@ import lombok.Getter;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Builder
@@ -21,6 +22,8 @@ public class RootNetworkInfos {
     // reportUuid of network import, root node one
     private UUID reportUuid;
 
+    private Map<String, String> importParameters;
+
     public RootNetworkEntity toEntity() {
         RootNetworkEntity.RootNetworkEntityBuilder rootNetworkEntityBuilder = RootNetworkEntity.builder()
             .id(id)
@@ -29,7 +32,8 @@ public class RootNetworkInfos {
             .caseUuid(caseInfos.getCaseUuid())
             .caseName(caseInfos.getCaseName())
             .caseFormat(caseInfos.getCaseFormat())
-            .reportUuid(reportUuid);
+            .reportUuid(reportUuid)
+            .importParameters(importParameters);
 
         if (rootNetworkNodeInfos != null) {
             rootNetworkEntityBuilder.rootNetworkNodeInfos(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::toEntity).toList());
