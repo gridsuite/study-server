@@ -75,6 +75,8 @@ public class RootNetworkService {
             rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity);
 
             rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity.get());
+
+            // TODO: send notification to frontend
             return rootNetworkEntity;
         } else {
             // TODO: delete remote resources here
