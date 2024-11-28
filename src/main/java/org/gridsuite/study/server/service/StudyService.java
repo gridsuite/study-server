@@ -330,7 +330,7 @@ public class StudyService {
         caseService.assertCaseExists(caseUuid);
         UUID importReportUuid = UUID.randomUUID();
         Map<String, Object> importParametersToUse = shouldLoadPreviousImportParameters
-            ? new HashMap<>(self.getStudyImportParameters(rootNetworkUuid))
+            ? new HashMap<>(rootNetworkService.getImportParameters(rootNetworkUuid))
             : importParameters;
 
         persistentStoreWithNotificationOnError(caseUuid, studyUuid, rootNetworkUuid, userId, importReportUuid, caseFormat, importParametersToUse);

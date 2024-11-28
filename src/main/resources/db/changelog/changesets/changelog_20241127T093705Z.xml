@@ -7,28 +7,14 @@
     </changeSet>
     <changeSet author="lesaulnierkev (generated)" id="1732700251866-13">
         <sqlFile
-                dbms="postgresql"
                 encoding="UTF-8"
-                path="migrationImportParamsToRootNetworkPostgres.sql"
-                relativeToChangelogFile="true"
-                splitStatements="true"
-                stripComments="true"/>
-        <sqlFile
-                dbms="!postgresql"
-                encoding="UTF-8"
-                path="migrationImportParamsToRootNetworkH2.sql"
+                path="migrationImportParamsToRootNetwork.sql"
                 relativeToChangelogFile="true"
                 splitStatements="true"
                 stripComments="true"/>
     </changeSet>
     <changeSet author="lesaulnierkev (generated)" id="1732700251866-14">
         <addNotNullConstraint tableName="import_parameters" columnName="root_network_entity_id"/>
-    </changeSet>
-    <changeSet author="lesaulnierkev (generated)" id="1732700251866-16">
-        <createIndex indexName="IX_import_parametersPK" tableName="import_parameters" unique="true">
-            <column name="root_network_entity_id"/>
-            <column name="import_parameters_key"/>
-        </createIndex>
     </changeSet>
     <changeSet author="lesaulnierkev (generated)" id="1732700251866-17">
         <createIndex indexName="rootNetworkEntity_importParameters_idx1" tableName="import_parameters">
