@@ -217,7 +217,7 @@ public class ConsumerService {
                         Optional<RootNetworkEntity> rootNetworkEntityOpt = rootNetworkService.getRootNetwork(rootNetworkUuid);
                         rootNetworkEntityOpt.ifPresentOrElse(
                             rootNetworkEntity -> studyService.updateStudyNetwork(studyEntity, rootNetworkEntity, userId, networkInfos),
-                            () -> rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
+                            () -> rootNetworkService.createRootNetworkFromRequest(studyEntity, RootNetworkInfos.builder()
                                     .id(rootNetworkUuid)
                                     .caseInfos(caseInfos)
                                     .reportUuid(importReportUuid)

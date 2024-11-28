@@ -65,23 +65,31 @@ public class RootNetworkService {
         return rootNetworkRepository.existsById(rootNetworkUuid);
     }
 
-    @Transactional
-    public RootNetworkEntity createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
+    /**
+     * Called by consumer - will create root network only if rootNetworkCreatationRequest is still in database
+     * @param studyEntity
+     * @param rootNetworkInfos
+     */
+    public void createRootNetworkFromRequest(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
         Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntity = rootNetworkCreationRequestRepository.findById(rootNetworkInfos.getId());
         if (rootNetworkCreationRequestEntity.isPresent()) {
-            RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
-            studyEntity.addRootNetwork(rootNetworkEntity);
-
-            rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity);
-
+            self.createRootNetwork(studyEntity, rootNetworkInfos);
             rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity.get());
-
             // TODO: send notification to frontend
-            return rootNetworkEntity;
         } else {
             // TODO: delete remote resources here
             throw new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND);
         }
+    }
+
+    @Transactional
+    public RootNetworkEntity createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
+        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
+        studyEntity.addRootNetwork(rootNetworkEntity);
+
+        rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity);
+
+        return rootNetworkEntity;
     }
 
     // TODO move to study service
