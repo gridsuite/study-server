@@ -8,7 +8,6 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.iidm.network.HvdcConverterStation;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.loadflow.LoadFlowParameters;
@@ -75,7 +74,6 @@ import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
-import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_CONVERTER_STATION_TYPE;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -661,8 +659,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
         return networkMapService.getElementInfos(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, self.getStudyFirstRootNetworkUuid(studyUuid)),
-                elementType, infoTypeParameters.getInfoType(), loadFlowParameters.getDcPowerFactor(),
-                infoTypeParameters.getOptionalParameters().getOrDefault(QUERY_PARAM_CONVERTER_STATION_TYPE, String.valueOf(HvdcConverterStation.HvdcType.VSC)), elementId);
+                elementType, infoTypeParameters.getInfoType(), loadFlowParameters.getDcPowerFactor(), elementId);
     }
 
     public String getNetworkCountries(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode) {

@@ -77,7 +77,7 @@ public class NetworkMapService {
     }
 
     public String getElementInfos(UUID networkUuid, String variantId, String elementType, String infoType,
-                                  double dcPowerFactor, String hvdcType, String elementId) {
+                                  double dcPowerFactor, String elementId) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements/{elementId}";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (!StringUtils.isBlank(variantId)) {
@@ -87,7 +87,6 @@ public class NetworkMapService {
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
         Map<String, String> optionalParams = new HashMap<>();
         optionalParams.put(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor));
-        optionalParams.put(QUERY_PARAM_CONVERTER_STATION_TYPE, hvdcType);
         InfoTypeParameters infoTypeParameters = InfoTypeParameters.builder()
                 .optionalParameters(optionalParams)
                 .build();

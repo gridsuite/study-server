@@ -16,7 +16,6 @@ import java.util.Map;
 @Builder
 public class InfoTypeParameters {
     public static final String QUERY_PARAM_DC_POWERFACTOR = "dcPowerFactor";
-    public static final String QUERY_PARAM_CONVERTER_STATION_TYPE = "converterStationType";
     private String infoType;
     private Map<String, String> optionalParameters;
 
