@@ -8,6 +8,9 @@ package org.gridsuite.study.server.repository.rootnetwork;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.gridsuite.study.server.dto.CaseInfos;
+import org.gridsuite.study.server.dto.NetworkInfos;
+import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 
@@ -15,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
@@ -26,7 +30,7 @@ import java.util.UUID;
 @Entity
 @Builder
 @Table(name = "rootNetwork",
-        indexes = {@Index(name = "rootNetworkEntity_studyId_idx", columnList = "study_uuid")})
+    indexes = {@Index(name = "rootNetworkEntity_studyId_idx", columnList = "study_uuid")})
 public class RootNetworkEntity {
     @Id
     @Column(name = "id")
@@ -70,5 +74,21 @@ public class RootNetworkEntity {
         }
         rootNetworkNodeInfoEntity.setRootNetwork(this);
         rootNetworkNodeInfos.add(rootNetworkNodeInfoEntity);
+    }
+
+    public RootNetworkInfos toDto() {
+        RootNetworkInfos.RootNetworkInfosBuilder rootNetworkInfosBuilder = RootNetworkInfos.builder();
+        rootNetworkInfosBuilder.id(this.id)
+            .networkInfos(new NetworkInfos(this.networkUuid, this.networkId))
+            .importParameters(this.importParameters)
+            .caseInfos(new CaseInfos(this.caseUuid, this.caseName, this.caseFormat))
+            .reportUuid(this.reportUuid)
+            .build();
+
+        if (this.rootNetworkNodeInfos != null) {
+            rootNetworkInfosBuilder.rootNetworkNodeInfos(this.rootNetworkNodeInfos.stream().map(RootNetworkNodeInfoEntity::toDto).collect(Collectors.toList()));
+        }
+
+        return rootNetworkInfosBuilder.build();
     }
 }

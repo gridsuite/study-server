@@ -26,4 +26,9 @@ public interface RootNetworkRepository extends JpaRepository<RootNetworkEntity, 
 
     @EntityGraph(attributePaths = {"importParameters"}, type = EntityGraph.EntityGraphType.LOAD)
     Optional<RootNetworkEntity> findWithImportParametersById(UUID rootNetworkUuid);
+
+    @EntityGraph(attributePaths = {"rootNetworkNodeInfos"}, type = EntityGraph.EntityGraphType.LOAD)
+    Optional<RootNetworkEntity> findWithRootNetworkNodeInfosById(UUID rootNetworkUuid);
+
+    boolean existsByIdAndStudyId(UUID studyUuid, UUID id);
 }

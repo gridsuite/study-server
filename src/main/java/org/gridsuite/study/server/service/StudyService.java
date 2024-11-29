@@ -282,6 +282,14 @@ public class StudyService {
         return basicStudyInfos;
     }
 
+    @Transactional
+    public void deleteRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId) {
+        assertIsStudyExist(studyUuid);
+        rootNetworkService.assertIsRootNetworkInStudy(rootNetworkUuid, studyUuid);
+
+        rootNetworkService.delete(rootNetworkUuid);
+    }
+
     public RootNetworkCreationRequestInfos createRootNetwork(UUID studyUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
@@ -402,7 +410,7 @@ public class StudyService {
         if (studyCreationRequestEntity.isEmpty()) {
             List<UUID> casesToDeleteUuids = new ArrayList<>();
             List<UUID> networksToDeleteUuids = rootNetworkService.getStudyNetworkUuids(studyUuid);
-            List<RootNetworkNodeInfo> rootNetworkNodeInfos = rootNetworkNodeInfoService.getStudyRootNetworkNodeInfos(studyUuid).stream().map(RootNetworkNodeInfoEntity::toDto).toList();
+            List<RootNetworkInfos> rootNetworkInfos = rootNetworkService.getStudyRootNetworkInfosWithRootNetworkNodeInfos(studyUuid);
             // get all reports related to the study
             List<UUID> reportUuids = rootNetworkService.getStudyReportUuids(studyUuid);
             // get all modification groups related to the study
@@ -425,7 +433,7 @@ public class StudyService {
                     sensitivityAnalysisService.deleteSensitivityAnalysisParameters(s.getSensitivityAnalysisParametersUuid());
                 }
             });
-            deleteStudyInfos = new DeleteStudyInfos(networksToDeleteUuids, casesToDeleteUuids, rootNetworkNodeInfos, reportUuids, modificationGroupUuids);
+            deleteStudyInfos = new DeleteStudyInfos(networksToDeleteUuids, casesToDeleteUuids, rootNetworkInfos, reportUuids, modificationGroupUuids);
         } else {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
         }
@@ -448,29 +456,12 @@ public class StudyService {
 
                 //TODO: now we have a n-n relation between node and rootNetworks, it's even more important to delete results in a single request
                 CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getRootNetworkNodeInfos().stream()
-                                .map(RootNetworkNodeInfo::getLoadFlowResultUuid).filter(Objects::nonNull).forEach(loadflowService::deleteLoadFlowResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getRootNetworkNodeInfos().stream()
-                                .map(RootNetworkNodeInfo::getSecurityAnalysisResultUuid).filter(Objects::nonNull).forEach(securityAnalysisService::deleteSaResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getRootNetworkNodeInfos().stream()
-                                .map(RootNetworkNodeInfo::getSensitivityAnalysisResultUuid).filter(Objects::nonNull).forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getRootNetworkNodeInfos().stream()
-                                .map(RootNetworkNodeInfo::getNonEvacuatedEnergyResultUuid).filter(Objects::nonNull).forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getRootNetworkNodeInfos().stream()
-                                .map(RootNetworkNodeInfo::getShortCircuitAnalysisResultUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getRootNetworkNodeInfos().stream()
-                                .map(RootNetworkNodeInfo::getOneBusShortCircuitAnalysisResultUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getRootNetworkNodeInfos().stream()
-                                .map(RootNetworkNodeInfo::getVoltageInitResultUuid).filter(Objects::nonNull).forEach(voltageInitService::deleteVoltageInitResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getRootNetworkNodeInfos().stream()
-                                .map(RootNetworkNodeInfo::getDynamicSimulationResultUuid).filter(Objects::nonNull).forEach(dynamicSimulationService::deleteResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getRootNetworkNodeInfos().stream()
-                                .map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).forEach(stateEstimationService::deleteStateEstimationResult)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuids().stream().filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
-                        studyServerExecutionService.runAsync(() -> reportService.deleteReports(deleteStudyInfos.getReportsUuids())),
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNetworkUuids().stream().filter(Objects::nonNull).forEach(this::deleteEquipmentIndexes)),
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNetworkUuids().stream().filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)),
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getCaseUuids().stream().filter(Objects::nonNull).forEach(caseService::deleteCase))
+                    Stream.concat(
+                        // delete all distant resources linked to rootNetworks
+                        rootNetworkService.getDeleteRootNetworkInfosFutures(deleteStudyInfos.getRootNetworkInfosList()).stream(),
+                        // delete all distant resources linked to nodes
+                        Stream.of(studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuids().stream().filter(Objects::nonNull).forEach(networkModificationService::deleteModifications))) // TODO delete all with one request only
+                    ).toArray(CompletableFuture[]::new)
                 );
 
                 executeInParallel.get();
@@ -484,13 +475,6 @@ public class StudyService {
         } catch (Exception e) {
             throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
         }
-    }
-
-    public void deleteEquipmentIndexes(UUID networkUuid) {
-        AtomicReference<Long> startTime = new AtomicReference<>();
-        startTime.set(System.nanoTime());
-        equipmentInfosService.deleteAllByNetworkUuid(networkUuid);
-        LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos, UUID loadFlowParametersUuid,

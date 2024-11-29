@@ -9,10 +9,7 @@ package org.gridsuite.study.server.service;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.DeleteNodeInfos;
-import org.gridsuite.study.server.dto.InvalidateNodeInfos;
-import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
@@ -21,11 +18,17 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
 import static org.gridsuite.study.server.StudyException.Type.ROOTNETWORK_NOT_FOUND;
@@ -39,11 +42,43 @@ public class RootNetworkNodeInfoService {
     private final RootNetworkRepository rootNetworkRepository;
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+    private final StudyServerExecutionService studyServerExecutionService;
+    private final LoadFlowService loadFlowService;
+    private final SecurityAnalysisService securityAnalysisService;
+    private final SensitivityAnalysisService sensitivityAnalysisService;
+    private final NonEvacuatedEnergyService nonEvacuatedEnergyService;
+    private final ShortCircuitService shortCircuitService;
+    private final VoltageInitService voltageInitService;
+    private final DynamicSimulationService dynamicSimulationService;
+    private final StateEstimationService stateEstimationService;
+    private final ReportService reportService;
 
-    public RootNetworkNodeInfoService(RootNetworkRepository rootNetworkRepository, RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository) {
+    public RootNetworkNodeInfoService(RootNetworkRepository rootNetworkRepository,
+                                      RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
+                                      NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
+                                      StudyServerExecutionService studyServerExecutionService,
+                                      @Lazy LoadFlowService loadFlowService,
+                                      @Lazy SecurityAnalysisService securityAnalysisService,
+                                      @Lazy SensitivityAnalysisService sensitivityAnalysisService,
+                                      @Lazy NonEvacuatedEnergyService nonEvacuatedEnergyService,
+                                      @Lazy ShortCircuitService shortCircuitService,
+                                      @Lazy VoltageInitService voltageInitService,
+                                      @Lazy DynamicSimulationService dynamicSimulationService,
+                                      @Lazy StateEstimationService stateEstimationService,
+                                      @Lazy ReportService reportService) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
+        this.studyServerExecutionService = studyServerExecutionService;
+        this.loadFlowService = loadFlowService;
+        this.securityAnalysisService = securityAnalysisService;
+        this.sensitivityAnalysisService = sensitivityAnalysisService;
+        this.nonEvacuatedEnergyService = nonEvacuatedEnergyService;
+        this.shortCircuitService = shortCircuitService;
+        this.voltageInitService = voltageInitService;
+        this.dynamicSimulationService = dynamicSimulationService;
+        this.stateEstimationService = stateEstimationService;
+        this.reportService = reportService;
     }
 
     public void createRootNetworkLinks(@NonNull UUID studyUuid, @NonNull RootNetworkEntity rootNetworkEntity) {
@@ -331,5 +366,37 @@ public class RootNetworkNodeInfoService {
         if (rootNetworkNodeInfo.getDynamicSimulationResultUuid() != null) {
             rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(rootNetworkNodeInfo.getDynamicSimulationResultUuid());
         }
+    }
+
+    public List<CompletableFuture<Void>> getDeleteRootNetworkNodeInfosFutures(List<RootNetworkNodeInfo> rootNetworkNodeInfo) {
+        return List.of(
+            studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkNodeInfo.stream().map(this::getReportUuids).flatMap(Collection::stream).toList())),
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getLoadFlowResultUuid).filter(Objects::nonNull).forEach(loadFlowService::deleteLoadFlowResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getSecurityAnalysisResultUuid).filter(Objects::nonNull).forEach(securityAnalysisService::deleteSaResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getSensitivityAnalysisResultUuid).filter(Objects::nonNull).forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getNonEvacuatedEnergyResultUuid).filter(Objects::nonNull).forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getShortCircuitAnalysisResultUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getOneBusShortCircuitAnalysisResultUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getVoltageInitResultUuid).filter(Objects::nonNull).forEach(voltageInitService::deleteVoltageInitResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getDynamicSimulationResultUuid).filter(Objects::nonNull).forEach(dynamicSimulationService::deleteResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).forEach(stateEstimationService::deleteStateEstimationResult)) // TODO delete all with one request only
+        );
+    }
+
+    private List<UUID> getReportUuids(RootNetworkNodeInfo rootNetworkNodeInfo) {
+        return Stream.of(
+            rootNetworkNodeInfo.getModificationReports().values().stream(),
+            rootNetworkNodeInfo.getComputationReports().values().stream())
+            .flatMap(Function.identity())
+            .toList();
     }
 }

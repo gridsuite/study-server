@@ -24,7 +24,7 @@ public class DeleteStudyInfos {
 
     private List<UUID> caseUuids;
 
-    private List<RootNetworkNodeInfo> rootNetworkNodeInfos;
+    private List<RootNetworkInfos> rootNetworkInfosList;
 
     private List<UUID> reportsUuids;
 

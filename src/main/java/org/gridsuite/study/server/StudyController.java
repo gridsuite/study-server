@@ -205,6 +205,16 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.createRootNetwork(studyUuid, caseUuid, caseFormat, importParameters, userId));
     }
 
+    @DeleteMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
+    @Operation(summary = "Create root network for study")
+    @ApiResponse(responseCode = "200", description = "Root network created")
+    public ResponseEntity<Void> deleteRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
+                                                    @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                    @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.deleteRootNetwork(studyUuid, rootNetworkUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping(value = "/studies/{targetStudyUuid}/tree/nodes", params = {"nodeToCopyUuid", "referenceNodeUuid", "insertMode"})
     @Operation(summary = "duplicate a node")
     @ApiResponses(value = {
