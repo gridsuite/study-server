@@ -24,9 +24,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.NetworkConversionService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NetworkService;
+import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,9 +66,6 @@ class SupervisionControllerTest {
     private static final UUID NODE_UUID = UUID.randomUUID();
 
     @MockBean
-    private NetworkService networkStoreService;
-
-    @MockBean
     private NetworkModificationTreeService networkModificationTreeService;
 
     @MockBean
@@ -87,6 +82,12 @@ class SupervisionControllerTest {
 
     @Value("${spring.data.elasticsearch.embedded.port:}")
     private String expectedEsPort;
+
+    @MockBean
+    private RootNetworkService rootNetworkService;
+
+    @Autowired
+    private StudyService studyService;
 
     private static EquipmentInfos toEquipmentInfos(Identifiable<?> i) {
         return EquipmentInfos.builder()
@@ -114,7 +115,6 @@ class SupervisionControllerTest {
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
         network.getIdentifiables().forEach(idable -> equipmentInfosService.addEquipmentInfos(toEquipmentInfos(idable)));
 
-        when(networkStoreService.getNetworkUuid(STUDY_UUID)).thenReturn(NETWORK_UUID);
         //TODO: removing it still works, check if it's normal
 //        when(networkModificationTreeService.getVariantId(NODE_UUID, any())).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
         when(networkModificationTreeService.getStudyTree(STUDY_UUID)).thenReturn(RootNode.builder().studyId(STUDY_UUID).id(NODE_UUID).build());
@@ -129,6 +129,9 @@ class SupervisionControllerTest {
 
     private StudyEntity initStudy() throws Exception {
         StudyEntity study = insertDummyStudy(NETWORK_UUID, CASE_UUID, "");
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(STUDY_UUID);
+
+        when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(NETWORK_UUID);
         assertIndexationStatus(STUDY_UUID, StudyIndexationStatus.INDEXED.name());
         return study;
     }

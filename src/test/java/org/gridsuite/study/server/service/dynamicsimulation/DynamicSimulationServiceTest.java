@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesMetadataRest;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
@@ -122,6 +123,9 @@ class DynamicSimulationServiceTest {
     @Autowired
     private DynamicSimulationService dynamicSimulationService;
 
+    @MockBean
+    private RootNetworkService rootNetworkService;
+
     @BeforeEach
     void setup() {
         // setup networkModificationTreeService mock in all normal cases
@@ -130,7 +134,7 @@ class DynamicSimulationServiceTest {
 
     @Test
     void testRunDynamicSimulation() {
-        given(networkService.getNetworkUuid(STUDY_UUID)).willReturn(NETWORK_UUID);
+        given(rootNetworkService.getNetworkUuid(ROOTNETWORK_UUID)).willReturn(NETWORK_UUID);
         given(networkModificationTreeService.getVariantId(NODE_UUID, ROOTNETWORK_UUID)).willReturn(VARIANT_1_ID);
         given(networkModificationTreeService.getReportUuid(NODE_UUID, ROOTNETWORK_UUID)).willReturn(REPORT_UUID);
 

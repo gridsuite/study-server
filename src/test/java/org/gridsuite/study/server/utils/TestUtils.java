@@ -14,12 +14,10 @@ import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
 import okio.Buffer;
 import org.gridsuite.study.server.dto.Report;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.junit.platform.commons.util.StringUtils;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
@@ -137,13 +135,6 @@ public final class TestUtils {
             .name(name)
             .description("")
             .modificationGroupUuid(UUID.randomUUID())
-            .variantId(UUID.randomUUID().toString())
-            .loadFlowResultUuid(UUID.randomUUID())
-            .securityAnalysisResultUuid(UUID.randomUUID())
-            .sensitivityAnalysisResultUuid(UUID.randomUUID())
-            .nonEvacuatedEnergyResultUuid(UUID.randomUUID())
-            .stateEstimationResultUuid(UUID.randomUUID())
-            .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT))
             .children(Collections.emptyList()).build();
     }
 

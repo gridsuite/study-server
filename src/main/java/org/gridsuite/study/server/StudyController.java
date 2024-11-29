@@ -79,21 +79,22 @@ public class StudyController {
     private final CaseService caseService;
     private final RemoteServicesInspector remoteServicesInspector;
     private final StateEstimationService stateEstimationService;
+    private final RootNetworkService rootNetworkService;
 
     public StudyController(StudyService studyService,
-            NetworkService networkStoreService,
-            NetworkModificationTreeService networkModificationTreeService,
-            SingleLineDiagramService singleLineDiagramService,
-            NetworkConversionService networkConversionService,
-            SecurityAnalysisService securityAnalysisService,
-            SensitivityAnalysisService sensitivityAnalysisService,
-            NonEvacuatedEnergyService nonEvacuatedEnergyService,
-            ShortCircuitService shortCircuitService,
-            VoltageInitService voltageInitService,
-            LoadFlowService loadflowService,
-            CaseService caseService,
-            RemoteServicesInspector remoteServicesInspector,
-            StateEstimationService stateEstimationService) {
+                           NetworkService networkStoreService,
+                           NetworkModificationTreeService networkModificationTreeService,
+                           SingleLineDiagramService singleLineDiagramService,
+                           NetworkConversionService networkConversionService,
+                           SecurityAnalysisService securityAnalysisService,
+                           SensitivityAnalysisService sensitivityAnalysisService,
+                           NonEvacuatedEnergyService nonEvacuatedEnergyService,
+                           ShortCircuitService shortCircuitService,
+                           VoltageInitService voltageInitService,
+                           LoadFlowService loadflowService,
+                           CaseService caseService,
+                           RemoteServicesInspector remoteServicesInspector,
+                           StateEstimationService stateEstimationService, RootNetworkService rootNetworkService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -108,6 +109,7 @@ public class StudyController {
         this.caseService = caseService;
         this.remoteServicesInspector = remoteServicesInspector;
         this.stateEstimationService = stateEstimationService;
+        this.rootNetworkService = rootNetworkService;
     }
 
     @InitBinder
@@ -129,7 +131,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study case name"),
                            @ApiResponse(responseCode = "204", description = "The study has no case name attached")})
     public ResponseEntity<String> getStudyCaseName(@PathVariable("studyUuid") UUID studyUuid) {
-        String studyCaseName = studyService.getStudyCaseName(studyUuid);
+        String studyCaseName = rootNetworkService.getCaseName(studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return StringUtils.isEmpty(studyCaseName) ? ResponseEntity.noContent().build() : ResponseEntity.ok().body(studyCaseName);
     }
 
@@ -181,7 +183,7 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "The study information"),
         @ApiResponse(responseCode = "404", description = "The study doesn't exist")})
     public ResponseEntity<CreatedStudyBasicInfos> getStudy(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyInfos(studyUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyInfos(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}")
@@ -221,7 +223,8 @@ public class StudyController {
                                               @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                               @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode,
                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.moveStudyNode(studyUuid, nodeToCutUuid, rootNetworkUuid, referenceNodeUuid, insertMode, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -231,7 +234,7 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "The network does exist"),
         @ApiResponse(responseCode = "204", description = "The network doesn't exist")})
     public ResponseEntity<Void> checkNetworkExistence(@PathVariable("studyUuid") UUID studyUuid) {
-        UUID networkUUID = networkStoreService.getNetworkUuid(studyUuid);
+        UUID networkUUID = rootNetworkService.getNetworkUuid(studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return networkStoreService.doesNetworkExist(networkUUID)
             ? ResponseEntity.ok().build()
             : ResponseEntity.noContent().build();
@@ -248,7 +251,7 @@ public class StudyController {
                                                                  @RequestParam(value = "caseUuid") UUID caseUuid,
                                                                  @Parameter(description = "case format") @RequestParam(name = "caseFormat", required = false) String caseFormat,
                                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.recreateStudyRootNetwork(caseUuid, userId, studyUuid, caseFormat, importParameters);
+        studyService.recreateStudyRootNetwork(caseUuid, userId, studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), caseFormat, importParameters);
         return ResponseEntity.ok().build();
     }
 
@@ -261,7 +264,7 @@ public class StudyController {
                                                                 @RequestHeader(HEADER_USER_ID) String userId,
                                                                 @Parameter(description = "case format") @RequestParam(name = "caseFormat", required = false) String caseFormat
     ) {
-        studyService.recreateStudyRootNetwork(userId, studyUuid, caseFormat);
+        studyService.recreateStudyRootNetwork(userId, studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), caseFormat);
         return ResponseEntity.ok().build();
     }
 
@@ -272,7 +275,7 @@ public class StudyController {
         @ApiResponse(responseCode = "204", description = "The study indexation status doesn't exist"),
         @ApiResponse(responseCode = "404", description = "The study or network doesn't exist")})
     public ResponseEntity<String> checkStudyIndexationStatus(@PathVariable("studyUuid") UUID studyUuid) {
-        String result = studyService.getStudyIndexationStatus(studyUuid).name();
+        String result = studyService.getStudyIndexationStatus(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)).name();
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -287,7 +290,8 @@ public class StudyController {
                                                 @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCutParentNodeUuid") UUID subtreeToCutParentNodeUuid,
                                                 @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, referenceNodeUuid, userId);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, rootNetworkUuid, referenceNodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -331,10 +335,10 @@ public class StudyController {
                 .language(language)
                 .build();
         byte[] result = studyService.getVoltageLevelSvg(
-                studyUuid,
                 voltageLevelId,
                 diagramParameters,
-                nodeUuid);
+                nodeUuid,
+                studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -364,10 +368,10 @@ public class StudyController {
                 .language(language)
                 .build();
         String result = studyService.getVoltageLevelSvgAndMetadata(
-                studyUuid,
                 voltageLevelId,
                 diagramParameters,
-                nodeUuid);
+                nodeUuid,
+                studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -380,7 +384,7 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuid, voltageLevelId, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusesOrBusbarSections(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), voltageLevelId, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/substation-id")
@@ -391,7 +395,7 @@ public class StudyController {
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "voltageLevelId") @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().body(studyService.getVoltageLevelSubstationId(studyUuid, nodeUuid, voltageLevelId, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().body(studyService.getVoltageLevelSubstationId(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), voltageLevelId, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/{hvdcId}/shunt-compensators")
@@ -402,7 +406,7 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("hvdcId") String hvdcId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        String hvdcInfos = studyService.getHvdcLineShuntCompensators(studyUuid, nodeUuid, inUpstreamBuiltParentNode, hvdcId);
+        String hvdcInfos = studyService.getHvdcLineShuntCompensators(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode, hvdcId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(hvdcInfos);
     }
 
@@ -413,8 +417,8 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Lines ids") @RequestParam(name = "lineId", required = false) List<String> linesIds) {
-
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLinesGraphics(networkStoreService.getNetworkUuid(studyUuid), nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), linesIds));
+        UUID firstRootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLinesGraphics(rootNetworkService.getNetworkUuid(firstRootNetworkUuid), nodeUuid, firstRootNetworkUuid, linesIds));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/substations")
@@ -424,8 +428,8 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
-
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsGraphics(networkStoreService.getNetworkUuid(studyUuid), nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), substationsIds));
+        UUID firstRootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsGraphics(rootNetworkService.getNetworkUuid(firstRootNetworkUuid), nodeUuid, firstRootNetworkUuid, substationsIds));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/equipments-ids")
@@ -439,7 +443,7 @@ public class StudyController {
             @Parameter(description = "equipment type") @RequestParam(name = "equipmentType") String equipmentType,
             @Parameter(description = "Nominal Voltages") @RequestParam(name = "nominalVoltages", required = false) List<Double> nominalVoltages) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode, equipmentType, nominalVoltages));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsIds(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), substationsIds, inUpstreamBuiltParentNode, equipmentType, nominalVoltages));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/elements")
@@ -455,7 +459,7 @@ public class StudyController {
             @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
             @Parameter(description = "Nominal Voltages") @RequestParam(name = "nominalVoltages", required = false) List<Double> nominalVoltages) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, substationsIds, infoType, elementType, inUpstreamBuiltParentNode, nominalVoltages));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), substationsIds, infoType, elementType, inUpstreamBuiltParentNode, nominalVoltages));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}")
@@ -468,7 +472,7 @@ public class StudyController {
             @Parameter(description = "Element type") @RequestParam(name = "elementType") String elementType,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
             @Parameter(description = "Info type parameters") InfoTypeParameters infoTypeParameters) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementInfos(studyUuid, nodeUuid, elementType, infoTypeParameters, elementId, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementInfos(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), elementType, infoTypeParameters, elementId, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/countries")
@@ -479,7 +483,7 @@ public class StudyController {
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkCountries(studyUuid, nodeUuid, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkCountries(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/nominal-voltages")
@@ -490,7 +494,7 @@ public class StudyController {
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkNominalVoltages(studyUuid, nodeUuid, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkNominalVoltages(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}/voltage-level-id")
@@ -502,7 +506,7 @@ public class StudyController {
             @PathVariable("equipmentId") String equipmentId,
             @RequestParam(value = "side") ThreeSides side,
             @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        String voltageLevelId = studyService.getBranchOr3WTVoltageLevelId(studyUuid, nodeUuid, inUpstreamBuiltParentNode, equipmentId, side);
+        String voltageLevelId = studyService.getBranchOr3WTVoltageLevelId(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode, equipmentId, side);
         return StringUtils.isEmpty(voltageLevelId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(voltageLevelId);
     }
 
@@ -516,7 +520,7 @@ public class StudyController {
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelEquipments(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode, voltageLevelId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelEquipments(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), substationsIds, inUpstreamBuiltParentNode, voltageLevelId));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/all")
@@ -527,7 +531,7 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllMapData(studyUuid, nodeUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllMapData(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), substationsIds));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}")
@@ -538,8 +542,9 @@ public class StudyController {
                                                         @PathVariable("modificationUuid") UUID modificationUuid,
                                                         @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid,
                                                         @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.moveModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, userId);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.moveModifications(studyUuid, nodeUuid, nodeUuid, rootNetworkUuid, List.of(modificationUuid), beforeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -553,17 +558,18 @@ public class StudyController {
                                                          @RequestBody List<UUID> modificationsToCopyUuidList,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
         if (originNodeUuid != null) {
             studyService.assertIsNodeExist(studyUuid, originNodeUuid);
-            studyService.assertCanModifyNode(studyUuid, originNodeUuid);
+            studyService.assertCanModifyNode(studyUuid, originNodeUuid, rootNetworkUuid);
         }
         switch (action) {
             case COPY, INSERT:
-                studyService.createModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId, action);
+                studyService.createModifications(studyUuid, nodeUuid, rootNetworkUuid, modificationsToCopyUuidList, userId, action);
                 break;
             case MOVE:
-                studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId);
+                studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, rootNetworkUuid, modificationsToCopyUuidList, null, userId);
                 break;
             default:
                 throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
@@ -772,8 +778,9 @@ public class StudyController {
             @PathVariable("format") String format,
             @RequestParam(value = "formatParameters", required = false) String parametersJson,
             @RequestParam(value = "fileName") String fileName) {
-        studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid);
-        ExportNetworkInfos exportNetworkInfos = studyService.exportNetwork(studyUuid, nodeUuid, format, parametersJson, fileName);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
+        ExportNetworkInfos exportNetworkInfos = studyService.exportNetwork(nodeUuid, rootNetworkUuid, format, parametersJson, fileName);
 
         HttpHeaders header = new HttpHeaders();
         header.setContentDisposition(ContentDisposition.builder("attachment").filename(exportNetworkInfos.getFileName(), StandardCharsets.UTF_8).build());
@@ -826,7 +833,7 @@ public class StudyController {
     public ResponseEntity<Integer> getContingencyCount(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames) {
-        return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListNames) ? 0 : studyService.getContingencyCount(studyUuid, contingencyListNames, nodeUuid));
+        return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListNames) ? 0 : studyService.getContingencyCount(studyUuid, contingencyListNames, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations")
@@ -837,7 +844,7 @@ public class StudyController {
                                                        @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
                                                        @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
                                                        Sort sort) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(studyUuid, nodeUuid, filters, globalFilters, sort));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), filters, globalFilters, sort));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/computation/result/enum-values")
@@ -847,7 +854,7 @@ public class StudyController {
                                                                     @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                     @Parameter(description = "Computing Type") @RequestParam(name = "computingType") ComputationType computingType,
                                                                     @Parameter(description = "Enum name") @RequestParam(name = "enumName") String enumName) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getResultEnumValues(studyUuid, nodeUuid, computingType, enumName));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getResultEnumValues(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), computingType, enumName));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
@@ -947,8 +954,8 @@ public class StudyController {
                 .componentLibrary(componentLibrary)
                 .language(language)
                 .build();
-        byte[] result = studyService.getSubstationSvg(studyUuid, substationId,
-                diagramParameters, substationLayout, nodeUuid);
+        byte[] result = studyService.getSubstationSvg(substationId,
+                diagramParameters, substationLayout, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -977,11 +984,11 @@ public class StudyController {
                 .language(language)
                 .build();
         String result = studyService.getSubstationSvgAndMetadata(
-                studyUuid,
                 substationId,
                 diagramParameters,
                 substationLayout,
-                nodeUuid);
+                nodeUuid,
+                studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -995,7 +1002,7 @@ public class StudyController {
             @Parameter(description = "Voltage levels ids") @RequestParam(name = "voltageLevelsIds") List<String> voltageLevelsIds,
             @Parameter(description = "depth") @RequestParam(name = "depth", defaultValue = "0") int depth,
             @Parameter(description = "Initialize NAD with Geographical Data") @RequestParam(name = "withGeoData", defaultValue = "true") boolean withGeoData) {
-        String result = studyService.getNetworkAreaDiagram(studyUuid, nodeUuid, voltageLevelsIds, depth, withGeoData);
+        String result = studyService.getNetworkAreaDiagram(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), voltageLevelsIds, depth, withGeoData);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1083,8 +1090,9 @@ public class StudyController {
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createNetworkModification(studyUuid, modificationAttributes, nodeUuid, userId);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.createNetworkModification(studyUuid, modificationAttributes, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1096,8 +1104,9 @@ public class StudyController {
                                                           @Parameter(description = "Network modification UUID") @PathVariable("uuid") UUID networkModificationUuid,
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, networkModificationUuid, userId);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, rootNetworkUuid, networkModificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1108,8 +1117,9 @@ public class StudyController {
                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                            @Parameter(description = "Network modification UUIDs") @RequestParam(name = "uuids", required = false) List<UUID> networkModificationUuids,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.deleteNetworkModifications(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId);
 
         return ResponseEntity.ok().build();
     }
@@ -1122,11 +1132,12 @@ public class StudyController {
                                                                @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
                                                                @Parameter(description = "Stashed Modification") @RequestParam(name = "stashed", required = true) Boolean stashed,
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
         if (stashed.booleanValue()) {
-            studyService.stashNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
+            studyService.stashNetworkModifications(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId);
         } else {
-            studyService.restoreNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
+            studyService.restoreNetworkModifications(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId);
         }
         return ResponseEntity.ok().build();
     }
@@ -1139,8 +1150,9 @@ public class StudyController {
                                                           @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
                                                           @Parameter(description = "New activated value") @RequestParam(name = "activated", required = true) Boolean activated,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.updateNetworkModificationsActivation(studyUuid, nodeUuid, networkModificationUuids, userId, activated);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.updateNetworkModificationsActivation(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId, activated);
         return ResponseEntity.ok().build();
     }
 
@@ -1191,7 +1203,8 @@ public class StudyController {
                                            @Parameter(description = "ids of children to remove") @RequestParam("ids") List<UUID> nodeIds,
                                            @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.deleteNodes(studyUuid, nodeIds, rootNetworkUuid, deleteChildren, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1204,7 +1217,8 @@ public class StudyController {
                                                  @Parameter(description = "id of child to delete (move to trash)") @PathVariable("id") UUID nodeId,
                                                  @Parameter(description = "stashChildren") @RequestParam(value = "stashChildren", defaultValue = "false") boolean stashChildren,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.stashNode(studyUuid, nodeId, stashChildren, userId);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.stashNode(studyUuid, nodeId, rootNetworkUuid, stashChildren, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1246,7 +1260,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The study or the parent node not found")})
     public ResponseEntity<NetworkModificationNode> getNetworkModificationSubtree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                  @Parameter(description = "parent node uuid") @RequestParam(value = "parentNodeUuid") UUID parentNodeUuid) {
-        NetworkModificationNode parentNode = networkModificationTreeService.getStudySubtree(studyUuid, parentNodeUuid);
+        NetworkModificationNode parentNode = (NetworkModificationNode) networkModificationTreeService.getStudySubtree(studyUuid, parentNodeUuid);
         return parentNode != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(parentNode)
                 : ResponseEntity.notFound().build();
@@ -1306,8 +1320,9 @@ public class StudyController {
     public ResponseEntity<Void> buildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.buildNode(studyUuid, nodeUuid, userId);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1318,7 +1333,8 @@ public class StudyController {
         @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
     public ResponseEntity<Void> unbuildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.unbuildNode(studyUuid, nodeUuid);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.unbuildNode(studyUuid, nodeUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -1366,7 +1382,7 @@ public class StudyController {
     @Operation(summary = "reindex the study")
     @ApiResponse(responseCode = "200", description = "Study reindexed")
     public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        studyService.reindexStudy(studyUuid);
+        studyService.reindexStudy(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
         return ResponseEntity.ok().build();
     }
 
@@ -1389,7 +1405,7 @@ public class StudyController {
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runSensitivityAnalysis(studyUuid, nodeUuid, userId);
+        studyService.runSensitivityAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1540,7 +1556,8 @@ public class StudyController {
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
         studyService.createDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
         return ResponseEntity.ok().build();
     }
@@ -1554,7 +1571,8 @@ public class StudyController {
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
         studyService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
         return ResponseEntity.ok().build();
     }
@@ -1568,7 +1586,8 @@ public class StudyController {
                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                               @Parameter(description = "Dynamic simulation event UUIDs") @RequestParam("eventUuids") List<UUID> eventUuids,
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
         studyService.deleteDynamicSimulationEvents(studyUuid, nodeUuid, userId, eventUuids);
         return ResponseEntity.ok().build();
     }
@@ -1671,8 +1690,9 @@ public class StudyController {
                                                              @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.copyVoltageInitModifications(studyUuid, nodeUuid, userId);
+        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.copyVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1741,7 +1761,7 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Is Injections Set") @RequestParam(name = "isInjectionsSet", required = false) Boolean isInjectionsSet,
             SensitivityFactorsIdsByGroup factorsIds) {
-        return ResponseEntity.ok().body(sensitivityAnalysisService.getSensitivityAnalysisFactorsCount(networkStoreService.getNetworkUuid(studyUuid),
+        return ResponseEntity.ok().body(sensitivityAnalysisService.getSensitivityAnalysisFactorsCount(rootNetworkService.getNetworkUuid(studyService.getStudyFirstRootNetworkUuid(studyUuid)),
             networkModificationTreeService.getVariantId(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)), factorsIds, isInjectionsSet));
     }
 
@@ -1772,7 +1792,7 @@ public class StudyController {
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                       @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runNonEvacuatedEnergy(studyUuid, nodeUuid, userId));
+        return ResponseEntity.ok().body(studyService.runNonEvacuatedEnergy(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/result")
@@ -1890,7 +1910,7 @@ public class StudyController {
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
             @RequestBody String filter) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFilter(studyUuid, nodeUuid, inUpstreamBuiltParentNode, filter));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFilter(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode, filter));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/filters/{filterUuid}/elements")
@@ -1899,7 +1919,7 @@ public class StudyController {
     public ResponseEntity<String> exportFilter(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "Filter uuid to be applied") @PathVariable("filterUuid") UUID filterUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(studyUuid, filterUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(studyService.getStudyFirstRootNetworkUuid(studyUuid), filterUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/state-estimation/run")
