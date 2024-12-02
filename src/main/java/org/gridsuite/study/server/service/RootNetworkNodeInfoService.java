@@ -405,6 +405,20 @@ public class RootNetworkNodeInfoService {
             .toList();
     }
 
+    public void assertComputationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
+        loadFlowService.assertLoadFlowNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW));
+        securityAnalysisService.assertSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS));
+        dynamicSimulationService.assertDynamicSimulationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION));
+        sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
+        nonEvacuatedEnergyService.assertNonEvacuatedEnergyNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS));
+        shortCircuitService.assertShortCircuitAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT), getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT_ONE_BUS));
+        voltageInitService.assertVoltageInitNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION));
+        stateEstimationService.assertStateEstimationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION));
+    }
+
+    /***************************
+     * GET COMPUTATION RESULTS *
+     ***************************/
     @Transactional(readOnly = true)
     public String getLoadFlowResult(UUID nodeUuid, UUID rootNetworkUuid, String filters, Sort sort) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
@@ -491,6 +505,9 @@ public class RootNetworkNodeInfoService {
         return stateEstimationService.getStateEstimationResult(resultUuid);
     }
 
+    /**************************
+     * GET COMPUTATION STATUS *
+     **************************/
     @Transactional(readOnly = true)
     public String getLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
@@ -539,6 +556,9 @@ public class RootNetworkNodeInfoService {
         return stateEstimationService.getStateEstimationStatus(resultUuid);
     }
 
+    /*******************************
+     * STOP COMPUTATION EXECUTIONS *
+     *******************************/
     @Transactional
     public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
@@ -579,16 +599,5 @@ public class RootNetworkNodeInfoService {
     public void stopStateEstimation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
         stateEstimationService.stopStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
-    }
-
-    public void assertComputationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
-        loadFlowService.assertLoadFlowNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW));
-        securityAnalysisService.assertSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS));
-        dynamicSimulationService.assertDynamicSimulationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION));
-        sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
-        nonEvacuatedEnergyService.assertNonEvacuatedEnergyNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS));
-        shortCircuitService.assertShortCircuitAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT), getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT_ONE_BUS));
-        voltageInitService.assertVoltageInitNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION));
-        stateEstimationService.assertStateEstimationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION));
     }
 }
