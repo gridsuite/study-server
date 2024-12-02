@@ -312,8 +312,6 @@ class RootNetworkTest {
 
         // check deletion of 2nd link remote infos
         Mockito.verify(loadFlowService, Mockito.times(1)).deleteLoadFlowResult(LOADFLOW_RESULT_UUID2);
-
-        //TODO: missing variant deletion
     }
 
     private Map<String, Object> createConsumeCaseImportSucceededHeaders(String networkUuid, String networkId, String caseFormat, String caseName, CaseImportReceiver caseImportReceiver, Map<String, String> importParameters) throws JsonProcessingException {
