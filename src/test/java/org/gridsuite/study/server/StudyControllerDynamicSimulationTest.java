@@ -482,7 +482,7 @@ class StudyControllerDynamicSimulationTest {
         Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicSimulationResultUuid(RESULT_UUID).build()))
             .when(rootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOTNETWORK_UUID);
         Mockito.doAnswer(invocation -> timeSeries).when(dynamicSimulationService).getTimeSeriesResult(RESULT_UUID, null);
-        
+
         // --- call endpoint to be tested --- //
         // get result from a node done
         MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT + DELIMITER + "timeseries",
