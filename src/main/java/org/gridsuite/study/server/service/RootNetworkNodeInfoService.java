@@ -371,6 +371,9 @@ public class RootNetworkNodeInfoService {
         if (rootNetworkNodeInfo.getDynamicSimulationResultUuid() != null) {
             rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(rootNetworkNodeInfo.getDynamicSimulationResultUuid());
         }
+        if (rootNetworkNodeInfo.getVoltageInitResultUuid() != null) {
+            rootNetworkNodeInfoEntity.setVoltageInitResultUuid(rootNetworkNodeInfo.getVoltageInitResultUuid());
+        }
     }
 
     public List<CompletableFuture<Void>> getDeleteRootNetworkNodeInfosFutures(List<RootNetworkNodeInfo> rootNetworkNodeInfo) {
