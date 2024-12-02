@@ -304,8 +304,8 @@ public class RootNetworkNodeInfoService {
     }
 
     public UUID getComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
-        return getComputationResultUuid(rootNetworkNodeInfoEntity, computationType);
+        Optional<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntityOpt = getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
+        return rootNetworkNodeInfoEntityOpt.map(rootNetworkNodeInfoEntity -> getComputationResultUuid(rootNetworkNodeInfoEntity, computationType)).orElse(null);
     }
 
     public List<UUID> getComputationResultUuids(UUID studyUuid, ComputationType computationType) {
@@ -405,156 +405,184 @@ public class RootNetworkNodeInfoService {
             .toList();
     }
 
+    @Transactional(readOnly = true)
     public String getLoadFlowResult(UUID nodeUuid, UUID rootNetworkUuid, String filters, Sort sort) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.LOAD_FLOW);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         return loadFlowService.getLoadFlowResult(resultUuid, filters, sort);
     }
 
+    @Transactional(readOnly = true)
     public String getSecurityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String filters, Pageable pageable) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
         return securityAnalysisService.getSecurityAnalysisResult(resultUuid, resultType, filters, pageable);
     }
 
+    @Transactional(readOnly = true)
     public byte[] getSecurityAnalysisResultCsv(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
         return securityAnalysisService.getSecurityAnalysisResultCsv(resultUuid, resultType, csvTranslations);
     }
 
+    @Transactional(readOnly = true)
     public List<TimeSeriesMetadataInfos> getDynamicSimulationTimeSeriesMetadata(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION);
         return dynamicSimulationService.getTimeSeriesMetadataList(resultUuid);
     }
 
+    @Transactional(readOnly = true)
     public List<DoubleTimeSeries> getDynamicSimulationTimeSeries(UUID nodeUuid, UUID rootNetworkUuid, List<String> timeSeriesNames) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.DYNAMIC_SIMULATION);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION);
         return dynamicSimulationService.getTimeSeriesResult(resultUuid, timeSeriesNames);
     }
 
+    @Transactional(readOnly = true)
     public List<TimelineEventInfos> getDynamicSimulationTimeline(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.DYNAMIC_SIMULATION);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION);
         return dynamicSimulationService.getTimelineResult(resultUuid);
     }
 
+    @Transactional(readOnly = true)
     public String getSensitivityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, String selector) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
         return sensitivityAnalysisService.getSensitivityAnalysisResult(resultUuid, selector);
     }
 
+    @Transactional(readOnly = true)
     public byte[] exportSensitivityResultsAsCsv(UUID nodeUuid, UUID rootNetworkUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
         return sensitivityAnalysisService.exportSensitivityResultsAsCsv(resultUuid, sensitivityAnalysisCsvFileInfos);
     }
 
+    @Transactional(readOnly = true)
     public String getSensitivityResultsFilterOptions(UUID nodeUuid, UUID rootNetworkUuid, String selector) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
         return sensitivityAnalysisService.getSensitivityResultsFilterOptions(resultUuid, selector);
     }
 
+    @Transactional(readOnly = true)
     public String getNonEvacuatedEnergyResult(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS);
         return nonEvacuatedEnergyService.getNonEvacuatedEnergyResult(resultUuid);
     }
 
+    @Transactional(readOnly = true)
     public String getShortCircuitAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, boolean paged, Pageable pageable) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
-            type == ShortcircuitAnalysisType.ALL_BUSES ? ComputationType.SHORT_CIRCUIT : ComputationType.SHORT_CIRCUIT_ONE_BUS);
+            type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
         return shortCircuitService.getShortCircuitAnalysisResult(resultUuid, mode, type, filters, paged, pageable);
     }
 
+    @Transactional(readOnly = true)
     public byte[] getShortCircuitAnalysisCsvResult(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type, String headerCsv) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
-            type == ShortcircuitAnalysisType.ALL_BUSES ? ComputationType.SHORT_CIRCUIT : ComputationType.SHORT_CIRCUIT_ONE_BUS);
+            type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
         return shortCircuitService.getShortCircuitAnalysisCsvResult(resultUuid, type, headerCsv);
     }
 
+    @Transactional(readOnly = true)
     public String getVoltageInitResult(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
         return voltageInitService.getVoltageInitResult(resultUuid);
     }
 
+    @Transactional(readOnly = true)
     public String getStateEstimationResult(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.STATE_ESTIMATION);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
         return stateEstimationService.getStateEstimationResult(resultUuid);
     }
 
+    @Transactional(readOnly = true)
     public String getLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.LOAD_FLOW);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         return loadFlowService.getLoadFlowStatus(resultUuid);
     }
 
+    @Transactional(readOnly = true)
     public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
         return securityAnalysisService.getSecurityAnalysisStatus(resultUuid);
     }
 
+    @Transactional(readOnly = true)
     public DynamicSimulationStatus getDynamicSimulationStatus(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION);
         return dynamicSimulationService.getStatus(resultUuid);
     }
 
     public String getSensitivityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
         return sensitivityAnalysisService.getSensitivityAnalysisStatus(resultUuid);
     }
 
+    @Transactional(readOnly = true)
     public String getNonEvacuatedEnergyStatus(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS);
         return nonEvacuatedEnergyService.getNonEvacuatedEnergyStatus(resultUuid);
     }
 
+    @Transactional(readOnly = true)
     public String getShortCircuitAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
-            type == ShortcircuitAnalysisType.ALL_BUSES ? ComputationType.SHORT_CIRCUIT : ComputationType.SHORT_CIRCUIT_ONE_BUS);
+            type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
         return shortCircuitService.getShortCircuitAnalysisStatus(resultUuid, type);
     }
 
+    @Transactional(readOnly = true)
     public String getVoltageInitStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
         return voltageInitService.getVoltageInitStatus(resultUuid);
     }
 
+    @Transactional(readOnly = true)
     public String getStateEstimationStatus(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.STATE_ESTIMATION);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
         return stateEstimationService.getStateEstimationStatus(resultUuid);
     }
 
+    @Transactional
     public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.LOAD_FLOW);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         loadFlowService.stopLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
     }
 
+    @Transactional
     public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
         securityAnalysisService.stopSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
     }
 
+    @Transactional
     public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
         sensitivityAnalysisService.stopSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
     }
 
+    @Transactional
     public void stopNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS);
         nonEvacuatedEnergyService.stopNonEvacuatedEnergy(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
     }
 
+    @Transactional
     public void stopShortCircuitAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SHORT_CIRCUIT);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT);
         shortCircuitService.stopShortCircuitAnalysis(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
     }
 
+    @Transactional
     public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
         voltageInitService.stopVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
     }
 
+    @Transactional
     public void stopStateEstimation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.STATE_ESTIMATION);
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
         stateEstimationService.stopStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
     }
 
     public void assertComputationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
-        loadFlowService.assertLoadFlowNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.LOAD_FLOW));
+        loadFlowService.assertLoadFlowNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW));
         securityAnalysisService.assertSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS));
         dynamicSimulationService.assertDynamicSimulationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION));
         sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));

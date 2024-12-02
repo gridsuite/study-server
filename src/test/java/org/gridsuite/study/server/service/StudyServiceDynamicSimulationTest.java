@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 
 import java.util.*;
 
@@ -89,7 +90,7 @@ class StudyServiceDynamicSimulationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @SpyBean
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @MockBean
@@ -115,7 +116,7 @@ class StudyServiceDynamicSimulationTest {
         // setup DynamicSimulationService mock
         given(dynamicSimulationService.runDynamicSimulation(eq(""), eq(NODE_UUID), eq(ROOTNETWORK_UUID), any(), any(), any(), any(), any())).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
-        given(loadFlowService.getLoadFlowStatus(RESULT_UUID)).willReturn(LoadFlowStatus.CONVERGED.name());
+        given(rootNetworkNodeInfoService.getLoadFlowStatus(NODE_UUID, ROOTNETWORK_UUID)).willReturn(LoadFlowStatus.CONVERGED.name());
 
         // init parameters
         DynamicSimulationParametersInfos parameters = new DynamicSimulationParametersInfos();

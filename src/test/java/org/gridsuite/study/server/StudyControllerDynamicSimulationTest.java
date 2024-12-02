@@ -15,6 +15,7 @@ import com.powsybl.timeseries.TimeSeriesIndex;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelVariableDefinitionInfos;
@@ -26,10 +27,12 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventPropertyInfos
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -188,6 +191,12 @@ class StudyControllerDynamicSimulationTest {
     @Autowired
     private InputDestination input;
 
+    @Autowired
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
+
+    @SpyBean
+    private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+
     //output destinations
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
@@ -233,14 +242,13 @@ class StudyControllerDynamicSimulationTest {
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                   UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
-                .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
+                .description("description").modificationGroupUuid(modificationGroupUuid)
                 .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
         // Only for tests
         String mnBodyJson = objectMapper.writeValueAsString(modificationNode);
         JSONObject jsonObject = new JSONObject(mnBodyJson);
-        jsonObject.put("variantId", variantId);
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
@@ -248,8 +256,10 @@ class StudyControllerDynamicSimulationTest {
                 .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertThat(mess).isNotNull();
-        modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
+        UUID newNodeId = UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE)));
+        modificationNode.setId(newNodeId);
         assertThat(mess.getHeaders()).containsEntry(NotificationService.HEADER_INSERT_MODE, InsertMode.CHILD.name());
+        rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyService.getStudyFirstRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
         return modificationNode;
     }
 
@@ -469,7 +479,10 @@ class StudyControllerDynamicSimulationTest {
         ));
 
         // setup DynamicSimulationService mock
+        Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicSimulationResultUuid(RESULT_UUID).build()))
+            .when(rootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOTNETWORK_UUID);
         Mockito.doAnswer(invocation -> timeSeries).when(dynamicSimulationService).getTimeSeriesResult(RESULT_UUID, null);
+
 
         // --- call endpoint to be tested --- //
         // get result from a node done
@@ -511,6 +524,8 @@ class StudyControllerDynamicSimulationTest {
         );
 
         // setup DynamicSimulationService mock
+        Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicSimulationResultUuid(RESULT_UUID).build()))
+            .when(rootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOTNETWORK_UUID);
         Mockito.doAnswer(invocation -> timelineEventInfosList).when(dynamicSimulationService).getTimelineResult(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
@@ -544,6 +559,8 @@ class StudyControllerDynamicSimulationTest {
     void testGetDynamicSimulationTimeSeriesMetadata() throws Exception {
         // setup DynamicSimulationService mock
         // timeseries metadata
+        Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicSimulationResultUuid(RESULT_UUID).build()))
+            .when(rootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOTNETWORK_UUID);
         List<TimeSeriesMetadataInfos> timeSeriesMetadataInfosList = List.of(new TimeSeriesMetadataInfos(TIME_SERIES_NAME_1), new TimeSeriesMetadataInfos(TIME_SERIES_NAME_2));
 
         Mockito.doAnswer(invocation -> timeSeriesMetadataInfosList).when(dynamicSimulationService).getTimeSeriesMetadataList(RESULT_UUID);
@@ -567,6 +584,8 @@ class StudyControllerDynamicSimulationTest {
     @Test
     void testGetDynamicSimulationStatus() throws Exception {
         // setup DynamicSimulationService mock
+        Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicSimulationResultUuid(RESULT_UUID).build()))
+            .when(rootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOTNETWORK_UUID);
         Mockito.doAnswer(invocation -> DynamicSimulationStatus.DIVERGED).when(dynamicSimulationService).getStatus(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
