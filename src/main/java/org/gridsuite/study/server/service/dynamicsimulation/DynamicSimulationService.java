@@ -222,37 +222,40 @@ public interface DynamicSimulationService {
     /**
      * Run a dynamic simulation from a given study, node UUID and some configured parameters
      * @param provider name of the dynamic simulation provider, e.g. Dynawo
-     * @param studyUuid study uuid
      * @param nodeUuid node uuid
+     * @param rootNetworkUuid root network uuid
+     * @param networkUuid network uuid
+     * @param variantId variant id
+     * @param reportUuid report uuid
      * @param parameters parameters of dynamic simulation
      * @param userId id of user
      * @return the UUID of the dynamic simulation
      */
-    UUID runDynamicSimulation(String provider, UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId);
+    UUID runDynamicSimulation(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId);
 
     /**
-     * Get a list of curves from a given node UUID
+     * Get a list of curves from a given result UUID
      *
-     * @param nodeUuid a given node UUID
+     * @param resultUuid a given result UUID
      * @param timeSeriesNames a given list of time-series names
      * @return a list of curves
      */
-    List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, UUID rootNetworkUuid, List<String> timeSeriesNames);
+    List<DoubleTimeSeries> getTimeSeriesResult(UUID resultUuid, List<String> timeSeriesNames);
 
     /**
-     * Get timeline from a given node UUID
+     * Get timeline from a given result UUID
      *
-     * @param nodeUuid a given node UUID
+     * @param resultUuid a given result UUID
      * @return a list of {@link TimelineEventInfos}
      */
-    List<TimelineEventInfos> getTimelineResult(UUID nodeUuid, UUID rootNetworkUuid);
+    List<TimelineEventInfos> getTimelineResult(UUID resultUuid);
 
     /**
      * Get the current status of the simulation
-     * @param nodeUuid a given node UUID
+     * @param resultUuid a given result UUID
      * @return the status of the dynamic simulation
      */
-    DynamicSimulationStatus getStatus(UUID nodeUuid, UUID rootNetworkUuid);
+    DynamicSimulationStatus getStatus(UUID resultUuid);
 
     /**
      * invalidate status of the simulation results
@@ -277,10 +280,10 @@ public interface DynamicSimulationService {
     Integer getResultsCount();
 
     /**
-     * @param nodeUuid a given node UUID
+     * @param resultUuid a given result UUID
      * @throws StudyException with type DYNAMIC_SIMULATION_RUNNING if this node is in RUNNING status
      */
-    void assertDynamicSimulationNotRunning(UUID nodeUuid, UUID rootNetworkUuid);
+    void assertDynamicSimulationNotRunning(UUID resultUuid);
 
     /**
      * Get mapping names
@@ -291,10 +294,10 @@ public interface DynamicSimulationService {
 
     /**
      * Get list of time-series metadata
-     * @param nodeUuid a given node UUID
+     * @param resultUuid a given result UUID
      * @return a list of time-series metadata
      */
-    List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid, UUID rootNetworkUuid);
+    List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID resultUuid);
 
     /**
      * Get models used in the given mapping

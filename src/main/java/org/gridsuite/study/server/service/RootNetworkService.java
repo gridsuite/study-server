@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.service;
 
-import com.google.common.base.Functions;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
@@ -15,7 +14,6 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
-import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -29,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -59,9 +56,9 @@ public class RootNetworkService {
                               @Lazy RootNetworkService self,
                               RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository,
                               StudyServerExecutionService studyServerExecutionService,
-                              @Lazy ReportService reportService,
-                              @Lazy EquipmentInfosService equipmentInfosService,
-                              @Lazy NetworkStoreService networkStoreService) {
+                              ReportService reportService,
+                              EquipmentInfosService equipmentInfosService,
+                              NetworkStoreService networkStoreService) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.networkService = networkService;

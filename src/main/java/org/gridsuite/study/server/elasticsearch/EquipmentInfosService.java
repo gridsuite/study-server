@@ -18,7 +18,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.dto.elasticsearch.BasicEquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
-import org.gridsuite.study.server.service.StudyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

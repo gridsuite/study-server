@@ -20,13 +20,7 @@ import java.util.UUID;
 @Getter
 public class DeleteStudyInfos {
 
-    private List<UUID> networkUuids;
-
-    private List<UUID> caseUuids;
-
     private List<RootNetworkInfos> rootNetworkInfosList;
-
-    private List<UUID> reportsUuids;
 
     private List<UUID> modificationGroupUuids;
 }
