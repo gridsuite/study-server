@@ -11,10 +11,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
-import org.gridsuite.study.server.service.CaseService;
-import org.gridsuite.study.server.service.ConsumerService;
-import org.gridsuite.study.server.service.NetworkConversionService;
-import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -25,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.GenericMessage;
 import org.springframework.test.web.servlet.MockMvc;
@@ -39,6 +37,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_IMPORT_PARAMETERS
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @AutoConfigureMockMvc
@@ -86,6 +85,8 @@ class RootNetworkTest {
     private RootNetworkService rootNetworkService;
     @Autowired
     private RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository;
+    @Autowired
+    private StudyService studyService;
 
     @BeforeEach
     void setUp() {
@@ -200,4 +201,35 @@ class RootNetworkTest {
         headers.put(HEADER_IMPORT_PARAMETERS, importParameters);
         return headers;
     }
+
+    @Test
+    void testUpdateRootNetworkCase() throws Exception {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        studyEntity.getFirstRootNetwork().getImportParameters();
+        //Update the root network case
+        UUID newCaseUuid = UUID.randomUUID();
+        String newCaseFormat = "updatedCaseFormat";
+        Map<String, String> importParameters = new HashMap<>();
+
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
+                .willReturn(WireMock.ok())).getId();
+
+        // Perform the PUT request to update the root network case
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}", studyEntity.getId(), studyEntity.getFirstRootNetwork().getId())
+                        .header("userId", "userId")
+                        .param("caseUuid", newCaseUuid.toString()) // Pass the caseUuid as a query parameter
+                        .param("caseFormat", newCaseFormat) // Pass the caseFormat as a query parameter
+                        .content(objectMapper.writeValueAsString(importParameters)) // Pass the importParameters as JSON
+                        .contentType(MediaType.APPLICATION_JSON)) // Set content type to JSON
+                .andExpect(status().isOk());
+
+        // get study from database and check that root network has been updated with new case
+        StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
+        RootNetworkEntity updatedRootNetwork = updatedStudyEntity.getFirstRootNetwork();
+        assertEquals(newCaseUuid, updatedRootNetwork.getCaseUuid());
+        assertEquals(newCaseFormat, updatedRootNetwork.getCaseFormat());
+        assertFalse(caseService.caseExists(CASE_UUID));
+    }
+
 }
