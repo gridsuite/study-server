@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 @Entity
 @Builder
 @Table(name = "rootNetwork",
-    indexes = {@Index(name = "rootNetworkEntity_studyId_idx", columnList = "study_uuid")})
+        indexes = {@Index(name = "rootNetworkEntity_studyId_idx", columnList = "study_uuid")})
 public class RootNetworkEntity {
     @Id
     @Column(name = "id")

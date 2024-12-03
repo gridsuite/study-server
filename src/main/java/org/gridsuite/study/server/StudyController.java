@@ -39,7 +39,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -69,48 +68,31 @@ public class StudyController {
     private final NetworkModificationTreeService networkModificationTreeService;
     private final SingleLineDiagramService singleLineDiagramService;
     private final NetworkConversionService networkConversionService;
-    private final SecurityAnalysisService securityAnalysisService;
-    private final SensitivityAnalysisService sensitivityAnalysisService;
-    private final NonEvacuatedEnergyService nonEvacuatedEnergyService;
-    private final ShortCircuitService shortCircuitService;
-    private final VoltageInitService voltageInitService;
-    private final LoadFlowService loadflowService;
     private final CaseService caseService;
     private final RemoteServicesInspector remoteServicesInspector;
-    private final StateEstimationService stateEstimationService;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final SensitivityAnalysisService sensitivityAnalysisService;
 
     public StudyController(StudyService studyService,
                            NetworkService networkStoreService,
                            NetworkModificationTreeService networkModificationTreeService,
                            SingleLineDiagramService singleLineDiagramService,
                            NetworkConversionService networkConversionService,
-                           SecurityAnalysisService securityAnalysisService,
-                           SensitivityAnalysisService sensitivityAnalysisService,
-                           NonEvacuatedEnergyService nonEvacuatedEnergyService,
-                           ShortCircuitService shortCircuitService,
-                           VoltageInitService voltageInitService,
-                           LoadFlowService loadflowService,
                            CaseService caseService,
                            RemoteServicesInspector remoteServicesInspector,
-                           StateEstimationService stateEstimationService, RootNetworkService rootNetworkService, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+                           RootNetworkService rootNetworkService,
+                           RootNetworkNodeInfoService rootNetworkNodeInfoService, SensitivityAnalysisService sensitivityAnalysisService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
         this.singleLineDiagramService = singleLineDiagramService;
         this.networkConversionService = networkConversionService;
-        this.securityAnalysisService = securityAnalysisService;
-        this.sensitivityAnalysisService = sensitivityAnalysisService;
-        this.nonEvacuatedEnergyService = nonEvacuatedEnergyService;
-        this.shortCircuitService = shortCircuitService;
-        this.voltageInitService = voltageInitService;
-        this.loadflowService = loadflowService;
         this.caseService = caseService;
         this.remoteServicesInspector = remoteServicesInspector;
-        this.stateEstimationService = stateEstimationService;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.sensitivityAnalysisService = sensitivityAnalysisService;
     }
 
     @InitBinder

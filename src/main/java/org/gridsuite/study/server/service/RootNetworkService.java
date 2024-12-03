@@ -15,7 +15,6 @@ import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestRepository;
@@ -28,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.DELETE_ROOT_NETWORK_FAILED;
 
@@ -108,40 +106,6 @@ public class RootNetworkService {
         rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity);
 
         return rootNetworkEntity;
-    }
-
-    // TODO move to study service
-    @Transactional
-    public List<UUID> getStudyReportUuids(UUID studyUuid) {
-        List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllWithInfosByStudyId(studyUuid);
-//        List<UUID> rootNodeReportUuids = rootNetworkEntities.stream().map(RootNetworkEntity::getReportUuid).toList();
-//        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkEntities.stream().flatMap(rootNetworkEntity -> rootNetworkEntity.getRootNetworkNodeInfos().stream()).toList();
-//
-//        //study reports uuids is the concatenation of modification reports, computation reports and root reports uuids
-//        List<UUID> networkModificationNodeReportUuids = rootNetworkNodeInfoEntities.stream().flatMap(rootNetworkNodeInfoEntity ->
-//                Stream.of(
-//                    rootNetworkNodeInfoEntity.getModificationReports().values().stream(),
-//                    rootNetworkNodeInfoEntity.getComputationReports().values().stream()))
-//            .reduce(Stream::concat)
-//            .orElse(Stream.empty()).toList();
-//
-//        return Stream.concat(rootNodeReportUuids.stream(), networkModificationNodeReportUuids.stream()).toList();
-        return rootNetworkEntities.stream().map(this::getReportUuids).flatMap(Collection::stream).toList();
-    }
-
-    public List<UUID> getReportUuids(RootNetworkEntity rootNetworkEntity) {
-        //root network reports uuids is the concatenation of modification reports, computation reports and root network reports uuids
-        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkEntity.getRootNetworkNodeInfos();
-        List<UUID> result = new ArrayList<>(rootNetworkNodeInfoEntities.stream().flatMap(rootNetworkNodeInfoEntity ->
-                Stream.of(
-                    rootNetworkNodeInfoEntity.getModificationReports().values().stream(),
-                    rootNetworkNodeInfoEntity.getComputationReports().values().stream()))
-            .reduce(Stream::concat)
-            .orElse(Stream.empty()).toList());
-
-        result.add(rootNetworkEntity.getReportUuid());
-
-        return result;
     }
 
     public List<UUID> getAllNetworkUuids() {
