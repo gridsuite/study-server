@@ -24,6 +24,7 @@ import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -242,6 +243,46 @@ class RootNetworkTest {
 
         // corresponding rootNetworkCreationRequestRepository should be emptied when root network creation is done
         assertFalse(rootNetworkCreationRequestRepository.existsById(newRootNetworkUuid));
+
+        // check case expiration has been disabled
+        Mockito.verify(caseService, Mockito.times(1)).disableCaseExpiration(CASE_UUID2);
+    }
+
+    @Test
+    void testCreateRootNetworkConsumerWithoutRequest() throws Exception {
+        // create study with first root network
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+
+        UUID newRootNetworkUuid = UUID.randomUUID();
+
+        // DO NOT insert creation request - it means root network won't be created and remote resources will be deleted
+
+        // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
+        Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
+        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, REPORT_UUID2, USER_ID, 0L);
+        Map<String, String> importParameters = new HashMap<>();
+        importParameters.put("param1", "value1");
+        importParameters.put("param2", "value2");
+        Map<String, Object> headers = createConsumeCaseImportSucceededHeaders(NETWORK_UUID2.toString(), NETWORK_ID2, CASE_FORMAT2, CASE_NAME2, caseImportReceiver, importParameters);
+
+        // send message to consumer
+        Mockito.doNothing().when(caseService).disableCaseExpiration(CASE_UUID2);
+        messageConsumer.accept(new GenericMessage<>("", headers));
+
+        // get study from database and check new root network has been created with correct values
+        StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
+        assertEquals(1, updatedStudyEntity.getRootNetworks().size());
+
+        // corresponding rootNetworkCreationRequestRepository should be emptied when root network creation is done
+        assertFalse(rootNetworkCreationRequestRepository.existsById(newRootNetworkUuid));
+
+        // assert distant resources deletions have been called
+        Mockito.verify(caseService, Mockito.times(1)).disableCaseExpiration(CASE_UUID2);
+        Mockito.verify(reportService, Mockito.times(1)).deleteReports(List.of(REPORT_UUID2));
+        Mockito.verify(equipmentInfosService, Mockito.times(1)).deleteEquipmentIndexes(NETWORK_UUID2);
+        Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID2);
+        Mockito.verify(caseService, Mockito.times(1)).deleteCase(CASE_UUID2);
     }
 
     @Test

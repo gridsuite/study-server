@@ -83,6 +83,7 @@ public class RootNetworkService {
 
     /**
      * Called by consumer - will create root network only if rootNetworkCreatationRequest is still in database
+     * Will delete remote resources otherwise
      * @param studyEntity
      * @param rootNetworkInfos
      */
@@ -93,8 +94,7 @@ public class RootNetworkService {
             rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity.get());
             // TODO: send notification to frontend
         } else {
-            // TODO: delete remote resources here
-            throw new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND);
+            delete(rootNetworkInfos);
         }
     }
 
@@ -220,7 +220,7 @@ public class RootNetworkService {
         ));
 
         // delete remote data ids set in root network node infos
-        result.addAll(rootNetworkNodeInfoService.getDeleteRootNetworkNodeInfosFutures(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).flatMap(Collection::stream).toList()));
+        result.addAll(rootNetworkNodeInfoService.getDeleteRootNetworkNodeInfosFutures(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).filter(Objects::nonNull).flatMap(Collection::stream).toList()));
 
         return result;
     }
