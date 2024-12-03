@@ -39,6 +39,7 @@ import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -69,6 +70,7 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
+import static org.gridsuite.study.server.dto.caseimport.CaseImportAction.ROOT_NETWORK_MODIFICATION;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -93,6 +95,7 @@ public class StudyService {
     private final String defaultDynamicSimulationProvider;
 
     private final StudyRepository studyRepository;
+    private final RootNetworkRepository rootNetworkRepository;
     private final StudyCreationRequestRepository studyCreationRequestRepository;
     private final NetworkService networkStoreService;
     private final NetworkModificationService networkModificationService;
@@ -147,6 +150,7 @@ public class StudyService {
         @Value("${non-evacuated-energy.default-provider}") String defaultNonEvacuatedEnergyProvider,
         @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
         StudyRepository studyRepository,
+        RootNetworkRepository rootNetworkRepository,
         StudyCreationRequestRepository studyCreationRequestRepository,
         NetworkService networkStoreService,
         NetworkModificationService networkModificationService,
@@ -180,6 +184,7 @@ public class StudyService {
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
+        this.rootNetworkRepository = rootNetworkRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
         this.networkModificationService = networkModificationService;
@@ -301,6 +306,32 @@ public class StudyService {
         }
 
         return rootNetworkCreationRequestEntity.toDto();
+    }
+
+    public void updateRootNetworkCase(UUID studyUuid, UUID rootNetworkUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
+        RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        UUID oldCaseUuid = rootNetworkEntity.getCaseUuid();
+        rootNetworkEntity.setCaseUuid(caseUuid);
+        rootNetworkEntity.setCaseFormat(caseFormat);
+
+        Map<String, String> importParametersToUse = rootNetworkEntity.getImportParameters();
+
+        for (Map.Entry<String, Object> entry : importParameters.entrySet()) {
+            String key = entry.getKey();
+            Object newValue = entry.getValue();
+
+            String currentValue = importParametersToUse.get(key);
+            if (!Objects.equals(currentValue, newValue)) {
+                importParametersToUse.put(key, newValue.toString());
+            }
+        }
+        rootNetworkEntity.setImportParameters(importParametersToUse);
+
+        rootNetworkRepository.save(rootNetworkEntity);
+
+        UUID importReportUuid = UUID.randomUUID();
+        caseService.deleteCase(oldCaseUuid);
+        persistNetwork(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, new HashMap<>(importParametersToUse), ROOT_NETWORK_MODIFICATION);
     }
 
     @Transactional
