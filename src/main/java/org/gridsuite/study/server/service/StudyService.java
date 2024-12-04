@@ -16,6 +16,7 @@ import lombok.NonNull;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -40,6 +41,8 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -271,13 +274,36 @@ public class StudyService {
             if (duplicateCase) {
                 caseUuidToUse = caseService.duplicateCase(caseUuid, true);
             }
-            persistentStoreWithNotificationOnError(caseUuidToUse, basicStudyInfos.getId(), userId, importReportUuid, caseFormat, importParameters);
+            persistentStoreWithNotificationOnError(caseUuidToUse, basicStudyInfos.getId(), null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.STUDY_CREATION);
         } catch (Exception e) {
             self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             throw e;
         }
 
         return basicStudyInfos;
+    }
+
+    public RootNetworkCreationRequestInfos createRootNetwork(UUID studyUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+
+//        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+        UUID importReportUuid = UUID.randomUUID();
+        UUID rootNetworkUuid = UUID.randomUUID();
+        RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, userId);
+        String variantId = UUID.randomUUID().toString();
+        try {
+            networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, variantId, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
+        } catch (Exception e) {
+            //TO IMPLEMENT rootNetworkService.deleteRootNetworkIfNotCreationInProgress(rootNetworkCreationRequestEntity.getId(), userId);
+            throw e;
+        }
+
+        return rootNetworkCreationRequestEntity.toDto();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, String> getStudyImportParameters(UUID rootNetworkUuid) {
+        return rootNetworkService.getImportParameters(rootNetworkUuid);
     }
 
     /**
@@ -297,7 +323,7 @@ public class StudyService {
      * @param studyUuid
      */
     public void recreateStudyRootNetwork(String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat) {
-        UUID caseUuid = rootNetworkService.getRootNetwork(self.getStudyFirstRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND)).getCaseUuid();
+        UUID caseUuid = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND)).getCaseUuid();
         recreateStudyRootNetwork(caseUuid, userId, studyUuid, rootNetworkUuid, caseFormat, null, true);
     }
 
@@ -308,7 +334,7 @@ public class StudyService {
             ? new HashMap<>(rootNetworkService.getImportParameters(rootNetworkUuid))
             : importParameters;
 
-        persistentStoreWithNotificationOnError(caseUuid, studyUuid, userId, importReportUuid, caseFormat, importParametersToUse);
+        persistentStoreWithNotificationOnError(caseUuid, studyUuid, rootNetworkUuid, userId, importReportUuid, caseFormat, importParametersToUse, CaseImportAction.NETWORK_RECREATION);
     }
 
     public UUID duplicateStudy(UUID sourceStudyUuid, String userId) {
@@ -496,12 +522,10 @@ public class StudyService {
         return createdStudyBasicInfos;
     }
 
-    public CreatedStudyBasicInfos updateStudyNetwork(StudyEntity studyEntity, String userId, NetworkInfos networkInfos) {
-        //TODO does not sound ok to update all rootNetwork network infos at the same time
-        rootNetworkService.getStudyRootNetworks(studyEntity.getId()).forEach(tp -> rootNetworkService.updateStudyEntityNetwork(tp, networkInfos));
+    public CreatedStudyBasicInfos updateStudyNetwork(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, String userId, NetworkInfos networkInfos) {
+        rootNetworkService.updateStudyEntityNetwork(rootNetworkEntity, networkInfos);
 
-        UUID studyFirstRootNetworkUuid = self.getStudyFirstRootNetworkUuid(studyEntity.getId());
-        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity, studyFirstRootNetworkUuid);
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity, rootNetworkEntity.getId());
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudyNetworkRecreationDone(studyEntity.getId(), userId);
@@ -601,9 +625,10 @@ public class StudyService {
         }
     }
 
-    private void persistentStoreWithNotificationOnError(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters) {
+    private void persistentStoreWithNotificationOnError(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
         try {
-            networkConversionService.persistentStore(caseUuid, studyUuid, userId, importReportUuid, caseFormat, importParameters);
+            //TODO: change variantId
+            networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, "first_variant_id", userId, importReportUuid, caseFormat, importParameters, caseImportAction);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, STUDY_CREATION_FAILED);
         }
@@ -1056,7 +1081,7 @@ public class StudyService {
                 .build();
 
         var study = studyRepository.save(studyEntity);
-        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).build());
+        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().id(UUID.randomUUID()).networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).build());
         networkModificationTreeService.createBasicTree(study);
 
         return study;

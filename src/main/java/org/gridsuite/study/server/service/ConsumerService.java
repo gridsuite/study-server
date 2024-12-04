@@ -11,14 +11,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
+import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.DynamicSimulationParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
@@ -68,6 +73,7 @@ public class ConsumerService {
     private final StudyRepository studyRepository;
     private final ShortCircuitService shortCircuitService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final RootNetworkService rootNetworkService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -80,7 +86,9 @@ public class ConsumerService {
                            UserAdminService userAdminService,
                            NetworkModificationTreeService networkModificationTreeService,
                            SensitivityAnalysisService sensitivityAnalysisService,
-                           StudyRepository studyRepository, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+                           StudyRepository studyRepository,
+                           RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                           RootNetworkService rootNetworkservice) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -93,6 +101,7 @@ public class ConsumerService {
         this.studyRepository = studyRepository;
         this.shortCircuitService = shortCircuitService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.rootNetworkService = rootNetworkservice;
     }
 
     @Bean
@@ -198,22 +207,23 @@ public class ConsumerService {
                 String userId = receiver.getUserId();
                 Long startTime = receiver.getStartTime();
                 UUID importReportUuid = receiver.getReportUuid();
+                UUID rootNetworkUuid = receiver.getRootNetworkUuid();
+                CaseImportAction caseImportAction = receiver.getCaseImportAction();
 
                 CaseInfos caseInfos = new CaseInfos(caseUuid, caseName, caseFormat);
                 NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
-                StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
+                StudyEntity studyEntity = studyRepository.findWithRootNetworksById(studyUuid).orElse(null);
                 try {
-                    if (studyEntity != null) {
-                        // if studyEntity is not null, it means we are recreating network for existing study
-                        // we only update network infos sent by network conversion server
-                        studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
-                    } else {
-                        DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
-                        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId, getUserProfile(userId));
-                        UUID shortCircuitParametersUuid = createDefaultShortCircuitAnalysisParameters();
-                        UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters();
-                        UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters();
-                        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid, shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters, importReportUuid);
+                    switch(caseImportAction) {
+                        case STUDY_CREATION -> insertStudy(studyUuid, userId, networkInfos, caseInfos, importParameters, importReportUuid);
+                        case ROOT_NETWORK_CREATION -> rootNetworkService.createRootNetworkFromRequest(studyEntity, RootNetworkInfos.builder()
+                            .id(rootNetworkUuid)
+                            .caseInfos(caseInfos)
+                            .reportUuid(importReportUuid)
+                            .networkInfos(networkInfos)
+                            .importParameters(importParameters)
+                            .build());
+                        case NETWORK_RECREATION -> recreateNetworkOfRootNetwork(studyEntity, rootNetworkUuid, userId, networkInfos);
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
@@ -228,6 +238,22 @@ public class ConsumerService {
                 }
             }
         };
+    }
+
+    private void insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos,
+                             Map<String, String> importParameters, UUID importReportUuid) {
+        DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
+        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId, getUserProfile(userId));
+        UUID shortCircuitParametersUuid = createDefaultShortCircuitAnalysisParameters();
+        UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters();
+        UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters();
+        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid, shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters, importReportUuid);
+    }
+
+    private void recreateNetworkOfRootNetwork(StudyEntity studyEntity, UUID rootNetworkUuid, String userId, NetworkInfos networkInfos) {
+        // TODO: what to do here ? throwing exception will provoke retried and won't notify frontend
+        RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        studyService.updateStudyNetwork(studyEntity, rootNetworkEntity, userId, networkInfos);
     }
 
     private UserProfileInfos getUserProfile(String userId) {
