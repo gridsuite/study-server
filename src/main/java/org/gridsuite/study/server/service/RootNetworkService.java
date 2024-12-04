@@ -27,6 +27,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.gridsuite.study.server.StudyException.Type.ROOTNETWORK_NOT_FOUND;
+
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
  */
@@ -66,7 +68,7 @@ public class RootNetworkService {
     }
 
     /**
-     * Called by consumer - will create root network only if rootNetworkCreatationRequest is still in database
+     * Called by consumer - will create root network only if rootNetworkCreationRequest is still in database
      * @param studyEntity
      * @param rootNetworkInfos
      */
@@ -84,6 +86,36 @@ public class RootNetworkService {
             // TODO: delete remote resources here
             throw new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND);
         }
+    }
+
+    /**
+     * Called by consumer - will update case for root network
+     */
+    public void updateRootNetworkCase(UUID rootNetworkUuid, RootNetworkInfos rootNetworkInfos) {
+        RootNetworkEntity rootNetworkEntity = getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+        UUID oldCaseUuid = rootNetworkEntity.getCaseUuid();
+        self.updateRootNetwork(rootNetworkEntity, rootNetworkInfos);
+        //delete old case
+        caseService.deleteCase(oldCaseUuid);
+    }
+
+    @Transactional
+    public void updateRootNetwork(@NonNull RootNetworkEntity rootNetworkEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
+        if (rootNetworkInfos.getCaseInfos() != null) {
+            CaseInfos caseInfos = rootNetworkInfos.getCaseInfos();
+            rootNetworkEntity.setCaseUuid(caseInfos.getCaseUuid());
+            rootNetworkEntity.setCaseFormat(caseInfos.getCaseFormat());
+            rootNetworkEntity.setCaseName(caseInfos.getCaseName());
+        }
+        if (rootNetworkInfos.getNetworkInfos() != null) {
+            NetworkInfos networkInfos = rootNetworkInfos.getNetworkInfos();
+            rootNetworkEntity.setNetworkUuid(networkInfos.getNetworkUuid());
+            rootNetworkEntity.setNetworkId(networkInfos.getNetworkId());
+        }
+
+        rootNetworkEntity.setImportParameters(rootNetworkInfos.getImportParameters());
+        rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
+        rootNetworkRepository.save(rootNetworkEntity);
     }
 
     @Transactional

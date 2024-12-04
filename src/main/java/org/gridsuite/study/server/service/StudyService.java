@@ -306,29 +306,13 @@ public class StudyService {
     }
 
     public void updateRootNetworkCase(UUID studyUuid, UUID rootNetworkUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
-        RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
-        UUID oldCaseUuid = rootNetworkEntity.getCaseUuid();
-        rootNetworkEntity.setCaseUuid(caseUuid);
-        rootNetworkEntity.setCaseFormat(caseFormat);
-
-        Map<String, String> importParametersToUse = rootNetworkEntity.getImportParameters();
-
-        for (Map.Entry<String, Object> entry : importParameters.entrySet()) {
-            String key = entry.getKey();
-            Object newValue = entry.getValue();
-
-            String currentValue = importParametersToUse.get(key);
-            if (!Objects.equals(currentValue, newValue)) {
-                importParametersToUse.put(key, newValue.toString());
-            }
-        }
-        rootNetworkEntity.setImportParameters(importParametersToUse);
-
-        rootNetworkRepository.save(rootNetworkEntity);
-
         UUID importReportUuid = UUID.randomUUID();
-        caseService.deleteCase(oldCaseUuid);
-        persistentStoreWithNotificationOnError(caseUuid, studyUuid, rootNetworkUuid, userId, importReportUuid, caseFormat, new HashMap<>(importParametersToUse));
+        try {
+            persistentStoreWithNotificationOnError(caseUuid, studyUuid, rootNetworkUuid, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+        } catch (Exception e) {
+            //TO DO
+            throw e;
+        }
     }
 
     @Transactional(readOnly = true)
