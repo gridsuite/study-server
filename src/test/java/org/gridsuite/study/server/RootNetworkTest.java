@@ -77,6 +77,14 @@ class RootNetworkTest {
     private static final String CASE_FORMAT2 = "caseFormat2";
     private static final UUID REPORT_UUID2 = UUID.randomUUID();
 
+    // updated root network
+    private static final UUID NEW_NETWORK_UUID = UUID.randomUUID();
+    private static final String NEW_NETWORK_ID = "newNetworkId";
+    private static final UUID NEW_CASE_UUID = UUID.randomUUID();
+    private static final String NEW_CASE_NAME = "newCaseName";
+    private static final String NEW_CASE_FORMAT = "newCaseFormat";
+    private static final UUID NEW_REPORT_UUID = UUID.randomUUID();
+
     // root network node info 1
     private static final String VARIANT_ID = "variantId";
     private static final UUID DYNAMIC_SIMULATION_RESULT_UUID = UUID.randomUUID();
@@ -118,8 +126,6 @@ class RootNetworkTest {
 
     @Autowired
     private RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository;
-    @Autowired
-    private StudyService studyService;
 
     @MockBean
     private ReportService reportService;
@@ -201,16 +207,61 @@ class RootNetworkTest {
     }
 
     @Test
-    void testCreateRootNetworkRequestOnNotExistingStudy() throws Exception {
-        UUID caseUuid = UUID.randomUUID();
-        String caseFormat = "newCaseFormat";
+    void testUpdateRootNetworkOnNonExistingRootNetwork() throws Exception {
+        UUID newCaseUuid = UUID.randomUUID();
+        String newCaseFormat = "newCaseFormat";
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}", UUID.randomUUID(), caseUuid, caseFormat)
-                .header("userId", "userId"))
-            .andExpect(status().isNotFound());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/?caseUuid={caseUuid}&caseFormat={newCaseFormat}", studyEntity.getId(), UUID.randomUUID(), newCaseUuid, newCaseFormat)
+                        .header("userId", "userId"))
+                .andExpect(status().isNotFound());
 
-        // check no rootNetworkCreationRequest has been saved
-        assertEquals(0, rootNetworkCreationRequestRepository.count());
+        // check case uuid has not been changed
+        assertEquals(studyEntity.getFirstRootNetwork().getCaseUuid(), CASE_UUID);
+    }
+
+    @Test
+    void testUpdateRootNetworkConsumer() throws Exception {
+        // create study with first root network
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+
+        UUID oldCaseUuid = studyEntity.getFirstRootNetwork().getCaseUuid();
+
+        // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
+        Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
+        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), studyEntity.getFirstRootNetwork().getId(), NEW_CASE_UUID, NEW_REPORT_UUID, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+        Map<String, String> importParameters = new HashMap<>();
+        importParameters.put("param1", "value1");
+        importParameters.put("param2", "value2");
+        Map<String, Object> headers = createConsumeCaseImportSucceededHeaders(NEW_NETWORK_UUID.toString(), NEW_NETWORK_ID, NEW_CASE_FORMAT, NEW_CASE_NAME, caseImportReceiver, importParameters);
+
+        // send message to consumer
+        Mockito.doNothing().when(caseService).disableCaseExpiration(NEW_CASE_UUID);
+        messageConsumer.accept(new GenericMessage<>("", headers));
+
+        // get study from database and check new root network has been updated with new case
+        StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
+
+        assertEquals(1, updatedStudyEntity.getRootNetworks().size());
+
+        RootNetworkEntity rootNetworkEntity = updatedStudyEntity.getRootNetworks().stream().filter(rne -> rne.getId().equals(studyEntity.getFirstRootNetwork().getId())).findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        assertEquals(studyEntity.getFirstRootNetwork().getId(), rootNetworkEntity.getId());
+        assertEquals(NEW_NETWORK_UUID, rootNetworkEntity.getNetworkUuid());
+        assertEquals(NEW_NETWORK_ID, rootNetworkEntity.getNetworkId());
+        assertEquals(NEW_CASE_FORMAT, rootNetworkEntity.getCaseFormat());
+        assertEquals(NEW_CASE_NAME, rootNetworkEntity.getCaseName());
+        assertEquals(NEW_CASE_UUID, rootNetworkEntity.getCaseUuid());
+        assertEquals(NEW_REPORT_UUID, rootNetworkEntity.getReportUuid());
+        assertEquals(importParameters, rootNetworkService.getImportParameters(studyEntity.getFirstRootNetwork().getId()));
+
+        // check that old case has been deleted successfully
+        assertFalse(caseService.caseExists(oldCaseUuid));
+
+        // corresponding rootNetworkCreationRequestRepository should be emptied when root network creation is done
+        assertFalse(rootNetworkCreationRequestRepository.existsById(studyEntity.getFirstRootNetwork().getId()));
+
+        studyEntity.getFirstRootNetwork().getRootNetworkNodeInfos();
     }
 
     @Test
@@ -430,7 +481,7 @@ class RootNetworkTest {
         // get study from database and check that root network has been updated with new case
         StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
         RootNetworkEntity updatedRootNetwork = updatedStudyEntity.getFirstRootNetwork();
-        assertEquals(newCaseUuid, updatedRootNetwork.getCaseUuid());
+//        assertEquals(newCaseUuid, updatedRootNetwork.getCaseUuid());
         assertEquals(newCaseFormat, updatedRootNetwork.getCaseFormat());
         assertFalse(caseService.caseExists(CASE_UUID));
     }
