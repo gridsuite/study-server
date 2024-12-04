@@ -18,6 +18,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -215,6 +216,14 @@ public class ConsumerService {
                                 .build());
                         case NETWORK_RECREATION ->
                             studyService.updateNetwork(studyUuid, rootNetworkUuid, userId, networkInfos);
+                        case ROOT_NETWORK_MODIFICATION -> {
+                            // Update case for a given root network
+                            studyService.updateRootNetworkCase(studyUuid, rootNetworkUuid, networkInfos, caseInfos,
+                                importParameters, importReportUuid);
+                            // Invalidate nodes of the updated root network
+                            RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
+                            studyService.invalidateBuild(studyUuid, rootNode.getId(), rootNetworkUuid, false, false, true);
+                        }
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {

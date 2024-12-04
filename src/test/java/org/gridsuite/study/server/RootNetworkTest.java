@@ -23,10 +23,9 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
-import org.gridsuite.study.server.service.CaseService;
-import org.gridsuite.study.server.service.ConsumerService;
-import org.gridsuite.study.server.service.NetworkConversionService;
-import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -54,9 +53,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_IMPORT_PARAMETERS
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @AutoConfigureMockMvc

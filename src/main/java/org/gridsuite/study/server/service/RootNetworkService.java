@@ -29,6 +29,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.DELETE_ROOT_NETWORK_FAILED;
+import static org.gridsuite.study.server.StudyException.Type.ROOT_NETWORK_NOT_FOUND;
 
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
@@ -81,6 +82,36 @@ public class RootNetworkService {
         return rootNetworkRepository.existsById(rootNetworkUuid);
     }
 
+    /**
+     * Called by consumer - will update case for root network
+     */
+    public void updateRootNetworkCase(UUID rootNetworkUuid, RootNetworkInfos rootNetworkInfos) {
+        RootNetworkEntity rootNetworkEntity = getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        UUID oldCaseUuid = rootNetworkEntity.getCaseUuid();
+        self.updateRootNetwork(rootNetworkEntity, rootNetworkInfos);
+        //delete old case
+        caseService.deleteCase(oldCaseUuid);
+    }
+
+    @Transactional
+    public void updateRootNetwork(@NonNull RootNetworkEntity rootNetworkEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
+        if (rootNetworkInfos.getCaseInfos() != null) {
+            CaseInfos caseInfos = rootNetworkInfos.getCaseInfos();
+            rootNetworkEntity.setCaseUuid(caseInfos.getCaseUuid());
+            rootNetworkEntity.setCaseFormat(caseInfos.getCaseFormat());
+            rootNetworkEntity.setCaseName(caseInfos.getCaseName());
+        }
+        if (rootNetworkInfos.getNetworkInfos() != null) {
+            NetworkInfos networkInfos = rootNetworkInfos.getNetworkInfos();
+            rootNetworkEntity.setNetworkUuid(networkInfos.getNetworkUuid());
+            rootNetworkEntity.setNetworkId(networkInfos.getNetworkId());
+        }
+
+        rootNetworkEntity.setImportParameters(rootNetworkInfos.getImportParameters());
+        rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
+        rootNetworkRepository.save(rootNetworkEntity);
+    }
+
     @Transactional
     public RootNetworkEntity createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
         RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
@@ -100,11 +131,11 @@ public class RootNetworkService {
     }
 
     public String getCaseName(UUID rootNetworkUuid) {
-        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getCaseName).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getCaseName).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
     }
 
     public Map<String, String> getImportParameters(UUID rootNetworkUuid) {
-        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
     }
 
     public List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
@@ -158,7 +189,7 @@ public class RootNetworkService {
 
     public void assertIsRootNetworkInStudy(UUID rootNetworkUuid, UUID studyUuid) {
         if (!rootNetworkRepository.existsByIdAndStudyId(rootNetworkUuid, studyUuid)) {
-            throw new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND);
+            throw new StudyException(ROOT_NETWORK_NOT_FOUND);
         }
     }
 
@@ -168,7 +199,7 @@ public class RootNetworkService {
      * @param rootNetworkUuid
      */
     public void delete(UUID rootNetworkUuid) {
-        delete(rootNetworkRepository.findWithRootNetworkNodeInfosById(rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND)).toDto());
+        delete(rootNetworkRepository.findWithRootNetworkNodeInfosById(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).toDto());
     }
 
     public void delete(RootNetworkInfos rootNetworkInfos) {

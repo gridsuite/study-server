@@ -70,7 +70,6 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
-import static org.gridsuite.study.server.dto.caseimport.CaseImportAction.ROOT_NETWORK_MODIFICATION;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -309,29 +308,23 @@ public class StudyService {
     }
 
     public void updateRootNetworkCase(UUID studyUuid, UUID rootNetworkUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
-        RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
-        UUID oldCaseUuid = rootNetworkEntity.getCaseUuid();
-        rootNetworkEntity.setCaseUuid(caseUuid);
-        rootNetworkEntity.setCaseFormat(caseFormat);
-
-        Map<String, String> importParametersToUse = rootNetworkEntity.getImportParameters();
-
-        for (Map.Entry<String, Object> entry : importParameters.entrySet()) {
-            String key = entry.getKey();
-            Object newValue = entry.getValue();
-
-            String currentValue = importParametersToUse.get(key);
-            if (!Objects.equals(currentValue, newValue)) {
-                importParametersToUse.put(key, newValue.toString());
-            }
-        }
-        rootNetworkEntity.setImportParameters(importParametersToUse);
-
-        rootNetworkRepository.save(rootNetworkEntity);
-
         UUID importReportUuid = UUID.randomUUID();
-        caseService.deleteCase(oldCaseUuid);
-        persistNetwork(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, new HashMap<>(importParametersToUse), ROOT_NETWORK_MODIFICATION);
+        persistNetwork(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+    }
+
+    public void updateRootNetworkCase(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, CaseInfos caseInfos,
+                                      Map<String, String> importParameters, UUID importReportUuid) {
+        // Update case for a given root network
+        rootNetworkService.updateRootNetworkCase(rootNetworkUuid, RootNetworkInfos.builder()
+            .id(rootNetworkUuid)
+            .caseInfos(caseInfos)
+            .reportUuid(importReportUuid)
+            .networkInfos(networkInfos)
+            .importParameters(importParameters)
+            .build());
+        // Invalidate nodes of the updated root network
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        invalidateBuild(studyUuid, rootNodeUuid, rootNetworkUuid, false, false, true);
     }
 
     @Transactional
