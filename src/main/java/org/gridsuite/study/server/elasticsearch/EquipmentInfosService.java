@@ -18,6 +18,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.dto.elasticsearch.BasicEquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.*;
@@ -28,6 +30,8 @@ import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static java.util.Map.entry;
@@ -40,6 +44,8 @@ import static java.util.Map.entry;
  */
 @Service
 public class EquipmentInfosService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(EquipmentInfosService.class);
 
     public enum FieldSelector {
         NAME, ID
@@ -236,6 +242,13 @@ public class EquipmentInfosService {
         equipmentInfosRepository.deleteAllByNetworkUuid(networkUuid);
         tombstonedEquipmentInfosRepository.deleteAllByNetworkUuid(networkUuid);
 
+    }
+
+    public void deleteEquipmentIndexes(UUID networkUuid) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+        deleteAllByNetworkUuid(networkUuid);
+        LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
     public static String escapeLucene(String s) {

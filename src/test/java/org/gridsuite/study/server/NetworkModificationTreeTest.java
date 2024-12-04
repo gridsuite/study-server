@@ -28,6 +28,7 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
+import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -814,7 +815,9 @@ class NetworkModificationTreeTest {
         assertNotNull(networkModificationTreeService.getReportUuid(nodeUuid, rootNetworkUuid));
         assertFalse(networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid).isEmpty());
 
-        assertEquals(4, rootNetworkService.getStudyReportUuids(root.getStudyId()).stream().filter(Objects::nonNull).toList().size());
+        List<RootNetworkInfos> rootNetworkEntities = rootNetworkService.getStudyRootNetworkInfosWithRootNetworkNodeInfos(root.getStudyId());
+        assertEquals(1, rootNetworkEntities.size());
+        assertEquals(3, rootNetworkEntities.get(0).getRootNetworkNodeInfos().size());
     }
 
     @Test

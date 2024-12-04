@@ -13,7 +13,6 @@ import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -23,9 +22,6 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NetworkService;
-import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
@@ -58,27 +54,18 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     private final DynamicSimulationClient dynamicSimulationClient;
 
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final RootNetworkService rootNetworkService;
-
     public DynamicSimulationServiceImpl(ObjectMapper objectMapper,
                                         DynamicMappingClient dynamicMappingClient,
                                         TimeSeriesClient timeSeriesClient,
-                                        DynamicSimulationClient dynamicSimulationClient,
-                                        NetworkService networkService,
-                                        NetworkModificationTreeService networkModificationTreeService, RootNetworkService rootNetworkService) {
+                                        DynamicSimulationClient dynamicSimulationClient) {
         this.objectMapper = objectMapper;
         this.dynamicMappingClient = dynamicMappingClient;
         this.timeSeriesClient = timeSeriesClient;
         this.dynamicSimulationClient = dynamicSimulationClient;
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.rootNetworkService = rootNetworkService;
     }
 
     @Override
-    public UUID runDynamicSimulation(String provider, UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId) {
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+    public UUID runDynamicSimulation(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId) {
 
         // create receiver for getting back the notification in rabbitmq
         String receiver;
@@ -93,10 +80,8 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid, UUID rootNetworkUuid) {
+    public List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID resultUuid) {
         List<TimeSeriesMetadataInfos> metadataList = new ArrayList<>();
-
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.DYNAMIC_SIMULATION);
 
         if (resultUuid != null) {
             UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuid); // get timeseries uuid
@@ -119,10 +104,8 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, UUID rootNetworkUuid, List<String> timeSeriesNames) {
+    public List<DoubleTimeSeries> getTimeSeriesResult(UUID resultUuid, List<String> timeSeriesNames) {
         List<TimeSeries> timeSeries = new ArrayList<>();
-
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.DYNAMIC_SIMULATION);
 
         if (resultUuid != null) {
             UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuid); // get timeseries uuid
@@ -144,9 +127,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public List<TimelineEventInfos> getTimelineResult(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.DYNAMIC_SIMULATION);
-
+    public List<TimelineEventInfos> getTimelineResult(UUID resultUuid) {
         if (resultUuid != null) {
             UUID timelineUuid = dynamicSimulationClient.getTimelineResult(resultUuid); // get timeline uuid
             if (timelineUuid != null) {
@@ -179,8 +160,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public DynamicSimulationStatus getStatus(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.DYNAMIC_SIMULATION);
+    public DynamicSimulationStatus getStatus(UUID resultUuid) {
         if (resultUuid == null) {
             return null;
         }
@@ -218,8 +198,8 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public void assertDynamicSimulationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
-        DynamicSimulationStatus status = getStatus(nodeUuid, rootNetworkUuid);
+    public void assertDynamicSimulationNotRunning(UUID resultUuid) {
+        DynamicSimulationStatus status = getStatus(resultUuid);
         if (DynamicSimulationStatus.RUNNING == status) {
             throw new StudyException(DYNAMIC_SIMULATION_RUNNING);
         }

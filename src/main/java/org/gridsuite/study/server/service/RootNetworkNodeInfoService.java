@@ -6,13 +6,15 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.powsybl.timeseries.DoubleTimeSeries;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.DeleteNodeInfos;
-import org.gridsuite.study.server.dto.InvalidateNodeInfos;
-import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
+import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
@@ -21,11 +23,21 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
+import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
 import static org.gridsuite.study.server.StudyException.Type.ROOTNETWORK_NOT_FOUND;
@@ -39,11 +51,43 @@ public class RootNetworkNodeInfoService {
     private final RootNetworkRepository rootNetworkRepository;
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+    private final StudyServerExecutionService studyServerExecutionService;
+    private final LoadFlowService loadFlowService;
+    private final SecurityAnalysisService securityAnalysisService;
+    private final SensitivityAnalysisService sensitivityAnalysisService;
+    private final NonEvacuatedEnergyService nonEvacuatedEnergyService;
+    private final ShortCircuitService shortCircuitService;
+    private final VoltageInitService voltageInitService;
+    private final DynamicSimulationService dynamicSimulationService;
+    private final StateEstimationService stateEstimationService;
+    private final ReportService reportService;
 
-    public RootNetworkNodeInfoService(RootNetworkRepository rootNetworkRepository, RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository, NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository) {
+    public RootNetworkNodeInfoService(RootNetworkRepository rootNetworkRepository,
+                                      RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
+                                      NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
+                                      StudyServerExecutionService studyServerExecutionService,
+                                      LoadFlowService loadFlowService,
+                                      SecurityAnalysisService securityAnalysisService,
+                                      SensitivityAnalysisService sensitivityAnalysisService,
+                                      NonEvacuatedEnergyService nonEvacuatedEnergyService,
+                                      ShortCircuitService shortCircuitService,
+                                      VoltageInitService voltageInitService,
+                                      DynamicSimulationService dynamicSimulationService,
+                                      StateEstimationService stateEstimationService,
+                                      ReportService reportService) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
+        this.studyServerExecutionService = studyServerExecutionService;
+        this.loadFlowService = loadFlowService;
+        this.securityAnalysisService = securityAnalysisService;
+        this.sensitivityAnalysisService = sensitivityAnalysisService;
+        this.nonEvacuatedEnergyService = nonEvacuatedEnergyService;
+        this.shortCircuitService = shortCircuitService;
+        this.voltageInitService = voltageInitService;
+        this.dynamicSimulationService = dynamicSimulationService;
+        this.stateEstimationService = stateEstimationService;
+        this.reportService = reportService;
     }
 
     public void createRootNetworkLinks(@NonNull UUID studyUuid, @NonNull RootNetworkEntity rootNetworkEntity) {
@@ -245,11 +289,6 @@ public class RootNetworkNodeInfoService {
         return rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid);
     }
 
-    public UUID getComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
-        return getComputationResultUuid(rootNetworkNodeInfoEntity, computationType);
-    }
-
     private static UUID getComputationResultUuid(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, ComputationType computationType) {
         return switch (computationType) {
             case LOAD_FLOW -> rootNetworkNodeInfoEntity.getLoadFlowResultUuid();
@@ -264,15 +303,16 @@ public class RootNetworkNodeInfoService {
         };
     }
 
+    public UUID getComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType) {
+        Optional<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntityOpt = getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
+        return rootNetworkNodeInfoEntityOpt.map(rootNetworkNodeInfoEntity -> getComputationResultUuid(rootNetworkNodeInfoEntity, computationType)).orElse(null);
+    }
+
     public List<UUID> getComputationResultUuids(UUID studyUuid, ComputationType computationType) {
         return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyId(studyUuid).stream()
             .map(rootNetworkNodeInfoEntity -> getComputationResultUuid(rootNetworkNodeInfoEntity, computationType))
             .filter(Objects::nonNull)
             .toList();
-    }
-
-    public List<RootNetworkNodeInfoEntity> getStudyRootNetworkNodeInfos(UUID studyUuid) {
-        return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyId(studyUuid);
     }
 
     public void assertNoRootNetworkModificationInfoIsBuilding(UUID studyUuid) {
@@ -331,5 +371,236 @@ public class RootNetworkNodeInfoService {
         if (rootNetworkNodeInfo.getDynamicSimulationResultUuid() != null) {
             rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(rootNetworkNodeInfo.getDynamicSimulationResultUuid());
         }
+        if (rootNetworkNodeInfo.getVoltageInitResultUuid() != null) {
+            rootNetworkNodeInfoEntity.setVoltageInitResultUuid(rootNetworkNodeInfo.getVoltageInitResultUuid());
+        }
+    }
+
+    public List<CompletableFuture<Void>> getDeleteRootNetworkNodeInfosFutures(List<RootNetworkNodeInfo> rootNetworkNodeInfo) {
+        return List.of(
+            studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkNodeInfo.stream().map(this::getReportUuids).flatMap(Collection::stream).toList())),
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getLoadFlowResultUuid).filter(Objects::nonNull).forEach(loadFlowService::deleteLoadFlowResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getSecurityAnalysisResultUuid).filter(Objects::nonNull).forEach(securityAnalysisService::deleteSaResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getSensitivityAnalysisResultUuid).filter(Objects::nonNull).forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getNonEvacuatedEnergyResultUuid).filter(Objects::nonNull).forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getShortCircuitAnalysisResultUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getOneBusShortCircuitAnalysisResultUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getVoltageInitResultUuid).filter(Objects::nonNull).forEach(voltageInitService::deleteVoltageInitResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getDynamicSimulationResultUuid).filter(Objects::nonNull).forEach(dynamicSimulationService::deleteResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).forEach(stateEstimationService::deleteStateEstimationResult)) // TODO delete all with one request only
+        );
+    }
+
+    private List<UUID> getReportUuids(RootNetworkNodeInfo rootNetworkNodeInfo) {
+        return Stream.of(
+            rootNetworkNodeInfo.getModificationReports().values().stream(),
+            rootNetworkNodeInfo.getComputationReports().values().stream())
+            .flatMap(Function.identity())
+            .toList();
+    }
+
+    public void assertComputationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
+        loadFlowService.assertLoadFlowNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW));
+        securityAnalysisService.assertSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS));
+        dynamicSimulationService.assertDynamicSimulationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION));
+        sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
+        nonEvacuatedEnergyService.assertNonEvacuatedEnergyNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS));
+        shortCircuitService.assertShortCircuitAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT), getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT_ONE_BUS));
+        voltageInitService.assertVoltageInitNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION));
+        stateEstimationService.assertStateEstimationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION));
+    }
+
+    /***************************
+     * GET COMPUTATION RESULTS *
+     ***************************/
+    @Transactional(readOnly = true)
+    public String getLoadFlowResult(UUID nodeUuid, UUID rootNetworkUuid, String filters, Sort sort) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
+        return loadFlowService.getLoadFlowResult(resultUuid, filters, sort);
+    }
+
+    @Transactional(readOnly = true)
+    public String getSecurityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String filters, Pageable pageable) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
+        return securityAnalysisService.getSecurityAnalysisResult(resultUuid, resultType, filters, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] getSecurityAnalysisResultCsv(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
+        return securityAnalysisService.getSecurityAnalysisResultCsv(resultUuid, resultType, csvTranslations);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TimeSeriesMetadataInfos> getDynamicSimulationTimeSeriesMetadata(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION);
+        return dynamicSimulationService.getTimeSeriesMetadataList(resultUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DoubleTimeSeries> getDynamicSimulationTimeSeries(UUID nodeUuid, UUID rootNetworkUuid, List<String> timeSeriesNames) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION);
+        return dynamicSimulationService.getTimeSeriesResult(resultUuid, timeSeriesNames);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TimelineEventInfos> getDynamicSimulationTimeline(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION);
+        return dynamicSimulationService.getTimelineResult(resultUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public String getSensitivityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, String selector) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
+        return sensitivityAnalysisService.getSensitivityAnalysisResult(resultUuid, selector);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] exportSensitivityResultsAsCsv(UUID nodeUuid, UUID rootNetworkUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
+        return sensitivityAnalysisService.exportSensitivityResultsAsCsv(resultUuid, sensitivityAnalysisCsvFileInfos);
+    }
+
+    @Transactional(readOnly = true)
+    public String getSensitivityResultsFilterOptions(UUID nodeUuid, UUID rootNetworkUuid, String selector) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
+        return sensitivityAnalysisService.getSensitivityResultsFilterOptions(resultUuid, selector);
+    }
+
+    @Transactional(readOnly = true)
+    public String getNonEvacuatedEnergyResult(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS);
+        return nonEvacuatedEnergyService.getNonEvacuatedEnergyResult(resultUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public String getShortCircuitAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, boolean paged, Pageable pageable) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
+            type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
+        return shortCircuitService.getShortCircuitAnalysisResult(resultUuid, mode, type, filters, paged, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] getShortCircuitAnalysisCsvResult(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type, String headerCsv) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
+            type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
+        return shortCircuitService.getShortCircuitAnalysisCsvResult(resultUuid, type, headerCsv);
+    }
+
+    @Transactional(readOnly = true)
+    public String getVoltageInitResult(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
+        return voltageInitService.getVoltageInitResult(resultUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public String getStateEstimationResult(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
+        return stateEstimationService.getStateEstimationResult(resultUuid);
+    }
+
+    /**************************
+     * GET COMPUTATION STATUS *
+     **************************/
+    @Transactional(readOnly = true)
+    public String getLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
+        return loadFlowService.getLoadFlowStatus(resultUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
+        return securityAnalysisService.getSecurityAnalysisStatus(resultUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public DynamicSimulationStatus getDynamicSimulationStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION);
+        return dynamicSimulationService.getStatus(resultUuid);
+    }
+
+    public String getSensitivityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
+        return sensitivityAnalysisService.getSensitivityAnalysisStatus(resultUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public String getNonEvacuatedEnergyStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS);
+        return nonEvacuatedEnergyService.getNonEvacuatedEnergyStatus(resultUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public String getShortCircuitAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
+            type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
+        return shortCircuitService.getShortCircuitAnalysisStatus(resultUuid, type);
+    }
+
+    @Transactional(readOnly = true)
+    public String getVoltageInitStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
+        return voltageInitService.getVoltageInitStatus(resultUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public String getStateEstimationStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
+        return stateEstimationService.getStateEstimationStatus(resultUuid);
+    }
+
+    /*******************************
+     * STOP COMPUTATION EXECUTIONS *
+     *******************************/
+    @Transactional
+    public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
+        loadFlowService.stopLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
+    }
+
+    @Transactional
+    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
+        securityAnalysisService.stopSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
+    }
+
+    @Transactional
+    public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
+        sensitivityAnalysisService.stopSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
+    }
+
+    @Transactional
+    public void stopNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS);
+        nonEvacuatedEnergyService.stopNonEvacuatedEnergy(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
+    }
+
+    @Transactional
+    public void stopShortCircuitAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT);
+        shortCircuitService.stopShortCircuitAnalysis(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
+    }
+
+    @Transactional
+    public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
+        voltageInitService.stopVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
+    }
+
+    @Transactional
+    public void stopStateEstimation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
+        stateEstimationService.stopStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
     }
 }

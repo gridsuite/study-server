@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
@@ -52,15 +51,11 @@ public class SensitivityAnalysisService {
 
     private final ObjectMapper objectMapper;
 
-    private final NetworkModificationTreeService networkModificationTreeService;
-
     @Autowired
     SensitivityAnalysisService(RemoteServicesProperties remoteServicesProperties,
-                               NetworkModificationTreeService networkModificationTreeService,
                                RestTemplate restTemplate,
                                ObjectMapper objectMapper) {
         this.sensitivityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("sensitivity-analysis-server");
-        this.networkModificationTreeService = networkModificationTreeService;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
     }
@@ -108,9 +103,9 @@ public class SensitivityAnalysisService {
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getSensitivityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, String selector) {
+    public String getSensitivityAnalysisResult(UUID resultUuid, String selector) {
         String result;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
+
         if (resultUuid == null) {
             return null;
         }
@@ -131,8 +126,7 @@ public class SensitivityAnalysisService {
         return result;
     }
 
-    public byte[] exportSensitivityResultsAsCsv(UUID nodeUuid, UUID rootNetworkUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
+    public byte[] exportSensitivityResultsAsCsv(UUID resultUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
         if (resultUuid == null) {
             throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
         }
@@ -160,9 +154,8 @@ public class SensitivityAnalysisService {
 
     }
 
-    public String getSensitivityResultsFilterOptions(UUID nodeUuid, UUID rootNetworkUuid, String selector) {
+    public String getSensitivityResultsFilterOptions(UUID resultUuid, String selector) {
         String options;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuid == null) {
             return null;
         }
@@ -183,9 +176,8 @@ public class SensitivityAnalysisService {
         return options;
     }
 
-    public String getSensitivityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+    public String getSensitivityAnalysisStatus(UUID resultUuid) {
         String result;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
 
         if (resultUuid == null) {
             return null;
@@ -204,12 +196,11 @@ public class SensitivityAnalysisService {
         return result;
     }
 
-    public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+    public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(userId);
 
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SENSITIVITY_ANALYSIS);
         if (resultUuid == null) {
             return;
         }
@@ -265,8 +256,8 @@ public class SensitivityAnalysisService {
         return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, Integer.class);
     }
 
-    public void assertSensitivityAnalysisNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
-        String sas = getSensitivityAnalysisStatus(nodeUuid, rootNetworkUuid);
+    public void assertSensitivityAnalysisNotRunning(UUID resultUuid) {
+        String sas = getSensitivityAnalysisStatus(resultUuid);
         if (SensitivityAnalysisStatus.RUNNING.name().equals(sas)) {
             throw new StudyException(SENSITIVITY_ANALYSIS_RUNNING);
         }
