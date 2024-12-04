@@ -441,6 +441,8 @@ class StudyTest {
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_CONVERSION_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportFailedMessage(path, null); // some conversion errors don't returnany error mesage
                     return new MockResponse(200);
+                } else if (path.matches("/v1/reports/.*/duplicate")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.matches("/v1/reports/" + REPORT_ID + "/logs.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(REPORT_LOGS));
                 } else if (path.matches("/v1/reports/.*/logs.*")) {
@@ -1595,7 +1597,7 @@ class StudyTest {
         wireMockUtils.verifyDuplicateModificationGroup(stubUuid, 3);
 
         Set<RequestWithBody> requests;
-        int numberOfRequests = 2;
+        int numberOfRequests = 3;
         if (sourceStudy.getSecurityAnalysisParametersUuid() == null) {
             // if we don't have a securityAnalysisParametersUuid we don't call the security-analysis-server to duplicate them
             assertNull(duplicatedStudy.getSecurityAnalysisParametersUuid());
@@ -1646,6 +1648,7 @@ class StudyTest {
         if (sourceStudy.getSensitivityAnalysisParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getSensitivityAnalysisParametersUuid())).count());
         }
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*/duplicate")).count());
         return duplicatedStudy;
     }
 

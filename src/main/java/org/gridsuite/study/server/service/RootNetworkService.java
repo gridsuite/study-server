@@ -34,6 +34,7 @@ public class RootNetworkService {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final NetworkService networkService;
     private final CaseService caseService;
+    private final ReportService reportService;
 
     private final RootNetworkService self;
 
@@ -41,11 +42,13 @@ public class RootNetworkService {
                               RootNetworkNodeInfoService rootNetworkNodeInfoService,
                               NetworkService networkService,
                               CaseService caseService,
+                              ReportService reportService,
                               @Lazy RootNetworkService self) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.networkService = networkService;
         this.caseService = caseService;
+        this.reportService = reportService;
         this.self = self;
     }
 
@@ -141,12 +144,17 @@ public class RootNetworkService {
                 UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkEntityToDuplicate.getCaseUuid(), false);
                 Map<String, String> newImportParameters = Map.copyOf(rootNetworkEntityToDuplicate.getImportParameters());
 
+                UUID clonedRootNodeReportUuid = UUID.randomUUID();
+                if (rootNetworkEntityToDuplicate.getReportUuid() != null) {
+                    clonedRootNodeReportUuid = reportService.duplicateReport(rootNetworkEntityToDuplicate.getReportUuid());
+                }
+
                 self.createRootNetwork(newStudyEntity,
                     RootNetworkInfos.builder()
                         .importParameters(newImportParameters)
                         .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getCaseName(), rootNetworkEntityToDuplicate.getCaseFormat()))
                         .networkInfos(new NetworkInfos(clonedNetworkUuid, rootNetworkEntityToDuplicate.getNetworkId()))
-                        .reportUuid(UUID.randomUUID())
+                        .reportUuid(clonedRootNodeReportUuid)
                         .build()
                 );
             }
