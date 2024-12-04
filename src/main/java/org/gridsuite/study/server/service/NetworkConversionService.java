@@ -14,7 +14,8 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.dto.CaseImportReceiver;
+import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
+import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.StudyException;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,11 +55,11 @@ public class NetworkConversionService {
         this.restTemplate = restTemplate;
     }
 
-    public void persistentStore(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String variantId, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters) {
+    public void persistentStore(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String variantId, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(
-                        new CaseImportReceiver(studyUuid, rootNetworkUuid, caseUuid, importReportUuid, userId, System.nanoTime()
+                        new CaseImportReceiver(studyUuid, rootNetworkUuid, caseUuid, importReportUuid, userId, System.nanoTime(), caseImportAction
                     )),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
