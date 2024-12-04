@@ -144,10 +144,7 @@ public class RootNetworkService {
                 UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkEntityToDuplicate.getCaseUuid(), false);
                 Map<String, String> newImportParameters = Map.copyOf(rootNetworkEntityToDuplicate.getImportParameters());
 
-                UUID clonedRootNodeReportUuid = UUID.randomUUID();
-                if (rootNetworkEntityToDuplicate.getReportUuid() != null) {
-                    clonedRootNodeReportUuid = reportService.duplicateReport(rootNetworkEntityToDuplicate.getReportUuid());
-                }
+                UUID clonedRootNodeReportUuid = reportService.duplicateReport(rootNetworkEntityToDuplicate.getReportUuid());
 
                 self.createRootNetwork(newStudyEntity,
                     RootNetworkInfos.builder()
