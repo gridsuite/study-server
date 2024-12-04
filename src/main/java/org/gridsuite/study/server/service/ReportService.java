@@ -100,7 +100,7 @@ public class ReportService {
         }).getBody();
     }
 
-    public UUID duplicateReport(UUID id) {
+    public UUID duplicateReport(@NonNull UUID id) {
         var path = UriComponentsBuilder.fromPath("{id}/duplicate").buildAndExpand(id).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
