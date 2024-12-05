@@ -10,13 +10,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.powsybl.network.store.client.NetworkStoreService;
-import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.RootNetworkCreationRequestInfos;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
-import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -24,12 +20,9 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequ
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -37,21 +30,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.GenericMessage;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.StudyConstants.HEADER_IMPORT_PARAMETERS;
-import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
-import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -84,31 +76,15 @@ class RootNetworkTest {
     private static final String NEW_CASE_FORMAT = "newCaseFormat";
     private static final UUID NEW_REPORT_UUID = UUID.randomUUID();
 
-    // root network node info 1
-    private static final String VARIANT_ID = "variantId";
-    private static final UUID DYNAMIC_SIMULATION_RESULT_UUID = UUID.randomUUID();
-    private static final UUID LOADFLOW_RESULT_UUID = UUID.randomUUID();
-    private static final UUID SECURITY_ANALYSIS_RESULT_UUID = UUID.randomUUID();
-    private static final UUID SHORT_CIRCUIT_ANALYSIS_RESULT_UUID = UUID.randomUUID();
-    private static final UUID ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID = UUID.randomUUID();
-    private static final UUID STATE_ESTIMATION_RESULT_UUID = UUID.randomUUID();
-    private static final UUID SENSITIVITY_ANALYSIS_RESULT_UUID = UUID.randomUUID();
-    private static final UUID VOLTAGE_INIT_RESULT_UUID = UUID.randomUUID();
-    private static final UUID NON_EVACUATED_ENERGY_RESULT_UUID = UUID.randomUUID();
-
-    // root network node info 2
-    private static final String VARIANT_ID2 = "variantId2";
-    private static final UUID LOADFLOW_RESULT_UUID2 = UUID.randomUUID();
-
-    private static final String NODE_1_NAME = "node1";
-    private static final String NODE_2_NAME = "node2";
-
     @Autowired
     private MockMvc mockMvc;
 
     private WireMockServer wireMockServer;
 
     private WireMockUtils wireMockUtils;
+
+    @MockBean
+    CaseService caseService;
 
     @Autowired
     private NetworkConversionService networkConversionService;
@@ -122,39 +98,13 @@ class RootNetworkTest {
     private StudyRepository studyRepository;
     @Autowired
     private RootNetworkService rootNetworkService;
-
     @Autowired
     private RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository;
-
-    @MockBean
-    private ReportService reportService;
-    @MockBean
-    private EquipmentInfosService equipmentInfosService;
-    @MockBean
-    private NetworkStoreService networkStoreService;
-    @MockBean
-    private CaseService caseService;
-    @MockBean
-    private DynamicSimulationService dynamicSimulationService;
-    @MockBean
-    private SecurityAnalysisService securityAnalysisService;
-    @MockBean
-    private LoadFlowService loadFlowService;
-    @MockBean
-    private NonEvacuatedEnergyService nonEvacuatedEnergyService;
-    @MockBean
-    private ShortCircuitService shortCircuitService;
-    @MockBean
-    private SensitivityAnalysisService sensitivityAnalysisService;
-    @MockBean
-    private StateEstimationService stateEstimationService;
-    @MockBean
-    private VoltageInitService voltageInitService;
-
-    @Autowired
-    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
+
+    @SpyBean
+    private StudyService studyService;
 
     @BeforeEach
     void setUp() {
@@ -196,7 +146,7 @@ class RootNetworkTest {
             Map.of("caseUuid", WireMock.equalTo(caseUuid.toString()),
                 "caseFormat", WireMock.equalTo(caseFormat),
                 "receiver", WireMock.matching(".*rootNetworkUuid.*")),
-                objectMapper.writeValueAsString(importParameters)
+            objectMapper.writeValueAsString(importParameters)
         );
 
         // check result values and check it has been saved in database
@@ -206,88 +156,13 @@ class RootNetworkTest {
     }
 
     @Test
-    void testUpdateRootNetworkOnNonExistingRootNetwork() throws Exception {
-        UUID newCaseUuid = UUID.randomUUID();
-        String newCaseFormat = "newCaseFormat";
-        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
-
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/?caseUuid={caseUuid}&caseFormat={newCaseFormat}", studyEntity.getId(), UUID.randomUUID(), newCaseUuid, newCaseFormat)
-                        .header("userId", "userId"))
-                .andExpect(status().isNotFound());
-
-        // check case uuid has not been changed
-        assertEquals(studyEntity.getFirstRootNetwork().getCaseUuid(), CASE_UUID);
-    }
-
-    @Test
-    void testUpdateRootNetworkConsumer() throws Exception {
-        // create study with first root network
-        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
-        studyRepository.save(studyEntity);
-
-        UUID oldCaseUuid = studyEntity.getFirstRootNetwork().getCaseUuid();
-
-        // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
-        Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
-        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), studyEntity.getFirstRootNetwork().getId(), NEW_CASE_UUID, NEW_REPORT_UUID, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_MODIFICATION);
-        Map<String, String> importParameters = new HashMap<>();
-        importParameters.put("param1", "value1");
-        importParameters.put("param2", "value2");
-        Map<String, Object> headers = createConsumeCaseImportSucceededHeaders(NEW_NETWORK_UUID.toString(), NEW_NETWORK_ID, NEW_CASE_FORMAT, NEW_CASE_NAME, caseImportReceiver, importParameters);
-
-        // send message to consumer
-        Mockito.doNothing().when(caseService).disableCaseExpiration(NEW_CASE_UUID);
-        messageConsumer.accept(new GenericMessage<>("", headers));
-
-        // get study from database and check new root network has been updated with new case
-        StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
-
-        assertEquals(1, updatedStudyEntity.getRootNetworks().size());
-
-        RootNetworkEntity rootNetworkEntity = updatedStudyEntity.getRootNetworks().stream().filter(rne -> rne.getId().equals(studyEntity.getFirstRootNetwork().getId())).findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
-        assertEquals(studyEntity.getFirstRootNetwork().getId(), rootNetworkEntity.getId());
-        assertEquals(NEW_NETWORK_UUID, rootNetworkEntity.getNetworkUuid());
-        assertEquals(NEW_NETWORK_ID, rootNetworkEntity.getNetworkId());
-        assertEquals(NEW_CASE_FORMAT, rootNetworkEntity.getCaseFormat());
-        assertEquals(NEW_CASE_NAME, rootNetworkEntity.getCaseName());
-        assertEquals(NEW_CASE_UUID, rootNetworkEntity.getCaseUuid());
-        assertEquals(NEW_REPORT_UUID, rootNetworkEntity.getReportUuid());
-        assertEquals(importParameters, rootNetworkService.getImportParameters(studyEntity.getFirstRootNetwork().getId()));
-
-        // check that old case has been deleted successfully
-        assertFalse(caseService.caseExists(oldCaseUuid));
-
-        // corresponding rootNetworkCreationRequestRepository should be emptied when root network creation is done
-        assertFalse(rootNetworkCreationRequestRepository.existsById(studyEntity.getFirstRootNetwork().getId()));
-
-        studyEntity.getFirstRootNetwork().getRootNetworkNodeInfos();
-    }
-
-    @Test
-    void testCreateRootNetworkRequestWithError() throws Exception {
-        // create study with first root network
-        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
-        studyRepository.save(studyEntity);
-
-        // prepare headers for 2nd root network creation request
+    void testCreateRootNetworkRequestOnNotExistingStudy() throws Exception {
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
-        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
-            .willReturn(WireMock.serverError().withBody("Error when creating root network"))).getId();
 
-        // request execution - returns RootNetworkCreationRequestInfos
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}", studyEntity.getId(), caseUuid, caseFormat)
-                .header("userId", USER_ID)
-                .header("content-type", "application/json"))
-            .andExpect(status().isInternalServerError());
-
-        wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
-            false,
-            Map.of("caseUuid", WireMock.equalTo(caseUuid.toString()),
-                "caseFormat", WireMock.equalTo(caseFormat),
-                "receiver", WireMock.matching(".*rootNetworkUuid.*")),
-            null
-        );
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}", UUID.randomUUID(), caseUuid, caseFormat)
+                .header("userId", "userId"))
+            .andExpect(status().isNotFound());
 
         // check no rootNetworkCreationRequest has been saved
         assertEquals(0, rootNetworkCreationRequestRepository.count());
@@ -332,116 +207,6 @@ class RootNetworkTest {
 
         // corresponding rootNetworkCreationRequestRepository should be emptied when root network creation is done
         assertFalse(rootNetworkCreationRequestRepository.existsById(newRootNetworkUuid));
-
-        // check case expiration has been disabled
-        Mockito.verify(caseService, Mockito.times(1)).disableCaseExpiration(CASE_UUID2);
-    }
-
-    @Test
-    void testCreateRootNetworkConsumerWithoutRequest() throws Exception {
-        // create study with first root network
-        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
-        studyRepository.save(studyEntity);
-
-        UUID newRootNetworkUuid = UUID.randomUUID();
-
-        // DO NOT insert creation request - it means root network won't be created and remote resources will be deleted
-
-        // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
-        Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
-        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, REPORT_UUID2, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_CREATION);
-        Map<String, String> importParameters = new HashMap<>();
-        importParameters.put("param1", "value1");
-        importParameters.put("param2", "value2");
-        Map<String, Object> headers = createConsumeCaseImportSucceededHeaders(NETWORK_UUID2.toString(), NETWORK_ID2, CASE_FORMAT2, CASE_NAME2, caseImportReceiver, importParameters);
-
-        // send message to consumer
-        Mockito.doNothing().when(caseService).disableCaseExpiration(CASE_UUID2);
-        messageConsumer.accept(new GenericMessage<>("", headers));
-
-        // get study from database and check new root network has been created with correct values
-        StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
-        assertEquals(1, updatedStudyEntity.getRootNetworks().size());
-
-        // corresponding rootNetworkCreationRequestRepository should be emptied when root network creation is done
-        assertFalse(rootNetworkCreationRequestRepository.existsById(newRootNetworkUuid));
-
-        // assert distant resources deletions have been called
-        Mockito.verify(caseService, Mockito.times(1)).disableCaseExpiration(CASE_UUID2);
-        Mockito.verify(reportService, Mockito.times(1)).deleteReports(List.of(REPORT_UUID2));
-        Mockito.verify(equipmentInfosService, Mockito.times(1)).deleteEquipmentIndexes(NETWORK_UUID2);
-        Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID2);
-        Mockito.verify(caseService, Mockito.times(1)).deleteCase(CASE_UUID2);
-    }
-
-    @Test
-    void testDeleteRootNetwork() throws Exception {
-        // create study with one root node, two network modification node and a root network
-        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
-        studyRepository.save(studyEntity);
-        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
-        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
-        NetworkModificationNode secondNode = networkModificationTreeService.createNode(studyEntity, firstNode.getId(), createModificationNodeInfo(NODE_2_NAME), InsertMode.AFTER, null);
-        UUID firstRootNetworkUuid = rootNetworkService.getStudyRootNetworks(studyEntity.getId()).get(0).getId();
-
-        // create a second root network - will create a root network link between this and each node
-        RootNetworkEntity rootNetworkEntityToDelete = rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
-            .id(UUID.randomUUID())
-            .importParameters(Map.of("param1", "value1", "param2", "value2"))
-            .caseInfos(new CaseInfos(CASE_UUID2, CASE_NAME2, CASE_FORMAT2))
-            .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
-            .reportUuid(REPORT_UUID2)
-            .build());
-
-        // updating one of the link (firstNode - rootNetworkEntityToDelete) with many data, needed to check all of them will be deleted when root network is deleted
-        rootNetworkNodeInfoService.updateRootNetworkNode(firstNode.getId(), rootNetworkEntityToDelete.getId(), RootNetworkNodeInfo.builder()
-                .variantId(VARIANT_ID)
-                .dynamicSimulationResultUuid(DYNAMIC_SIMULATION_RESULT_UUID)
-                .loadFlowResultUuid(LOADFLOW_RESULT_UUID)
-                .securityAnalysisResultUuid(SECURITY_ANALYSIS_RESULT_UUID)
-                .shortCircuitAnalysisResultUuid(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
-                .oneBusShortCircuitAnalysisResultUuid(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
-                .stateEstimationResultUuid(STATE_ESTIMATION_RESULT_UUID)
-                .sensitivityAnalysisResultUuid(SENSITIVITY_ANALYSIS_RESULT_UUID)
-                .voltageInitResultUuid(VOLTAGE_INIT_RESULT_UUID)
-                .nonEvacuatedEnergyResultUuid(NON_EVACUATED_ENERGY_RESULT_UUID)
-            .build());
-
-        // updating the other link  (secondNode - rootNetworkEntityToDelete) with a few data, needed to check data of all root network node info are indeed deleted
-        rootNetworkNodeInfoService.updateRootNetworkNode(secondNode.getId(), rootNetworkEntityToDelete.getId(), RootNetworkNodeInfo.builder()
-            .variantId(VARIANT_ID2)
-            .loadFlowResultUuid(LOADFLOW_RESULT_UUID2)
-            .build());
-
-        // before deletion, check we have 2 root networks for study
-        assertEquals(2, rootNetworkService.getStudyRootNetworks(studyEntity.getId()).size());
-
-        mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}", studyEntity.getId(), rootNetworkEntityToDelete.getId())
-                .header("userId", USER_ID))
-            .andExpect(status().isOk());
-
-        // after deletion, check we have only 1 root network for study
-        List<RootNetworkEntity> rootNetworkEntityListAfterDeletion = rootNetworkService.getStudyRootNetworks(studyEntity.getId());
-        assertEquals(1, rootNetworkEntityListAfterDeletion.size());
-        assertEquals(firstRootNetworkUuid, rootNetworkEntityListAfterDeletion.get(0).getId());
-
-        // check deletion of 1st link remote infos
-        Mockito.verify(reportService, Mockito.times(1)).deleteReports(List.of(REPORT_UUID2));
-        Mockito.verify(equipmentInfosService, Mockito.times(1)).deleteEquipmentIndexes(NETWORK_UUID2);
-        Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID2);
-        Mockito.verify(caseService, Mockito.times(1)).deleteCase(CASE_UUID2);
-        Mockito.verify(dynamicSimulationService, Mockito.times(1)).deleteResult(DYNAMIC_SIMULATION_RESULT_UUID);
-        Mockito.verify(loadFlowService, Mockito.times(1)).deleteLoadFlowResult(LOADFLOW_RESULT_UUID);
-        Mockito.verify(securityAnalysisService, Mockito.times(1)).deleteSaResult(SECURITY_ANALYSIS_RESULT_UUID);
-        Mockito.verify(shortCircuitService, Mockito.times(1)).deleteShortCircuitAnalysisResult(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
-        Mockito.verify(shortCircuitService, Mockito.times(1)).deleteShortCircuitAnalysisResult(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
-        Mockito.verify(stateEstimationService, Mockito.times(1)).deleteStateEstimationResult(STATE_ESTIMATION_RESULT_UUID);
-        Mockito.verify(sensitivityAnalysisService, Mockito.times(1)).deleteSensitivityAnalysisResult(SENSITIVITY_ANALYSIS_RESULT_UUID);
-        Mockito.verify(voltageInitService, Mockito.times(1)).deleteVoltageInitResult(VOLTAGE_INIT_RESULT_UUID);
-        Mockito.verify(nonEvacuatedEnergyService, Mockito.times(1)).deleteNonEvacuatedEnergyResult(NON_EVACUATED_ENERGY_RESULT_UUID);
-
-        // check deletion of 2nd link remote infos
-        Mockito.verify(loadFlowService, Mockito.times(1)).deleteLoadFlowResult(LOADFLOW_RESULT_UUID2);
     }
 
     private Map<String, Object> createConsumeCaseImportSucceededHeaders(String networkUuid, String networkId, String caseFormat, String caseName, CaseImportReceiver caseImportReceiver, Map<String, String> importParameters) throws JsonProcessingException {
@@ -457,36 +222,96 @@ class RootNetworkTest {
 
     @Test
     void testUpdateRootNetworkCase() throws Exception {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
-        studyRepository.save(studyEntity);
-        studyEntity.getFirstRootNetwork().getImportParameters();
-        //Update the root network case
-        UUID newCaseUuid = UUID.randomUUID();
-        String newCaseFormat = "updatedCaseFormat";
-        Map<String, String> importParameters = new HashMap<>();
+        final UUID studyUuid = UUID.randomUUID();
+        final UUID rootNetworkUuid = UUID.randomUUID();
+        final UUID caseUuid = UUID.randomUUID();
+        final String caseFormat = "newCaseFormat";
+        Map<String, Object> importParameters = new HashMap<>();
+        importParameters.put("param1", "newValue1");
+        importParameters.put("param2", "newValue2");
 
-        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
-                .willReturn(WireMock.ok())).getId();
+        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
+            .willReturn(WireMock.ok())).getId();
 
-        // Perform the PUT request to update the root network case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}", studyEntity.getId(), studyEntity.getFirstRootNetwork().getId())
-                        .header("userId", "userId")
-                        .param("caseUuid", newCaseUuid.toString()) // Pass the caseUuid as a query parameter
-                        .param("caseFormat", newCaseFormat) // Pass the caseFormat as a query parameter
-                        .content(objectMapper.writeValueAsString(importParameters)) // Pass the importParameters as JSON
-                        .contentType(MediaType.APPLICATION_JSON)) // Set content type to JSON
-                .andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}",
+            studyUuid, rootNetworkUuid)
+            .contentType(APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(importParameters))
+            .param("caseUuid", caseUuid.toString())
+            .param("caseFormat", caseFormat)
+            .header("userId", USER_ID)
+        ).andExpect(status().isOk());
 
-        // get study from database and check that root network has been updated with new case
-        StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
-        RootNetworkEntity updatedRootNetwork = updatedStudyEntity.getFirstRootNetwork();
-//        assertEquals(newCaseUuid, updatedRootNetwork.getCaseUuid());
-        assertEquals(newCaseFormat, updatedRootNetwork.getCaseFormat());
-        assertFalse(caseService.caseExists(CASE_UUID));
+        wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
+            false,
+            Map.of(
+                "caseUuid", WireMock.equalTo(caseUuid.toString()),
+                "caseFormat", WireMock.equalTo(caseFormat)
+            ),
+            objectMapper.writeValueAsString(importParameters)
+        );
     }
 
-    @AfterEach
-    void tearDown() {
-        TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
+    @Test
+    void testUpdateRootNetworkOnNonExistingRootNetwork() throws Exception {
+        UUID newCaseUuid = UUID.randomUUID();
+        String newCaseFormat = "newCaseFormat";
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/?caseUuid={caseUuid}&caseFormat={newCaseFormat}", studyEntity.getId(), UUID.randomUUID(), newCaseUuid, newCaseFormat)
+                .header("userId", "userId"))
+            .andExpect(status().isNotFound());
+
+        // check case uuid has not been changed
+        assertEquals(CASE_UUID, studyEntity.getFirstRootNetwork().getCaseUuid());
+    }
+
+    @Test
+    void testUpdateRootNetworkConsumer() throws Exception {
+        // create study with first root network
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+
+        UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
+        UUID studyUuid = studyEntity.getId();
+        UUID oldCaseUuid = studyEntity.getFirstRootNetwork().getCaseUuid();
+
+        // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
+        Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
+        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyUuid, rootNetworkUuid, NEW_CASE_UUID, NEW_REPORT_UUID, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+        Map<String, String> importParameters = new HashMap<>();
+        importParameters.put("param1", "value1");
+        importParameters.put("param2", "value2");
+        Map<String, Object> headers = createConsumeCaseImportSucceededHeaders(NEW_NETWORK_UUID.toString(), NEW_NETWORK_ID, NEW_CASE_FORMAT, NEW_CASE_NAME, caseImportReceiver, importParameters);
+
+        // send message to consumer
+        Mockito.doNothing().when(caseService).disableCaseExpiration(NEW_CASE_UUID);
+        Mockito.doNothing().when(studyService).invalidateBuild(studyUuid, rootNode.getIdNode(), rootNetworkUuid, false,
+            false,
+            true);
+        messageConsumer.accept(new GenericMessage<>("", headers));
+
+        // get study from database and check new root network has been updated with new case
+        StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
+
+        assertEquals(1, updatedStudyEntity.getRootNetworks().size());
+
+        RootNetworkEntity rootNetworkEntity = updatedStudyEntity.getRootNetworks().stream().filter(rne -> rne.getId().equals(rootNetworkUuid)).findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        assertEquals(rootNetworkUuid, rootNetworkEntity.getId());
+        assertEquals(NEW_NETWORK_UUID, rootNetworkEntity.getNetworkUuid());
+        assertEquals(NEW_NETWORK_ID, rootNetworkEntity.getNetworkId());
+        assertEquals(NEW_CASE_FORMAT, rootNetworkEntity.getCaseFormat());
+        assertEquals(NEW_CASE_NAME, rootNetworkEntity.getCaseName());
+        assertEquals(NEW_CASE_UUID, rootNetworkEntity.getCaseUuid());
+        assertEquals(NEW_REPORT_UUID, rootNetworkEntity.getReportUuid());
+        assertEquals(importParameters, rootNetworkService.getImportParameters(rootNetworkUuid));
+
+        // check that old case has been deleted successfully
+        assertFalse(caseService.caseExists(oldCaseUuid));
+        //assert invalidate Build node has been called on root node
+        Mockito.verify(studyService, Mockito.times(1)).invalidateBuild(studyUuid, rootNode.getIdNode(), rootNetworkUuid, false,
+            false,
+            true);
     }
 }

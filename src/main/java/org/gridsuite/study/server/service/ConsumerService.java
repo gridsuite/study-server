@@ -18,7 +18,6 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -103,12 +102,12 @@ public class ConsumerService {
                 try {
                     NetworkModificationResult networkModificationResult = message.getPayload();
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
+                        NodeReceiver.class);
 
                     LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
 
                     networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(),
-                            NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
+                        NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
 
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
@@ -127,7 +126,7 @@ public class ConsumerService {
                 NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
+                        NodeReceiver.class);
 
                     LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
 
@@ -151,7 +150,7 @@ public class ConsumerService {
                 NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
+                        NodeReceiver.class);
 
                     LOGGER.info("Build failed for node '{}'", receiverObj.getNodeUuid());
 
@@ -216,14 +215,9 @@ public class ConsumerService {
                                 .build());
                         case NETWORK_RECREATION ->
                             studyService.updateNetwork(studyUuid, rootNetworkUuid, userId, networkInfos);
-                        case ROOT_NETWORK_MODIFICATION -> {
-                            // Update case for a given root network
+                        case ROOT_NETWORK_MODIFICATION ->
                             studyService.updateRootNetworkCase(studyUuid, rootNetworkUuid, networkInfos, caseInfos,
                                 importParameters, importReportUuid);
-                            // Invalidate nodes of the updated root network
-                            RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
-                            studyService.invalidateBuild(studyUuid, rootNode.getId(), rootNetworkUuid, false, false, true);
-                        }
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
@@ -234,7 +228,7 @@ public class ConsumerService {
                         studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
                     }
                     LOGGER.trace(caseImportAction.getLabel() + " for study uuid '{}' : {} seconds", studyUuid,
-                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
+                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
                 }
             }
         };
@@ -316,7 +310,7 @@ public class ConsumerService {
                 CaseImportReceiver receiver;
                 try {
                     receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8),
-                            CaseImportReceiver.class);
+                        CaseImportReceiver.class);
                     UUID studyUuid = receiver.getStudyUuid();
                     String userId = receiver.getUserId();
 
@@ -358,11 +352,11 @@ public class ConsumerService {
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notification for failed computation
                 notificationService.emitStudyError(
-                        studyUuid,
-                        receiverObj.getNodeUuid(),
-                        computationType.getUpdateFailedType(),
-                        errorMessage,
-                        userId);
+                    studyUuid,
+                    receiverObj.getNodeUuid(),
+                    computationType.getUpdateFailedType(),
+                    errorMessage,
+                    userId);
             } catch (JsonProcessingException e) {
                 LOGGER.error(e.toString());
             }
