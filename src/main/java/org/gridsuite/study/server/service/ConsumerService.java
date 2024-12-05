@@ -19,7 +19,6 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -228,17 +227,8 @@ public class ConsumerService {
                         case NETWORK_RECREATION ->
                                 recreateNetworkOfRootNetwork(studyEntity, rootNetworkUuid, userId, networkInfos);
                         case ROOT_NETWORK_MODIFICATION -> {
-                            // Update case for a given root network
-                            rootNetworkService.updateRootNetworkCase(rootNetworkUuid, RootNetworkInfos.builder()
-                                    .id(rootNetworkUuid)
-                                    .caseInfos(caseInfos)
-                                    .reportUuid(importReportUuid)
-                                    .networkInfos(networkInfos)
-                                    .importParameters(importParameters)
-                                    .build());
-                            // Invalidate nodes of the updated root network
-                            RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
-                            studyService.invalidateBuild(studyUuid, rootNode.getId(), rootNetworkUuid, false, false, true);
+                            updateRootNetworkCase(studyEntity.getId(), rootNetworkUuid, networkInfos, caseInfos,
+                                    importParameters, importReportUuid);
                         }
                     }
                     caseService.disableCaseExpiration(caseUuid);
@@ -270,6 +260,21 @@ public class ConsumerService {
         // TODO: what to do here ? throwing exception will provoke retried and won't notify frontend
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
         studyService.updateStudyNetwork(studyEntity, rootNetworkEntity, userId, networkInfos);
+    }
+
+    private void updateRootNetworkCase(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, CaseInfos caseInfos,
+                                       Map<String, String> importParameters, UUID importReportUuid) {
+        // Update case for a given root network
+        rootNetworkService.updateRootNetworkCase(rootNetworkUuid, RootNetworkInfos.builder()
+                .id(rootNetworkUuid)
+                .caseInfos(caseInfos)
+                .reportUuid(importReportUuid)
+                .networkInfos(networkInfos)
+                .importParameters(importParameters)
+                .build());
+        // Invalidate nodes of the updated root network
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        studyService.invalidateBuild(studyUuid, rootNodeUuid, rootNetworkUuid, false, false, true);
     }
 
     private UserProfileInfos getUserProfile(String userId) {
