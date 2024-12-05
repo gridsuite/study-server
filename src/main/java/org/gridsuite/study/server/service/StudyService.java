@@ -39,7 +39,6 @@ import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -94,7 +93,6 @@ public class StudyService {
     private final String defaultDynamicSimulationProvider;
 
     private final StudyRepository studyRepository;
-    private final RootNetworkRepository rootNetworkRepository;
     private final StudyCreationRequestRepository studyCreationRequestRepository;
     private final NetworkService networkStoreService;
     private final NetworkModificationService networkModificationService;
@@ -149,7 +147,6 @@ public class StudyService {
         @Value("${non-evacuated-energy.default-provider}") String defaultNonEvacuatedEnergyProvider,
         @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
         StudyRepository studyRepository,
-        RootNetworkRepository rootNetworkRepository,
         StudyCreationRequestRepository studyCreationRequestRepository,
         NetworkService networkStoreService,
         NetworkModificationService networkModificationService,
@@ -183,7 +180,6 @@ public class StudyService {
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
-        this.rootNetworkRepository = rootNetworkRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
         this.networkModificationService = networkModificationService;
