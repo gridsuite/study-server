@@ -257,7 +257,7 @@ class RootNetworkTest {
                 .andExpect(status().isNotFound());
 
         // check case uuid has not been changed
-        assertEquals(studyEntity.getFirstRootNetwork().getCaseUuid(), CASE_UUID);
+        assertEquals(CASE_UUID, studyEntity.getFirstRootNetwork().getCaseUuid());
     }
 
     @Test

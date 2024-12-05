@@ -226,10 +226,10 @@ public class ConsumerService {
                                         .build());
                         case NETWORK_RECREATION ->
                                 recreateNetworkOfRootNetwork(studyEntity, rootNetworkUuid, userId, networkInfos);
-                        case ROOT_NETWORK_MODIFICATION -> {
-                            updateRootNetworkCase(studyEntity.getId(), rootNetworkUuid, networkInfos, caseInfos,
-                                    importParameters, importReportUuid);
-                        }
+                        case ROOT_NETWORK_MODIFICATION ->
+                                updateRootNetworkCase(studyEntity.getId(), rootNetworkUuid, networkInfos, caseInfos,
+                                        importParameters, importReportUuid);
+
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
