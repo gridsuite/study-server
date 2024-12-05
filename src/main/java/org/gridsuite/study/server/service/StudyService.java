@@ -301,6 +301,16 @@ public class StudyService {
         return rootNetworkCreationRequestEntity.toDto();
     }
 
+    public void updateRootNetworkCase(UUID studyUuid, UUID rootNetworkUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
+        UUID importReportUuid = UUID.randomUUID();
+        try {
+            persistentStoreWithNotificationOnError(caseUuid, studyUuid, rootNetworkUuid, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+        } catch (Exception e) {
+            //TO DO
+            throw e;
+        }
+    }
+
     @Transactional(readOnly = true)
     public Map<String, String> getStudyImportParameters(UUID rootNetworkUuid) {
         return rootNetworkService.getImportParameters(rootNetworkUuid);
