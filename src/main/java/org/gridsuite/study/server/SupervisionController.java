@@ -11,6 +11,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.apache.http.HttpHost;
+import org.elasticsearch.client.RestClient;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.SupervisionService;
 
@@ -19,7 +21,6 @@ import java.util.UUID;
 
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -38,13 +39,13 @@ public class SupervisionController {
 
     private final EquipmentInfosService equipmentInfosService;
 
-    private final ClientConfiguration elasticsearchClientConfiguration;
+    private final RestClient restClient;
 
-    public SupervisionController(SupervisionService supervisionService, StudyService studyService, EquipmentInfosService equipmentInfosService, ClientConfiguration elasticsearchClientConfiguration) {
+    public SupervisionController(SupervisionService supervisionService, StudyService studyService, EquipmentInfosService equipmentInfosService, RestClient restClient) {
         this.supervisionService = supervisionService;
         this.studyService = studyService;
         this.equipmentInfosService = equipmentInfosService;
-        this.elasticsearchClientConfiguration = elasticsearchClientConfiguration;
+        this.restClient = restClient;
     }
 
     @DeleteMapping(value = "/computation/results")
@@ -59,9 +60,10 @@ public class SupervisionController {
     @Operation(summary = "get the elasticsearch address")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "the elasticsearch address")})
     public ResponseEntity<String> getElasticsearchHost() {
-        String host = elasticsearchClientConfiguration.getEndpoints().get(0).getHostName()
+        HttpHost httpHost = restClient.getNodes().get(0).getHost();
+        String host = httpHost.getHostName()
                         + ":"
-                        + elasticsearchClientConfiguration.getEndpoints().get(0).getPort();
+                        + httpHost.getPort();
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(host);
     }
 
