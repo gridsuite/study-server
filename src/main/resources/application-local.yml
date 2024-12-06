@@ -7,8 +7,6 @@ spring:
   elasticsearch:
     uris:
       - http://localhost:9200
-    connection-timeout: 60s
-    socket-timeout: 60s
     ## to fill if authentication is needed
     # username:
     # password:
