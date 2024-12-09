@@ -26,5 +26,13 @@ public class UserProfileInfos {
 
     private UUID loadFlowParameterId;
 
+    private UUID securityAnalysisParameterId;
+
+    private UUID sensitivityAnalysisParameterId;
+
+    private UUID shortcircuitParameterId;
+
+    private UUID voltageInitParameterId;
+
     Integer maxAllowedBuilds;
 }
