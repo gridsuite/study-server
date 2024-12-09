@@ -15,6 +15,8 @@ import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.springframework.context.annotation.Lazy;
@@ -37,8 +39,10 @@ public class RootNetworkService {
     private final ReportService reportService;
 
     private final RootNetworkService self;
+    private final RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository;
 
     public RootNetworkService(RootNetworkRepository rootNetworkRepository,
+                              RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository,
                               RootNetworkNodeInfoService rootNetworkNodeInfoService,
                               NetworkService networkService,
                               CaseService caseService,
@@ -50,6 +54,7 @@ public class RootNetworkService {
         this.caseService = caseService;
         this.reportService = reportService;
         this.self = self;
+        this.rootNetworkCreationRequestRepository = rootNetworkCreationRequestRepository;
     }
 
     public UUID getNetworkUuid(UUID rootNetworkUuid) {
@@ -64,10 +69,30 @@ public class RootNetworkService {
         return rootNetworkRepository.existsById(rootNetworkUuid);
     }
 
+    /**
+     * Called by consumer - will create root network only if rootNetworkCreatationRequest is still in database
+     * @param studyEntity
+     * @param rootNetworkInfos
+     */
+    public void createRootNetworkFromRequest(StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
+        if (studyEntity == null) {
+            // TODO: what to do here ? throwing exceptions in consumer will provoke retries and won't notify frontend
+            throw new StudyException(StudyException.Type.STUDY_NOT_FOUND);
+        }
+        Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntity = rootNetworkCreationRequestRepository.findById(rootNetworkInfos.getId());
+        if (rootNetworkCreationRequestEntity.isPresent()) {
+            self.createRootNetwork(studyEntity, rootNetworkInfos);
+            rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity.get());
+            // TODO: send notification to frontend
+        } else {
+            // TODO: delete remote resources here
+            throw new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND);
+        }
+    }
+
     @Transactional
     public RootNetworkEntity createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
         RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
-
         studyEntity.addRootNetwork(rootNetworkEntity);
 
         rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity);
@@ -107,7 +132,7 @@ public class RootNetworkService {
     }
 
     public Map<String, String> getImportParameters(UUID rootNetworkUuid) {
-        return rootNetworkRepository.findById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
     }
 
     public List<UUID> getStudyCaseUuids(UUID studyUuid) {
@@ -148,6 +173,7 @@ public class RootNetworkService {
 
                 self.createRootNetwork(newStudyEntity,
                     RootNetworkInfos.builder()
+                        .id(UUID.randomUUID())
                         .importParameters(newImportParameters)
                         .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getCaseName(), rootNetworkEntityToDuplicate.getCaseFormat()))
                         .networkInfos(new NetworkInfos(clonedNetworkUuid, rootNetworkEntityToDuplicate.getNetworkId()))
@@ -156,5 +182,9 @@ public class RootNetworkService {
                 );
             }
         );
+    }
+
+    public RootNetworkCreationRequestEntity insertCreationRequest(UUID rootNetworkInCreationUuid, StudyEntity studyEntity, String userId) {
+        return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).studyUuid(studyEntity.getId()).userId(userId).build());
     }
 }

@@ -303,6 +303,7 @@ class NetworkModificationTreeTest {
             .shortCircuitParametersUuid(UUID.randomUUID())
             .build();
         studyEntity.addRootNetwork(RootNetworkEntity.builder()
+            .id(UUID.randomUUID())
             .caseFormat("").caseUuid(UUID.randomUUID())
             .reportUuid(UUID.randomUUID())
             .caseName("caseName1")
