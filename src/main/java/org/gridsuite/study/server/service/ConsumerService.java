@@ -68,6 +68,7 @@ public class ConsumerService {
     private final StudyRepository studyRepository;
     private final ShortCircuitService shortCircuitService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final VoltageInitService voltageInitService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -80,7 +81,9 @@ public class ConsumerService {
                            UserAdminService userAdminService,
                            NetworkModificationTreeService networkModificationTreeService,
                            SensitivityAnalysisService sensitivityAnalysisService,
-                           StudyRepository studyRepository, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+                           StudyRepository studyRepository,
+                           RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                           VoltageInitService voltageInitService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -93,6 +96,7 @@ public class ConsumerService {
         this.studyRepository = studyRepository;
         this.shortCircuitService = shortCircuitService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.voltageInitService = voltageInitService;
     }
 
     @Bean
@@ -208,12 +212,15 @@ public class ConsumerService {
                         // we only update network infos sent by network conversion server
                         studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
                     } else {
+                        UserProfileInfos userProfileInfos = getUserProfile(userId);
                         DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
-                        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId, getUserProfile(userId));
-                        UUID shortCircuitParametersUuid = createDefaultShortCircuitAnalysisParameters();
-                        UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters();
-                        UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters();
-                        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid, shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters, importReportUuid);
+                        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId, userProfileInfos);
+                        UUID shortCircuitParametersUuid = createDefaultShortCircuitAnalysisParameters(userId, userProfileInfos);
+                        UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters(userId, userProfileInfos);
+                        UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters(userId, userProfileInfos);
+                        UUID voltageInitParametersUuid = createDefaultVoltageInitParameters(userId, userProfileInfos);
+                        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid, shortCircuitParametersUuid,
+                            DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters, importReportUuid);
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
@@ -259,7 +266,18 @@ public class ConsumerService {
         }
     }
 
-    private UUID createDefaultShortCircuitAnalysisParameters() {
+    private UUID createDefaultShortCircuitAnalysisParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getShortcircuitParameterId() != null) {
+            // try to access/duplicate the user profile shortcircuit parameters
+            try {
+                return shortCircuitService.duplicateParameters(userProfileInfos.getShortcircuitParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate shortcircuit parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getShortcircuitParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad shortcircuit parameters in profile => use default values
         try {
             return shortCircuitService.createParameters(null);
         } catch (final Exception e) {
@@ -268,7 +286,18 @@ public class ConsumerService {
         }
     }
 
-    private UUID createDefaultSensitivityAnalysisParameters() {
+    private UUID createDefaultSensitivityAnalysisParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getSensitivityAnalysisParameterId() != null) {
+            // try to access/duplicate the user profile sensitivity analysis parameters
+            try {
+                return sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(userProfileInfos.getSensitivityAnalysisParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate sensitivity analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getSensitivityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad sensitivity analysis parameters in profile => use default values
         try {
             return sensitivityAnalysisService.createDefaultSensitivityAnalysisParameters();
         } catch (final Exception e) {
@@ -277,11 +306,42 @@ public class ConsumerService {
         }
     }
 
-    private UUID createDefaultSecurityAnalysisParameters() {
+    private UUID createDefaultSecurityAnalysisParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getSecurityAnalysisParameterId() != null) {
+            // try to access/duplicate the user profile security analysis parameters
+            try {
+                return securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate security analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getSecurityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad security analysis parameters in profile => use default values
         try {
             return securityAnalysisService.createDefaultSecurityAnalysisParameters();
         } catch (final Exception e) {
             LOGGER.error("Error while creating default parameters for Security analysis", e);
+            return null;
+        }
+    }
+
+    private UUID createDefaultVoltageInitParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getVoltageInitParameterId() != null) {
+            // try to access/duplicate the user profile voltage init parameters
+            try {
+                return voltageInitService.duplicateVoltageInitParameters(userProfileInfos.getVoltageInitParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate voltage init parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getVoltageInitParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad voltage init parameters in profile => use default values
+        try {
+            return voltageInitService.createVoltageInitParameters(null);
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default parameters for voltage init", e);
             return null;
         }
     }
