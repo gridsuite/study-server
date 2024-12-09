@@ -293,7 +293,7 @@ public class StudyService {
         try {
             networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, variantId, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
         } catch (Exception e) {
-            //TODO IMPLEMENT rootNetworkService.deleteRootNetworkIfNotCreationInProgress(rootNetworkCreationRequestEntity.getId(), userId);
+            //TODO: implement rootNetworkService.deleteRootNetworkIfNotCreationInProgress(rootNetworkCreationRequestEntity.getId(), userId);
             throw e;
         }
 
