@@ -282,27 +282,22 @@ public class StudyService {
         return basicStudyInfos;
     }
 
+    @Transactional
     public RootNetworkCreationRequestInfos createRootNetwork(UUID studyUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
-//        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         UUID importReportUuid = UUID.randomUUID();
         UUID rootNetworkUuid = UUID.randomUUID();
-        RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, userId);
         String variantId = UUID.randomUUID().toString();
+        RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, userId);
         try {
             networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, variantId, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
         } catch (Exception e) {
-            //TO IMPLEMENT rootNetworkService.deleteRootNetworkIfNotCreationInProgress(rootNetworkCreationRequestEntity.getId(), userId);
+            //TODO IMPLEMENT rootNetworkService.deleteRootNetworkIfNotCreationInProgress(rootNetworkCreationRequestEntity.getId(), userId);
             throw e;
         }
 
         return rootNetworkCreationRequestEntity.toDto();
-    }
-
-    @Transactional(readOnly = true)
-    public Map<String, String> getStudyImportParameters(UUID rootNetworkUuid) {
-        return rootNetworkService.getImportParameters(rootNetworkUuid);
     }
 
     /**

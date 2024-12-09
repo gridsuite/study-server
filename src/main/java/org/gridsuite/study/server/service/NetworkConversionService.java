@@ -39,8 +39,6 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 @Service
 public class NetworkConversionService {
 
-    private static final String FIRST_VARIANT_ID = "first_variant_id";
-
     private final RestTemplate restTemplate;
 
     private String networkConversionServerBaseUri;
