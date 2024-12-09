@@ -55,6 +55,8 @@ import java.util.stream.Stream;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_DEFAULT_NAME;
 import static org.gridsuite.study.server.utils.TestUtils.checkReports;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -76,6 +78,7 @@ class ReportServiceTest {
     private static final UUID MODIFICATION_NODE_REPORT_UUID = UUID.randomUUID();
     private static final UUID MODIFICATION_CHILD_NODE1_REPORT_UUID = UUID.randomUUID();
     private static final UUID MODIFICATION_CHILD_NODE2_REPORT_UUID = UUID.randomUUID();
+    private static final UUID NOT_FOUND_REPORT_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
     @Autowired
     private ObjectMapper mapper;
@@ -123,6 +126,8 @@ class ReportServiceTest {
                 } else if (path.matches("/v1/subreports/.*\\?severityLevels=.*")) {
                     String reportId = Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2);
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(getNodeReport(UUID.fromString(reportId), reportId)));
+                } else if (path.matches("/v1/reports/" + NOT_FOUND_REPORT_UUID + "/duplicate")) {
+                    return new MockResponse(HttpStatus.NOT_FOUND.value());
                 } else {
                     LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
                     return new MockResponse.Builder().code(HttpStatus.I_AM_A_TEAPOT.value()).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
@@ -253,6 +258,16 @@ class ReportServiceTest {
         childrenAndParentsExpectedReports.add(child1ExpectedReport);
         checkReports(child1AndParentsReports, childrenAndParentsExpectedReports);
         assertTrue(TestUtils.getRequestsDone(childrenAndParentsExpectedReports.size(), server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+    }
+
+    @Test
+    void testDuplicateRootNodeReport(final MockWebServer server) {
+        // with null reportUuid
+        assertThrows(NullPointerException.class, () -> reportService.duplicateReport(null));
+
+        // error while duplicating report
+        assertNotNull(reportService.duplicateReport(NOT_FOUND_REPORT_UUID));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/" + NOT_FOUND_REPORT_UUID + "/duplicate")));
     }
 
     private static Report getNodeReport(UUID reportUuid, String nodeUuid) {

@@ -99,4 +99,16 @@ public class ReportService {
         return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReportLog>>() {
         }).getBody();
     }
+
+    public UUID duplicateReport(@NonNull UUID id) {
+        var path = UriComponentsBuilder.fromPath("{id}/duplicate").buildAndExpand(id).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        try {
+            return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
+        } catch (Exception e) {
+            LOGGER.error("Error while duplicating report : {}", e.getMessage());
+            return UUID.randomUUID();
+        }
+    }
 }
