@@ -74,9 +74,9 @@ public class RootNetworkService {
      * @param studyEntity
      * @param rootNetworkInfos
      */
+    @Transactional
     public void createRootNetworkFromRequest(StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
         if (studyEntity == null) {
-            // TODO: what to do here ? throwing exceptions in consumer will provoke retries and won't notify frontend
             throw new StudyException(StudyException.Type.STUDY_NOT_FOUND);
         }
         Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntity = rootNetworkCreationRequestRepository.findById(rootNetworkInfos.getId());
@@ -148,7 +148,7 @@ public class RootNetworkService {
     }
 
     @Transactional
-    public void updateStudyEntityNetwork(RootNetworkEntity rootNetworkEntity, NetworkInfos networkInfos) {
+    public void updateRootNetworkEntityNetwork(RootNetworkEntity rootNetworkEntity, NetworkInfos networkInfos) {
         if (networkInfos != null) {
             rootNetworkEntity.setNetworkId(networkInfos.getNetworkId());
             rootNetworkEntity.setNetworkUuid(networkInfos.getNetworkUuid());

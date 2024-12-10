@@ -225,7 +225,7 @@ public class ConsumerService {
                                 .importParameters(importParameters)
                                 .build());
                         case NETWORK_RECREATION ->
-                            recreateNetworkOfRootNetwork(studyEntity, rootNetworkUuid, userId, networkInfos);
+                            updateRootNetworkNetwork(studyEntity, rootNetworkUuid, userId, networkInfos);
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
@@ -252,10 +252,9 @@ public class ConsumerService {
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid, shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters, importReportUuid);
     }
 
-    private void recreateNetworkOfRootNetwork(StudyEntity studyEntity, UUID rootNetworkUuid, String userId, NetworkInfos networkInfos) {
-        // TODO: what to do here ? throwing exception will provoke retried and won't notify frontend
+    private void updateRootNetworkNetwork(StudyEntity studyEntity, UUID rootNetworkUuid, String userId, NetworkInfos networkInfos) {
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
-        studyService.updateStudyNetwork(studyEntity, rootNetworkEntity, userId, networkInfos);
+        studyService.updateRootNetworkNetwork(studyEntity, rootNetworkEntity, userId, networkInfos);
     }
 
     private UserProfileInfos getUserProfile(String userId) {

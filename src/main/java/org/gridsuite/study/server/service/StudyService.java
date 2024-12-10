@@ -516,8 +516,8 @@ public class StudyService {
         return createdStudyBasicInfos;
     }
 
-    public CreatedStudyBasicInfos updateStudyNetwork(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, String userId, NetworkInfos networkInfos) {
-        rootNetworkService.updateStudyEntityNetwork(rootNetworkEntity, networkInfos);
+    public CreatedStudyBasicInfos updateRootNetworkNetwork(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, String userId, NetworkInfos networkInfos) {
+        rootNetworkService.updateRootNetworkEntityNetwork(rootNetworkEntity, networkInfos);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity, rootNetworkEntity.getId());
         studyInfosService.add(createdStudyBasicInfos);
@@ -622,7 +622,7 @@ public class StudyService {
     private void persistentStoreWithNotificationOnError(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
         try {
             //TODO: change variantId
-            networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, "first_variant_id", userId, importReportUuid, caseFormat, importParameters, caseImportAction);
+            networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, NetworkModificationTreeService.FIRST_VARIANT_ID, userId, importReportUuid, caseFormat, importParameters, caseImportAction);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, STUDY_CREATION_FAILED);
         }
