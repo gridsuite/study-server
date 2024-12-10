@@ -69,27 +69,6 @@ public class RootNetworkService {
         return rootNetworkRepository.existsById(rootNetworkUuid);
     }
 
-    /**
-     * Called by consumer - will create root network only if rootNetworkCreatationRequest is still in database
-     * @param studyEntity
-     * @param rootNetworkInfos
-     */
-    @Transactional
-    public void createRootNetworkFromRequest(StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
-        if (studyEntity == null) {
-            throw new StudyException(StudyException.Type.STUDY_NOT_FOUND);
-        }
-        Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntity = rootNetworkCreationRequestRepository.findById(rootNetworkInfos.getId());
-        if (rootNetworkCreationRequestEntity.isPresent()) {
-            self.createRootNetwork(studyEntity, rootNetworkInfos);
-            rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity.get());
-            // TODO: send notification to frontend
-        } else {
-            // TODO: delete remote resources here
-            throw new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND);
-        }
-    }
-
     @Transactional
     public RootNetworkEntity createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
         RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
@@ -148,7 +127,7 @@ public class RootNetworkService {
     }
 
     @Transactional
-    public void updateRootNetworkEntityNetwork(RootNetworkEntity rootNetworkEntity, NetworkInfos networkInfos) {
+    public void updateNetwork(RootNetworkEntity rootNetworkEntity, NetworkInfos networkInfos) {
         if (networkInfos != null) {
             rootNetworkEntity.setNetworkId(networkInfos.getNetworkId());
             rootNetworkEntity.setNetworkUuid(networkInfos.getNetworkUuid());
@@ -186,5 +165,13 @@ public class RootNetworkService {
 
     public RootNetworkCreationRequestEntity insertCreationRequest(UUID rootNetworkInCreationUuid, StudyEntity studyEntity, String userId) {
         return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).studyUuid(studyEntity.getId()).userId(userId).build());
+    }
+
+    public Optional<RootNetworkCreationRequestEntity> getCreationRequest(UUID rootNetworkInCreationUuid) {
+        return rootNetworkCreationRequestRepository.findById(rootNetworkInCreationUuid);
+    }
+
+    public void deleteCreationRequest(RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity) {
+        rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity);
     }
 }
