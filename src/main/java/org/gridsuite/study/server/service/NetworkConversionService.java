@@ -53,6 +53,11 @@ public class NetworkConversionService {
         this.restTemplate = restTemplate;
     }
 
+    /**
+     * if *variantId* is not null, 2 variant will be created from network-conversion-server
+     * - one variant for root node - INITIAL_VARIANT
+     * - one variant cloned from the previous one for the 1st node - *variantId*
+     */
     public void persistentStore(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String variantId, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
         String receiver;
         try {

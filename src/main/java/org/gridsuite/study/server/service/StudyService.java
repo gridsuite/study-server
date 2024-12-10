@@ -273,7 +273,7 @@ public class StudyService {
             if (duplicateCase) {
                 caseUuidToUse = caseService.duplicateCase(caseUuid, true);
             }
-            persistentStore(caseUuidToUse, basicStudyInfos.getId(), null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.STUDY_CREATION);
+            persistentStore(caseUuidToUse, basicStudyInfos.getId(), null, NetworkModificationTreeService.FIRST_VARIANT_ID, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.STUDY_CREATION);
         } catch (Exception e) {
             self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             throw e;
@@ -338,7 +338,7 @@ public class StudyService {
             ? new HashMap<>(rootNetworkService.getImportParameters(rootNetworkUuid))
             : importParameters;
 
-        persistentStore(caseUuid, studyUuid, rootNetworkUuid, userId, importReportUuid, caseFormat, importParametersToUse, CaseImportAction.NETWORK_RECREATION);
+        persistentStore(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParametersToUse, CaseImportAction.NETWORK_RECREATION);
     }
 
     public UUID duplicateStudy(UUID sourceStudyUuid, String userId) {
@@ -633,9 +633,9 @@ public class StudyService {
         }
     }
 
-    private void persistentStore(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
+    private void persistentStore(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String variantId, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
         try {
-            networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, caseImportAction);
+            networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, variantId, userId, importReportUuid, caseFormat, importParameters, caseImportAction);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, STUDY_CREATION_FAILED);
         }
