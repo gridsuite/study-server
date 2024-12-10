@@ -39,20 +39,20 @@ public class RootNetworkService {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final NetworkService networkService;
     private final CaseService caseService;
+    private final ReportService reportService;
 
     private final RootNetworkService self;
     private final RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository;
     private final StudyServerExecutionService studyServerExecutionService;
-    private final ReportService reportService;
     private final EquipmentInfosService equipmentInfosService;
     private final NetworkStoreService networkStoreService;
 
     public RootNetworkService(RootNetworkRepository rootNetworkRepository,
+                              RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository,
                               RootNetworkNodeInfoService rootNetworkNodeInfoService,
                               NetworkService networkService,
                               CaseService caseService,
                               @Lazy RootNetworkService self,
-                              RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository,
                               StudyServerExecutionService studyServerExecutionService,
                               ReportService reportService,
                               EquipmentInfosService equipmentInfosService,
@@ -61,10 +61,10 @@ public class RootNetworkService {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.networkService = networkService;
         this.caseService = caseService;
+        this.reportService = reportService;
         this.self = self;
         this.rootNetworkCreationRequestRepository = rootNetworkCreationRequestRepository;
         this.studyServerExecutionService = studyServerExecutionService;
-        this.reportService = reportService;
         this.equipmentInfosService = equipmentInfosService;
         this.networkStoreService = networkStoreService;
     }
@@ -87,9 +87,9 @@ public class RootNetworkService {
      * @param studyEntity
      * @param rootNetworkInfos
      */
+    @Transactional
     public void createRootNetworkFromRequest(StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
         if (studyEntity == null) {
-            // TODO: what to do here ? throwing exceptions in consumer will provoke retries and won't notify frontend
             throw new StudyException(StudyException.Type.STUDY_NOT_FOUND);
         }
         Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntity = rootNetworkCreationRequestRepository.findById(rootNetworkInfos.getId());
@@ -145,7 +145,7 @@ public class RootNetworkService {
     }
 
     @Transactional
-    public void updateStudyEntityNetwork(RootNetworkEntity rootNetworkEntity, NetworkInfos networkInfos) {
+    public void updateRootNetworkEntityNetwork(RootNetworkEntity rootNetworkEntity, NetworkInfos networkInfos) {
         if (networkInfos != null) {
             rootNetworkEntity.setNetworkId(networkInfos.getNetworkId());
             rootNetworkEntity.setNetworkUuid(networkInfos.getNetworkUuid());
@@ -166,13 +166,15 @@ public class RootNetworkService {
                 UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkEntityToDuplicate.getCaseUuid(), false);
                 Map<String, String> newImportParameters = Map.copyOf(rootNetworkEntityToDuplicate.getImportParameters());
 
+                UUID clonedRootNodeReportUuid = reportService.duplicateReport(rootNetworkEntityToDuplicate.getReportUuid());
+
                 self.createRootNetwork(newStudyEntity,
                     RootNetworkInfos.builder()
                         .id(UUID.randomUUID())
                         .importParameters(newImportParameters)
                         .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getCaseName(), rootNetworkEntityToDuplicate.getCaseFormat()))
                         .networkInfos(new NetworkInfos(clonedNetworkUuid, rootNetworkEntityToDuplicate.getNetworkId()))
-                        .reportUuid(UUID.randomUUID())
+                        .reportUuid(clonedRootNodeReportUuid)
                         .build()
                 );
             }
