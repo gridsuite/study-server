@@ -81,27 +81,6 @@ public class RootNetworkService {
         return rootNetworkRepository.existsById(rootNetworkUuid);
     }
 
-    /**
-     * Called by consumer - will create root network only if rootNetworkCreatationRequest is still in database
-     * Will delete remote resources otherwise
-     * @param studyEntity
-     * @param rootNetworkInfos
-     */
-    @Transactional
-    public void createRootNetworkFromRequest(StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
-        if (studyEntity == null) {
-            throw new StudyException(StudyException.Type.STUDY_NOT_FOUND);
-        }
-        Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntity = rootNetworkCreationRequestRepository.findById(rootNetworkInfos.getId());
-        if (rootNetworkCreationRequestEntity.isPresent()) {
-            self.createRootNetwork(studyEntity, rootNetworkInfos);
-            rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity.get());
-            // TODO: send notification to frontend
-        } else {
-            delete(rootNetworkInfos);
-        }
-    }
-
     @Transactional
     public RootNetworkEntity createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
         RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
@@ -145,7 +124,7 @@ public class RootNetworkService {
     }
 
     @Transactional
-    public void updateRootNetworkEntityNetwork(RootNetworkEntity rootNetworkEntity, NetworkInfos networkInfos) {
+    public void updateNetwork(RootNetworkEntity rootNetworkEntity, NetworkInfos networkInfos) {
         if (networkInfos != null) {
             rootNetworkEntity.setNetworkId(networkInfos.getNetworkId());
             rootNetworkEntity.setNetworkUuid(networkInfos.getNetworkUuid());
@@ -200,7 +179,7 @@ public class RootNetworkService {
         delete(rootNetworkRepository.findWithRootNetworkNodeInfosById(rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND)).toDto());
     }
 
-    private void delete(RootNetworkInfos rootNetworkInfos) {
+    public void delete(RootNetworkInfos rootNetworkInfos) {
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
             getDeleteRootNetworkInfosFutures(List.of(rootNetworkInfos)).toArray(CompletableFuture[]::new)
         );
@@ -229,5 +208,13 @@ public class RootNetworkService {
         result.addAll(rootNetworkNodeInfoService.getDeleteRootNetworkNodeInfosFutures(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).filter(Objects::nonNull).flatMap(Collection::stream).toList()));
 
         return result;
+    }
+
+    public Optional<RootNetworkCreationRequestEntity> getCreationRequest(UUID rootNetworkInCreationUuid) {
+        return rootNetworkCreationRequestRepository.findById(rootNetworkInCreationUuid);
+    }
+
+    public void deleteCreationRequest(RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity) {
+        rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity);
     }
 }

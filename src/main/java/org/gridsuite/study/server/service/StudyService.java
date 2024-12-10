@@ -269,7 +269,7 @@ public class StudyService {
             if (duplicateCase) {
                 caseUuidToUse = caseService.duplicateCase(caseUuid, true);
             }
-            persistentStoreWithNotificationOnError(caseUuidToUse, basicStudyInfos.getId(), null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.STUDY_CREATION);
+            persistentStore(caseUuidToUse, basicStudyInfos.getId(), null, NetworkModificationTreeService.FIRST_VARIANT_ID, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.STUDY_CREATION);
         } catch (Exception e) {
             self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             throw e;
@@ -291,10 +291,9 @@ public class StudyService {
 
         UUID importReportUuid = UUID.randomUUID();
         UUID rootNetworkUuid = UUID.randomUUID();
-        String variantId = UUID.randomUUID().toString();
         RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, userId);
         try {
-            networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, variantId, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
+            networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
         } catch (Exception e) {
             //TODO: don't throw another error if deletion fails ?
             rootNetworkService.delete(rootNetworkUuid);
@@ -302,6 +301,19 @@ public class StudyService {
         }
 
         return rootNetworkCreationRequestEntity.toDto();
+    }
+
+    @Transactional
+    public void createRootNetwork(@NonNull UUID studyUuid, @NonNull RootNetworkInfos rootNetworkInfos) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntityOpt = rootNetworkService.getCreationRequest(rootNetworkInfos.getId());
+        if (rootNetworkCreationRequestEntityOpt.isPresent()) {
+            rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
+            rootNetworkService.deleteCreationRequest(rootNetworkCreationRequestEntityOpt.get());
+            // TODO: send notification to frontend
+        } else {
+            rootNetworkService.delete(rootNetworkInfos);
+        }
     }
 
     /**
@@ -332,7 +344,7 @@ public class StudyService {
             ? new HashMap<>(rootNetworkService.getImportParameters(rootNetworkUuid))
             : importParameters;
 
-        persistentStoreWithNotificationOnError(caseUuid, studyUuid, rootNetworkUuid, userId, importReportUuid, caseFormat, importParametersToUse, CaseImportAction.NETWORK_RECREATION);
+        persistentStore(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParametersToUse, CaseImportAction.NETWORK_RECREATION);
     }
 
     public UUID duplicateStudy(UUID sourceStudyUuid, String userId) {
@@ -491,8 +503,12 @@ public class StudyService {
         return createdStudyBasicInfos;
     }
 
-    public CreatedStudyBasicInfos updateRootNetworkNetwork(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, String userId, NetworkInfos networkInfos) {
-        rootNetworkService.updateRootNetworkEntityNetwork(rootNetworkEntity, networkInfos);
+    @Transactional
+    public CreatedStudyBasicInfos updateNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId, NetworkInfos networkInfos) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+
+        rootNetworkService.updateNetwork(rootNetworkEntity, networkInfos);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity, rootNetworkEntity.getId());
         studyInfosService.add(createdStudyBasicInfos);
@@ -594,10 +610,9 @@ public class StudyService {
         }
     }
 
-    private void persistentStoreWithNotificationOnError(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
+    private void persistentStore(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String variantId, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
         try {
-            //TODO: change variantId
-            networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, NetworkModificationTreeService.FIRST_VARIANT_ID, userId, importReportUuid, caseFormat, importParameters, caseImportAction);
+            networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, variantId, userId, importReportUuid, caseFormat, importParameters, caseImportAction);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, STUDY_CREATION_FAILED);
         }

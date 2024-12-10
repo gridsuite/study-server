@@ -6,8 +6,17 @@
  */
 package org.gridsuite.study.server.dto.caseimport;
 
+import lombok.Getter;
+
 public enum CaseImportAction {
-    STUDY_CREATION,
-    ROOT_NETWORK_CREATION,
-    NETWORK_RECREATION
+    STUDY_CREATION("Study creation"),
+    ROOT_NETWORK_CREATION("Root network creation"),
+    NETWORK_RECREATION("Network recreation");
+
+    @Getter
+    public final String label;
+
+    CaseImportAction(String label) {
+        this.label = label;
+    }
 }
