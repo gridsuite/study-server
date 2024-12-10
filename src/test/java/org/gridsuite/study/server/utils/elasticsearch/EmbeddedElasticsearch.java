@@ -45,7 +45,9 @@ public class EmbeddedElasticsearch {
         elasticsearchContainer.start();
 
         System.setProperty("spring.data.elasticsearch.embedded", Boolean.toString(true));
-        System.setProperty("spring.data.elasticsearch.embedded.port", Integer.toString(elasticsearchContainer.getMappedPort(9200)));
+        int port = elasticsearchContainer.getMappedPort(9200);
+        System.setProperty("spring.data.elasticsearch.embedded.port", Integer.toString(port));
+        System.setProperty("spring.elasticsearch.uris", "localhost:" + port);
     }
 
     @PreDestroy
