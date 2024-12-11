@@ -12,7 +12,7 @@ import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.utils.JsonUtils;
 import org.gridsuite.study.server.utils.PropertyUtils;
-import org.gridsuite.study.server.utils.StudyUtils;
+import org.gridsuite.study.server.utils.StudyTestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -41,7 +41,7 @@ class GenericTest implements WithAssertions {
     }
 
     @ParameterizedTest
-    @ValueSource(classes = {JsonUtils.class, UrlUtil.class, PropertyUtils.class, StudyUtils.class})
+    @ValueSource(classes = {JsonUtils.class, UrlUtil.class, PropertyUtils.class, StudyTestUtils.class})
     void utilityClassConstructor(@NonNull final Class<?> utilsClass) {
         assertThat(utilsClass).hasSuperclass(Object.class).isNotInterface().isNotAnnotation().isFinal().satisfiesAnyOf(
                 clazz -> assertThat(clazz).isPublic(),
