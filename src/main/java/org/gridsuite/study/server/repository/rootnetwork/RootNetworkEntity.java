@@ -41,7 +41,8 @@ public class RootNetworkEntity {
     private StudyEntity study;
 
     @OneToMany(orphanRemoval = true, mappedBy = "rootNetwork", cascade = CascadeType.ALL)
-    private List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos;
+    @Builder.Default
+    private List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos = new ArrayList<>();
 
     @Column(name = "networkUuid", nullable = false)
     private UUID networkUuid;
@@ -69,9 +70,6 @@ public class RootNetworkEntity {
     private Map<String, String> importParameters;
 
     public void addRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
-        if (rootNetworkNodeInfos == null) {
-            rootNetworkNodeInfos = new ArrayList<>();
-        }
         rootNetworkNodeInfoEntity.setRootNetwork(this);
         rootNetworkNodeInfos.add(rootNetworkNodeInfoEntity);
     }
@@ -85,9 +83,7 @@ public class RootNetworkEntity {
             .reportUuid(this.reportUuid)
             .build();
 
-        if (this.rootNetworkNodeInfos != null) {
-            rootNetworkInfosBuilder.rootNetworkNodeInfos(this.rootNetworkNodeInfos.stream().map(RootNetworkNodeInfoEntity::toDto).collect(Collectors.toList()));
-        }
+        rootNetworkInfosBuilder.rootNetworkNodeInfos(this.rootNetworkNodeInfos.stream().map(RootNetworkNodeInfoEntity::toDto).collect(Collectors.toList()));
 
         return rootNetworkInfosBuilder.build();
     }
