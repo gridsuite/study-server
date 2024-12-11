@@ -493,7 +493,7 @@ public class RootNetworkNodeInfoService {
     public byte[] getShortCircuitAnalysisCsvResult(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type, String headerCsv) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
             type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
-        return shortCircuitService.getShortCircuitAnalysisCsvResult(resultUuid, type, headerCsv);
+        return shortCircuitService.getShortCircuitAnalysisCsvResult(resultUuid, headerCsv);
     }
 
     @Transactional(readOnly = true)
@@ -544,7 +544,7 @@ public class RootNetworkNodeInfoService {
     public String getShortCircuitAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
             type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
-        return shortCircuitService.getShortCircuitAnalysisStatus(resultUuid, type);
+        return shortCircuitService.getShortCircuitAnalysisStatus(resultUuid);
     }
 
     @Transactional(readOnly = true)

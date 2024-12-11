@@ -101,7 +101,7 @@ public class ShortCircuitService extends AbstractComputationService {
         return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    private String getShortCircuitAnalysisResultResourcePath(UUID resultUuid, ShortcircuitAnalysisType type) {
+    private String getShortCircuitAnalysisResultResourcePath(UUID resultUuid) {
         if (resultUuid == null) {
             return null;
         }
@@ -109,7 +109,7 @@ public class ShortCircuitService extends AbstractComputationService {
     }
 
     private String getShortCircuitAnalysisResultsPageResourcePath(UUID resultUuid, ShortcircuitAnalysisType type) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(resultUuid, type);
+        String resultPath = getShortCircuitAnalysisResultResourcePath(resultUuid);
         if (resultPath == null) {
             return null;
         }
@@ -125,11 +125,11 @@ public class ShortCircuitService extends AbstractComputationService {
         if (paged) {
             return getShortCircuitAnalysisResultsPage(resultUuid, mode, type, filters, pageable);
         } else {
-            return getShortCircuitAnalysisResult(resultUuid, mode, type);
+            return getShortCircuitAnalysisResult(resultUuid, mode);
         }
     }
 
-    private String getShortCircuitAnalysisCsvResultResourcePath(UUID resultUuid, ShortcircuitAnalysisType type) {
+    private String getShortCircuitAnalysisCsvResultResourcePath(UUID resultUuid) {
         if (resultUuid == null) {
             throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
         }
@@ -152,14 +152,14 @@ public class ShortCircuitService extends AbstractComputationService {
         }
     }
 
-    public byte[] getShortCircuitAnalysisCsvResult(UUID resultUuid, ShortcircuitAnalysisType type, String headersCsv) {
-        String resultPath = getShortCircuitAnalysisCsvResultResourcePath(resultUuid, type);
+    public byte[] getShortCircuitAnalysisCsvResult(UUID resultUuid, String headersCsv) {
+        String resultPath = getShortCircuitAnalysisCsvResultResourcePath(resultUuid);
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath);
         return getShortCircuitAnalysisCsvResultResource(builder.build().toUri(), headersCsv);
     }
 
-    public String getShortCircuitAnalysisResult(UUID resultUuid, FaultResultsMode mode, ShortcircuitAnalysisType type) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(resultUuid, type);
+    public String getShortCircuitAnalysisResult(UUID resultUuid, FaultResultsMode mode) {
+        String resultPath = getShortCircuitAnalysisResultResourcePath(resultUuid);
         if (resultPath == null) {
             return null;
         }
@@ -187,8 +187,8 @@ public class ShortCircuitService extends AbstractComputationService {
         return getShortCircuitAnalysisResource(builder.build().encode().toUri()); // need to encode because of filter JSON array
     }
 
-    public String getShortCircuitAnalysisStatus(UUID resultUuid, ShortcircuitAnalysisType type) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(resultUuid, type);
+    public String getShortCircuitAnalysisStatus(UUID resultUuid) {
+        String resultPath = getShortCircuitAnalysisResultResourcePath(resultUuid);
         if (resultPath == null) {
             return null;
         }
@@ -262,8 +262,8 @@ public class ShortCircuitService extends AbstractComputationService {
     }
 
     public void assertShortCircuitAnalysisNotRunning(UUID scsResultUuid, UUID oneBusScsResultUuid) {
-        String scs = getShortCircuitAnalysisStatus(scsResultUuid, ShortcircuitAnalysisType.ALL_BUSES);
-        String oneBusScs = getShortCircuitAnalysisStatus(oneBusScsResultUuid, ShortcircuitAnalysisType.ONE_BUS);
+        String scs = getShortCircuitAnalysisStatus(scsResultUuid);
+        String oneBusScs = getShortCircuitAnalysisStatus(oneBusScsResultUuid);
         if (ShortCircuitStatus.RUNNING.name().equals(scs) || ShortCircuitStatus.RUNNING.name().equals(oneBusScs)) {
             throw new StudyException(SHORT_CIRCUIT_ANALYSIS_RUNNING);
         }
