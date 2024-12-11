@@ -100,19 +100,11 @@ public class RootNetworkService {
     }
 
     public String getCaseName(UUID rootNetworkUuid) {
-        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getCaseName).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getCaseName).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
     }
 
     public Map<String, String> getImportParameters(UUID rootNetworkUuid) {
-        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
-    }
-
-    public List<UUID> getStudyCaseUuids(UUID studyUuid) {
-        return getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::getCaseUuid).toList();
-    }
-
-    public List<UUID> getStudyNetworkUuids(UUID studyUuid) {
-        return getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::getNetworkUuid).toList();
+        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
     }
 
     public List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
@@ -166,7 +158,7 @@ public class RootNetworkService {
 
     public void assertIsRootNetworkInStudy(UUID rootNetworkUuid, UUID studyUuid) {
         if (!rootNetworkRepository.existsByIdAndStudyId(rootNetworkUuid, studyUuid)) {
-            throw new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND);
+            throw new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND);
         }
     }
 
@@ -176,7 +168,7 @@ public class RootNetworkService {
      * @param rootNetworkUuid
      */
     public void delete(UUID rootNetworkUuid) {
-        delete(rootNetworkRepository.findWithRootNetworkNodeInfosById(rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND)).toDto());
+        delete(rootNetworkRepository.findWithRootNetworkNodeInfosById(rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND)).toDto());
     }
 
     public void delete(RootNetworkInfos rootNetworkInfos) {

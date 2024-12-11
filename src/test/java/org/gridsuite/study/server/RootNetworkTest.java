@@ -212,6 +212,36 @@ class RootNetworkTest {
     }
 
     @Test
+    void testCreateRootNetworkRequestWithError() throws Exception {
+        // create study with first root network
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+
+        // prepare headers for 2nd root network creation request
+        UUID caseUuid = UUID.randomUUID();
+        String caseFormat = "newCaseFormat";
+        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
+            .willReturn(WireMock.serverError().withBody("Error when creating root network"))).getId();
+
+        // request execution - returns RootNetworkCreationRequestInfos
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}", studyEntity.getId(), caseUuid, caseFormat)
+                .header("userId", USER_ID)
+                .header("content-type", "application/json"))
+            .andExpect(status().isInternalServerError());
+
+        wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
+            false,
+            Map.of("caseUuid", WireMock.equalTo(caseUuid.toString()),
+                "caseFormat", WireMock.equalTo(caseFormat),
+                "receiver", WireMock.matching(".*rootNetworkUuid.*")),
+            null
+        );
+
+        // check no rootNetworkCreationRequest has been saved
+        assertEquals(0, rootNetworkCreationRequestRepository.count());
+    }
+
+    @Test
     void testCreateRootNetworkConsumer() throws Exception {
         // create study with first root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
@@ -238,7 +268,7 @@ class RootNetworkTest {
         StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
         assertEquals(2, updatedStudyEntity.getRootNetworks().size());
 
-        RootNetworkEntity rootNetworkEntity = updatedStudyEntity.getRootNetworks().stream().filter(rne -> rne.getId().equals(newRootNetworkUuid)).findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        RootNetworkEntity rootNetworkEntity = updatedStudyEntity.getRootNetworks().stream().filter(rne -> rne.getId().equals(newRootNetworkUuid)).findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
         assertEquals(newRootNetworkUuid, rootNetworkEntity.getId());
         assertEquals(NETWORK_UUID2, rootNetworkEntity.getNetworkUuid());
         assertEquals(NETWORK_ID2, rootNetworkEntity.getNetworkId());
