@@ -113,6 +113,7 @@ public class StudyService {
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final NonEvacuatedEnergyService nonEvacuatedEnergyService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
+    private final StudyConfigService studyConfigService;
     private final FilterService filterService;
     private final ActionsService actionsService;
     private final CaseService caseService;
@@ -173,6 +174,7 @@ public class StudyService {
         DynamicSimulationService dynamicSimulationService,
         VoltageInitService voltageInitService,
         DynamicSimulationEventService dynamicSimulationEventService,
+        StudyConfigService studyConfigService,
         FilterService filterService,
         StateEstimationService stateEstimationService,
         @Lazy StudyService studyService,
@@ -206,6 +208,7 @@ public class StudyService {
         this.dynamicSimulationService = dynamicSimulationService;
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
+        this.studyConfigService = studyConfigService;
         this.filterService = filterService;
         this.stateEstimationService = stateEstimationService;
         this.self = studyService;
@@ -398,6 +401,9 @@ public class StudyService {
                 if (s.getSensitivityAnalysisParametersUuid() != null) {
                     sensitivityAnalysisService.deleteSensitivityAnalysisParameters(s.getSensitivityAnalysisParametersUuid());
                 }
+                if (s.getNetworkVisualizationParametersUuid() != null) {
+                    studyConfigService.deleteNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
+                }
             });
             deleteStudyInfos = new DeleteStudyInfos(networksToDeleteUuids, casesToDeleteUuids, rootNetworkNodeInfos, reportUuids, modificationGroupUuids);
         } else {
@@ -470,7 +476,7 @@ public class StudyService {
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos, UUID loadFlowParametersUuid,
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
-                                              Map<String, String> importParameters, UUID importReportUuid) {
+                                              UUID networkVisualizationParametersUuid, Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -482,7 +488,7 @@ public class StudyService {
         StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(studyUuid, networkInfos,
                 caseInfos, loadFlowParametersUuid,
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
-                voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
+                voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid,
                 importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
@@ -556,6 +562,11 @@ public class StudyService {
             copiedVoltageInitParametersUuid = voltageInitService.duplicateVoltageInitParameters(sourceStudyEntity.getVoltageInitParametersUuid());
         }
 
+        UUID copiedNetworkVisualizationParametersUuid = null;
+        if (sourceStudyEntity.getNetworkVisualizationParametersUuid() != null) {
+            copiedNetworkVisualizationParametersUuid = studyConfigService.duplicateNetworkVisualizationParameters(sourceStudyEntity.getNetworkVisualizationParametersUuid());
+        }
+
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
 
         return studyRepository.save(StudyEntity.builder()
@@ -568,6 +579,7 @@ public class StudyService {
             .shortCircuitParametersUuid(copiedShortCircuitParametersUuid)
             .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
             .sensitivityAnalysisParametersUuid(copiedSensitivityAnalysisParametersUuid)
+            .networkVisualizationParametersUuid(copiedNetworkVisualizationParametersUuid)
             .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
             .build());
     }
@@ -784,6 +796,32 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, SECURITY_ANALYSIS);
+    }
+
+    @Transactional
+    public String getNetworkVisualizationParametersValues(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return studyConfigService.getNetworkVisualizationParameters(studyConfigService.getNetworkVisualizationParametersUuidOrElseCreateDefaults(studyEntity));
+    }
+
+    @Transactional
+    public void setNetworkVisualizationParametersValues(UUID studyUuid, String parameters, String userId) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        createOrUpdateNetworkVisualizationParameters(studyEntity, parameters);
+        //notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        //notificationService.emitElementUpdated(studyUuid, userId);
+        //notificationService.emitComputationParamsChanged(studyUuid, SECURITY_ANALYSIS);
+        // TODO new notif
+    }
+
+    public void createOrUpdateNetworkVisualizationParameters(StudyEntity studyEntity, String parameters) {
+        UUID networkVisualizationParametersUuid = studyEntity.getNetworkVisualizationParametersUuid();
+        if (networkVisualizationParametersUuid == null) {
+            networkVisualizationParametersUuid = studyConfigService.createNetworkVisualizationParameters(parameters);
+            studyEntity.setNetworkVisualizationParametersUuid(networkVisualizationParametersUuid);
+        } else {
+            studyConfigService.updateNetworkVisualizationParameters(networkVisualizationParametersUuid, parameters);
+        }
     }
 
     public NonEvacuatedEnergyParametersInfos getNonEvacuatedEnergyParametersInfos(UUID studyUuid) {
@@ -1038,7 +1076,7 @@ public class StudyService {
                                                     CaseInfos caseInfos, UUID loadFlowParametersUuid,
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
-                                                    Map<String, String> importParameters, UUID importReportUuid) {
+                                                    UUID networkVisualizationParametersUuid, Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -1052,6 +1090,7 @@ public class StudyService {
                 .sensitivityAnalysisParametersUuid(sensitivityAnalysisParametersUuid)
                 .indexationStatus(StudyIndexationStatus.INDEXED)
                 .voltageInitParameters(new StudyVoltageInitParametersEntity())
+                .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
                 .build();
 
         var study = studyRepository.save(studyEntity);

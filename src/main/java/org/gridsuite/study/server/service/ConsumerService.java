@@ -67,6 +67,7 @@ public class ConsumerService {
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyRepository studyRepository;
     private final ShortCircuitService shortCircuitService;
+    private final StudyConfigService studyConfigService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @Autowired
@@ -80,6 +81,7 @@ public class ConsumerService {
                            UserAdminService userAdminService,
                            NetworkModificationTreeService networkModificationTreeService,
                            SensitivityAnalysisService sensitivityAnalysisService,
+                           StudyConfigService studyConfigService,
                            StudyRepository studyRepository, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
@@ -92,6 +94,7 @@ public class ConsumerService {
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.studyRepository = studyRepository;
         this.shortCircuitService = shortCircuitService;
+        this.studyConfigService = studyConfigService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
 
@@ -213,7 +216,16 @@ public class ConsumerService {
                         UUID shortCircuitParametersUuid = createDefaultShortCircuitAnalysisParameters();
                         UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters();
                         UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters();
-                        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid, shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), null, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, importParameters, importReportUuid);
+                        UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters();
+                        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos,
+                                loadFlowParametersUuid,
+                                shortCircuitParametersUuid,
+                                DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
+                                null,
+                                securityAnalysisParametersUuid,
+                                sensitivityAnalysisParametersUuid,
+                                networkVisualizationParametersUuid,
+                                importParameters, importReportUuid);
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
@@ -282,6 +294,15 @@ public class ConsumerService {
             return securityAnalysisService.createDefaultSecurityAnalysisParameters();
         } catch (final Exception e) {
             LOGGER.error("Error while creating default parameters for Security analysis", e);
+            return null;
+        }
+    }
+
+    private UUID createDefaultNetworkVisualizationParameters() {
+        try {
+            return studyConfigService.createDefaultNetworkVisualizationParameters();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating network visualization default parameters", e);
             return null;
         }
     }

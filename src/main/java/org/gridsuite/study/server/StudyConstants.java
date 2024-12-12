@@ -19,7 +19,7 @@ public final class StudyConstants {
     public static final String SINGLE_LINE_DIAGRAM_API_VERSION = "v1";
     public static final String NETWORK_CONVERSION_API_VERSION = "v1";
     public static final String GEO_DATA_API_VERSION = "v1";
-    public static final String NETWORK_STORE_API_VERSION = "v1";
+    public static final String STUDY_CONFIG_API_VERSION = "v1";
     public static final String NETWORK_MODIFICATION_API_VERSION = "v1";
     public static final String LOADFLOW_API_VERSION = "v1";
     public static final String USER_ADMIN_API_VERSION = "v1";
