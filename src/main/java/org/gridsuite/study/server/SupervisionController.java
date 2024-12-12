@@ -113,7 +113,7 @@ public class SupervisionController {
     @Operation(summary = "delete indexed equipments and tombstoned equipments for the given networkUuid")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed equipments and tombstoned equipments for the given networkUuid have been deleted")})
     public ResponseEntity<Long> deleteNetworkUuidIndexedEquipmentsAndTombstoned(@PathVariable("networkUuid") UUID networkUuid) {
-        studyService.deleteEquipmentIndexes(networkUuid);
+        equipmentInfosService.deleteEquipmentIndexes(networkUuid);
         return ResponseEntity.ok().build();
     }
 

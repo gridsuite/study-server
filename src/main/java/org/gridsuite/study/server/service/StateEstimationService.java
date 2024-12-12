@@ -12,7 +12,6 @@ import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.StateEstimationStatus;
@@ -58,21 +57,16 @@ public class StateEstimationService {
     @Setter
     private String stateEstimationServerServerBaseUri;
 
-    private final NetworkModificationTreeService networkModificationTreeService;
-
     @Autowired
     public StateEstimationService(RemoteServicesProperties remoteServicesProperties,
-                                  NetworkModificationTreeService networkModificationTreeService,
                                   ObjectMapper objectMapper, RestTemplate restTemplate) {
         this.stateEstimationServerServerBaseUri = remoteServicesProperties.getServiceUri("state-estimation-server");
-        this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;
     }
 
-    public String getStateEstimationResult(UUID nodeUuid, UUID rootNetworkUuid) {
+    public String getStateEstimationResult(UUID resultUuid) {
         String result;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.STATE_ESTIMATION);
 
         if (resultUuid == null) {
             return null;
@@ -114,11 +108,9 @@ public class StateEstimationService {
         return restTemplate.exchange(stateEstimationServerServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void stopStateEstimation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+    public void stopStateEstimation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
-
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.STATE_ESTIMATION);
 
         if (resultUuid == null) {
             return;
@@ -138,8 +130,7 @@ public class StateEstimationService {
         restTemplate.put(stateEstimationServerServerBaseUri + path, Void.class);
     }
 
-    public String getStateEstimationStatus(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.STATE_ESTIMATION);
+    public String getStateEstimationStatus(UUID resultUuid) {
         if (resultUuid == null) {
             return null;
         }
@@ -181,8 +172,8 @@ public class StateEstimationService {
         return restTemplate.getForObject(stateEstimationServerServerBaseUri + path, Integer.class);
     }
 
-    public void assertStateEstimationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
-        String status = getStateEstimationStatus(nodeUuid, rootNetworkUuid);
+    public void assertStateEstimationNotRunning(UUID resultUuid) {
+        String status = getStateEstimationStatus(resultUuid);
         if (StateEstimationStatus.RUNNING.name().equals(status)) {
             throw new StudyException(STATE_ESTIMATION_RUNNING);
         }

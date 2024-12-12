@@ -18,6 +18,7 @@ import com.powsybl.iidm.network.TwoSides;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,7 +40,7 @@ public class WireMockUtils {
 
     private static final String URI_NETWORK_MODIFICATION_GROUPS = "/v1/groups";
 
-    private static final String FIRST_VARIANT_ID = "first_variant_id";
+    public static final String FIRST_VARIANT_ID = "first_variant_id";
 
     private final WireMockServer wireMock;
 
@@ -331,34 +332,42 @@ public class WireMockUtils {
         removeRequestForStub(stubUuid, 1);
     }
 
-    public UUID stubImportNetwork(String caseUuid, Map<String, Object> importParameters, String networkUuid, String networkId, String caseFormat, String caseName, CountDownLatch countDownLatch) {
-        UUID importNetworkStubId = wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
+    public UUID stubImportNetwork(String caseUuid, Map<String, Object> importParameters, String networkUuid, String networkId, String variantId, String caseFormat, String caseName, CountDownLatch countDownLatch) {
+        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
             .withQueryParam("caseUuid", WireMock.equalTo(caseUuid))
-            .withQueryParam("variantId", WireMock.equalTo(FIRST_VARIANT_ID))
-            .withQueryParam("receiver", WireMock.matching(".*"))
-            .withPostServeAction(POST_ACTION_SEND_INPUT,
-                Parameters.from(
-                    Map.of(
-                        "payload", "",
-                        "destination", "case.import.succeeded",
-                        "networkUuid", networkUuid,
-                        "networkId", networkId,
-                        "caseFormat", caseFormat,
-                        "caseName", caseName,
-                        "importParameters", importParameters,
-                        "latch", countDownLatch
-                    )
+            .withQueryParam("receiver", WireMock.matching(".*"));
+        if (variantId != null) {
+            mappingBuilder = mappingBuilder.withQueryParam("variantId", WireMock.equalTo(variantId));
+        }
+        mappingBuilder = mappingBuilder.withPostServeAction(POST_ACTION_SEND_INPUT,
+            Parameters.from(
+                Map.of(
+                    "payload", "",
+                    "destination", "case.import.succeeded",
+                    "networkUuid", networkUuid,
+                    "networkId", networkId,
+                    "caseFormat", caseFormat,
+                    "caseName", caseName,
+                    "importParameters", importParameters,
+                    "latch", countDownLatch
                 )
             )
+        )
+        .willReturn(WireMock.ok());
 
-            .willReturn(WireMock.ok())).getId();
-
-        return importNetworkStubId;
+        return wireMock.stubFor(mappingBuilder).getId();
     }
 
-    public void verifyImportNetwork(UUID stubUuid, String caseUuid) {
-        verifyPostRequest(stubUuid, "/v1/networks",
-            Map.of("caseUuid", WireMock.equalTo(caseUuid.toString()), "variantId", WireMock.equalTo(FIRST_VARIANT_ID), "receiver", WireMock.matching(".*")));
+    public void verifyImportNetwork(UUID stubUuid, String caseUuid, String variantId) {
+        HashMap<String, StringValuePattern> params = new HashMap<>();
+        params.put("caseUuid", WireMock.equalTo(caseUuid));
+        params.put("receiver", WireMock.matching(".*"));
+
+        if (variantId != null) {
+            params.put("variantId", WireMock.equalTo(variantId));
+        }
+
+        verifyPostRequest(stubUuid, "/v1/networks", params);
     }
 
     public UUID stubDisableCaseExpiration(String caseUuid) {

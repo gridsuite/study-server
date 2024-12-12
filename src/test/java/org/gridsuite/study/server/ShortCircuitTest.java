@@ -588,7 +588,7 @@ class ShortCircuitTest implements WithAssertions {
         studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, Optional.empty(), "user_1");
 
         // Test reset uuid result in the database
-        assertNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));
+        assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
