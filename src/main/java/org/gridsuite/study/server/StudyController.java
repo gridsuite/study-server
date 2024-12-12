@@ -581,52 +581,56 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run")
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run")
     @Operation(summary = "run loadflow on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow has started")})
     public ResponseEntity<Void> runLoadFlow(
             @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "The limit reduction") @RequestParam(name = "limitReduction", required = false) Float limitReduction,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runLoadFlow(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId, limitReduction);
+        studyService.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, userId, limitReduction);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/result")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/result")
     @Operation(summary = "Get a loadflow result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow result"),
         @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
         @ApiResponse(responseCode = "404", description = "The loadflow result has not been found")})
     public ResponseEntity<String> getLoadflowResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                    @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                     @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
                                                     Sort sort) {
-        String result = rootNetworkNodeInfoService.getLoadFlowResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), filters, sort);
+        String result = rootNetworkNodeInfoService.getLoadFlowResult(nodeUuid, rootNetworkUuid, filters, sort);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/status")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/status")
     @Operation(summary = "Get the loadflow status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow status"),
         @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
         @ApiResponse(responseCode = "404", description = "The loadflow status has not been found")})
     public ResponseEntity<String> getLoadFlowStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        String result = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/stop")
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/stop")
     @Operation(summary = "stop loadflow on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow has been stopped")})
     public ResponseEntity<Void> stopLoadFlow(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        rootNetworkNodeInfoService.stopLoadFlow(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
+        rootNetworkNodeInfoService.stopLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -844,25 +848,27 @@ public class StudyController {
         return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListNames) ? 0 : studyService.getContingencyCount(studyUuid, contingencyListNames, nodeUuid, rootNetworkUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/limit-violations")
     @Operation(summary = "Get limit violations.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The limit violations")})
     public ResponseEntity<List<LimitViolationInfos>> getLimitViolations(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                       @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
                                                        @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
                                                        Sort sort) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), filters, globalFilters, sort));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(nodeUuid, rootNetworkUuid, filters, globalFilters, sort));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/computation/result/enum-values")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computation/result/enum-values")
     @Operation(summary = "Get Enum values")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Enum values")})
     public ResponseEntity<List<String>> getResultEnumValues(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                    @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                     @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                     @Parameter(description = "Computing Type") @RequestParam(name = "computingType") ComputationType computingType,
                                                                     @Parameter(description = "Enum name") @RequestParam(name = "enumName") String enumName) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getResultEnumValues(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), computingType, enumName));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getResultEnumValues(nodeUuid, rootNetworkUuid, computingType, enumName));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
