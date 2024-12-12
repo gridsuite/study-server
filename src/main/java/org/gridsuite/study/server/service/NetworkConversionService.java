@@ -39,8 +39,6 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 @Service
 public class NetworkConversionService {
 
-    private static final String FIRST_VARIANT_ID = "first_variant_id";
-
     private final RestTemplate restTemplate;
 
     private String networkConversionServerBaseUri;
@@ -55,7 +53,12 @@ public class NetworkConversionService {
         this.restTemplate = restTemplate;
     }
 
-    public void persistentStore(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String variantId, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
+    /**
+     * if *variantId* is not null, 2 variant will be created from network-conversion-server
+     * - one variant for root node - INITIAL_VARIANT
+     * - one variant cloned from the previous one for the 1st node - *variantId*
+     */
+    public void persistNetwork(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String variantId, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(

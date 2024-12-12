@@ -38,19 +38,23 @@ public class RootNetworkService {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final NetworkService networkService;
     private final CaseService caseService;
+    private final ReportService reportService;
 
     private final RootNetworkService self;
     private final RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository;
 
     public RootNetworkService(RootNetworkRepository rootNetworkRepository,
+                              RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository,
                               RootNetworkNodeInfoService rootNetworkNodeInfoService,
                               NetworkService networkService,
                               CaseService caseService,
-                              @Lazy RootNetworkService self, RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository) {
+                              ReportService reportService,
+                              @Lazy RootNetworkService self) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.networkService = networkService;
         this.caseService = caseService;
+        this.reportService = reportService;
         this.self = self;
         this.rootNetworkCreationRequestRepository = rootNetworkCreationRequestRepository;
     }
@@ -65,27 +69,6 @@ public class RootNetworkService {
 
     public boolean exists(UUID rootNetworkUuid) {
         return rootNetworkRepository.existsById(rootNetworkUuid);
-    }
-
-    /**
-     * Called by consumer - will create root network only if rootNetworkCreationRequest is still in database
-     * @param studyEntity
-     * @param rootNetworkInfos
-     */
-    public void createRootNetworkFromRequest(StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
-        if (studyEntity == null) {
-            // TODO: what to do here ? throwing exceptions in consumer will provoke retries and won't notify frontend
-            throw new StudyException(StudyException.Type.STUDY_NOT_FOUND);
-        }
-        Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntity = rootNetworkCreationRequestRepository.findById(rootNetworkInfos.getId());
-        if (rootNetworkCreationRequestEntity.isPresent()) {
-            self.createRootNetwork(studyEntity, rootNetworkInfos);
-            rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity.get());
-            // TODO: send notification to frontend
-        } else {
-            // TODO: delete remote resources here
-            throw new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND);
-        }
     }
 
     /**
@@ -176,7 +159,7 @@ public class RootNetworkService {
     }
 
     @Transactional
-    public void updateStudyEntityNetwork(RootNetworkEntity rootNetworkEntity, NetworkInfos networkInfos) {
+    public void updateNetwork(RootNetworkEntity rootNetworkEntity, NetworkInfos networkInfos) {
         if (networkInfos != null) {
             rootNetworkEntity.setNetworkId(networkInfos.getNetworkId());
             rootNetworkEntity.setNetworkUuid(networkInfos.getNetworkUuid());
@@ -197,13 +180,15 @@ public class RootNetworkService {
                 UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkEntityToDuplicate.getCaseUuid(), false);
                 Map<String, String> newImportParameters = Map.copyOf(rootNetworkEntityToDuplicate.getImportParameters());
 
+                UUID clonedRootNodeReportUuid = reportService.duplicateReport(rootNetworkEntityToDuplicate.getReportUuid());
+
                 self.createRootNetwork(newStudyEntity,
                     RootNetworkInfos.builder()
                         .id(UUID.randomUUID())
                         .importParameters(newImportParameters)
                         .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getCaseName(), rootNetworkEntityToDuplicate.getCaseFormat()))
                         .networkInfos(new NetworkInfos(clonedNetworkUuid, rootNetworkEntityToDuplicate.getNetworkId()))
-                        .reportUuid(UUID.randomUUID())
+                        .reportUuid(clonedRootNodeReportUuid)
                         .build()
                 );
             }
@@ -212,5 +197,13 @@ public class RootNetworkService {
 
     public RootNetworkCreationRequestEntity insertCreationRequest(UUID rootNetworkInCreationUuid, StudyEntity studyEntity, String userId) {
         return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).studyUuid(studyEntity.getId()).userId(userId).build());
+    }
+
+    public Optional<RootNetworkCreationRequestEntity> getCreationRequest(UUID rootNetworkInCreationUuid) {
+        return rootNetworkCreationRequestRepository.findById(rootNetworkInCreationUuid);
+    }
+
+    public void deleteCreationRequest(RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity) {
+        rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity);
     }
 }

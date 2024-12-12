@@ -270,12 +270,12 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Study network recreation has started"),
         @ApiResponse(responseCode = "424", description = "The case doesn't exist")})
-    public ResponseEntity<BasicStudyInfos> recreateStudyNetworkFromCase(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<BasicStudyInfos> recreateNetworkFromCase(@PathVariable("studyUuid") UUID studyUuid,
                                                                  @RequestBody(required = false) Map<String, Object> importParameters,
                                                                  @RequestParam(value = "caseUuid") UUID caseUuid,
                                                                  @Parameter(description = "case format") @RequestParam(name = "caseFormat", required = false) String caseFormat,
                                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.recreateStudyRootNetwork(caseUuid, userId, studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), caseFormat, importParameters);
+        studyService.recreateNetwork(caseUuid, userId, studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), caseFormat, importParameters);
         return ResponseEntity.ok().build();
     }
 
@@ -288,7 +288,7 @@ public class StudyController {
                                                                 @RequestHeader(HEADER_USER_ID) String userId,
                                                                 @Parameter(description = "case format") @RequestParam(name = "caseFormat", required = false) String caseFormat
     ) {
-        studyService.recreateStudyRootNetwork(userId, studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), caseFormat);
+        studyService.recreateNetwork(userId, studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), caseFormat);
         return ResponseEntity.ok().build();
     }
 

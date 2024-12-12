@@ -73,7 +73,6 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
-import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_OPERATION;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -274,7 +273,7 @@ public class StudyService {
             if (duplicateCase) {
                 caseUuidToUse = caseService.duplicateCase(caseUuid, true);
             }
-            persistentStoreWithNotificationOnError(caseUuidToUse, basicStudyInfos.getId(), null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.STUDY_CREATION);
+            persistNetwork(caseUuidToUse, basicStudyInfos.getId(), null, NetworkModificationTreeService.FIRST_VARIANT_ID, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.STUDY_CREATION);
         } catch (Exception e) {
             self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             throw e;
@@ -283,18 +282,17 @@ public class StudyService {
         return basicStudyInfos;
     }
 
+    @Transactional
     public RootNetworkCreationRequestInfos createRootNetwork(UUID studyUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
-//        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         UUID importReportUuid = UUID.randomUUID();
         UUID rootNetworkUuid = UUID.randomUUID();
         RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, userId);
-        String variantId = UUID.randomUUID().toString();
         try {
-            networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, variantId, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
+            networkConversionService.persistNetwork(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
         } catch (Exception e) {
-            //TO IMPLEMENT rootNetworkService.deleteRootNetworkIfNotCreationInProgress(rootNetworkCreationRequestEntity.getId(), userId);
+            //TODO: implement rootNetworkService.deleteRootNetworkIfNotCreationInProgress(rootNetworkCreationRequestEntity.getId(), userId);
             throw e;
         }
 
@@ -303,17 +301,33 @@ public class StudyService {
 
     public void updateRootNetworkCase(UUID studyUuid, UUID rootNetworkUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
         UUID importReportUuid = UUID.randomUUID();
-        try {
-            persistentStoreWithNotificationOnError(caseUuid, studyUuid, rootNetworkUuid, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
-        } catch (Exception e) {
-            //TO DO
-            throw e;
-        }
+        persistNetwork(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
     }
 
-    @Transactional(readOnly = true)
-    public Map<String, String> getStudyImportParameters(UUID rootNetworkUuid) {
-        return rootNetworkService.getImportParameters(rootNetworkUuid);
+    public void updateRootNetworkCase(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, CaseInfos caseInfos,
+                                       Map<String, String> importParameters, UUID importReportUuid) {
+        // Update case for a given root network
+        rootNetworkService.updateRootNetworkCase(rootNetworkUuid, RootNetworkInfos.builder()
+            .id(rootNetworkUuid)
+            .caseInfos(caseInfos)
+            .reportUuid(importReportUuid)
+            .networkInfos(networkInfos)
+            .importParameters(importParameters)
+            .build());
+        // Invalidate nodes of the updated root network
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        invalidateBuild(studyUuid, rootNodeUuid, rootNetworkUuid, false, false, true);
+    }
+
+    @Transactional
+    public void createRootNetwork(@NonNull UUID studyUuid, @NonNull RootNetworkInfos rootNetworkInfos) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.getCreationRequest(rootNetworkInfos.getId()).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+
+        rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
+        rootNetworkService.deleteCreationRequest(rootNetworkCreationRequestEntity);
+
+        // TODO: send notification to frontend
     }
 
     /**
@@ -323,8 +337,8 @@ public class StudyService {
      * @param studyUuid
      * @param importParameters
      */
-    public void recreateStudyRootNetwork(UUID caseUuid, String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat, Map<String, Object> importParameters) {
-        recreateStudyRootNetwork(caseUuid, userId, studyUuid, rootNetworkUuid, caseFormat, importParameters, false);
+    public void recreateNetwork(UUID caseUuid, String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat, Map<String, Object> importParameters) {
+        recreateNetwork(caseUuid, userId, studyUuid, rootNetworkUuid, caseFormat, importParameters, false);
     }
 
     /**
@@ -332,19 +346,19 @@ public class StudyService {
      * @param userId
      * @param studyUuid
      */
-    public void recreateStudyRootNetwork(String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat) {
+    public void recreateNetwork(String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat) {
         UUID caseUuid = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND)).getCaseUuid();
-        recreateStudyRootNetwork(caseUuid, userId, studyUuid, rootNetworkUuid, caseFormat, null, true);
+        recreateNetwork(caseUuid, userId, studyUuid, rootNetworkUuid, caseFormat, null, true);
     }
 
-    private void recreateStudyRootNetwork(UUID caseUuid, String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters) {
+    private void recreateNetwork(UUID caseUuid, String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters) {
         caseService.assertCaseExists(caseUuid);
         UUID importReportUuid = UUID.randomUUID();
         Map<String, Object> importParametersToUse = shouldLoadPreviousImportParameters
             ? new HashMap<>(rootNetworkService.getImportParameters(rootNetworkUuid))
             : importParameters;
 
-        persistentStoreWithNotificationOnError(caseUuid, studyUuid, rootNetworkUuid, userId, importReportUuid, caseFormat, importParametersToUse, CaseImportAction.NETWORK_RECREATION);
+        persistNetwork(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParametersToUse, CaseImportAction.NETWORK_RECREATION);
     }
 
     public UUID duplicateStudy(UUID sourceStudyUuid, String userId) {
@@ -532,8 +546,12 @@ public class StudyService {
         return createdStudyBasicInfos;
     }
 
-    public CreatedStudyBasicInfos updateStudyNetwork(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, String userId, NetworkInfos networkInfos) {
-        rootNetworkService.updateStudyEntityNetwork(rootNetworkEntity, networkInfos);
+    @Transactional
+    public CreatedStudyBasicInfos updateNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId, NetworkInfos networkInfos) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+
+        rootNetworkService.updateNetwork(rootNetworkEntity, networkInfos);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity, rootNetworkEntity.getId());
         studyInfosService.add(createdStudyBasicInfos);
@@ -635,10 +653,9 @@ public class StudyService {
         }
     }
 
-    private void persistentStoreWithNotificationOnError(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
+    private void persistNetwork(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String variantId, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
         try {
-            //TODO: change variantId
-            networkConversionService.persistentStore(caseUuid, studyUuid, rootNetworkUuid, "first_variant_id", userId, importReportUuid, caseFormat, importParameters, caseImportAction);
+            networkConversionService.persistNetwork(caseUuid, studyUuid, rootNetworkUuid, variantId, userId, importReportUuid, caseFormat, importParameters, caseImportAction);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, STUDY_CREATION_FAILED);
         }
@@ -669,7 +686,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
         return networkMapService.getElementInfos(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
-                elementType, infoTypeParameters.getInfoType(), infoTypeParameters.getOptionalParameters().getOrDefault(QUERY_PARAM_OPERATION, null), loadFlowParameters.getDcPowerFactor(), elementId);
+                elementType, infoTypeParameters.getInfoType(), loadFlowParameters.getDcPowerFactor(), elementId);
     }
 
     public String getNetworkCountries(UUID nodeUuid, UUID rootNetworkUuid, boolean inUpstreamBuiltParentNode) {

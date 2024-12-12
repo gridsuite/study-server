@@ -43,7 +43,7 @@ public class NetworkModificationTreeService {
 
     public static final String ROOT_NODE_NAME = "Root";
 
-    private static final String FIRST_VARIANT_ID = "first_variant_id";
+    public static final String FIRST_VARIANT_ID = "first_variant_id";
 
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
