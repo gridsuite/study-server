@@ -100,7 +100,7 @@ class StateEstimationTest {
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
     private static final String ESTIM_RESULT_JSON_DESTINATION = "stateestimation.result";
     private static final String ESTIM_STOPPED_DESTINATION = "stateestimation.stopped";
-    private static final String ESTIM_FAILED_DESTINATION = "stateestimation.failed";
+    private static final String ESTIM_FAILED_DESTINATION = "stateestimation.run";
 
     @Autowired
     private MockMvc mockMvc;

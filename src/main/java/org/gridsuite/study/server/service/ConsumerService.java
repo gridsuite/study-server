@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
+import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
@@ -160,7 +161,7 @@ public class ConsumerService {
 
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitNodeBuildFailed(studyUuid, receiverObj.getNodeUuid(), message.getHeaders().get(HEADER_RABBIT_ERROR_MESSAGE, String.class));
+                    notificationService.emitNodeBuildFailed(studyUuid, receiverObj.getNodeUuid(), message.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE, String.class));
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -314,7 +315,7 @@ public class ConsumerService {
      */
     public void consumeCalculationFailed(Message<String> msg, ComputationType computationType) {
         String receiver = msg.getHeaders().get(HEADER_RECEIVER, String.class);
-        String errorMessage = msg.getHeaders().get(HEADER_RABBIT_ERROR_MESSAGE, String.class);
+        String errorMessage = msg.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE, String.class);
         String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
         UUID resultUuid = null;
         // resultUuid is only used for the voltage initialization computation, I don't know why
