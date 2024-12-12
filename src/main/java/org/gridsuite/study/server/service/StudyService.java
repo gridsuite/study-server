@@ -808,10 +808,7 @@ public class StudyService {
     public void setNetworkVisualizationParametersValues(UUID studyUuid, String parameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         createOrUpdateNetworkVisualizationParameters(studyEntity, parameters);
-        //notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        //notificationService.emitElementUpdated(studyUuid, userId);
-        //notificationService.emitComputationParamsChanged(studyUuid, SECURITY_ANALYSIS);
-        // TODO new notif
+        notificationService.emitNetworkVisualizationParamsChanged(studyUuid);
     }
 
     public void createOrUpdateNetworkVisualizationParameters(StudyEntity studyEntity, String parameters) {
