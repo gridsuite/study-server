@@ -140,6 +140,7 @@
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-ws-commons</artifactId>
+            <version>1.18.0</version>
         </dependency>
         <dependency>
             <groupId>io.projectreactor</groupId>

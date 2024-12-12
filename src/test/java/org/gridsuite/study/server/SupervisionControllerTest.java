@@ -16,6 +16,7 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
+import org.elasticsearch.client.RestClient;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
@@ -30,7 +31,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -80,14 +80,14 @@ class SupervisionControllerTest {
     @Autowired
     private ObjectMapper mapper;
 
-    @Value("${spring.data.elasticsearch.embedded.port:}")
-    private String expectedEsPort;
-
     @MockBean
     private RootNetworkService rootNetworkService;
 
     @Autowired
     private StudyService studyService;
+
+    @Autowired
+    private RestClient restClient;
 
     private static EquipmentInfos toEquipmentInfos(Identifiable<?> i) {
         return EquipmentInfos.builder()
@@ -167,7 +167,7 @@ class SupervisionControllerTest {
             .andExpect(status().isOk())
             .andReturn();
 
-        assertEquals("localhost:" + expectedEsPort, mvcResult.getResponse().getContentAsString());
+        assertEquals(restClient.getNodes().get(0).getHost().getHostName() + ":" + restClient.getNodes().get(0).getHost().getPort(), mvcResult.getResponse().getContentAsString());
 
         // Test get indexed equipments index name
         mvcResult = mockMvc.perform(get("/v1/supervision/equipments/index-name"))
