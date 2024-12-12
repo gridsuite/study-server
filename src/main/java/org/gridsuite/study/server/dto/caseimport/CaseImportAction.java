@@ -11,7 +11,8 @@ import lombok.Getter;
 public enum CaseImportAction {
     STUDY_CREATION("Study creation"),
     ROOT_NETWORK_CREATION("Root network creation"),
-    NETWORK_RECREATION("Network recreation");
+    NETWORK_RECREATION("Network recreation"),
+    ROOT_NETWORK_MODIFICATION("Root network modification");
 
     @Getter
     public final String label;

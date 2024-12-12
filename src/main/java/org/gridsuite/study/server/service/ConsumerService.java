@@ -204,17 +204,20 @@ public class ConsumerService {
                 try {
                     switch (caseImportAction) {
                         case STUDY_CREATION ->
-                            insertStudy(studyUuid, userId, networkInfos, caseInfos, importParameters, importReportUuid);
+                                insertStudy(studyUuid, userId, networkInfos, caseInfos, importParameters, importReportUuid);
                         case ROOT_NETWORK_CREATION ->
-                            studyService.createRootNetwork(studyUuid, RootNetworkInfos.builder()
-                                .id(rootNetworkUuid)
-                                .caseInfos(caseInfos)
-                                .reportUuid(importReportUuid)
-                                .networkInfos(networkInfos)
-                                .importParameters(importParameters)
-                                .build());
+                                studyService.createRootNetwork(studyUuid, RootNetworkInfos.builder()
+                                        .id(rootNetworkUuid)
+                                        .caseInfos(caseInfos)
+                                        .reportUuid(importReportUuid)
+                                        .networkInfos(networkInfos)
+                                        .importParameters(importParameters)
+                                        .build());
                         case NETWORK_RECREATION ->
-                            studyService.updateNetwork(studyUuid, rootNetworkUuid, userId, networkInfos);
+                                studyService.updateNetwork(studyUuid, rootNetworkUuid, userId, networkInfos);
+                        case ROOT_NETWORK_MODIFICATION ->
+                            studyService.updateRootNetworkCase(studyUuid, rootNetworkUuid, networkInfos, caseInfos,
+                                        importParameters, importReportUuid);
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {

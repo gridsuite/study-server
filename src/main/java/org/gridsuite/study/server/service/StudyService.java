@@ -299,6 +299,26 @@ public class StudyService {
         return rootNetworkCreationRequestEntity.toDto();
     }
 
+    public void updateRootNetworkCase(UUID studyUuid, UUID rootNetworkUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
+        UUID importReportUuid = UUID.randomUUID();
+        persistNetwork(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+    }
+
+    public void updateRootNetworkCase(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, CaseInfos caseInfos,
+                                       Map<String, String> importParameters, UUID importReportUuid) {
+        // Update case for a given root network
+        rootNetworkService.updateRootNetworkCase(rootNetworkUuid, RootNetworkInfos.builder()
+            .id(rootNetworkUuid)
+            .caseInfos(caseInfos)
+            .reportUuid(importReportUuid)
+            .networkInfos(networkInfos)
+            .importParameters(importParameters)
+            .build());
+        // Invalidate nodes of the updated root network
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        invalidateBuild(studyUuid, rootNodeUuid, rootNetworkUuid, false, false, true);
+    }
+
     @Transactional
     public void createRootNetwork(@NonNull UUID studyUuid, @NonNull RootNetworkInfos rootNetworkInfos) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
