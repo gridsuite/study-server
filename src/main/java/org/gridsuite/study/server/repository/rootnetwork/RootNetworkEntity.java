@@ -8,6 +8,9 @@ package org.gridsuite.study.server.repository.rootnetwork;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.gridsuite.study.server.dto.CaseInfos;
+import org.gridsuite.study.server.dto.NetworkInfos;
+import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 
@@ -15,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
@@ -37,7 +41,8 @@ public class RootNetworkEntity {
     private StudyEntity study;
 
     @OneToMany(orphanRemoval = true, mappedBy = "rootNetwork", cascade = CascadeType.ALL)
-    private List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos;
+    @Builder.Default
+    private List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos = new ArrayList<>();
 
     @Column(name = "networkUuid", nullable = false)
     private UUID networkUuid;
@@ -65,10 +70,21 @@ public class RootNetworkEntity {
     private Map<String, String> importParameters;
 
     public void addRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
-        if (rootNetworkNodeInfos == null) {
-            rootNetworkNodeInfos = new ArrayList<>();
-        }
         rootNetworkNodeInfoEntity.setRootNetwork(this);
         rootNetworkNodeInfos.add(rootNetworkNodeInfoEntity);
+    }
+
+    public RootNetworkInfos toDto() {
+        RootNetworkInfos.RootNetworkInfosBuilder rootNetworkInfosBuilder = RootNetworkInfos.builder();
+        rootNetworkInfosBuilder.id(this.id)
+            .networkInfos(new NetworkInfos(this.networkUuid, this.networkId))
+            .importParameters(this.importParameters)
+            .caseInfos(new CaseInfos(this.caseUuid, this.caseName, this.caseFormat))
+            .reportUuid(this.reportUuid)
+            .build();
+
+        rootNetworkInfosBuilder.rootNetworkNodeInfos(this.rootNetworkNodeInfos.stream().map(RootNetworkNodeInfoEntity::toDto).collect(Collectors.toList()));
+
+        return rootNetworkInfosBuilder.build();
     }
 }

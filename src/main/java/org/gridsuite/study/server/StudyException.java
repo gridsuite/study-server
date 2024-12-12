@@ -44,6 +44,7 @@ public class StudyException extends RuntimeException {
         DELETE_EQUIPMENT_FAILED,
         DELETE_NODE_FAILED,
         DELETE_STUDY_FAILED,
+        DELETE_ROOT_NETWORK_FAILED,
         CREATE_NETWORK_MODIFICATION_FAILED,
         UPDATE_NETWORK_MODIFICATION_FAILED,
         DELETE_NETWORK_MODIFICATION_FAILED,
@@ -114,7 +115,8 @@ public class StudyException extends RuntimeException {
         STATE_ESTIMATION_NOT_FOUND,
         STATE_ESTIMATION_ERROR,
         MAX_NODE_BUILDS_EXCEEDED,
-        ROOTNETWORK_NOT_FOUND
+        ROOT_NETWORK_NOT_FOUND,
+        ROOT_NETWORK_CREATION_FAILED
     }
 
     private final Type type;

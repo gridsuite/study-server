@@ -31,20 +31,15 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     private UUID modificationGroupUuid;
 
     @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo", cascade = CascadeType.ALL)
-    protected List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos;
+    @Builder.Default
+    protected List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos = new ArrayList<>();
 
     //TODO temporary, for now we are only working with one root network by study
     public RootNetworkNodeInfoEntity getFirstRootNetworkNodeInfosEntity() {
-        if (rootNetworkNodeInfos == null || rootNetworkNodeInfos.isEmpty()) {
-            return null;
-        }
-        return rootNetworkNodeInfos.get(0);
+        return rootNetworkNodeInfos.stream().findFirst().orElse(null);
     }
 
     public void addRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
-        if (rootNetworkNodeInfos == null) {
-            rootNetworkNodeInfos = new ArrayList<>();
-        }
         rootNetworkNodeInfoEntity.setNodeInfo(this);
         rootNetworkNodeInfos.add(rootNetworkNodeInfoEntity);
     }

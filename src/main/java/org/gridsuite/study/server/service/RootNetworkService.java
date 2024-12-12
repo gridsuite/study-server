@@ -7,13 +7,14 @@
 package org.gridsuite.study.server.service;
 
 import com.powsybl.iidm.network.Network;
+import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestRepository;
@@ -24,8 +25,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
+
+import static org.gridsuite.study.server.StudyException.Type.DELETE_ROOT_NETWORK_FAILED;
 
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
@@ -40,14 +43,20 @@ public class RootNetworkService {
 
     private final RootNetworkService self;
     private final RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository;
+    private final StudyServerExecutionService studyServerExecutionService;
+    private final EquipmentInfosService equipmentInfosService;
+    private final NetworkStoreService networkStoreService;
 
     public RootNetworkService(RootNetworkRepository rootNetworkRepository,
                               RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository,
                               RootNetworkNodeInfoService rootNetworkNodeInfoService,
                               NetworkService networkService,
                               CaseService caseService,
+                              @Lazy RootNetworkService self,
+                              StudyServerExecutionService studyServerExecutionService,
                               ReportService reportService,
-                              @Lazy RootNetworkService self) {
+                              EquipmentInfosService equipmentInfosService,
+                              NetworkStoreService networkStoreService) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.networkService = networkService;
@@ -55,6 +64,9 @@ public class RootNetworkService {
         this.reportService = reportService;
         this.self = self;
         this.rootNetworkCreationRequestRepository = rootNetworkCreationRequestRepository;
+        this.studyServerExecutionService = studyServerExecutionService;
+        this.equipmentInfosService = equipmentInfosService;
+        this.networkStoreService = networkStoreService;
     }
 
     public UUID getNetworkUuid(UUID rootNetworkUuid) {
@@ -79,25 +91,6 @@ public class RootNetworkService {
         return rootNetworkEntity;
     }
 
-    // TODO move to study service
-    @Transactional
-    public List<UUID> getStudyReportUuids(UUID studyUuid) {
-        List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllWithInfosByStudyId(studyUuid);
-        List<UUID> rootNodeReportUuids = rootNetworkEntities.stream().map(RootNetworkEntity::getReportUuid).toList();
-        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkEntities.stream().flatMap(rootNetworkEntity -> rootNetworkEntity.getRootNetworkNodeInfos().stream()).toList();
-
-        //study reports uuids is the concatenation of modification reports, computation reports and root reports uuids
-
-        List<UUID> networkModificationNodeReportUuids = rootNetworkNodeInfoEntities.stream().flatMap(rootNetworkNodeInfoEntity ->
-                Stream.of(
-                    rootNetworkNodeInfoEntity.getModificationReports().values().stream(),
-                    rootNetworkNodeInfoEntity.getComputationReports().values().stream()))
-            .reduce(Stream::concat)
-            .orElse(Stream.empty()).toList();
-
-        return Stream.concat(rootNodeReportUuids.stream(), networkModificationNodeReportUuids.stream()).toList();
-    }
-
     public List<UUID> getAllNetworkUuids() {
         return rootNetworkRepository.findAll().stream().map(RootNetworkEntity::getNetworkUuid).toList();
     }
@@ -107,23 +100,19 @@ public class RootNetworkService {
     }
 
     public String getCaseName(UUID rootNetworkUuid) {
-        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getCaseName).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getCaseName).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
     }
 
     public Map<String, String> getImportParameters(UUID rootNetworkUuid) {
-        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND));
-    }
-
-    public List<UUID> getStudyCaseUuids(UUID studyUuid) {
-        return getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::getCaseUuid).toList();
-    }
-
-    public List<UUID> getStudyNetworkUuids(UUID studyUuid) {
-        return getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::getNetworkUuid).toList();
+        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
     }
 
     public List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
         return rootNetworkRepository.findAllByStudyId(studyUuid);
+    }
+
+    public List<RootNetworkInfos> getStudyRootNetworkInfosWithRootNetworkNodeInfos(UUID studyUuid) {
+        return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream().map(RootNetworkEntity::toDto).toList();
     }
 
     @Transactional
@@ -165,6 +154,52 @@ public class RootNetworkService {
 
     public RootNetworkCreationRequestEntity insertCreationRequest(UUID rootNetworkInCreationUuid, StudyEntity studyEntity, String userId) {
         return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).studyUuid(studyEntity.getId()).userId(userId).build());
+    }
+
+    public void assertIsRootNetworkInStudy(UUID rootNetworkUuid, UUID studyUuid) {
+        if (!rootNetworkRepository.existsByIdAndStudyId(rootNetworkUuid, studyUuid)) {
+            throw new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND);
+        }
+    }
+
+    /**
+     * delete entity with rootNetworkUuid
+     * will also delete all remote resources linked to the entity
+     * @param rootNetworkUuid
+     */
+    public void delete(UUID rootNetworkUuid) {
+        delete(rootNetworkRepository.findWithRootNetworkNodeInfosById(rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND)).toDto());
+    }
+
+    public void delete(RootNetworkInfos rootNetworkInfos) {
+        CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
+            getDeleteRootNetworkInfosFutures(List.of(rootNetworkInfos)).toArray(CompletableFuture[]::new)
+        );
+
+        try {
+            executeInParallel.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new StudyException(DELETE_ROOT_NETWORK_FAILED, e.getMessage());
+        } catch (Exception e) {
+            throw new StudyException(DELETE_ROOT_NETWORK_FAILED, e.getMessage());
+        }
+        rootNetworkRepository.deleteById(rootNetworkInfos.getId());
+    }
+
+    public List<CompletableFuture<Void>> getDeleteRootNetworkInfosFutures(List<RootNetworkInfos> rootNetworkInfos) {
+        // delete remote data ids set in root network
+        List<CompletableFuture<Void>> result = new ArrayList<>(List.of(
+            studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())),
+            studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(equipmentInfosService::deleteEquipmentIndexes)),
+            studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)),
+            studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getCaseInfos().getCaseUuid()).filter(Objects::nonNull).forEach(caseService::deleteCase))
+        ));
+
+        // delete remote data ids set in root network node infos
+        result.addAll(rootNetworkNodeInfoService.getDeleteRootNetworkNodeInfosFutures(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).filter(Objects::nonNull).flatMap(Collection::stream).toList()));
+
+        return result;
     }
 
     public Optional<RootNetworkCreationRequestEntity> getCreationRequest(UUID rootNetworkInCreationUuid) {

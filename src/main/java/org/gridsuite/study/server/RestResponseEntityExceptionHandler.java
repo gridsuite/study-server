@@ -33,6 +33,7 @@ public class RestResponseEntityExceptionHandler {
             case ELEMENT_NOT_FOUND,
                     STUDY_NOT_FOUND,
                     NODE_NOT_FOUND,
+                    ROOT_NETWORK_NOT_FOUND,
                     SECURITY_ANALYSIS_NOT_FOUND,
                     SENSITIVITY_ANALYSIS_NOT_FOUND,
                     SHORT_CIRCUIT_ANALYSIS_NOT_FOUND,
@@ -98,7 +99,8 @@ public class RestResponseEntityExceptionHandler {
                     GET_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED,
                     CREATE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED,
                     UPDATE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED,
-                    DELETE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED
+                    DELETE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED,
+                    ROOT_NETWORK_CREATION_FAILED
                     -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
             case SVG_NOT_FOUND,
                     NO_VOLTAGE_INIT_RESULTS_FOR_NODE,
