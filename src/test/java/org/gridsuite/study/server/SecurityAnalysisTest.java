@@ -501,14 +501,14 @@ class SecurityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(String.format("/v1/results/%s/nmk-constraints-result/paged\\?page=.*size=.*filters=.*sort=.*", resultUuid))));
 
         // get security analysis status
-        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status", studyUuid, nodeUuid)).andExpectAll(
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/status", studyUuid, rootNetworkUuid, nodeUuid)).andExpectAll(
                 status().isOk()).andReturn();
         assertEquals("CONVERGED", result.getResponse().getContentAsString());
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s/status", resultUuid)));
 
         // stop security analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop", studyUuid, nodeUuid).header("userId", "userId")).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/stop", studyUuid, rootNetworkUuid, nodeUuid).header("userId", "userId")).andExpect(status().isOk());
 
         securityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -518,8 +518,8 @@ class SecurityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + resultUuid + "/stop\\?receiver=.*nodeUuid.*")));
 
         // get contingency count
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count?contingencyListName={contingencyListName}",
-                studyUuid, nodeUuid, CONTINGENCY_LIST_NAME))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/contingency-count?contingencyListName={contingencyListName}",
+                studyUuid, rootNetworkUuid, nodeUuid, CONTINGENCY_LIST_NAME))
                 .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         Integer integerResponse = Integer.parseInt(resultAsString);
@@ -529,8 +529,8 @@ class SecurityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/contingency-lists/count\\?ids=" + CONTINGENCY_LIST_NAME + "&networkUuid=" + NETWORK_UUID_STRING + ".*")));
 
         // get contingency count with no list
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count",
-                        studyUuid, nodeUuid, CONTINGENCY_LIST_NAME))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/contingency-count",
+                        studyUuid, rootNetworkUuid, nodeUuid, CONTINGENCY_LIST_NAME))
                 .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         integerResponse = Integer.parseInt(resultAsString);
@@ -693,7 +693,7 @@ class SecurityAnalysisTest {
          * RUN SECURITY ANALYSIS END
          */
         // get N security analysis result zipped csv
-        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}", studyUuid, nodeUuid, SecurityAnalysisResultType.N).content(CSV_TRANSLATION_DTO_STRING)).andExpectAll(
+        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}", studyUuid, firstRootNetworkUuid, nodeUuid, SecurityAnalysisResultType.N).content(CSV_TRANSLATION_DTO_STRING)).andExpectAll(
             status().isOk()).andReturn();
         byte[] byteArrayResult = mvcResult.getResponse().getContentAsByteArray();
         assertArrayEquals(SECURITY_ANALYSIS_N_RESULT_CSV_ZIPPED, byteArrayResult);
@@ -704,7 +704,7 @@ class SecurityAnalysisTest {
         ));
 
         // get NMK_CONTINGENCIES security analysis result zipped csv
-        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}", studyUuid, nodeUuid, SecurityAnalysisResultType.NMK_CONTINGENCIES).content(CSV_TRANSLATION_DTO_STRING)).andExpectAll(
+        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}", studyUuid, firstRootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_CONTINGENCIES).content(CSV_TRANSLATION_DTO_STRING)).andExpectAll(
             status().isOk()).andReturn();
         byteArrayResult = mvcResult.getResponse().getContentAsByteArray();
         assertArrayEquals(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_CSV_ZIPPED, byteArrayResult);
@@ -715,7 +715,7 @@ class SecurityAnalysisTest {
         ));
 
         // get NMK_CONSTRAINTS security analysis result zipped csv
-        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}", studyUuid, nodeUuid, SecurityAnalysisResultType.NMK_LIMIT_VIOLATIONS).content(CSV_TRANSLATION_DTO_STRING)).andExpectAll(
+        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}", studyUuid, firstRootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_LIMIT_VIOLATIONS).content(CSV_TRANSLATION_DTO_STRING)).andExpectAll(
             status().isOk()).andReturn();
         byteArrayResult = mvcResult.getResponse().getContentAsByteArray();
         assertArrayEquals(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_CSV_ZIPPED, byteArrayResult);
@@ -763,7 +763,7 @@ class SecurityAnalysisTest {
          * RUN SECURITY ANALYSIS END
          */
         // get NOT_FOUND security analysis result zipped csv
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}", studyUuid, nodeUuid, SecurityAnalysisResultType.N).content(CSV_TRANSLATION_DTO_STRING)).andExpectAll(
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}", studyUuid, firstRootNetworkUuid, nodeUuid, SecurityAnalysisResultType.N).content(CSV_TRANSLATION_DTO_STRING)).andExpectAll(
             status().isNotFound());
 
         assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
