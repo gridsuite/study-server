@@ -192,7 +192,7 @@ class StudyControllerDynamicSimulationTest {
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
     private static final String DS_RESULT_DESTINATION = "ds.result";
     private static final String DS_STOPPED_DESTINATION = "ds.stopped";
-    private static final String DS_FAILED_DESTINATION = "ds.run";
+    private static final String DS_FAILED_DESTINATION = "ds.run.dlx";
 
     @BeforeEach
     public void setup() {

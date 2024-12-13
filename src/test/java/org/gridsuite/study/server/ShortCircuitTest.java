@@ -147,7 +147,7 @@ class ShortCircuitTest implements WithAssertions {
     private final String studyUpdateDestination = "study.update";
     private final String shortCircuitAnalysisResultDestination = "shortcircuitanalysis.result";
     private final String shortCircuitAnalysisStoppedDestination = "shortcircuitanalysis.stopped";
-    private final String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.run";
+    private final String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.run.dlx";
     @Autowired
     private StudyService studyService;
 

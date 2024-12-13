@@ -155,7 +155,7 @@ class SensitivityAnalysisTest {
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
     private static final String SENSITIVITY_ANALYSIS_RESULT_DESTINATION = "sensitivityanalysis.result";
     private static final String SENSITIVITY_ANALYSIS_STOPPED_DESTINATION = "sensitivityanalysis.stopped";
-    private static final String SENSITIVITY_ANALYSIS_FAILED_DESTINATION = "sensitivityanalysis.run";
+    private static final String SENSITIVITY_ANALYSIS_FAILED_DESTINATION = "sensitivityanalysis.run.dlx";
 
     public static final String SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":0.0,\"angleFlowSensitivityValueThreshold\":0.0,\"flowVoltageSensitivityValueThreshold\":0.0," +
             "\"sensitivityInjectionsSet\":[],\"sensitivityInjection\":[],\"sensitivityHVDC\":[],\"sensitivityPST\":[],\"sensitivityNodes\":[]}";

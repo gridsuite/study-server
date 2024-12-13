@@ -264,7 +264,7 @@ class NetworkModificationTest {
             .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", DEFAULT_BUILD_RESULT, "destination", "build.result"))
             .willReturn(WireMock.ok())).getId();
         buildFailedStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_2_STRING + "/build"))
-            .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.run", HEADER_ERROR_MESSAGE, ERROR_MESSAGE))
+            .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.run.dlx", HEADER_ERROR_MESSAGE, ERROR_MESSAGE))
             .willReturn(WireMock.ok())).getId();
         buildErrorStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_3_STRING + "/build"))
             .willReturn(WireMock.serverError())).getId();

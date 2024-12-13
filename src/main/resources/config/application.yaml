@@ -31,7 +31,7 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.cancelfailed
           group: studySaCancelFailedGroup
         consumeSaFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.run
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.run.dlx
           group: dlq
         consumeDsResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.result
@@ -40,7 +40,7 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.stopped
           group: studyDsStoppedGroup
         consumeDsFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.run
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.run.dlx
           group: dlq
         consumeBuildResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.result
@@ -49,7 +49,7 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.stopped
           group: studyBuildStoppedGroup
         consumeBuildFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.run
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.run.dlx
           group: dlq
         consumeLoadFlowResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.result
@@ -58,7 +58,7 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.stopped
           group: studyLoadFlowStoppedGroup
         consumeLoadFlowFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.run
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.run.dlx
           group: dlq
         consumeLoadFlowCancelFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.cancelfailed
@@ -70,7 +70,7 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.stopped
           group: studySensitivityAnalysisStoppedGroup
         consumeSensitivityAnalysisFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.run
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.run.dlx
           group: dlq
         consumeSensitivityAnalysisCancelFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.cancelfailed
@@ -82,7 +82,7 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.stopped
           group: studyNonEvacuatedEnergyStoppedGroup
         consumeNonEvacuatedEnergyFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.run
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.run.dlx
           group: dlq
         consumeNonEvacuatedEnergyCancelFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.cancelfailed
@@ -94,7 +94,7 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.stopped
           group: studyShortCircuitAnalysisStoppedGroup
         consumeShortCircuitAnalysisFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.run
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.run.dlx
           group: dlq
         consumeShortCircuitAnalysisCancelFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.cancelfailed
@@ -106,7 +106,7 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.stopped
           group: studyVoltageInitStoppedGroup
         consumeVoltageInitFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.run
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.run.dlx
           group: dlq
         consumeVoltageInitCancelFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.cancelfailed
@@ -118,47 +118,15 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.stopped
           group: studyStateEstimationStoppedGroup
         consumeStateEstimationFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.run
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.run.dlx
           group: dlq
         consumeCaseImportSucceeded-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.succeeded
           group: studyCaseImportSucceededGroup
         consumeCaseImportFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.start
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.start.dlx
           group: dlq
       output-bindings: publishStudyUpdate-out-0;publishElementUpdate-out-0
-      rabbit:
-        bindings:
-          consumeSaFailed-in-0:
-            consumer:
-              declare-exchange: false
-          consumeDsFailed-in-0:
-            consumer:
-              declare-exchange: false
-          consumeBuildFailed-in-0:
-            consumer:
-              declare-exchange: false
-          consumeLoadFlowFailed-in-0:
-            consumer:
-              declare-exchange: false
-          consumeSensitivityAnalysisFailed-in-0:
-            consumer:
-              declare-exchange: false
-          consumeNonEvacuatedEnergyFailed-in-0:
-            consumer:
-              declare-exchange: false
-          consumeShortCircuitAnalysisFailed-in-0:
-            consumer:
-              declare-exchange: false
-          consumeVoltageInitFailed-in-0:
-            consumer:
-              declare-exchange: false
-          consumeStateEstimationFailed-in-0:
-            consumer:
-              declare-exchange: false
-          consumeCaseImportFailed-in-0:
-            consumer:
-              declare-exchange: false
 
 powsybl:
   services:
