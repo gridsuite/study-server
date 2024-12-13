@@ -14,7 +14,8 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.dto.CaseImportReceiver;
+import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
+import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.StudyException;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,8 +39,6 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 @Service
 public class NetworkConversionService {
 
-    private static final String FIRST_VARIANT_ID = "first_variant_id";
-
     private final RestTemplate restTemplate;
 
     private String networkConversionServerBaseUri;
@@ -54,11 +53,16 @@ public class NetworkConversionService {
         this.restTemplate = restTemplate;
     }
 
-    public void persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters) {
+    /**
+     * if *variantId* is not null, 2 variant will be created from network-conversion-server
+     * - one variant for root node - INITIAL_VARIANT
+     * - one variant cloned from the previous one for the 1st node - *variantId*
+     */
+    public void persistNetwork(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String variantId, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(
-                        new CaseImportReceiver(studyUuid, caseUuid, importReportUuid, userId, System.nanoTime()
+                        new CaseImportReceiver(studyUuid, rootNetworkUuid, caseUuid, importReportUuid, userId, System.nanoTime(), caseImportAction
                     )),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
@@ -67,7 +71,7 @@ public class NetworkConversionService {
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
                 .queryParam(CASE_UUID, caseUuid)
-                .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
+                .queryParam(QUERY_PARAM_VARIANT_ID, variantId)
                 .queryParam(REPORT_UUID, importReportUuid)
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam(CASE_FORMAT, caseFormat)

@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -53,21 +54,16 @@ public class SecurityAnalysisService extends AbstractComputationService {
     @Setter
     private String securityAnalysisServerBaseUri;
 
-    private final NetworkModificationTreeService networkModificationTreeService;
-
     @Autowired
     public SecurityAnalysisService(RemoteServicesProperties remoteServicesProperties,
-                                   NetworkModificationTreeService networkModificationTreeService,
                                    ObjectMapper objectMapper, RestTemplate restTemplate) {
         this.securityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("security-analysis-server");
-        this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;
     }
 
-    public String getSecurityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String filters, Pageable pageable) {
+    public String getSecurityAnalysisResult(UUID resultUuid, SecurityAnalysisResultType resultType, String filters, Pageable pageable) {
         String result;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
 
         if (resultUuid == null) {
             return null;
@@ -100,17 +96,16 @@ public class SecurityAnalysisService extends AbstractComputationService {
         return result;
     }
 
-    public byte[] getSecurityAnalysisResultCsv(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
+    public byte[] getSecurityAnalysisResultCsv(UUID resultUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
         ResponseEntity<byte[]> result;
-        UUID resultUuidOpt = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
 
-        if (resultUuidOpt == null) {
+        if (resultUuid == null) {
             throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
         }
 
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getExportPathFromResultType(resultType));
 
-        String path = pathBuilder.buildAndExpand(resultUuidOpt).toUriString();
+        String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -172,12 +167,10 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 .exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(userId);
-
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
 
         if (resultUuid == null) {
             return;
@@ -202,9 +195,8 @@ public class SecurityAnalysisService extends AbstractComputationService {
         restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
-    public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+    public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID resultUuid) {
         SecurityAnalysisStatus status;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SECURITY_ANALYSIS);
 
         if (resultUuid == null) {
             return null;
@@ -259,15 +251,14 @@ public class SecurityAnalysisService extends AbstractComputationService {
         }
     }
 
-    public void assertSecurityAnalysisNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
-        SecurityAnalysisStatus sas = getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid);
+    public void assertSecurityAnalysisNotRunning(UUID resultUuid) {
+        SecurityAnalysisStatus sas = getSecurityAnalysisStatus(resultUuid);
         if (sas == SecurityAnalysisStatus.RUNNING) {
             throw new StudyException(SECURITY_ANALYSIS_RUNNING);
         }
     }
 
-    public void updateSecurityAnalysisParameters(UUID parametersUuid, String parameters) {
-
+    public void updateSecurityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{uuid}");
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
 

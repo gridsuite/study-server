@@ -12,13 +12,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
+import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
@@ -65,10 +65,10 @@ public class ConsumerService {
     private final LoadFlowService loadFlowService;
     private final UserAdminService userAdminService;
     private final NetworkModificationTreeService networkModificationTreeService;
-    private final StudyRepository studyRepository;
-    private final ShortCircuitService shortCircuitService;
     private final StudyConfigService studyConfigService;
+    private final ShortCircuitService shortCircuitService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final VoltageInitService voltageInitService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -82,7 +82,8 @@ public class ConsumerService {
                            NetworkModificationTreeService networkModificationTreeService,
                            SensitivityAnalysisService sensitivityAnalysisService,
                            StudyConfigService studyConfigService,
-                           StudyRepository studyRepository, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+                           RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                           VoltageInitService voltageInitService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -92,10 +93,10 @@ public class ConsumerService {
         this.userAdminService = userAdminService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
-        this.studyRepository = studyRepository;
-        this.shortCircuitService = shortCircuitService;
         this.studyConfigService = studyConfigService;
+        this.shortCircuitService = shortCircuitService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.voltageInitService = voltageInitService;
     }
 
     @Bean
@@ -201,45 +202,57 @@ public class ConsumerService {
                 String userId = receiver.getUserId();
                 Long startTime = receiver.getStartTime();
                 UUID importReportUuid = receiver.getReportUuid();
+                UUID rootNetworkUuid = receiver.getRootNetworkUuid();
+                CaseImportAction caseImportAction = receiver.getCaseImportAction();
 
                 CaseInfos caseInfos = new CaseInfos(caseUuid, caseName, caseFormat);
                 NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
-                StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
                 try {
-                    if (studyEntity != null) {
-                        // if studyEntity is not null, it means we are recreating network for existing study
-                        // we only update network infos sent by network conversion server
-                        studyService.updateStudyNetwork(studyEntity, userId, networkInfos);
-                    } else {
-                        DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
-                        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId, getUserProfile(userId));
-                        UUID shortCircuitParametersUuid = createDefaultShortCircuitAnalysisParameters();
-                        UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters();
-                        UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters();
-                        UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters();
-                        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos,
-                                loadFlowParametersUuid,
-                                shortCircuitParametersUuid,
-                                DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
-                                null,
-                                securityAnalysisParametersUuid,
-                                sensitivityAnalysisParametersUuid,
-                                networkVisualizationParametersUuid,
-                                importParameters, importReportUuid);
+                    switch (caseImportAction) {
+                        case STUDY_CREATION ->
+                            insertStudy(studyUuid, userId, networkInfos, caseInfos, importParameters, importReportUuid);
+                        case ROOT_NETWORK_CREATION ->
+                            studyService.createRootNetwork(studyUuid, RootNetworkInfos.builder()
+                                .id(rootNetworkUuid)
+                                .caseInfos(caseInfos)
+                                .reportUuid(importReportUuid)
+                                .networkInfos(networkInfos)
+                                .importParameters(importParameters)
+                                .build());
+                        case NETWORK_RECREATION ->
+                            studyService.updateNetwork(studyUuid, rootNetworkUuid, userId, networkInfos);
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
                     LOGGER.error("Error while importing case", e);
                 } finally {
                     // if studyEntity is already existing, we don't delete anything in the end of the process
-                    if (studyEntity == null) {
+                    if (caseImportAction == CaseImportAction.STUDY_CREATION) {
                         studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
                     }
-                    LOGGER.trace("Create study '{}' : {} seconds", studyUuid,
+                    LOGGER.trace(caseImportAction.getLabel() + " for study uuid '{}' : {} seconds", studyUuid,
                             TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
                 }
             }
         };
+    }
+
+    private void insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos,
+                             Map<String, String> importParameters, UUID importReportUuid) {
+        UserProfileInfos userProfileInfos = getUserProfile(userId);
+
+        DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
+        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId, userProfileInfos);
+        UUID shortCircuitParametersUuid = createDefaultShortCircuitAnalysisParameters(userId, userProfileInfos);
+        UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters(userId, userProfileInfos);
+        UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters(userId, userProfileInfos);
+        UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters();
+        UUID voltageInitParametersUuid = createDefaultVoltageInitParameters(userId, userProfileInfos);
+
+        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
+            shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
+            voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid,
+            importParameters, importReportUuid);
     }
 
     private UserProfileInfos getUserProfile(String userId) {
@@ -271,7 +284,18 @@ public class ConsumerService {
         }
     }
 
-    private UUID createDefaultShortCircuitAnalysisParameters() {
+    private UUID createDefaultShortCircuitAnalysisParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getShortcircuitParameterId() != null) {
+            // try to access/duplicate the user profile shortcircuit parameters
+            try {
+                return shortCircuitService.duplicateParameters(userProfileInfos.getShortcircuitParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate shortcircuit parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getShortcircuitParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad shortcircuit parameters in profile => use default values
         try {
             return shortCircuitService.createParameters(null);
         } catch (final Exception e) {
@@ -280,7 +304,18 @@ public class ConsumerService {
         }
     }
 
-    private UUID createDefaultSensitivityAnalysisParameters() {
+    private UUID createDefaultSensitivityAnalysisParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getSensitivityAnalysisParameterId() != null) {
+            // try to access/duplicate the user profile sensitivity analysis parameters
+            try {
+                return sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(userProfileInfos.getSensitivityAnalysisParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate sensitivity analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getSensitivityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad sensitivity analysis parameters in profile => use default values
         try {
             return sensitivityAnalysisService.createDefaultSensitivityAnalysisParameters();
         } catch (final Exception e) {
@@ -289,11 +324,42 @@ public class ConsumerService {
         }
     }
 
-    private UUID createDefaultSecurityAnalysisParameters() {
+    private UUID createDefaultSecurityAnalysisParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getSecurityAnalysisParameterId() != null) {
+            // try to access/duplicate the user profile security analysis parameters
+            try {
+                return securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate security analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getSecurityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad security analysis parameters in profile => use default values
         try {
             return securityAnalysisService.createDefaultSecurityAnalysisParameters();
         } catch (final Exception e) {
             LOGGER.error("Error while creating default parameters for Security analysis", e);
+            return null;
+        }
+    }
+
+    private UUID createDefaultVoltageInitParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getVoltageInitParameterId() != null) {
+            // try to access/duplicate the user profile voltage init parameters
+            try {
+                return voltageInitService.duplicateVoltageInitParameters(userProfileInfos.getVoltageInitParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate voltage init parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getVoltageInitParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad voltage init parameters in profile => use default values
+        try {
+            return voltageInitService.createVoltageInitParameters(null);
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default parameters for voltage init", e);
             return null;
         }
     }

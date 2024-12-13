@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.dto;
+package org.gridsuite.study.server.dto.caseimport;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -22,8 +22,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CaseImportReceiver {
     private UUID studyUuid;
+    private UUID rootNetworkUuid;
     private UUID caseUuid;
     private UUID reportUuid;
     private String userId;
     private Long startTime;
+    private CaseImportAction caseImportAction;
 }

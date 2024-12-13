@@ -14,12 +14,8 @@ import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ShortCircuitStatus;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NetworkService;
-import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,31 +49,25 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class ShortCircuitService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
-    private final RootNetworkService rootNetworkService;
+
+    private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
 
     @Setter
     private String shortCircuitServerBaseUri;
 
-    private final NetworkModificationTreeService networkModificationTreeService;
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
 
     @Autowired
     public ShortCircuitService(RemoteServicesProperties remoteServicesProperties,
-                               NetworkModificationTreeService networkModificationTreeService,
-                               NetworkService networkStoreService,
                                RestTemplate restTemplate,
-                               ObjectMapper objectMapper, RootNetworkService rootNetworkService) {
+                               ObjectMapper objectMapper) {
         this.shortCircuitServerBaseUri = remoteServicesProperties.getServiceUri("shortcircuit-server");
-        this.networkModificationTreeService = networkModificationTreeService;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
-        this.rootNetworkService = rootNetworkService;
     }
 
-    public UUID runShortCircuit(UUID nodeUuid, UUID rootNetworkUuid, String busId, Optional<UUID> parametersUuid, UUID reportUuid, String userId) {
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = getVariantId(nodeUuid, rootNetworkUuid);
+    public UUID runShortCircuit(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, String busId, Optional<UUID> parametersUuid, UUID reportUuid, String userId) {
 
         String receiver;
         try {
@@ -113,17 +103,15 @@ public class ShortCircuitService extends AbstractComputationService {
         return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    private String getShortCircuitAnalysisResultResourcePath(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type) {
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid,
-                type == ShortcircuitAnalysisType.ALL_BUSES ? ComputationType.SHORT_CIRCUIT : ComputationType.SHORT_CIRCUIT_ONE_BUS);
+    private String getShortCircuitAnalysisResultResourcePath(UUID resultUuid) {
         if (resultUuid == null) {
             return null;
         }
         return UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results" + "/{resultUuid}").buildAndExpand(resultUuid).toUriString();
     }
 
-    private String getShortCircuitAnalysisResultsPageResourcePath(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, rootNetworkUuid, type);
+    private String getShortCircuitAnalysisResultsPageResourcePath(UUID resultUuid, ShortcircuitAnalysisType type) {
+        String resultPath = getShortCircuitAnalysisResultResourcePath(resultUuid);
         if (resultPath == null) {
             return null;
         }
@@ -135,17 +123,15 @@ public class ShortCircuitService extends AbstractComputationService {
         return resultPath + "/paged";
     }
 
-    public String getShortCircuitAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, boolean paged, Pageable pageable) {
+    public String getShortCircuitAnalysisResult(UUID resultUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, boolean paged, Pageable pageable) {
         if (paged) {
-            return getShortCircuitAnalysisResultsPage(nodeUuid, rootNetworkUuid, mode, type, filters, pageable);
+            return getShortCircuitAnalysisResultsPage(resultUuid, mode, type, filters, pageable);
         } else {
-            return getShortCircuitAnalysisResult(nodeUuid, rootNetworkUuid, mode, type);
+            return getShortCircuitAnalysisResult(resultUuid, mode);
         }
     }
 
-    private String getShortCircuitAnalysisCsvResultResourcePath(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type) {
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid,
-                type == ShortcircuitAnalysisType.ALL_BUSES ? ComputationType.SHORT_CIRCUIT : ComputationType.SHORT_CIRCUIT_ONE_BUS);
+    private String getShortCircuitAnalysisCsvResultResourcePath(UUID resultUuid) {
         if (resultUuid == null) {
             throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
         }
@@ -168,14 +154,14 @@ public class ShortCircuitService extends AbstractComputationService {
         }
     }
 
-    public byte[] getShortCircuitAnalysisCsvResult(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type, String headersCsv) {
-        String resultPath = getShortCircuitAnalysisCsvResultResourcePath(nodeUuid, rootNetworkUuid, type);
+    public byte[] getShortCircuitAnalysisCsvResult(UUID resultUuid, String headersCsv) {
+        String resultPath = getShortCircuitAnalysisCsvResultResourcePath(resultUuid);
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath);
         return getShortCircuitAnalysisCsvResultResource(builder.build().toUri(), headersCsv);
     }
 
-    public String getShortCircuitAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, FaultResultsMode mode, ShortcircuitAnalysisType type) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, rootNetworkUuid, type);
+    public String getShortCircuitAnalysisResult(UUID resultUuid, FaultResultsMode mode) {
+        String resultPath = getShortCircuitAnalysisResultResourcePath(resultUuid);
         if (resultPath == null) {
             return null;
         }
@@ -185,8 +171,8 @@ public class ShortCircuitService extends AbstractComputationService {
         return getShortCircuitAnalysisResource(builder.build().toUri());
     }
 
-    public String getShortCircuitAnalysisResultsPage(UUID nodeUuid, UUID rootNetworkUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, Pageable pageable) {
-        String resultsPath = getShortCircuitAnalysisResultsPageResourcePath(nodeUuid, rootNetworkUuid, type);
+    public String getShortCircuitAnalysisResultsPage(UUID resultUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, Pageable pageable) {
+        String resultsPath = getShortCircuitAnalysisResultsPageResourcePath(resultUuid, type);
         if (resultsPath == null) {
             return null;
         }
@@ -203,8 +189,8 @@ public class ShortCircuitService extends AbstractComputationService {
         return getShortCircuitAnalysisResource(builder.build().encode().toUri()); // need to encode because of filter JSON array
     }
 
-    public String getShortCircuitAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(nodeUuid, rootNetworkUuid, type);
+    public String getShortCircuitAnalysisStatus(UUID resultUuid) {
+        String resultPath = getShortCircuitAnalysisResultResourcePath(resultUuid);
         if (resultPath == null) {
             return null;
         }
@@ -227,12 +213,11 @@ public class ShortCircuitService extends AbstractComputationService {
         return result;
     }
 
-    public void stopShortCircuitAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+    public void stopShortCircuitAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(userId);
 
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SHORT_CIRCUIT);
         if (resultUuid == null) {
             return;
         }
@@ -252,10 +237,6 @@ public class ShortCircuitService extends AbstractComputationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
-    }
-
-    private String getVariantId(UUID nodeUuid, UUID rootNetworkUuid) {
-        return networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
     }
 
     public void deleteShortCircuitAnalysisResult(UUID uuid) {
@@ -282,9 +263,9 @@ public class ShortCircuitService extends AbstractComputationService {
         return restTemplate.getForObject(shortCircuitServerBaseUri + path, Integer.class);
     }
 
-    public void assertShortCircuitAnalysisNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
-        String scs = getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ALL_BUSES);
-        String oneBusScs = getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ONE_BUS);
+    public void assertShortCircuitAnalysisNotRunning(UUID scsResultUuid, UUID oneBusScsResultUuid) {
+        String scs = getShortCircuitAnalysisStatus(scsResultUuid);
+        String oneBusScs = getShortCircuitAnalysisStatus(oneBusScsResultUuid);
         if (ShortCircuitStatus.RUNNING.name().equals(scs) || ShortCircuitStatus.RUNNING.name().equals(oneBusScs)) {
             throw new StudyException(SHORT_CIRCUIT_ANALYSIS_RUNNING);
         }
@@ -325,7 +306,7 @@ public class ShortCircuitService extends AbstractComputationService {
         }
     }
 
-    public void updateParameters(final UUID parametersUuid, final String parametersInfos) {
+    public void updateParameters(final UUID parametersUuid, @Nullable final String parametersInfos) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         try {
@@ -362,5 +343,14 @@ public class ShortCircuitService extends AbstractComputationService {
         } catch (final HttpStatusCodeException e) {
             throw handleHttpError(e, CREATE_SHORTCIRCUIT_PARAMETERS_FAILED);
         }
+    }
+
+    public void deleteShortcircuitParameters(UUID uuid) {
+        Objects.requireNonNull(uuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + PARAMETERS_URI)
+            .buildAndExpand(uuid)
+            .toUriString();
+
+        restTemplate.delete(shortCircuitServerBaseUri + path);
     }
 }

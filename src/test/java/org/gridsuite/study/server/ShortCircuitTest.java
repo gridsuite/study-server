@@ -48,6 +48,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
@@ -94,8 +96,6 @@ class ShortCircuitTest implements WithAssertions {
 
     private static final String SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
 
-    private static final String SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID = "00000000-1111-2222-3333-444444444444";
-
     private static final String SHORT_CIRCUIT_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"faults\":[]}";
 
     private static final String CSV_HEADERS = "{csvHeaders}";
@@ -103,6 +103,21 @@ class ShortCircuitTest implements WithAssertions {
     private static final byte[] SHORT_CIRCUIT_ANALYSIS_CSV_RESULT = {0x00, 0x11};
 
     private static final String SHORT_CIRCUIT_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+
+    private static final String SHORT_CIRCUIT_ANALYSIS_PROFILE_PARAMETERS_JSON = "{\"withLimitViolations\":\"true\",\"withFortescueResult\":\"false\",\"withFeederResult\":\"true\"}";
+    private static final String SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
+    private static final UUID SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID = UUID.fromString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
+    private static final String NO_PROFILE_USER_ID = "noProfileUser";
+    private static final String NO_PARAMS_IN_PROFILE_USER_ID = "noParamInProfileUser";
+    private static final String INVALID_PARAMS_IN_PROFILE_USER_ID = "invalidParamInProfileUser";
+    private static final String PROFILE_SHORT_CIRCUIT_ANALYSIS_INVALID_PARAMETERS_UUID_STRING = "f09f5282-8e34-48b5-b66e-7ef9f3f36c4f";
+    private static final String VALID_PARAMS_IN_PROFILE_USER_ID = "validParamInProfileUser";
+    private static final String PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING = "1cec4a7b-ab7e-4d78-9dd7-ce73c5ef11d9";
+    private static final String PROFILE_SHORT_CIRCUIT_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
+    private static final String USER_PROFILE_NO_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}";
+    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"shortcircuitParameterId\":\"" + PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
+    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"shortcircuitParameterId\":\"" + PROFILE_SHORT_CIRCUIT_ANALYSIS_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
+    private static final String DUPLICATED_PARAMS_JSON = "\"" + PROFILE_SHORT_CIRCUIT_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
 
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
@@ -132,6 +147,9 @@ class ShortCircuitTest implements WithAssertions {
     private ShortCircuitService shortCircuitService;
 
     @Autowired
+    private UserAdminService userAdminService;
+
+    @Autowired
     private StudyRepository studyRepository;
 
     @Autowired
@@ -145,6 +163,7 @@ class ShortCircuitTest implements WithAssertions {
 
     //output destinations
     private final String studyUpdateDestination = "study.update";
+    private final String elementUpdateDestination = "element.update";
     private final String shortCircuitAnalysisResultDestination = "shortcircuitanalysis.result";
     private final String shortCircuitAnalysisStoppedDestination = "shortcircuitanalysis.stopped";
     private final String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.failed";
@@ -160,6 +179,7 @@ class ShortCircuitTest implements WithAssertions {
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
+        userAdminService.setUserAdminServerBaseUri(baseUrl);
 
         String shortCircuitAnalysisResultUuidStr = objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
         String shortCircuitAnalysisResultNotFoundUuidStr = objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND);
@@ -171,6 +191,8 @@ class ShortCircuitTest implements WithAssertions {
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
+                String method = Objects.requireNonNull(request.getMethod());
+
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&busId=BUS_TEST_ID&variantId=" + VARIANT_ID_2)) {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
@@ -225,12 +247,38 @@ class ShortCircuitTest implements WithAssertions {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/supervision/results-count")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
-                } else if ("POST".equalsIgnoreCase(request.getMethod()) && path.equals("/v1/parameters/default")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID + "\"");
-                } else if ("GET".equalsIgnoreCase(request.getMethod()) && path.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), TestUtils.resourceToString("/short-circuit-parameters.json"));
-                } else if ("PUT".equalsIgnoreCase(request.getMethod()) && path.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)) {
-                    return new MockResponse(200);
+                } else if (path.matches("/v1/parameters")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING));
+                } else if (path.matches("/v1/users/" + NO_PROFILE_USER_ID + "/profile")) {
+                    return new MockResponse(404);
+                } else if (path.matches("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_NO_PARAMS_JSON);
+                } else if (path.matches("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_VALID_PARAMS_JSON);
+                } else if (path.matches("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_INVALID_PARAMS_JSON);
+                } else if (path.matches("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)) {
+                    if (method.equals("GET")) {
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), TestUtils.resourceToString("/short-circuit-parameters.json"));
+                    } else {
+                        //Method PUT
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID));
+                    }
+                } else if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_SHORT_CIRCUIT_ANALYSIS_INVALID_PARAMETERS_UUID_STRING) && method.equals("POST")) {
+                    // params duplication request KO
+                    return new MockResponse(404);
+                } else if (path.matches("/v1/parameters/" + PROFILE_SHORT_CIRCUIT_ANALYSIS_INVALID_PARAMETERS_UUID_STRING) && method.equals("GET")) {
+                    return new MockResponse(404);
+                } else if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING) && method.equals("POST")) {
+                    // params duplication request OK
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), DUPLICATED_PARAMS_JSON);
+                } else if (path.matches("/v1/parameters/" + PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING) && method.equals("GET")) {
+                    // profile params get request OK
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORT_CIRCUIT_ANALYSIS_PROFILE_PARAMETERS_JSON);
+                } else if (path.matches("/v1/parameters") && method.equals("POST")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID));
+                } else if (path.matches("/v1/parameters/default") && method.equals("POST")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID));
                 } else {
                     LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
                     return new MockResponse(418, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE), "Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -243,7 +291,7 @@ class ShortCircuitTest implements WithAssertions {
     @Test
     void testShortCircuitAnalysisParameters(final MockWebServer server) throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), UUID.fromString(CASE_SHORT_CIRCUIT_UUID_STRING));
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), UUID.fromString(CASE_SHORT_CIRCUIT_UUID_STRING), null);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         //get default ShortCircuitParameters
@@ -263,7 +311,7 @@ class ShortCircuitTest implements WithAssertions {
     @Test
     void testAllBusesShortCircuit(final MockWebServer server) throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -280,7 +328,6 @@ class ShortCircuitTest implements WithAssertions {
 
         NetworkModificationNode modificationNode4 = createNetworkModificationNode(studyNameUserIdUuid,
                 modificationNode3Uuid, UUID.randomUUID(), VARIANT_ID_3, "node 4");
-        UUID modificationNode4Uuid = modificationNode4.getId();
 
         UUID unknownModificationNodeUuid = UUID.randomUUID();
 
@@ -374,7 +421,7 @@ class ShortCircuitTest implements WithAssertions {
     @Test
     void testGetShortCircuitAnalysisCsvResultNotFound(final MockWebServer server) throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING_NOT_FOUND), UUID.fromString(CASE_SHORT_CIRCUIT_UUID_STRING_NOT_FOUND));
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING_NOT_FOUND), UUID.fromString(CASE_SHORT_CIRCUIT_UUID_STRING_NOT_FOUND), null);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -416,7 +463,7 @@ class ShortCircuitTest implements WithAssertions {
     @Test
     void testPagedShortCircuit(final MockWebServer server) throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -478,7 +525,7 @@ class ShortCircuitTest implements WithAssertions {
     @Test
     void testOneBusShortCircuit(final MockWebServer server) throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -569,7 +616,7 @@ class ShortCircuitTest implements WithAssertions {
     @Test
     void testResetUuidResultWhenSCFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
-        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
+        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), null);
         UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
@@ -588,7 +635,7 @@ class ShortCircuitTest implements WithAssertions {
         studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, Optional.empty(), "user_1");
 
         // Test reset uuid result in the database
-        assertNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));
+        assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -614,7 +661,7 @@ class ShortCircuitTest implements WithAssertions {
     @Test
     void testNoResult() throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -648,7 +695,7 @@ class ShortCircuitTest implements WithAssertions {
     @Test
     void testInvalidateShortCircuitStatus(final MockWebServer server) throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -697,13 +744,85 @@ class ShortCircuitTest implements WithAssertions {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "&resultUuid=" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
-
     }
 
-    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
+    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)
+                    .header("userId", userId)
+                    .contentType(MediaType.ALL)
+                    .content(parameters))
+            .andExpect(status().is(status.value()));
+
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        message = output.receive(TIMEOUT, elementUpdateDestination);
+        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
+    }
+
+    @Test
+    void testResetShortCircuitAnalysisParametersUserHasNoProfile(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PROFILE_USER_ID, HttpStatus.OK);
+
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING))); // update existing with dft
+    }
+
+    @Test
+    void testResetShortCircuitAnalysisParametersUserHasNoParamsInProfile(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING))); // update existing with dft
+    }
+
+    @Test
+    void testResetShortCircuitAnalysisParametersUserHasInvalidParamsInProfile(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
+
+        var requests = TestUtils.getRequestsDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING))); // update existing with dft
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SHORT_CIRCUIT_ANALYSIS_INVALID_PARAMETERS_UUID_STRING))); // post duplicate ko
+    }
+
+    @Test
+    void testResetShortCircuitAnalysisParametersUserHasValidParamsInProfile(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+
+        var requests = TestUtils.getRequestsDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING)));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
+    }
+
+    @Test
+    void testResetShortCircuitAnalysisParametersUserHasValidParamsInProfileButNoExistingShortcircuitAnalysisParams(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
+    }
+
+    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID shortCircuitParametersUuid) {
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null,
-                UUID.randomUUID(), null, null, null,
+                UUID.randomUUID(), shortCircuitParametersUuid, null, null,
                 defaultNonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
