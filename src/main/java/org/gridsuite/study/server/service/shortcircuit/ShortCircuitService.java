@@ -50,6 +50,8 @@ public class ShortCircuitService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
 
+    private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
+
     @Setter
     private String shortCircuitServerBaseUri;
 
@@ -304,7 +306,7 @@ public class ShortCircuitService extends AbstractComputationService {
         }
     }
 
-    public void updateParameters(final UUID parametersUuid, final String parametersInfos) {
+    public void updateParameters(final UUID parametersUuid, @Nullable final String parametersInfos) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         try {
@@ -341,5 +343,14 @@ public class ShortCircuitService extends AbstractComputationService {
         } catch (final HttpStatusCodeException e) {
             throw handleHttpError(e, CREATE_SHORTCIRCUIT_PARAMETERS_FAILED);
         }
+    }
+
+    public void deleteShortcircuitParameters(UUID uuid) {
+        Objects.requireNonNull(uuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + PARAMETERS_URI)
+            .buildAndExpand(uuid)
+            .toUriString();
+
+        restTemplate.delete(shortCircuitServerBaseUri + path);
     }
 }
