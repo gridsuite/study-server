@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -22,4 +23,12 @@ public interface RootNetworkRepository extends JpaRepository<RootNetworkEntity, 
 
     @EntityGraph(attributePaths = {"rootNetworkNodeInfos"}, type = EntityGraph.EntityGraphType.LOAD)
     List<RootNetworkEntity> findAllWithInfosByStudyId(UUID studyUuid);
+
+    @EntityGraph(attributePaths = {"importParameters"}, type = EntityGraph.EntityGraphType.LOAD)
+    Optional<RootNetworkEntity> findWithImportParametersById(UUID rootNetworkUuid);
+
+    @EntityGraph(attributePaths = {"rootNetworkNodeInfos"}, type = EntityGraph.EntityGraphType.LOAD)
+    Optional<RootNetworkEntity> findWithRootNetworkNodeInfosById(UUID rootNetworkUuid);
+
+    boolean existsByIdAndStudyId(UUID studyUuid, UUID id);
 }

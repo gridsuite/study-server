@@ -400,8 +400,8 @@ class SecurityAnalysisTest {
 
         // Set an uuid result in the database
         rootNetworkNodeInfoService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, SECURITY_ANALYSIS);
-        assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
-        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
+        assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
+        assertEquals(resultUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
@@ -411,7 +411,7 @@ class SecurityAnalysisTest {
         studyService.runSecurityAnalysis(studyEntity.getId(), List.of(), modificationNode.getId(), rootNetworkUuid, "");
 
         // Test reset uuid result in the database
-        assertNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
+        assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));

@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
@@ -47,19 +46,15 @@ public class VoltageInitService {
 
     private String voltageInitServerBaseUri;
 
-    NetworkModificationTreeService networkModificationTreeService;
-
     private final ObjectMapper objectMapper;
 
     private final RestTemplate restTemplate;
 
     @Autowired
     public VoltageInitService(RemoteServicesProperties remoteServicesProperties,
-                              NetworkModificationTreeService networkModificationTreeService,
                               RestTemplate restTemplate,
                               ObjectMapper objectMapper) {
         this.voltageInitServerBaseUri = remoteServicesProperties.getServiceUri("voltage-init-server");
-        this.networkModificationTreeService = networkModificationTreeService;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
     }
@@ -96,9 +91,8 @@ public class VoltageInitService {
         return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
     }
 
-    private String getVoltageInitResultOrStatus(UUID nodeUuid, UUID rootNetworkUuid, String suffix) {
+    private String getVoltageInitResultOrStatus(UUID resultUuid, String suffix) {
         String result;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
 
         if (resultUuid == null) {
             return null;
@@ -118,12 +112,12 @@ public class VoltageInitService {
         return result;
     }
 
-    public String getVoltageInitResult(UUID nodeUuid, UUID rootNetworkUuid) {
-        return getVoltageInitResultOrStatus(nodeUuid, rootNetworkUuid, "");
+    public String getVoltageInitResult(UUID resultUuid) {
+        return getVoltageInitResultOrStatus(resultUuid, "");
     }
 
-    public String getVoltageInitStatus(UUID nodeUuid, UUID rootNetworkUuid) {
-        return getVoltageInitResultOrStatus(nodeUuid, rootNetworkUuid, "/status");
+    public String getVoltageInitStatus(UUID resultUuid) {
+        return getVoltageInitResultOrStatus(resultUuid, "/status");
     }
 
     public VoltageInitParametersInfos getVoltageInitParameters(UUID parametersUuid) {
@@ -207,12 +201,11 @@ public class VoltageInitService {
         restTemplate.delete(voltageInitServerBaseUri + path);
     }
 
-    public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+    public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(userId);
 
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
         if (resultUuid == null) {
             return;
         }
@@ -263,15 +256,14 @@ public class VoltageInitService {
         return restTemplate.getForObject(voltageInitServerBaseUri + path, Integer.class);
     }
 
-    public void assertVoltageInitNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
-        String scs = getVoltageInitStatus(nodeUuid, rootNetworkUuid);
+    public void assertVoltageInitNotRunning(UUID resultUuid) {
+        String scs = getVoltageInitStatus(resultUuid);
         if (VoltageInitStatus.RUNNING.name().equals(scs)) {
             throw new StudyException(VOLTAGE_INIT_RUNNING);
         }
     }
 
-    public UUID getModificationsGroupUuid(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
+    public UUID getModificationsGroupUuid(UUID nodeUuid, UUID resultUuid) {
         if (resultUuid == null) {
             throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, THE_NODE + nodeUuid + " has no voltage init results");
         }
@@ -300,8 +292,7 @@ public class VoltageInitService {
         }
     }
 
-    public void resetModificationsGroupUuid(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
+    public void resetModificationsGroupUuid(UUID nodeUuid, UUID resultUuid) {
         if (resultUuid == null) {
             throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, THE_NODE + nodeUuid + " has no voltage init results");
         }

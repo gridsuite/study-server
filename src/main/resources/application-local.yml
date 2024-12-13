@@ -4,12 +4,12 @@ server:
 spring:
   rabbitmq:
     addresses: localhost
-  data:
-    elasticsearch:
-      host: localhost
-      ## to fill if authentication is needed
-      # user:
-      # password:
+  elasticsearch:
+    uris:
+      - http://localhost:9200
+    ## to fill if authentication is needed
+    # username:
+    # password:
 
 powsybl-ws:
   database:

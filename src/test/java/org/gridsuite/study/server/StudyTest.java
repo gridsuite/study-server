@@ -92,7 +92,7 @@ import java.util.stream.Stream;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.StudyException.Type.ROOTNETWORK_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.ROOT_NETWORK_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.DEFAULT_ERROR_MESSAGE;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
@@ -858,7 +858,8 @@ class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(6, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(7, server);
+        assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getVoltageInitParametersUuid())));
@@ -887,8 +888,8 @@ class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(2, server);
+        assertTrue(requests.stream().allMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
@@ -901,7 +902,7 @@ class StudyTest {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
         assertNotNull(studyEntity);
         UUID nonExistingCaseUuid = UUID.randomUUID();
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyId(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyId(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         rootNetworkEntity.setCaseUuid(nonExistingCaseUuid);
         rootNetworkRepository.save(rootNetworkEntity);
 
@@ -912,7 +913,7 @@ class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(6, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(7, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + nonExistingCaseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/.*"))); // x 3
@@ -998,7 +999,7 @@ class StudyTest {
     void testGetParentNodesReportLogs(final MockWebServer server) throws Exception {
         String userId = "userId";
         UUID studyUuid = createStudy(server, userId, CASE_UUID);
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyId(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOTNETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyId(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND)).getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         AbstractNode modificationNode = rootNode.getChildren().get(0);
@@ -1711,7 +1712,7 @@ class StudyTest {
         }
         requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
 
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyId(duplicatedStudy.getId()).stream().findFirst().orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND));
+        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyId(duplicatedStudy.getId()).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + rootNetworkEntity.getNetworkUuid() + "/reindex-all")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
@@ -1927,7 +1928,7 @@ class StudyTest {
     void testCutAndPasteNodeWithoutModification(final MockWebServer server) throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(server, userId, CASE_UUID);
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
@@ -1949,7 +1950,7 @@ class StudyTest {
     void testCutAndPasteNodeWithModification(final MockWebServer server) throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(server, userId, CASE_UUID);
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
@@ -2004,7 +2005,7 @@ class StudyTest {
     void testCutAndPasteSubtree(final MockWebServer server) throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(server, userId, CASE_UUID);
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
@@ -2184,7 +2185,7 @@ class StudyTest {
     void testDuplicateSubtree(final MockWebServer server) throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(server, userId, CASE_UUID);
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOTNETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);

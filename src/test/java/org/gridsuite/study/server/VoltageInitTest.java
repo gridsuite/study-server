@@ -748,7 +748,7 @@ class VoltageInitTest {
         studyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "");
 
         // Test doesn't reset uuid result in the database
-        assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION).toString());
+        assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION).toString());
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
