@@ -901,13 +901,13 @@ public class StudyService {
     @Transactional
     public boolean setShortCircuitParameters(UUID studyUuid, @Nullable String shortCircuitParametersInfos, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        boolean userProfileIssue = createOrUpdateShortcircuitParameters(studyUuid, studyEntity, shortCircuitParametersInfos, userId);
+        boolean userProfileIssue = createOrUpdateShortcircuitParameters(studyEntity, shortCircuitParametersInfos, userId);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, SHORT_CIRCUIT);
         return userProfileIssue;
     }
 
-    public boolean createOrUpdateShortcircuitParameters(UUID studyUuid, StudyEntity studyEntity, String parameters, String userId) {
+    public boolean createOrUpdateShortcircuitParameters(StudyEntity studyEntity, String parameters, String userId) {
         /* +-----------------------+----------------+-----------------------------------------+
          * | entity.parametersUuid | parametersInfo | action                                  |
          * | no                    | no             | create default ones                     |
