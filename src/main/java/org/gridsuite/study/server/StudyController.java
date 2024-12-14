@@ -1282,6 +1282,19 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/tree/nodes/columnpositions/{parentUuid}")
+    @Operation(summary = "update nodes column positions")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "the nodes column positions have been updated"),
+        @ApiResponse(responseCode = "404", description = "The study or a node was not found")})
+    public ResponseEntity<Void> updateNodesColumnPositions(@RequestBody List<NetworkModificationNode> nodes,
+                                                 @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                 @Parameter(description = "parent node uuid") @PathVariable("parentUuid") UUID parentUuid,
+                                                 @RequestHeader(HEADER_USER_ID) String userId) {
+        networkModificationTreeService.updateNodesColumnPositions(studyUuid, parentUuid, nodes, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
     @Operation(summary = "get simplified node")
     @ApiResponses(value = {

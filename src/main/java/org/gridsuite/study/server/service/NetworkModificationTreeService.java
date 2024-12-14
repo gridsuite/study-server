@@ -445,6 +445,27 @@ public class NetworkModificationTreeService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
+    @Transactional
+    public void updateNodesColumnPositions(UUID studyUuid, UUID parentUuid, List<NetworkModificationNode> nodes, String userId) {
+        List<UUID> nodeIds = nodes.stream().map(NetworkModificationNode::getId).collect(Collectors.toList());
+
+        List<NetworkModificationNodeInfoEntity> networkModificationNodeEntities = networkModificationNodeInfoRepository.findAllById(nodeIds);
+
+        // Convert to a map for quick lookup
+        Map<UUID, Integer> nodeIdToColumnPosition = nodes.stream()
+                                                     .collect(Collectors.toMap(NetworkModificationNode::getId, NetworkModificationNode::getColumnPosition));
+
+        networkModificationNodeEntities.forEach(entity -> {
+            Integer newColumnPosition = nodeIdToColumnPosition.get(entity.getId());
+            if (newColumnPosition != null) {
+                entity.setColumnPosition(newColumnPosition);
+            }
+        });
+
+        notificationService.emitColumnsChanged(studyUuid, parentUuid, nodeIdToColumnPosition);
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
     private boolean isRenameNode(AbstractNode node) {
         NetworkModificationNode renameNode = NetworkModificationNode.builder()
             .id(node.getId())
