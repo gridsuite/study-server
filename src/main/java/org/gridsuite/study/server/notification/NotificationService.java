@@ -23,7 +23,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Collection;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -303,13 +302,13 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitColumnsChanged(UUID studyUuid, UUID parentNodeUuid, Map<UUID, Integer> nodes) {
+    public void emitColumnsChanged(UUID studyUuid, UUID parentNodeUuid, UUID[] orderedUuids) {
         try {
-            sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(nodes))
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, COLUMNS_CHANGED)
-                .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
-                .build()
+            sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(orderedUuids))
+                    .setHeader(HEADER_STUDY_UUID, studyUuid)
+                    .setHeader(HEADER_UPDATE_TYPE, COLUMNS_CHANGED)
+                    .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
+                    .build()
             );
         } catch (JsonProcessingException e) {
             LOGGER.error("Unable to notify on column positions update", e);

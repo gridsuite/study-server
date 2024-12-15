@@ -453,7 +453,7 @@ public class NetworkModificationTreeService {
 
         // Convert to a map for quick lookup
         Map<UUID, Integer> nodeIdToColumnPosition = nodes.stream()
-                                                     .collect(Collectors.toMap(NetworkModificationNode::getId, NetworkModificationNode::getColumnPosition));
+                .collect(Collectors.toMap(NetworkModificationNode::getId, NetworkModificationNode::getColumnPosition));
 
         networkModificationNodeEntities.forEach(entity -> {
             Integer newColumnPosition = nodeIdToColumnPosition.get(entity.getId());
@@ -462,7 +462,12 @@ public class NetworkModificationTreeService {
             }
         });
 
-        notificationService.emitColumnsChanged(studyUuid, parentUuid, nodeIdToColumnPosition);
+        UUID[] orderedUuids = nodes.stream()
+                .sorted(Comparator.comparingInt(AbstractNode::getColumnPosition))
+                .map(NetworkModificationNode::getId)
+                .toArray(UUID[]::new);
+
+        notificationService.emitColumnsChanged(studyUuid, parentUuid, orderedUuids);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
