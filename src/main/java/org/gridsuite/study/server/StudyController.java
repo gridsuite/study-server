@@ -186,7 +186,7 @@ public class StudyController {
                                                                               @RequestParam(value = CASE_FORMAT) String caseFormat,
                                                                               @RequestBody(required = false) Map<String, Object> importParameters,
                                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.createRootNetwork(studyUuid, caseUuid, caseFormat, importParameters, userId));
+        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, caseUuid, caseFormat, importParameters, userId));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
@@ -199,7 +199,7 @@ public class StudyController {
                                                       @RequestBody(required = false) Map<String, Object> importParameters,
                                                       @RequestHeader(HEADER_USER_ID) String userId) {
         caseService.assertCaseExists(caseUuid);
-        studyService.updateRootNetworkCase(studyUuid, rootNetworkUuid, caseUuid, caseFormat, importParameters, userId);
+        studyService.updateNetworkRequest(studyUuid, rootNetworkUuid, caseUuid, caseFormat, importParameters, userId);
         return ResponseEntity.ok().build();
     }
 

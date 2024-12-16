@@ -217,10 +217,15 @@ public class ConsumerService {
                                 .importParameters(importParameters)
                                 .build());
                         case NETWORK_RECREATION ->
-                            studyService.updateNetwork(studyUuid, rootNetworkUuid, userId, networkInfos);
+                            studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
                         case ROOT_NETWORK_MODIFICATION ->
-                            studyService.updateRootNetworkCase(studyUuid, rootNetworkUuid, networkInfos, caseInfos,
-                                importParameters, importReportUuid);
+                            studyService.updateNetwork(studyUuid, rootNetworkUuid, RootNetworkInfos.builder()
+                                .id(rootNetworkUuid)
+                                .networkInfos(networkInfos)
+                                .caseInfos(caseInfos)
+                                .importParameters(importParameters)
+                                .reportUuid(importReportUuid)
+                                .build());
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
@@ -230,7 +235,7 @@ public class ConsumerService {
                     if (caseImportAction == CaseImportAction.STUDY_CREATION) {
                         studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
                     }
-                    LOGGER.trace(caseImportAction.getLabel() + " for study uuid '{}' : {} seconds", studyUuid,
+                    LOGGER.trace("{} for study uuid '{}' : {} seconds", caseImportAction.getLabel(), studyUuid,
                         TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
                 }
             }
