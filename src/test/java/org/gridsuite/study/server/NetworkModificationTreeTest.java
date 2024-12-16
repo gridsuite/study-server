@@ -874,6 +874,35 @@ class NetworkModificationTreeTest {
             .andExpect(status().isNotFound());
     }
 
+    @Test
+    void testUpdateNodesColumnPositions() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        final NetworkModificationNode node1 = buildNetworkModificationNode("nod", "silently", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        final NetworkModificationNode node2 = buildNetworkModificationNode("nodding", "politely", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(root.getStudyId(), root, node1, userId);
+        createNode(root.getStudyId(), root, node2, userId);
+        assertNull(node1.getColumnPosition());
+        node1.setColumnPosition(1);
+        node2.setColumnPosition(0);
+        ArrayList<NetworkModificationNode> nodes = new ArrayList<>();
+        nodes.add(node1);
+        nodes.add(node2);
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes/columnpositions/{parentUuid}", root.getStudyId(), root.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectWriter.writeValueAsString(nodes))
+                .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+
+        UUID[] expectedInOrder = new UUID[]{
+                node2.getId(),
+                node1.getId()
+        };
+        checkColumnsChangedMessageSent(root.getStudyId(), root.getId(), expectedInOrder);
+        checkElementUpdatedMessageSent(root.getStudyId(), userId);
+    }
+
     // This test is for a part of the code that is not used yet
     // We update a node description (this is not used in the front) and we assume that it will emit a nodeUpdated notif
     // If it's not the case or if this test causes problems feel free to update it / remove it as needed
@@ -1334,6 +1363,18 @@ class NetworkModificationTreeTest {
         Message<byte[]> message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
         assertEquals(elementUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
         assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
+    }
+
+    private void checkColumnsChangedMessageSent(UUID studyUuid, UUID parentNodeUuid, UUID[] orderedUuids) {
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(NotificationService.COLUMNS_CHANGED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(parentNodeUuid, message.getHeaders().get(NotificationService.HEADER_PARENT_NODE));
+        String expected = Arrays.stream(orderedUuids)
+                .map(UUID::toString)
+                .map(uuid -> "\"" + uuid + "\"") // Add quotes around each UUID
+                .collect(Collectors.joining(",", "[", "]")); // Join them in JSON format
+        assertEquals(expected, new String(message.getPayload()));
     }
 
     private void checkUpdateNodesMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
