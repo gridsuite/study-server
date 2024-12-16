@@ -315,8 +315,15 @@ public class RootNetworkNodeInfoService {
             .toList();
     }
 
-    public void assertNoRootNetworkModificationInfoIsBuilding(UUID studyUuid) {
+    public void assertNoRootNetworkNodeIsBuilding(UUID studyUuid) {
         if (rootNetworkNodeInfoRepository.existsByStudyUuidAndBuildStatus(studyUuid, BuildStatus.BUILDING)) {
+            throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
+        }
+    }
+
+    public void assertNetworkNodeIsNotBuilding(UUID rootNetworkUuid, UUID nodeUuid) {
+        NodeBuildStatusEmbeddable buildStatusEmbeddable = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        if (buildStatusEmbeddable.getGlobalBuildStatus().isBuilding() || buildStatusEmbeddable.getLocalBuildStatus().isBuilding()) {
             throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
         }
     }

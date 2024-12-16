@@ -318,11 +318,14 @@ public class NetworkModificationService {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam(QUERY_PARAM_ACTION, ModificationsActionType.MOVE.name())
             .queryParam(NETWORK_UUID, networkUuid)
-            .queryParam(REPORT_UUID, rootNetworkNodeInfoEntity.getModificationReports().get(networkModificationNodeInfoEntity.getId()))
             .queryParam(REPORTER_ID, networkModificationNodeInfoEntity.getId())
-            .queryParam(VARIANT_ID, rootNetworkNodeInfoEntity.getVariantId())
             .queryParam("originGroupUuid", originGroupUuid)
             .queryParam("build", buildTargetNode);
+
+        if (rootNetworkNodeInfoEntity != null) {
+            path.queryParam(VARIANT_ID, rootNetworkNodeInfoEntity.getVariantId())
+                .queryParam(REPORT_UUID, rootNetworkNodeInfoEntity.getModificationReports().get(networkModificationNodeInfoEntity.getId()));
+        }
         if (beforeUuid != null) {
             path.queryParam("before", beforeUuid);
         }

@@ -47,6 +47,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.utils.StudyTestUtils;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -198,6 +199,8 @@ class NetworkModificationTreeTest {
     private RootNetworkService rootNetworkService;
     @Autowired
     private StudyService studyService;
+    @Autowired
+    private StudyTestUtils studyTestUtils;
 
     @BeforeEach
     void setUp(final MockWebServer server) {
@@ -1173,6 +1176,7 @@ class NetworkModificationTreeTest {
     void testGetNetworkModificationsToRestoreByNode() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(root.getStudyId());
         NetworkModificationNode node = buildNetworkModificationNode("modification node 1", "", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
@@ -1188,7 +1192,7 @@ class NetworkModificationTreeTest {
 
         node = buildNetworkModificationNode("modification node 3", "", UUID.fromString(MODIFICATION_GROUP_UUID_STRING), VARIANT_ID, null, null, null, null, null, null, null, BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?uuids={modificationID1}&stashed=false", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?uuids={modificationID1}&stashed=false&rootNetworkUuid={rootNetworkUuid}", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING, firstRootNetworkUuid)
             .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
 
@@ -1211,6 +1215,7 @@ class NetworkModificationTreeTest {
     void testGetNetworkModificationsToStashByNode() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(root.getStudyId());
         NetworkModificationNode node = buildNetworkModificationNode("modification node 1", "", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
@@ -1226,7 +1231,7 @@ class NetworkModificationTreeTest {
 
         node = buildNetworkModificationNode("modification node 3", "", UUID.fromString(MODIFICATION_GROUP_UUID_STRING), VARIANT_ID, null, null, null, null, null, null, null, BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?uuids={modificationID1}&stashed=true", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?uuids={modificationID1}&stashed=true&rootNetworkUuid={rootNetworkUuid}", root.getStudyId(), node.getId(), MODIFICATION1_UUID_STRING, firstRootNetworkUuid)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 

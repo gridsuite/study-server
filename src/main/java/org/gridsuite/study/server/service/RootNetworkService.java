@@ -156,7 +156,7 @@ public class RootNetworkService {
         return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).studyUuid(studyEntity.getId()).userId(userId).build());
     }
 
-    public void assertIsRootNetworkInStudy(UUID rootNetworkUuid, UUID studyUuid) {
+    public void assertIsRootNetworkInStudy(UUID studyUuid, UUID rootNetworkUuid) {
         if (!rootNetworkRepository.existsByIdAndStudyId(rootNetworkUuid, studyUuid)) {
             throw new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND);
         }

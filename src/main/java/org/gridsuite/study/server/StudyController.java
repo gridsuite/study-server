@@ -558,9 +558,9 @@ public class StudyController {
                                                         @PathVariable("nodeUuid") UUID nodeUuid,
                                                         @PathVariable("modificationUuid") UUID modificationUuid,
                                                         @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid,
+                                                        @Parameter(description = "active root network uuid - will apply iteratively modifications for this root network only") @RequestParam(value = "rootNetworkUuid") UUID rootNetworkUuid,
                                                         @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.moveModifications(studyUuid, nodeUuid, nodeUuid, rootNetworkUuid, List.of(modificationUuid), beforeUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -572,14 +572,15 @@ public class StudyController {
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
                                                          @RequestParam("action") StudyConstants.ModificationsActionType action,
                                                          @Nullable @RequestParam("originNodeUuid") UUID originNodeUuid,
+                                                         @Parameter(description = "active root network uuid - will apply iteratively modifications for this root network only") @RequestParam(value = "rootNetworkUuid") UUID rootNetworkUuid,
                                                          @RequestBody List<UUID> modificationsToCopyUuidList,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         if (originNodeUuid != null) {
             studyService.assertIsNodeExist(studyUuid, originNodeUuid);
-            studyService.assertCanModifyNode(studyUuid, originNodeUuid, rootNetworkUuid);
+            studyService.assertCanUpdateModifications(studyUuid, originNodeUuid);
         }
         switch (action) {
             case COPY, INSERT:
@@ -1131,10 +1132,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification was created"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> createNetworkModification(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                          @Parameter(description = "Active root network uuid - will apply iteratively modifications for this root network only") @RequestParam(value = "rootNetworkUuid") UUID rootNetworkUuid,
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.createNetworkModification(studyUuid, modificationAttributes, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -1147,9 +1148,8 @@ public class StudyController {
                                                           @Parameter(description = "Network modification UUID") @PathVariable("uuid") UUID networkModificationUuid,
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
-        studyService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, rootNetworkUuid, networkModificationUuid, userId);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, networkModificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1160,9 +1160,8 @@ public class StudyController {
                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                            @Parameter(description = "Network modification UUIDs") @RequestParam(name = "uuids", required = false) List<UUID> networkModificationUuids,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
-        studyService.deleteNetworkModifications(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
 
         return ResponseEntity.ok().build();
     }
@@ -1173,10 +1172,10 @@ public class StudyController {
     public ResponseEntity<Void> stashNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
+                                                               @Parameter(description = "active root network uuid - will apply iteratively modifications for this root network only") @RequestParam(value = "rootNetworkUuid") UUID rootNetworkUuid,
                                                                @Parameter(description = "Stashed Modification") @RequestParam(name = "stashed", required = true) Boolean stashed,
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         if (stashed.booleanValue()) {
             studyService.stashNetworkModifications(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId);
         } else {
@@ -1191,10 +1190,10 @@ public class StudyController {
     public ResponseEntity<Void> updateNetworkModificationsActivation(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
+                                                          @Parameter(description = "active root network uuid - will apply iteratively modifications for this root network only") @RequestParam(value = "rootNetworkUuid") UUID rootNetworkUuid,
                                                           @Parameter(description = "New activated value") @RequestParam(name = "activated", required = true) Boolean activated,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.updateNetworkModificationsActivation(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId, activated);
         return ResponseEntity.ok().build();
     }
@@ -1247,8 +1246,7 @@ public class StudyController {
                                            @Parameter(description = "ids of children to remove") @RequestParam("ids") List<UUID> nodeIds,
                                            @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.deleteNodes(studyUuid, nodeIds, rootNetworkUuid, deleteChildren, userId);
+        studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1365,7 +1363,7 @@ public class StudyController {
                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertNoBuildNoComputationForRootNetworkNode(nodeUuid, rootNetworkUuid);
         studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -1607,8 +1605,7 @@ public class StudyController {
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.createDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
         return ResponseEntity.ok().build();
     }
@@ -1622,8 +1619,7 @@ public class StudyController {
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
         return ResponseEntity.ok().build();
     }
@@ -1637,8 +1633,7 @@ public class StudyController {
                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                               @Parameter(description = "Dynamic simulation event UUIDs") @RequestParam("eventUuids") List<UUID> eventUuids,
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.deleteDynamicSimulationEvents(studyUuid, nodeUuid, userId, eventUuids);
         return ResponseEntity.ok().build();
     }
@@ -1748,7 +1743,7 @@ public class StudyController {
                                                              @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.copyVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }

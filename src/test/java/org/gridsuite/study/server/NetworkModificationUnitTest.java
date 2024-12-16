@@ -185,7 +185,8 @@ class NetworkModificationUnitTest {
     }
 
     private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {
-        studyController.updateNetworkModificationsActivation(studyUuid, node1Uuid, networkModificationUuids, activated, "userId");
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        studyController.updateNetworkModificationsActivation(studyUuid, node1Uuid, networkModificationUuids, firstRootNetworkUuid, activated, "userId");
 
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         checkUpdateBuildStateMessageReceived(studyUuid, nodesToUnbuild);
