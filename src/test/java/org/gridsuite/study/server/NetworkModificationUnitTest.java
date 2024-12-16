@@ -22,6 +22,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.utils.StudyTestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -98,6 +99,8 @@ class NetworkModificationUnitTest {
     private RootNetworkRepository rootNetworkRepository;
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    @Autowired
+    private StudyTestUtils studyTestUtils;
 
     @BeforeEach
     void setup() {
@@ -146,8 +149,9 @@ class NetworkModificationUnitTest {
         assertEquals(BuildStatus.BUILT, rootNetworkNodeInfoEntity1.getNodeBuildStatus().getLocalBuildStatus());
         assertEquals(BuildStatus.BUILT, rootNetworkNodeInfoEntity2.getNodeBuildStatus().getLocalBuildStatus());
         assertEquals(BuildStatus.NOT_BUILT, rootNetworkNodeInfoEntity3.getNodeBuildStatus().getLocalBuildStatus());
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
 
-        studyController.unbuildNode(studyUuid, node1Uuid);
+        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node1Uuid);
 
         /*       rootNode
          *          |

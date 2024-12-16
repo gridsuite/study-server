@@ -422,7 +422,7 @@ class NetworkModificationTest {
         testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode1.getId(), rootNetworkUuid, userId, userProfileQuotaExceededStubId);
 
         // build modificationNode2: cannot be done cause quota is 1 build max (err 403)
-        MvcResult result = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyNameUserIdUuid, modificationNode2.getId())
+        MvcResult result = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyNameUserIdUuid, rootNetworkUuid, modificationNode2.getId())
                         .header("userId", userId)
                         .contentType(APPLICATION_JSON)
                 ).andExpect(status().isForbidden())
@@ -2544,7 +2544,7 @@ class NetworkModificationTest {
 
     private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, UUID profileStubId) throws Exception {
         // build node
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 
@@ -2572,7 +2572,7 @@ class NetworkModificationTest {
 
     private void testBuildAndStopWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, UUID profileStubId) throws Exception {
         // build node
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid)
                         .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
 
@@ -2599,7 +2599,7 @@ class NetworkModificationTest {
         networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
 
         // stop build
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build/stop", studyUuid, nodeUuid))
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build/stop", studyUuid, rootNetworkUuid, nodeUuid))
             .andExpect(status().isOk());
 
         buildStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
@@ -2619,7 +2619,7 @@ class NetworkModificationTest {
     // builds on network 2 will fail
     private void testBuildFailedWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) throws Exception {
         // build node
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid)
                         .header(USER_ID_HEADER, USER_ID))
             .andExpect(status().isOk());
 
@@ -2649,7 +2649,7 @@ class NetworkModificationTest {
     // builds on network 3 will throw an error on networkmodificationservice call
     private void testBuildErrorWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) throws Exception {
         // build node
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid)
                         .header(USER_ID_HEADER, USER_ID))
             .andExpect(status().isInternalServerError());
 
