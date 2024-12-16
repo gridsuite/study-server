@@ -25,7 +25,7 @@ public class MatcherReport extends TypeSafeMatcher<Report> {
 
     @Override
     public boolean matchesSafely(Report m) {
-        return Objects.equals(reference.message(), m.message()) && Objects.equals(reference.severities(), m.severities());
+        return Objects.equals(reference.message(), m.message()) && Objects.equals(reference.severity(), m.severity());
     }
 
     @Override
