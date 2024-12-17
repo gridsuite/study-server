@@ -1723,7 +1723,7 @@ public class StudyController {
     }
 
     @PostMapping(value = "/studies/{studyUuid}/network-visualizations/parameters")
-    @Operation(summary = "set network visualization parameters on study, reset to default ones if empty body")
+    @Operation(summary = "set network visualization parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network visualization parameters are set")})
     public ResponseEntity<Void> setNetworkVisualizationParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,

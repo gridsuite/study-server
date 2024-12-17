@@ -219,6 +219,9 @@ class StudyTest {
     private static final String PROFILE_VOLTAGE_INIT_DUPLICATED_PARAMETERS_UUID_STRING = "d4ce25e1-27a7-401d-a721-04425fe24587";
     private static final String DUPLICATED_VOLTAGE_INIT_PARAMS_JSON = "\"" + PROFILE_VOLTAGE_INIT_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
 
+    private static final String NETWORK_VISUALIZATION_DUPLICATED_PARAMETERS_UUID_STRING = "407a4bec-6f1a-400f-98f0-e5bcf37d4fcf";
+    private static final String DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON = "\"" + NETWORK_VISUALIZATION_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
+
     private static final String DEFAULT_PROVIDER = "defaultProvider";
 
     @Value("${non-evacuated-energy.default-provider}")
@@ -265,6 +268,9 @@ class StudyTest {
 
     @Autowired
     private StateEstimationService stateEstimationService;
+
+    @Autowired
+    private StudyConfigService studyConfigService;
 
     @MockBean
     private EquipmentInfosService equipmentInfosService;
@@ -395,6 +401,7 @@ class StudyTest {
         loadflowService.setLoadFlowServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
         stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
+        studyConfigService.setStudyConfigServerBaseUri(baseUrl);
 
         String baseUrlWireMock = wireMockServer.baseUrl();
         networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
@@ -515,6 +522,12 @@ class StudyTest {
                     }
                 } else if (path.matches("/v1/parameters/.*") && DELETE.equals(request.getMethod())) {
                     return new MockResponse(200);
+                } else if (path.matches("/v1/network-visualizations-params/.*") && DELETE.equals(request.getMethod())) {
+                    return new MockResponse(200);
+                } else if (path.matches("/v1/network-visualizations-params/default")) {
+                    return new MockResponse(200);
+                } else if (path.matches("/v1/network-visualizations-params/duplicate\\?duplicateFrom=.*")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
                 } else if (path.matches("/v1/parameters/.*/provider")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/default-provider")) {
@@ -848,6 +861,7 @@ class StudyTest {
         UUID studyUuid = createStudy(server, "userId", CASE_UUID);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID()); // does not have default params
+        studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
 
         UUID stubUuid = wireMockUtils.stubNetworkModificationDeleteGroup();
@@ -858,7 +872,7 @@ class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(7, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(8, server);
         assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + CASE_UUID)));
@@ -866,6 +880,7 @@ class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getLoadFlowParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSecurityAnalysisParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSensitivityAnalysisParametersUuid())));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-visualizations-params/" + studyEntity.getNetworkVisualizationParametersUuid())));
     }
 
     @Test
@@ -1098,7 +1113,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        int nbRequest = 9;
+        int nbRequest = 10;
         if (parameterDuplicatedUuid != null && !parameterDuplicationSuccess) {
             nbRequest += 5;
         }
@@ -1577,6 +1592,7 @@ class StudyTest {
         studyEntity.setSecurityAnalysisParametersUuid(UUID.randomUUID());
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID());
         studyEntity.setSensitivityAnalysisParametersUuid(UUID.randomUUID());
+        studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
         testDuplicateStudy(mockWebServer, study1Uuid);
     }
@@ -1587,7 +1603,9 @@ class StudyTest {
         StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
         studyEntity.setLoadFlowParametersUuid(null);
         studyEntity.setSecurityAnalysisParametersUuid(null);
+        studyEntity.setVoltageInitParametersUuid(null);
         studyEntity.setSensitivityAnalysisParametersUuid(null);
+        studyEntity.setNetworkVisualizationParametersUuid(null);
         studyRepository.save(studyEntity);
         testDuplicateStudy(mockWebServer, study1Uuid);
     }
@@ -1704,6 +1722,12 @@ class StudyTest {
             assertNotNull(duplicatedStudy.getLoadFlowParametersUuid());
             numberOfRequests++;
         }
+        if (sourceStudy.getNetworkVisualizationParametersUuid() == null) {
+            assertNull(duplicatedStudy.getNetworkVisualizationParametersUuid());
+        } else {
+            assertNotNull(duplicatedStudy.getNetworkVisualizationParametersUuid());
+            numberOfRequests++;
+        }
         if (sourceStudy.getShortCircuitParametersUuid() == null) {
             assertNull(duplicatedStudy.getShortCircuitParametersUuid());
         } else {
@@ -1729,6 +1753,9 @@ class StudyTest {
         }
         if (sourceStudy.getSensitivityAnalysisParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getSensitivityAnalysisParametersUuid())).count());
+        }
+        if (sourceStudy.getNetworkVisualizationParametersUuid() != null) {
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/network-visualizations-params/duplicate\\?duplicateFrom=" + sourceStudy.getNetworkVisualizationParametersUuid())).count());
         }
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*/duplicate")).count());
         return duplicatedStudy;
