@@ -178,6 +178,13 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/root-networks")
+    @Operation(summary = "Get root networks for study")
+    @ApiResponse(responseCode = "200", description = "List of root networks")
+    public ResponseEntity<List<RootNetworkMinimalInfos>> getRootNetworks(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(rootNetworkService.getRootNetworks(studyUuid));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/root-networks")
     @Operation(summary = "Create root network for study")
     @ApiResponse(responseCode = "200", description = "Root network created")

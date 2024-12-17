@@ -7,6 +7,7 @@
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -495,6 +496,36 @@ class RootNetworkTest {
         Mockito.verify(studyService, Mockito.times(1)).invalidateBuild(studyUuid, rootNode.getIdNode(), rootNetworkUuid, false,
             false,
             true);
+    }
+
+    @Test
+    void getRootNetworks() throws Exception {
+        // create study with one root node, two network modification node and a root network
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+
+        // create a second root network
+        RootNetworkEntity rootNetworkEntity = rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
+            .caseInfos(new CaseInfos(CASE_UUID2, CASE_NAME2, CASE_FORMAT2))
+            .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
+            .reportUuid(REPORT_UUID2)
+            .id(UUID.randomUUID())
+            .build());
+
+        // create a request of root network creation
+        UUID requestUuid = UUID.randomUUID();
+        rootNetworkCreationRequestRepository.save(new RootNetworkCreationRequestEntity(requestUuid, studyEntity.getId(), USER_ID));
+
+        String response = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks", studyEntity.getId()))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        List<RootNetworkMinimalInfos> result = objectMapper.readValue(response, new TypeReference<>() { });
+        assertEquals(3, result.size());
+
+        RootNetworkMinimalInfos requestRootNetwork = result.stream().filter(rootNetworkMinimalInfos -> rootNetworkMinimalInfos.rootNetworkUuid().equals(requestUuid)).findFirst().orElseThrow(() -> new Exception("this should be in the results"));
+        assertTrue(requestRootNetwork.isCreating());
+        RootNetworkMinimalInfos createdRootNetwork = result.stream().filter(rootNetworkMinimalInfos -> rootNetworkMinimalInfos.rootNetworkUuid().equals(rootNetworkEntity.getId())).findFirst().orElseThrow(() -> new Exception("this should be in the results"));
+        assertFalse(createdRootNetwork.isCreating());
     }
 
     private Map<String, Object> createConsumeCaseImportSucceededHeaders(String networkUuid, String networkId, String caseFormat, String caseName, CaseImportReceiver caseImportReceiver, Map<String, String> importParameters) throws JsonProcessingException {
