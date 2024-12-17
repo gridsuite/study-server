@@ -22,6 +22,6 @@ public record Report(
         UUID id,
         UUID parentId,
         String message,
-        List<StudyConstants.Severity> severities,
+        StudyConstants.Severity severity,
         List<Report> subReports
 ) { }
