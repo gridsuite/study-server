@@ -889,7 +889,7 @@ class NetworkModificationTreeTest {
         nodes.add(node1);
         nodes.add(node2);
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes/columnpositions/{parentUuid}", root.getStudyId(), root.getId())
+        mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes/{parentUuid}/children-column-positions", root.getStudyId(), root.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(nodes))
                 .header(USER_ID_HEADER, "userId"))
