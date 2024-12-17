@@ -2320,7 +2320,6 @@ public class StudyService {
 
     public String exportFilter(UUID rootNetworkUuid, UUID filterUuid) {
         // will use root node network of the study
-        //TODO: buggy, what networkUuid to choose ?
         return filterService.exportFilter(rootNetworkService.getNetworkUuid(rootNetworkUuid), filterUuid);
     }
 

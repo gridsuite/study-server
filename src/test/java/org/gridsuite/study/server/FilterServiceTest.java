@@ -15,6 +15,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.FilterService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.utils.StudyTestUtils;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -74,6 +75,9 @@ class FilterServiceTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private StudyTestUtils studyTestUtils;
+
     @BeforeEach
     void setup() {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
@@ -117,6 +121,7 @@ class FilterServiceTest {
     void testEvaluateFilter() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         // whatever string is allowed but given here a json string for more expressive
@@ -148,8 +153,8 @@ class FilterServiceTest {
 
         UUID stubUuid = wireMockUtils.stubFilterEvaluate(NETWORK_UUID_STRING, responseBody);
 
-        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/filters/evaluate",
-                        studyNameUserIdUuid, rootNodeUuid)
+        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/evaluate",
+                        studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
                         .content(sendBody).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -165,6 +170,7 @@ class FilterServiceTest {
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         // whatever string is allowed but given here a json string for more expressive
@@ -187,8 +193,8 @@ class FilterServiceTest {
                     }
                 """;
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/filters/evaluate",
-                        studyNameUserIdUuid, rootNodeUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/evaluate",
+                        studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
                         .content(sendBody).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().is5xxServerError())
                 .andReturn();
@@ -202,6 +208,7 @@ class FilterServiceTest {
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         // whatever string is allowed but given here a json string for more expressive
@@ -224,8 +231,8 @@ class FilterServiceTest {
                     }
                 """;
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/filters/evaluate",
-                        studyNameUserIdUuid, rootNodeUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/evaluate",
+                        studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
                         .content(sendBody).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().is5xxServerError())
                 .andReturn();
@@ -238,6 +245,7 @@ class FilterServiceTest {
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
         String responseBody = """
                 [
                     {"id":"MANDA7COND.41","type":"SHUNT_COMPENSATOR","distributionKey":null},
@@ -246,8 +254,8 @@ class FilterServiceTest {
             """;
         UUID stubUuid = wireMockUtils.stubFilterExport(NETWORK_UUID_STRING, FILTER_UUID_STRING, responseBody);
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/filters/{filterId}/elements",
-                        studyUuid, FILTER_UUID_STRING))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/filters/{filterId}/elements",
+                        studyUuid, firstRootNetworkUuid, FILTER_UUID_STRING))
                 .andExpect(status().isOk())
                 .andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
