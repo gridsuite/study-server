@@ -885,9 +885,7 @@ class NetworkModificationTreeTest {
         assertNull(node1.getColumnPosition());
         node1.setColumnPosition(1);
         node2.setColumnPosition(0);
-        ArrayList<NetworkModificationNode> nodes = new ArrayList<>();
-        nodes.add(node1);
-        nodes.add(node2);
+        List<NetworkModificationNode> nodes = List.of(node1, node2);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes/{parentUuid}/children-column-positions", root.getStudyId(), root.getId())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -895,11 +893,12 @@ class NetworkModificationTreeTest {
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
 
-        UUID[] expectedInOrder = new UUID[]{
-                node2.getId(),
-                node1.getId()
-        };
-        checkColumnsChangedMessageSent(root.getStudyId(), root.getId(), expectedInOrder);
+        List<UUID> nodesUuids = List.of(node2.getId(), node1.getId());
+        for (NetworkModificationNodeInfoEntity entity : networkModificationNodeInfoRepository.findAllById(nodesUuids)) {
+            assertEquals(entity.getId().equals(node2.getId()) ? 0 : 1, entity.getColumnPosition());
+        }
+
+        checkColumnsChangedMessageSent(root.getStudyId(), root.getId(), nodesUuids);
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
     }
 
@@ -1365,7 +1364,7 @@ class NetworkModificationTreeTest {
         assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
     }
 
-    private void checkColumnsChangedMessageSent(UUID studyUuid, UUID parentNodeUuid, UUID[] orderedUuids) throws Exception {
+    private void checkColumnsChangedMessageSent(UUID studyUuid, UUID parentNodeUuid, List<UUID> orderedUuids) throws Exception {
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.COLUMNS_CHANGED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
