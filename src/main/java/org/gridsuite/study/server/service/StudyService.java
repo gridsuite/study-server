@@ -287,7 +287,7 @@ public class StudyService {
     }
 
     @Transactional
-    public RootNetworkCreationRequestInfos createRootNetwork(UUID studyUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
+    public RootNetworkCreationRequestInfos createRootNetworkRequest(UUID studyUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
         UUID importReportUuid = UUID.randomUUID();
@@ -314,6 +314,22 @@ public class StudyService {
         } else {
             rootNetworkService.delete(rootNetworkInfos);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public void updateNetworkRequest(UUID studyUuid, UUID rootNetworkUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
+        UUID importReportUuid = UUID.randomUUID();
+        persistNetwork(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+    }
+
+    @Transactional
+    public void updateNetwork(UUID studyUuid, UUID rootNetworkUuid, RootNetworkInfos rootNetworkInfos) {
+        // Update case for a given root network
+        rootNetworkService.updateNetwork(rootNetworkInfos);
+
+        // Invalidate nodes of the updated root network
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        invalidateBuild(studyUuid, rootNodeUuid, rootNetworkUuid, false, false, true);
     }
 
     /**
@@ -504,7 +520,7 @@ public class StudyService {
     }
 
     @Transactional
-    public CreatedStudyBasicInfos updateNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId, NetworkInfos networkInfos) {
+    public CreatedStudyBasicInfos updateNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
 
@@ -791,12 +807,13 @@ public class StudyService {
     }
 
     @Transactional
-    public void setSecurityAnalysisParametersValues(UUID studyUuid, String parameters, String userId) {
+    public boolean setSecurityAnalysisParametersValues(UUID studyUuid, String parameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        createOrUpdateSecurityAnalysisParameters(studyUuid, studyEntity, parameters);
+        boolean userProfileIssue = createOrUpdateSecurityAnalysisParameters(studyUuid, studyEntity, parameters, userId);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, SECURITY_ANALYSIS);
+        return userProfileIssue;
     }
 
     public NonEvacuatedEnergyParametersInfos getNonEvacuatedEnergyParametersInfos(UUID studyUuid) {
@@ -910,8 +927,15 @@ public class StudyService {
     }
 
     @Transactional
-    public void setShortCircuitParameters(UUID studyUuid, @Nullable String shortCircuitParametersInfos, String userId) {
+    public boolean setShortCircuitParameters(UUID studyUuid, @Nullable String shortCircuitParametersInfos, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        boolean userProfileIssue = createOrUpdateShortcircuitParameters(studyEntity, shortCircuitParametersInfos, userId);
+        notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitComputationParamsChanged(studyUuid, SHORT_CIRCUIT);
+        return userProfileIssue;
+    }
+
+    public boolean createOrUpdateShortcircuitParameters(StudyEntity studyEntity, String parameters, String userId) {
         /* +-----------------------+----------------+-----------------------------------------+
          * | entity.parametersUuid | parametersInfo | action                                  |
          * | no                    | no             | create default ones                     |
@@ -920,15 +944,41 @@ public class StudyService {
          * | yes                   | yes            | update existing ones                    |
          * +-----------------------+----------------+-----------------------------------------+
          */
-        if (studyEntity.getShortCircuitParametersUuid() != null) {
-            shortCircuitService.updateParameters(studyEntity.getShortCircuitParametersUuid(), shortCircuitParametersInfos);
-        } else {
-            studyEntity.setShortCircuitParametersUuid(shortCircuitService.createParameters(shortCircuitParametersInfos));
-            studyRepository.save(studyEntity);
+        boolean userProfileIssue = false;
+        UUID existingShortcircuitParametersUuid = studyEntity.getShortCircuitParametersUuid();
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId).orElse(null) : null;
+        if (parameters == null && userProfileInfos != null && userProfileInfos.getShortcircuitParameterId() != null) {
+            // reset case, with existing profile, having default short circuit params
+            try {
+                UUID shortcircuitParametersFromProfileUuid = shortCircuitService.duplicateParameters(userProfileInfos.getShortcircuitParameterId());
+                studyEntity.setShortCircuitParametersUuid(shortcircuitParametersFromProfileUuid);
+                removeShortcircuitParameters(existingShortcircuitParametersUuid);
+                return userProfileIssue;
+            } catch (Exception e) {
+                userProfileIssue = true;
+                LOGGER.error(String.format("Could not duplicate short circuit parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getShortcircuitParameterId(), userId, userProfileInfos.getName()), e);
+                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
+            }
         }
-        notificationService.emitElementUpdated(studyUuid, userId);
-        notificationService.emitComputationParamsChanged(studyUuid, SHORT_CIRCUIT);
 
+        if (existingShortcircuitParametersUuid == null) {
+            existingShortcircuitParametersUuid = shortCircuitService.createParameters(parameters);
+            studyEntity.setShortCircuitParametersUuid(existingShortcircuitParametersUuid);
+        } else {
+            shortCircuitService.updateParameters(existingShortcircuitParametersUuid, parameters);
+        }
+        return userProfileIssue;
+    }
+
+    private void removeShortcircuitParameters(@Nullable UUID shortcircuitParametersUuid) {
+        if (shortcircuitParametersUuid != null) {
+            try {
+                shortCircuitService.deleteShortcircuitParameters(shortcircuitParametersUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove short circuit parameters with uuid:" + shortcircuitParametersUuid, e);
+            }
+        }
     }
 
     @Transactional
@@ -1163,30 +1213,87 @@ public class StudyService {
         });
     }
 
-    public void createOrUpdateVoltageInitParameters(StudyEntity studyEntity, VoltageInitParametersInfos parameters) {
-        UUID voltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
-        if (voltageInitParametersUuid == null) {
-            voltageInitParametersUuid = voltageInitService.createVoltageInitParameters(parameters);
-            studyEntity.setVoltageInitParametersUuid(voltageInitParametersUuid);
-        } else {
-            VoltageInitParametersInfos oldParameters = voltageInitService.getVoltageInitParameters(voltageInitParametersUuid);
-            if (!Objects.isNull(parameters) && parameters.equals(oldParameters)) {
-                return;
+    public boolean createOrUpdateVoltageInitParameters(StudyEntity studyEntity, VoltageInitParametersInfos parameters, String userId) {
+        boolean userProfileIssue = false;
+        UUID existingVoltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId).orElse(null) : null;
+        if (parameters == null && userProfileInfos != null && userProfileInfos.getVoltageInitParameterId() != null) {
+            // reset case, with existing profile, having default voltage init params
+            try {
+                UUID voltageInitParametersFromProfileUuid = voltageInitService.duplicateVoltageInitParameters(userProfileInfos.getVoltageInitParameterId());
+                studyEntity.setVoltageInitParametersUuid(voltageInitParametersFromProfileUuid);
+                removeVoltageInitParameters(existingVoltageInitParametersUuid);
+                return userProfileIssue;
+            } catch (Exception e) {
+                userProfileIssue = true;
+                LOGGER.error(String.format("Could not duplicate voltage init parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getVoltageInitParameterId(), userId, userProfileInfos.getName()), e);
+                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
             }
-            voltageInitService.updateVoltageInitParameters(voltageInitParametersUuid, parameters);
+        }
+
+        if (existingVoltageInitParametersUuid == null) {
+            existingVoltageInitParametersUuid = voltageInitService.createVoltageInitParameters(parameters);
+            studyEntity.setVoltageInitParametersUuid(existingVoltageInitParametersUuid);
+        } else {
+            VoltageInitParametersInfos oldParameters = voltageInitService.getVoltageInitParameters(existingVoltageInitParametersUuid);
+            if (Objects.isNull(parameters) || !parameters.equals(oldParameters)) {
+                voltageInitService.updateVoltageInitParameters(existingVoltageInitParametersUuid, parameters);
+            }
         }
         invalidateVoltageInitStatusOnAllNodes(studyEntity.getId());
+
+        return userProfileIssue;
     }
 
-    public void createOrUpdateSecurityAnalysisParameters(UUID studyUuid, StudyEntity studyEntity, String parameters) {
-        UUID securityAnalysisParametersUuid = studyEntity.getSecurityAnalysisParametersUuid();
-        if (securityAnalysisParametersUuid == null) {
-            securityAnalysisParametersUuid = securityAnalysisService.createSecurityAnalysisParameters(parameters);
-            studyEntity.setSecurityAnalysisParametersUuid(securityAnalysisParametersUuid);
+    private void removeVoltageInitParameters(@Nullable UUID voltageInitParametersUuid) {
+        if (voltageInitParametersUuid != null) {
+            try {
+                voltageInitService.deleteVoltageInitParameters(voltageInitParametersUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove voltage init parameters with uuid:" + voltageInitParametersUuid, e);
+            }
+        }
+    }
+
+    public boolean createOrUpdateSecurityAnalysisParameters(UUID studyUuid, StudyEntity studyEntity, String parameters, String userId) {
+        boolean userProfileIssue = false;
+        UUID existingSecurityAnalysisParametersUuid = studyEntity.getSecurityAnalysisParametersUuid();
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId).orElse(null) : null;
+        if (parameters == null && userProfileInfos != null && userProfileInfos.getSecurityAnalysisParameterId() != null) {
+            // reset case, with existing profile, having default security analysis params
+            try {
+                UUID securityAnalysisParametersFromProfileUuid = securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId());
+                studyEntity.setSecurityAnalysisParametersUuid(securityAnalysisParametersFromProfileUuid);
+                removeSecurityAnalysisParameters(existingSecurityAnalysisParametersUuid);
+                return userProfileIssue;
+            } catch (Exception e) {
+                userProfileIssue = true;
+                LOGGER.error(String.format("Could not duplicate security analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                        userProfileInfos.getSecurityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
+                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
+            }
+        }
+
+        if (existingSecurityAnalysisParametersUuid == null) {
+            existingSecurityAnalysisParametersUuid = securityAnalysisService.createSecurityAnalysisParameters(parameters);
+            studyEntity.setSecurityAnalysisParametersUuid(existingSecurityAnalysisParametersUuid);
         } else {
-            securityAnalysisService.updateSecurityAnalysisParameters(securityAnalysisParametersUuid, parameters);
+            securityAnalysisService.updateSecurityAnalysisParameters(existingSecurityAnalysisParametersUuid, parameters);
         }
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
+
+        return userProfileIssue;
+    }
+
+    private void removeSecurityAnalysisParameters(@Nullable UUID securityAnalysisParametersUuid) {
+        if (securityAnalysisParametersUuid != null) {
+            try {
+                securityAnalysisService.deleteSecurityAnalysisParameters(securityAnalysisParametersUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove security analysis parameters with uuid:" + securityAnalysisParametersUuid, e);
+            }
+        }
     }
 
     public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
@@ -1828,7 +1935,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void setVoltageInitParameters(UUID studyUuid, StudyVoltageInitParameters parameters, String userId) {
+    public boolean setVoltageInitParameters(UUID studyUuid, StudyVoltageInitParameters parameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         var voltageInitParameters = studyEntity.getVoltageInitParameters();
         if (voltageInitParameters == null) {
@@ -1837,11 +1944,11 @@ public class StudyService {
         } else {
             voltageInitParameters.setApplyModifications(parameters.isApplyModifications());
         }
-        createOrUpdateVoltageInitParameters(studyEntity, parameters.getComputationParameters());
+        boolean userProfileIssue = createOrUpdateVoltageInitParameters(studyEntity, parameters.getComputationParameters(), userId);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, VOLTAGE_INITIALIZATION);
-
+        return userProfileIssue;
     }
 
     public StudyVoltageInitParameters getVoltageInitParameters(UUID studyUuid) {
@@ -2045,11 +2152,12 @@ public class StudyService {
     }
 
     @Transactional
-    public void setSensitivityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
-        createOrUpdateSensitivityAnalysisParameters(studyUuid, parameters);
+    public boolean setSensitivityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
+        boolean userProfileIssue = createOrUpdateSensitivityAnalysisParameters(studyUuid, parameters, userId);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, SENSITIVITY_ANALYSIS);
+        return userProfileIssue;
     }
 
     @Transactional
@@ -2062,16 +2170,46 @@ public class StudyService {
 
     }
 
-    public void createOrUpdateSensitivityAnalysisParameters(UUID studyUuid, String parameters) {
+    public boolean createOrUpdateSensitivityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID sensitivityAnalysisParametersUuid = studyEntity.getSensitivityAnalysisParametersUuid();
-        if (sensitivityAnalysisParametersUuid == null) {
-            sensitivityAnalysisParametersUuid = sensitivityAnalysisService.createSensitivityAnalysisParameters(parameters);
-            studyEntity.setSensitivityAnalysisParametersUuid(sensitivityAnalysisParametersUuid);
+
+        boolean userProfileIssue = false;
+        UUID existingSensitivityAnalysisParametersUuid = studyEntity.getSensitivityAnalysisParametersUuid();
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId).orElse(null) : null;
+        if (parameters == null && userProfileInfos != null && userProfileInfos.getSensitivityAnalysisParameterId() != null) {
+            // reset case, with existing profile, having default sensitivity analysis params
+            try {
+                UUID sensitivityAnalysisParametersFromProfileUuid = sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(userProfileInfos.getSensitivityAnalysisParameterId());
+                studyEntity.setSensitivityAnalysisParametersUuid(sensitivityAnalysisParametersFromProfileUuid);
+                removeSensitivityAnalysisParameters(existingSensitivityAnalysisParametersUuid);
+                return userProfileIssue;
+            } catch (Exception e) {
+                userProfileIssue = true;
+                LOGGER.error(String.format("Could not duplicate sensitivity analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getSensitivityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
+                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
+            }
+        }
+
+        if (existingSensitivityAnalysisParametersUuid == null) {
+            existingSensitivityAnalysisParametersUuid = sensitivityAnalysisService.createSensitivityAnalysisParameters(parameters);
+            studyEntity.setSensitivityAnalysisParametersUuid(existingSensitivityAnalysisParametersUuid);
         } else {
-            sensitivityAnalysisService.updateSensitivityAnalysisParameters(sensitivityAnalysisParametersUuid, parameters);
+            sensitivityAnalysisService.updateSensitivityAnalysisParameters(existingSensitivityAnalysisParametersUuid, parameters);
         }
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
+
+        return userProfileIssue;
+    }
+
+    private void removeSensitivityAnalysisParameters(@Nullable UUID sensitivityAnalysisParametersUuid) {
+        if (sensitivityAnalysisParametersUuid != null) {
+            try {
+                sensitivityAnalysisService.deleteSensitivityAnalysisParameters(sensitivityAnalysisParametersUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove sensitivity analysis parameters with uuid:" + sensitivityAnalysisParametersUuid, e);
+            }
+        }
     }
 
     public void updateNonEvacuatedEnergyParameters(UUID studyUuid, NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {
