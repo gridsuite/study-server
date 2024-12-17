@@ -109,12 +109,12 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudies());
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/case/name")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/case/name")
     @Operation(summary = "Get study case name")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study case name"),
                            @ApiResponse(responseCode = "204", description = "The study has no case name attached")})
-    public ResponseEntity<String> getStudyCaseName(@PathVariable("studyUuid") UUID studyUuid) {
-        String studyCaseName = rootNetworkService.getCaseName(studyService.getStudyFirstRootNetworkUuid(studyUuid));
+    public ResponseEntity<String> getStudyCaseName(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        String studyCaseName = rootNetworkService.getCaseName(rootNetworkUuid);
         return StringUtils.isEmpty(studyCaseName) ? ResponseEntity.noContent().build() : ResponseEntity.ok().body(studyCaseName);
     }
 
@@ -248,59 +248,60 @@ public class StudyController {
                                               @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                               @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode,
                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.moveStudyNode(studyUuid, nodeToCutUuid, rootNetworkUuid, referenceNodeUuid, insertMode, userId);
+        studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId);
         return ResponseEntity.ok().build();
     }
 
-    @RequestMapping(value = "/studies/{studyUuid}/network", method = RequestMethod.HEAD)
+    @RequestMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", method = RequestMethod.HEAD)
     @Operation(summary = "check study root network existence")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The network does exist"),
         @ApiResponse(responseCode = "204", description = "The network doesn't exist")})
-    public ResponseEntity<Void> checkNetworkExistence(@PathVariable("studyUuid") UUID studyUuid) {
-        UUID networkUUID = rootNetworkService.getNetworkUuid(studyService.getStudyFirstRootNetworkUuid(studyUuid));
+    public ResponseEntity<Void> checkNetworkExistence(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        UUID networkUUID = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         return networkStoreService.doesNetworkExist(networkUUID)
             ? ResponseEntity.ok().build()
             : ResponseEntity.noContent().build();
 
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/network", params = {"caseUuid"})
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", params = {"caseUuid"})
     @Operation(summary = "recreate study network of a study from an existing case")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Study network recreation has started"),
         @ApiResponse(responseCode = "424", description = "The case doesn't exist")})
     public ResponseEntity<BasicStudyInfos> recreateNetworkFromCase(@PathVariable("studyUuid") UUID studyUuid,
+                                                                 @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                  @RequestBody(required = false) Map<String, Object> importParameters,
                                                                  @RequestParam(value = "caseUuid") UUID caseUuid,
                                                                  @Parameter(description = "case format") @RequestParam(name = "caseFormat", required = false) String caseFormat,
                                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.recreateNetwork(caseUuid, userId, studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), caseFormat, importParameters);
+        studyService.recreateNetwork(caseUuid, userId, studyUuid, rootNetworkUuid, caseFormat, importParameters);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/network")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network")
     @Operation(summary = "recreate study network of a study from its case")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Study network recreation has started"),
         @ApiResponse(responseCode = "424", description = "The study's case doesn't exist")})
     public ResponseEntity<BasicStudyInfos> recreateStudyNetwork(@PathVariable("studyUuid") UUID studyUuid,
+                                                                @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                 @RequestHeader(HEADER_USER_ID) String userId,
                                                                 @Parameter(description = "case format") @RequestParam(name = "caseFormat", required = false) String caseFormat
     ) {
-        studyService.recreateNetwork(userId, studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), caseFormat);
+        studyService.recreateNetwork(userId, studyUuid, rootNetworkUuid, caseFormat);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/indexation/status")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status")
     @Operation(summary = "check study indexation")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The study indexation status"),
         @ApiResponse(responseCode = "204", description = "The study indexation status doesn't exist"),
         @ApiResponse(responseCode = "404", description = "The study or network doesn't exist")})
-    public ResponseEntity<String> checkStudyIndexationStatus(@PathVariable("studyUuid") UUID studyUuid) {
-        String result = studyService.getStudyIndexationStatus(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)).name();
+    public ResponseEntity<String> checkStudyIndexationStatus(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        String result = studyService.getStudyIndexationStatus(studyUuid, rootNetworkUuid).name();
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -315,8 +316,7 @@ public class StudyController {
                                                 @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCutParentNodeUuid") UUID subtreeToCutParentNodeUuid,
                                                 @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, rootNetworkUuid, referenceNodeUuid, userId);
+        studyService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, referenceNodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1274,8 +1274,7 @@ public class StudyController {
                                                  @Parameter(description = "id of child to delete (move to trash)") @PathVariable("id") UUID nodeId,
                                                  @Parameter(description = "stashChildren") @RequestParam(value = "stashChildren", defaultValue = "false") boolean stashChildren,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.stashNode(studyUuid, nodeId, rootNetworkUuid, stashChildren, userId);
+        studyService.stashNode(studyUuid, nodeId, stashChildren, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1436,11 +1435,12 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getDefaultDynamicSimulationProvider());
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/reindex-all")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all")
     @Operation(summary = "reindex the study")
     @ApiResponse(responseCode = "200", description = "Study reindexed")
-    public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        studyService.reindexStudy(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+    public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                             @Parameter(description = "root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        studyService.reindexStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
     }
 

@@ -1402,7 +1402,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID rootNetworkUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
+    public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         List<NodeEntity> oldChildren = null;
         checkStudyContainsNode(studyUuid, nodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
@@ -1420,7 +1420,9 @@ public class StudyService {
             updateStatuses(studyUuid, nodeToMoveUuid, false, true, true);
             oldChildren.forEach(child -> updateStatuses(studyUuid, child.getIdNode(), false, true, true));
         } else {
-            invalidateBuild(studyUuid, nodeToMoveUuid, rootNetworkUuid, false, true, true);
+            rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
+                invalidateBuild(studyUuid, nodeToMoveUuid, rootNetworkEntity.getId(), false, true, true);
+            });
         }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
@@ -1438,7 +1440,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void moveStudySubtree(UUID studyUuid, UUID parentNodeToMoveUuid, UUID rootNetworkUuid, UUID referenceNodeUuid, String userId) {
+    public void moveStudySubtree(UUID studyUuid, UUID parentNodeToMoveUuid, UUID referenceNodeUuid, String userId) {
         checkStudyContainsNode(studyUuid, parentNodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
 
@@ -1448,18 +1450,21 @@ public class StudyService {
         }
         networkModificationTreeService.moveStudySubtree(parentNodeToMoveUuid, referenceNodeUuid);
 
-        if (networkModificationTreeService.getNodeBuildStatus(parentNodeToMoveUuid, rootNetworkUuid).isBuilt()) {
-            updateStatuses(studyUuid, parentNodeToMoveUuid, false, true, true);
-        }
-        allChildren.stream()
+        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
+            UUID rootNetworkUuid = rootNetworkEntity.getId();
+            if (networkModificationTreeService.getNodeBuildStatus(parentNodeToMoveUuid, rootNetworkUuid).isBuilt()) {
+                updateStatuses(studyUuid, parentNodeToMoveUuid, false, true, true);
+            }
+            allChildren.stream()
                 .filter(childUuid -> networkModificationTreeService.getNodeBuildStatus(childUuid, rootNetworkUuid).isBuilt())
                 .forEach(childUuid -> updateStatuses(studyUuid, childUuid, false, true, true));
+
+        });
 
         notificationService.emitSubtreeMoved(studyUuid, parentNodeToMoveUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    // TODO Need to deal with all root networks
     public void invalidateBuild(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateOnlyTargetNode, boolean deleteVoltageInitResults) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
@@ -1639,11 +1644,13 @@ public class StudyService {
     }
 
     @Transactional
-    public void stashNode(UUID studyUuid, UUID nodeId, UUID rootNetworkUuid, boolean stashChildren, String userId) {
+    public void stashNode(UUID studyUuid, UUID nodeId, boolean stashChildren, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         boolean invalidateChildrenBuild = stashChildren || networkModificationTreeService.hasModifications(nodeId, false);
-        invalidateBuild(studyUuid, nodeId, rootNetworkUuid, false, !invalidateChildrenBuild, true);
+        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
+            invalidateBuild(studyUuid, nodeId, rootNetworkEntity.getId(), false, !invalidateChildrenBuild, true);
+        });
         networkModificationTreeService.doStashNode(nodeId, stashChildren);
 
         if (startTime.get() != null) {

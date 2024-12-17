@@ -18,6 +18,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.CaseService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.utils.StudyTestUtils;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -74,6 +75,8 @@ class CaseTest {
 
     //output destinations
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
+    @Autowired
+    private StudyTestUtils studyTestUtils;
 
     @BeforeEach
     void setup(final MockWebServer server) {
@@ -102,11 +105,12 @@ class CaseTest {
     void getCaseName() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, CASE_NAME);
         UUID study1Uuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/case/name", study1Uuid, firstRootNetworkUuid)).andExpectAll(
                 status().isOk(),
                 content().string(CASE_NAME));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", UUID.randomUUID()))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/case/name", UUID.randomUUID(), UUID.randomUUID()))
                 .andExpect(status().isNotFound());
     }
 

@@ -2563,15 +2563,16 @@ class StudyTest {
 
     @Test
     void reindexStudyTest(final MockWebServer server) throws Exception {
-        mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", UUID.randomUUID()))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", UUID.randomUUID(), UUID.randomUUID()))
             .andExpect(status().isNotFound());
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", UUID.randomUUID()))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status", UUID.randomUUID(), UUID.randomUUID()))
             .andExpectAll(status().isNotFound());
 
         UUID notExistingNetworkStudyUuid = createStudy(server, "userId", NOT_EXISTING_NETWORK_CASE_UUID);
+        UUID notExistingNetworkRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(notExistingNetworkStudyUuid);
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", notExistingNetworkStudyUuid))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", notExistingNetworkStudyUuid, notExistingNetworkRootNetworkUuid))
             .andExpect(status().isInternalServerError());
         Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
         Message<byte[]> indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
@@ -2579,20 +2580,21 @@ class StudyTest {
         var requests = TestUtils.getRequestsWithBodyDone(1, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/reindex-all")));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", notExistingNetworkStudyUuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status", notExistingNetworkStudyUuid, notExistingNetworkRootNetworkUuid))
             .andExpectAll(status().isInternalServerError());
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/indexed-equipments")).count());
 
         UUID study1Uuid = createStudy(server, "userId", CASE_UUID);
+        UUID study1RootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", study1Uuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status", study1Uuid, study1RootNetworkUuid))
             .andExpectAll(status().isOk(),
                         content().string("NOT_INDEXED"));
         indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", study1Uuid))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", study1Uuid, study1RootNetworkUuid))
             .andExpect(status().isOk());
 
         indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
@@ -2600,7 +2602,7 @@ class StudyTest {
         assertEquals(study1Uuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/indexation/status", study1Uuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status", study1Uuid, study1RootNetworkUuid))
             .andExpectAll(status().isOk(),
                         content().string("INDEXED"));
 
@@ -2613,7 +2615,7 @@ class StudyTest {
         assertEquals(study1Uuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", study1Uuid))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", study1Uuid, study1RootNetworkUuid))
             .andExpect(status().is5xxServerError());
         indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
         indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);

@@ -542,5 +542,6 @@ class RootNetworkTest {
     @AfterEach
     void tearDown() {
         TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
+        rootNetworkCreationRequestRepository.deleteAll();
     }
 }
