@@ -17,6 +17,7 @@ import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -132,10 +133,7 @@ public class VoltageInitService {
         }
     }
 
-    public UUID createVoltageInitParameters(VoltageInitParametersInfos parameters) {
-
-        Objects.requireNonNull(parameters);
-
+    public UUID createVoltageInitParameters(@Nullable VoltageInitParametersInfos parameters) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters")
                 .buildAndExpand()
@@ -157,10 +155,7 @@ public class VoltageInitService {
         return parametersUuid;
     }
 
-    public void updateVoltageInitParameters(UUID parametersUuid, VoltageInitParametersInfos parameters) {
-
-        Objects.requireNonNull(parameters);
-
+    public void updateVoltageInitParameters(UUID parametersUuid, @Nullable VoltageInitParametersInfos parameters) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid)
@@ -188,15 +183,15 @@ public class VoltageInitService {
                 .buildAndExpand()
                 .toUriString();
 
-        UUID parametersUuid;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
         try {
-            parametersUuid = restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+            return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, CREATE_VOLTAGE_INIT_PARAMETERS_FAILED);
         }
-
-        return parametersUuid;
     }
 
     public void deleteVoltageInitParameters(UUID parametersUuid) {

@@ -18,6 +18,7 @@ import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -339,10 +340,7 @@ public class SensitivityAnalysisService {
         }
     }
 
-    public void updateSensitivityAnalysisParameters(UUID parametersUuid, String parameters) {
-
-        Objects.requireNonNull(parameters);
-
+    public void updateSensitivityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid)
