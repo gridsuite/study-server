@@ -287,7 +287,7 @@ public class StudyService {
     }
 
     @Transactional
-    public RootNetworkCreationRequestInfos createRootNetwork(UUID studyUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
+    public RootNetworkCreationRequestInfos createRootNetworkRequest(UUID studyUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
         UUID importReportUuid = UUID.randomUUID();
@@ -314,6 +314,22 @@ public class StudyService {
         } else {
             rootNetworkService.delete(rootNetworkInfos);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public void updateNetworkRequest(UUID studyUuid, UUID rootNetworkUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
+        UUID importReportUuid = UUID.randomUUID();
+        persistNetwork(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+    }
+
+    @Transactional
+    public void updateNetwork(UUID studyUuid, UUID rootNetworkUuid, RootNetworkInfos rootNetworkInfos) {
+        // Update case for a given root network
+        rootNetworkService.updateNetwork(rootNetworkInfos);
+
+        // Invalidate nodes of the updated root network
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        invalidateBuild(studyUuid, rootNodeUuid, rootNetworkUuid, false, false, true);
     }
 
     /**
@@ -504,7 +520,7 @@ public class StudyService {
     }
 
     @Transactional
-    public CreatedStudyBasicInfos updateNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId, NetworkInfos networkInfos) {
+    public CreatedStudyBasicInfos updateNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
 
