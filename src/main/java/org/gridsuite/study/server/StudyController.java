@@ -186,7 +186,21 @@ public class StudyController {
                                                                               @RequestParam(value = CASE_FORMAT) String caseFormat,
                                                                               @RequestBody(required = false) Map<String, Object> importParameters,
                                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.createRootNetwork(studyUuid, caseUuid, caseFormat, importParameters, userId));
+        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, caseUuid, caseFormat, importParameters, userId));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
+    @Operation(summary = "update root network case")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The case is updated for a root network")})
+    public ResponseEntity<Void> updateRootNetworkCase(@PathVariable("studyUuid") UUID studyUuid,
+                                                      @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                      @RequestParam(value = CASE_UUID) UUID caseUuid,
+                                                      @RequestParam(value = CASE_FORMAT) String caseFormat,
+                                                      @RequestBody(required = false) Map<String, Object> importParameters,
+                                                      @RequestHeader(HEADER_USER_ID) String userId) {
+        caseService.assertCaseExists(caseUuid);
+        studyService.updateNetworkRequest(studyUuid, rootNetworkUuid, caseUuid, caseFormat, importParameters, userId);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
@@ -761,13 +775,13 @@ public class StudyController {
 
     @PostMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
     @Operation(summary = "Set voltage init parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
     public ResponseEntity<Void> setVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) StudyVoltageInitParameters voltageInitParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setVoltageInitParameters(studyUuid, voltageInitParameters, userId);
-        return ResponseEntity.ok().build();
+        return studyService.setVoltageInitParameters(studyUuid, voltageInitParameters, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
@@ -938,13 +952,13 @@ public class StudyController {
 
     @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "set short-circuit analysis parameters on study, reset to default ones if empty body")
-    @ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
     public ResponseEntity<Void> setShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) String shortCircuitParametersInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setShortCircuitParameters(studyUuid, shortCircuitParametersInfos, userId);
-        return ResponseEntity.ok().build();
+        return studyService.setShortCircuitParameters(studyUuid, shortCircuitParametersInfos, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -1696,13 +1710,13 @@ public class StudyController {
 
     @PostMapping(value = "/studies/{studyUuid}/security-analysis/parameters")
     @Operation(summary = "set security analysis parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters are set")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters are set"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
     public ResponseEntity<Void> setSecurityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) String securityAnalysisParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId);
-        return ResponseEntity.ok().build();
+        return studyService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/modifications", produces = MediaType.TEXT_PLAIN_VALUE)
@@ -1776,13 +1790,13 @@ public class StudyController {
 
     @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
     @Operation(summary = "set sensitivity analysis parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
     public ResponseEntity<Void> setSensitivityAnalysisParameters(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) String sensitivityAnalysisParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setSensitivityAnalysisParameters(studyUuid, sensitivityAnalysisParameters, userId);
-        return ResponseEntity.ok().build();
+        return studyService.setSensitivityAnalysisParameters(studyUuid, sensitivityAnalysisParameters, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/factors-count")
