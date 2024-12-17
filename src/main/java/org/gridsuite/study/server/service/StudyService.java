@@ -720,7 +720,7 @@ public class StudyService {
         UUID result = loadflowService.runLoadFlow(nodeUuid, rootNetworkUuid, networkUuid, variantId, lfParametersUuid, lfReportUuid, userId, limitReduction);
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, LOAD_FLOW);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         return result;
     }
 
@@ -810,7 +810,7 @@ public class StudyService {
     public boolean setSecurityAnalysisParametersValues(UUID studyUuid, String parameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         boolean userProfileIssue = createOrUpdateSecurityAnalysisParameters(studyUuid, studyEntity, parameters, userId);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, SECURITY_ANALYSIS);
         return userProfileIssue;
@@ -833,11 +833,11 @@ public class StudyService {
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
         invalidateNonEvacuatedEnergyAnalysisStatusOnAllNodes(studyUuid);
         invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, LOAD_FLOW);
         return userProfileIssue;
@@ -869,7 +869,7 @@ public class StudyService {
         updateProvider(studyUuid, userId, studyEntity -> {
             loadflowService.updateLoadFlowProvider(studyEntity.getLoadFlowParametersUuid(), provider);
             invalidateLoadFlowStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
             notificationService.emitComputationParamsChanged(studyUuid, LOAD_FLOW);
 
         });
@@ -883,7 +883,7 @@ public class StudyService {
         updateProvider(studyUuid, userId, studyEntity -> {
             securityAnalysisService.updateSecurityAnalysisProvider(studyEntity.getSecurityAnalysisParametersUuid(), provider);
             invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
             notificationService.emitComputationParamsChanged(studyUuid, SECURITY_ANALYSIS);
         });
     }
@@ -911,7 +911,7 @@ public class StudyService {
         updateProvider(studyUuid, userId, studyEntity -> {
             studyEntity.setDynamicSimulationProvider(provider != null ? provider : defaultDynamicSimulationProvider);
             invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
             notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_SIMULATION);
         });
     }
@@ -1009,7 +1009,7 @@ public class StudyService {
         UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, variantId, runSecurityAnalysisParametersInfos,
                 new ReportInfos(saReportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SECURITY_ANALYSIS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         return result;
     }
 
@@ -1209,7 +1209,7 @@ public class StudyService {
         studyEntity.ifPresent(studyEntity1 -> {
             studyEntity1.setDynamicSimulationParameters(dynamicSimulationParametersEntity);
             invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         });
     }
 
@@ -1384,7 +1384,7 @@ public class StudyService {
     @Transactional
     public void unbuildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
         invalidateBuild(studyUuid, nodeUuid, rootNetworkUuid, false, true, true);
-        emitAllComputationStatusChanged(studyUuid, nodeUuid);
+        emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid);
     }
 
     public void stopBuild(@NonNull UUID nodeUuid, UUID rootNetworkUuid) {
@@ -1508,15 +1508,14 @@ public class StudyService {
         updateStatuses(studyUuid, nodeUuid, invalidateOnlyChildrenBuildStatus, true, true);
     }
 
-    // TODO Need to deal with all root networks
     private void updateStatuses(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateBuild, boolean deleteVoltageInitResults) {
-        if (invalidateBuild) {
-            //TODO: to implement better, this is not really optimized
-            rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
-                invalidateBuild(studyUuid, nodeUuid, rootNetworkEntity.getId(), invalidateOnlyChildrenBuildStatus, false, deleteVoltageInitResults);
-            });
-        }
-        emitAllComputationStatusChanged(studyUuid, nodeUuid);
+        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
+            UUID rootNetworkUuid = rootNetworkEntity.getId();
+            if (invalidateBuild) {
+                invalidateBuild(studyUuid, nodeUuid, rootNetworkUuid, invalidateOnlyChildrenBuildStatus, false, deleteVoltageInitResults);
+            }
+            emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid);
+        });
     }
 
     @Transactional
@@ -1529,7 +1528,6 @@ public class StudyService {
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.deleteModifications(groupId, modificationsUuids);
-
             updateStatuses(studyUuid, nodeUuid, false, false, false);
         } finally {
             notificationService.emitEndDeletionEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -1872,7 +1870,7 @@ public class StudyService {
                 .map(impact -> impact.getElementType().name())
                 .collect(Collectors.toSet());
 
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STUDY,
                 NetworkImpactsInfos.builder()
                         .deletedEquipments(deletionsInfos)
                         .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
@@ -1907,7 +1905,7 @@ public class StudyService {
         UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, rootNetworkUuid, networkUuid, variantId, sensiReportUuid, userId, study.getSensitivityAnalysisParametersUuid(), study.getLoadFlowParametersUuid());
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SENSITIVITY_ANALYSIS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         return result;
     }
 
@@ -1924,7 +1922,7 @@ public class StudyService {
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, computationType, scReportUuid);
         final UUID result = shortCircuitService.runShortCircuit(nodeUuid, rootNetworkUuid, networkUuid, variantId, busId.orElse(null), parametersUuid, scReportUuid, userId);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, computationType);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid,
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid,
                 busId.isEmpty() ? NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS : NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         return result;
     }
@@ -1943,7 +1941,7 @@ public class StudyService {
         UUID result = voltageInitService.runVoltageInit(networkUuid, variantId, studyEntity.getVoltageInitParametersUuid(), reportUuid, nodeUuid, rootNetworkUuid, userId);
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, VOLTAGE_INITIALIZATION);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         return result;
     }
 
@@ -1958,7 +1956,7 @@ public class StudyService {
             voltageInitParameters.setApplyModifications(parameters.isApplyModifications());
         }
         boolean userProfileIssue = createOrUpdateVoltageInitParameters(studyEntity, parameters.getComputationParameters(), userId);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, VOLTAGE_INITIALIZATION);
         return userProfileIssue;
@@ -2023,7 +2021,7 @@ public class StudyService {
     private void postProcessEventCrud(UUID studyUuid, UUID nodeUuid) {
         // for delete old result and refresh dynamic simulation run button in UI
         invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 
     @Transactional
@@ -2106,7 +2104,7 @@ public class StudyService {
 
         // update result uuid and notification
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicSResultUuid, DYNAMIC_SIMULATION);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
 
         return dynamicSResultUuid;
     }
@@ -2149,7 +2147,7 @@ public class StudyService {
 
             // invalidate the whole subtree except the target node (we have built this node during the duplication)
             networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, rootNetworkUuid, modificationResult));
-            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT); // send notification voltage init result has changed
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT); // send notification voltage init result has changed
             updateStatuses(studyUuid, nodeUuid, true, true, false);  // do not delete the voltage init results
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -2167,7 +2165,7 @@ public class StudyService {
     @Transactional
     public boolean setSensitivityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
         boolean userProfileIssue = createOrUpdateSensitivityAnalysisParameters(studyUuid, parameters, userId);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, SENSITIVITY_ANALYSIS);
         return userProfileIssue;
@@ -2233,7 +2231,7 @@ public class StudyService {
     @Transactional
     public void invalidateLoadFlowStatus(UUID studyUuid, String userId) {
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -2247,8 +2245,8 @@ public class StudyService {
     @Transactional
     public void invalidateShortCircuitStatus(UUID studyUuid) {
         invalidateShortCircuitStatusOnAllNodes(studyUuid);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
     }
 
     public UUID runNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
@@ -2301,7 +2299,7 @@ public class StudyService {
         UUID result = nonEvacuatedEnergyService.runNonEvacuatedEnergy(nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, provider, nonEvacuatedEnergyInputData, studyEntity.getLoadFlowParametersUuid(), userId);
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, NON_EVACUATED_ENERGY_ANALYSIS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         return result;
     }
 
@@ -2310,7 +2308,7 @@ public class StudyService {
         updateProvider(studyUuid, userId, studyEntity -> {
             studyEntity.setNonEvacuatedEnergyProvider(provider != null ? provider : defaultNonEvacuatedEnergyProvider);
             invalidateNonEvacuatedEnergyAnalysisStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
+            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
             notificationService.emitComputationParamsChanged(studyUuid, NON_EVACUATED_ENERGY_ANALYSIS);
         });
     }
@@ -2321,16 +2319,16 @@ public class StudyService {
                 .orElse("");
     }
 
-    private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid) {
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+    private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
     }
 
     public String evaluateFilter(UUID nodeUuid, UUID rootNetworkUuid, boolean inUpstreamBuiltParentNode, String filter) {
@@ -2369,7 +2367,7 @@ public class StudyService {
 
         UUID result = stateEstimationService.runStateEstimation(networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, STATE_ESTIMATION);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
         return result;
     }
 
