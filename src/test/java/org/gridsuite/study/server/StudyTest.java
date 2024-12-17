@@ -1146,7 +1146,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(9, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(10, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/exists", caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/disableExpiration", caseUuid))));
@@ -1174,7 +1174,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(10, server);
+        var requests = TestUtils.getRequestsDone(11, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
         assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=%s", caseUuid, true)));
         // note : it's a new case UUID
@@ -1392,7 +1392,7 @@ class StudyTest {
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(9, server);
+        var requests = TestUtils.getRequestsDone(10, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", NEW_STUDY_CASE_UUID)));
