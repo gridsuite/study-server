@@ -113,7 +113,7 @@ public class NotificationService {
     public static final String NODE_RENAMED = "nodeRenamed";
     public static final String NODE_BUILD_STATUS_UPDATED = "nodeBuildStatusUpdated";
     public static final String SUBTREE_MOVED = "subtreeMoved";
-    public static final String COLUMNS_CHANGED = "columnsChanged";
+    public static final String NODES_COLUMN_POSITIONS_CHANGED = "nodesColumnPositionsChanged";
     public static final String SUBTREE_CREATED = "subtreeCreated";
     public static final String MESSAGE_LOG = "Sending message : {}";
     public static final String DEFAULT_ERROR_MESSAGE = "Unknown error";
@@ -307,7 +307,7 @@ public class NotificationService {
         try {
             sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(orderedUuids))
                     .setHeader(HEADER_STUDY_UUID, studyUuid)
-                    .setHeader(HEADER_UPDATE_TYPE, COLUMNS_CHANGED)
+                    .setHeader(HEADER_UPDATE_TYPE, NODES_COLUMN_POSITIONS_CHANGED)
                     .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
                     .build()
             );

@@ -1366,7 +1366,7 @@ class NetworkModificationTreeTest {
 
     private void checkColumnsChangedMessageSent(UUID studyUuid, UUID parentNodeUuid, List<UUID> orderedUuids) throws Exception {
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(NotificationService.COLUMNS_CHANGED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.NODES_COLUMN_POSITIONS_CHANGED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(parentNodeUuid, message.getHeaders().get(NotificationService.HEADER_PARENT_NODE));
         assertEquals(objectMapper.writeValueAsString(orderedUuids), new String(message.getPayload()));
