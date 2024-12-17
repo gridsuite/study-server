@@ -1296,17 +1296,20 @@ public class StudyService {
         }
     }
 
-    public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+    public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
-            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            String variantId = rootNetworkNodeInfoEntity.getVariantId();
-            UUID reportUuid = rootNetworkNodeInfoEntity.getModificationReports().get(nodeUuid);
+            rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
+                UUID rootNetworkUuid = rootNetworkEntity.getId();
+                RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+                UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+                String variantId = rootNetworkNodeInfoEntity.getVariantId();
+                UUID reportUuid = rootNetworkNodeInfoEntity.getModificationReports().get(nodeUuid);
 
-            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModification(studyUuid, createModificationAttributes, groupUuid, variantId, reportUuid, nodeUuid, rootNetworkUuid);
-            updateNode(studyUuid, nodeUuid, rootNetworkUuid, networkModificationResult);
+                Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModification(studyUuid, createModificationAttributes, groupUuid, variantId, reportUuid, nodeUuid, rootNetworkUuid);
+                updateNode(studyUuid, nodeUuid, rootNetworkUuid, networkModificationResult);
+            });
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1535,7 +1538,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void stashNetworkModifications(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, List<UUID> modificationsUuids, String userId) {
+    public void stashNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_STASHING_IN_PROGRESS);
         try {
@@ -1552,7 +1555,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void updateNetworkModificationsActivation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, List<UUID> modificationsUuids, String userId, boolean activated) {
+    public void updateNetworkModificationsActivation(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId, boolean activated) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
@@ -1569,7 +1572,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void restoreNetworkModifications(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, List<UUID> modificationsUuids, String userId) {
+    public void restoreNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_RESTORING_IN_PROGRESS);
         try {
@@ -1696,7 +1699,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void moveModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, UUID rootNetworkUuid, List<UUID> modificationUuidList, UUID beforeUuid, String userId) {
+    public void moveModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, String userId) {
         if (originNodeUuid == null) {
             throw new StudyException(MISSING_PARAMETER, "The parameter 'originNodeUuid' must be defined when moving modifications");
         }
@@ -1719,20 +1722,26 @@ public class StudyService {
             checkStudyContainsNode(studyUuid, targetNodeUuid);
             UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
             NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(targetNodeUuid);
-            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(targetNodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
-            UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, networkModificationNodeInfoEntity, rootNetworkNodeInfoEntity, buildTargetNode);
-            if (!targetNodeBelongsToSourceNodeSubTree) {
-                // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
-                networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, targetNodeUuid, rootNetworkUuid, modificationResult));
-                updateStatuses(studyUuid, targetNodeUuid, buildTargetNode, true, true);
-            }
-            if (moveBetweenNodes) {
-                // invalidate the whole subtree including the source node
-                networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, originNodeUuid, rootNetworkUuid, modificationResult));
-                updateStatuses(studyUuid, originNodeUuid, false, true, true);
-            }
+            rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
+                UUID rootNetworkUuid = rootNetworkEntity.getId();
+                RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(targetNodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+                UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+                Optional<NetworkModificationResult> networkModificationResult = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, networkModificationNodeInfoEntity, rootNetworkNodeInfoEntity, buildTargetNode);
+                if (!targetNodeBelongsToSourceNodeSubTree) {
+                    // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
+                    networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, targetNodeUuid, rootNetworkUuid, modificationResult));
+                    //TODO : should take rootnetworkuuid as param
+                    updateStatuses(studyUuid, targetNodeUuid, buildTargetNode, true, true);
+                }
+                if (moveBetweenNodes) {
+                    // invalidate the whole subtree including the source node
+                    networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, originNodeUuid, rootNetworkUuid, modificationResult));
+                    //TODO : should take rootnetworkuuid as param
+                    updateStatuses(studyUuid, originNodeUuid, false, true, true);
+                }
+            });
         } finally {
+            //TODO : should take rootnetworkuuid as param
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
             if (moveBetweenNodes) {
                 notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids);
@@ -1742,17 +1751,21 @@ public class StudyService {
     }
 
     @Transactional
-    public void createModifications(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, List<UUID> modificationUuidList, String userId, StudyConstants.ModificationsActionType action) {
+    public void createModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, String userId, StudyConstants.ModificationsActionType action) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nodeUuid);
-            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
-            UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModifications(modificationUuidList, networkUuid, networkModificationNodeInfoEntity, rootNetworkNodeInfoEntity, action);
-            // invalidate the whole subtree except the target node (we have built this node during the duplication)
-            networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, rootNetworkUuid, modificationResult));
+            rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
+                UUID rootNetworkUuid = rootNetworkEntity.getId();
+                RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+                UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+                Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModifications(modificationUuidList, networkUuid, networkModificationNodeInfoEntity, rootNetworkNodeInfoEntity, action);
+                // invalidate the whole subtree except the target node (we have built this node during the duplication)
+                networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, rootNetworkUuid, modificationResult));
+            });
+            //TODO: NOT WORKING WELL, NOTIF HAS TO TARGET ROOT NETWORK UUID
             updateStatuses(studyUuid, nodeUuid, true, true, true);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
