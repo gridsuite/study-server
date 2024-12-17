@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -302,7 +303,7 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitColumnsChanged(UUID studyUuid, UUID parentNodeUuid, UUID[] orderedUuids) {
+    public void emitColumnsChanged(UUID studyUuid, UUID parentNodeUuid, List<UUID> orderedUuids) {
         try {
             sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(orderedUuids))
                     .setHeader(HEADER_STUDY_UUID, studyUuid)

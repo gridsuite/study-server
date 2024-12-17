@@ -1365,16 +1365,12 @@ class NetworkModificationTreeTest {
         assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
     }
 
-    private void checkColumnsChangedMessageSent(UUID studyUuid, UUID parentNodeUuid, UUID[] orderedUuids) {
+    private void checkColumnsChangedMessageSent(UUID studyUuid, UUID parentNodeUuid, UUID[] orderedUuids) throws Exception {
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.COLUMNS_CHANGED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(parentNodeUuid, message.getHeaders().get(NotificationService.HEADER_PARENT_NODE));
-        String expected = Arrays.stream(orderedUuids)
-                .map(UUID::toString)
-                .map(uuid -> "\"" + uuid + "\"") // Add quotes around each UUID
-                .collect(Collectors.joining(",", "[", "]")); // Join them in JSON format
-        assertEquals(expected, new String(message.getPayload()));
+        assertEquals(objectMapper.writeValueAsString(orderedUuids), new String(message.getPayload()));
     }
 
     private void checkUpdateNodesMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {

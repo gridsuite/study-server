@@ -447,25 +447,20 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void updateNodesColumnPositions(UUID studyUuid, UUID parentUuid, List<NetworkModificationNode> childrenNodes, String userId) {
-        List<UUID> childrenIds = childrenNodes.stream().map(NetworkModificationNode::getId).collect(Collectors.toList());
-
-        List<NetworkModificationNodeInfoEntity> networkModificationNodeEntities = networkModificationNodeInfoRepository.findAllById(childrenIds);
-
         // Convert to a map for quick lookup
         Map<UUID, Integer> nodeIdToColumnPosition = childrenNodes.stream()
                 .collect(Collectors.toMap(NetworkModificationNode::getId, NetworkModificationNode::getColumnPosition));
 
-        networkModificationNodeEntities.forEach(entity -> {
+        List<UUID> childrenIds = childrenNodes.stream().map(NetworkModificationNode::getId).toList();
+        networkModificationNodeInfoRepository.findAllById(childrenIds).forEach(entity -> {
             Integer newColumnPosition = nodeIdToColumnPosition.get(entity.getId());
-            if (newColumnPosition != null) {
-                entity.setColumnPosition(newColumnPosition);
-            }
+            entity.setColumnPosition(Objects.requireNonNull(newColumnPosition));
         });
 
-        UUID[] orderedUuids = childrenNodes.stream()
-                .sorted(Comparator.comparingInt(AbstractNode::getColumnPosition))
-                .map(NetworkModificationNode::getId)
-                .toArray(UUID[]::new);
+        List<UUID> orderedUuids = childrenNodes.stream()
+            .sorted(Comparator.comparingInt(AbstractNode::getColumnPosition))
+            .map(NetworkModificationNode::getId)
+            .toList();
 
         notificationService.emitColumnsChanged(studyUuid, parentUuid, orderedUuids);
         notificationService.emitElementUpdated(studyUuid, userId);
