@@ -21,7 +21,6 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.NetworkService;
-import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -96,8 +95,6 @@ class NetworkModificationUnitTest {
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
-    @Autowired
-    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @BeforeEach
     void setup() {
