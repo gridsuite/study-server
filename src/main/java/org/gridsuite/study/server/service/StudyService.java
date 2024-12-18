@@ -310,10 +310,10 @@ public class StudyService {
         if (rootNetworkCreationRequestEntityOpt.isPresent()) {
             rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
             rootNetworkService.deleteCreationRequest(rootNetworkCreationRequestEntityOpt.get());
-            // TODO: send notification to frontend
         } else {
             rootNetworkService.delete(rootNetworkInfos);
         }
+        notificationService.emitRootNetworksUpdated(studyUuid);
     }
 
     @Transactional(readOnly = true)

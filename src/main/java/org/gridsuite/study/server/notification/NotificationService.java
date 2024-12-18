@@ -117,6 +117,9 @@ public class NotificationService {
     public static final String MESSAGE_LOG = "Sending message : {}";
     public static final String DEFAULT_ERROR_MESSAGE = "Unknown error";
 
+    public static final String ROOT_NETWORKS_UPDATED = "rootNetworksUpdated";
+    public static final String ROOT_NETWORKS_UPDATE_FAILED = "rootNetworksUpdateFailed";
+
     public static final String STUDY_ALERT = "STUDY_ALERT";
 
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
@@ -426,5 +429,22 @@ public class NotificationService {
         } catch (JsonProcessingException e) {
             LOGGER.error("Unable to notify on study alert", e);
         }
+    }
+
+    @PostCompletion
+    public void emitRootNetworksUpdated(UUID studyUuid) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_UPDATE_TYPE, ROOT_NETWORKS_UPDATED)
+            .build());
+    }
+
+    @PostCompletion
+    public void emitRootNetworksUpdateFailed(UUID studyUuid, String errorMessage) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_UPDATE_TYPE, ROOT_NETWORKS_UPDATE_FAILED)
+            .setHeader(HEADER_ERROR, errorMessage)
+            .build());
     }
 }
