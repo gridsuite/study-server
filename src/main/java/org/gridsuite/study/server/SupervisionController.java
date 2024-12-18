@@ -95,11 +95,11 @@ public class SupervisionController {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.getIndexedTombstonedEquipmentsCount()));
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/equipments/indexation")
+    @DeleteMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/equipments/indexation")
     @Operation(summary = "delete indexed equipments and tombstoned equipments for the given study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed equipments and tombstoned equipments for the given study have been deleted")})
-    public ResponseEntity<String> deleteStudyIndexedEquipmentsAndTombstoned(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.deleteStudyIndexedEquipmentsAndTombstoned(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid))));
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed equipments and tombstoned equipments for the given study for the given root network have been deleted")})
+    public ResponseEntity<String> deleteStudyIndexedEquipmentsAndTombstoned(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.deleteStudyIndexedEquipmentsAndTombstoned(studyUuid, rootNetworkUuid)));
     }
 
     @GetMapping(value = "/orphan_indexed_network_uuids")

@@ -685,7 +685,7 @@ public class NetworkModificationTreeService {
             }
         });
 
-        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()), rootNetworkUuid);
     }
 
     @Transactional
@@ -702,7 +702,7 @@ public class NetworkModificationTreeService {
             }
         );
 
-        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()), rootNetworkUuid);
     }
 
     private void invalidateChildrenBuildStatus(UUID nodeUuid, UUID rootNetworkUuid, List<UUID> changedNodes, InvalidateNodeInfos invalidateNodeInfos,
@@ -743,7 +743,7 @@ public class NetworkModificationTreeService {
 
         rootNetworkNodeInfoEntity.setNodeBuildStatus(newNodeStatus);
         changedNodes.add(nodeUuid);
-        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes);
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes, rootNetworkUuid);
     }
 
     @Transactional(readOnly = true)
