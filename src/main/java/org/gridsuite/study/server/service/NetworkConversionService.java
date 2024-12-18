@@ -69,12 +69,17 @@ public class NetworkConversionService {
             throw new UncheckedIOException(e);
         }
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
-                .queryParam(CASE_UUID, caseUuid)
-                .queryParam(QUERY_PARAM_VARIANT_ID, variantId)
-                .queryParam(REPORT_UUID, importReportUuid)
-                .queryParam(QUERY_PARAM_RECEIVER, receiver)
-                .queryParam(CASE_FORMAT, caseFormat)
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
+            .queryParam(CASE_UUID, caseUuid)
+            .queryParam(REPORT_UUID, importReportUuid)
+            .queryParam(QUERY_PARAM_RECEIVER, receiver)
+            .queryParam(CASE_FORMAT, caseFormat);
+
+        if (variantId != null) {
+            builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+
+        String path = builder
                 .buildAndExpand()
                 .toUriString();
 

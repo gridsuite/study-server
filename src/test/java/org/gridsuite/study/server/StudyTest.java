@@ -816,7 +816,7 @@ class StudyTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, "XIIDM"))
             .andExpect(status().isInternalServerError());
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode1.getId(), studyService.getStudyFirstRootNetworkUuid(studyNameUserIdUuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode1.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid),
             RootNetworkNodeInfo.builder().nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
@@ -1081,7 +1081,7 @@ class StudyTest {
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).nodeBuildStatus(NodeBuildStatus.from(buildStatus)).build());
 
         return modificationNode;
@@ -1553,7 +1553,7 @@ class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyService.getStudyFirstRootNetworkUuid(study1Uuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid),
             RootNetworkNodeInfo.builder()
                 .securityAnalysisResultUuid(UUID.randomUUID())
                 .sensitivityAnalysisResultUuid(UUID.randomUUID())
@@ -1791,7 +1791,7 @@ class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPost(stubUuid, createLoadAttributes, NETWORK_UUID_STRING);
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyService.getStudyFirstRootNetworkUuid(study1Uuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid),
             RootNetworkNodeInfo.builder()
                 .loadFlowResultUuid(UUID.randomUUID())
                 .securityAnalysisResultUuid(UUID.randomUUID())
@@ -2118,7 +2118,7 @@ class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyService.getStudyFirstRootNetworkUuid(study1Uuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid),
             RootNetworkNodeInfo.builder()
                 .loadFlowResultUuid(UUID.randomUUID())
                 .securityAnalysisResultUuid(UUID.randomUUID())
@@ -2185,7 +2185,7 @@ class StudyTest {
                 .andExpect(status().isForbidden());
 
         // Test Built status when duplicating an empty node
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(study1Uuid);
+        UUID rootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId(), rootNetworkUuid).getGlobalBuildStatus());
         duplicateNode(study1Uuid, study1Uuid, emptyNode, node3.getId(), InsertMode.BEFORE, userId);
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId(), rootNetworkUuid).getGlobalBuildStatus());

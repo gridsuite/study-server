@@ -263,7 +263,7 @@ class StudyControllerDynamicSimulationTest {
         UUID newNodeId = UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE)));
         modificationNode.setId(newNodeId);
         assertThat(mess.getHeaders()).containsEntry(NotificationService.HEADER_INSERT_MODE, InsertMode.CHILD.name());
-        rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyService.getStudyFirstRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
+        rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
         return modificationNode;
     }
 

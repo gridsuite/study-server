@@ -385,8 +385,9 @@ public class StudyService {
 
             StudyEntity duplicatedStudy = duplicateStudy(basicStudyInfos, sourceStudyUuid, userId);
 
-            reindexStudy(duplicatedStudy, getStudyFirstRootNetworkUuid(duplicatedStudy.getId()));
-
+            rootNetworkService.getStudyRootNetworks(duplicatedStudy.getId()).forEach(rootNetworkEntity -> {
+                reindexStudy(duplicatedStudy, rootNetworkEntity.getId());
+            });
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -1762,6 +1763,7 @@ public class StudyService {
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nodeUuid);
+            //TODO : not ok, creating multiple times the same modification for each root network
             rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
                 UUID rootNetworkUuid = rootNetworkEntity.getId();
                 RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));

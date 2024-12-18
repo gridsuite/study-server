@@ -995,7 +995,7 @@ class NetworkModificationTreeTest {
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(newNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(newNode.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder()
                 .variantId(newNode.getVariantId())
                 .nodeBuildStatus(newNode.getNodeBuildStatus())
@@ -1039,7 +1039,7 @@ class NetworkModificationTreeTest {
 
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(newNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(newNode.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).nodeBuildStatus(newNode.getNodeBuildStatus()).build());
     }
 
