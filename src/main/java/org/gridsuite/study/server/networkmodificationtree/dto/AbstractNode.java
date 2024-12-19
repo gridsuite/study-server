@@ -48,6 +48,8 @@ public abstract class AbstractNode {
 
     String description;
 
+    Integer columnPosition;
+
     Boolean readOnly;
 
     NodeType type;

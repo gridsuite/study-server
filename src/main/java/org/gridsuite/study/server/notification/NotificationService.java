@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -113,6 +114,7 @@ public class NotificationService {
     public static final String NODE_RENAMED = "nodeRenamed";
     public static final String NODE_BUILD_STATUS_UPDATED = "nodeBuildStatusUpdated";
     public static final String SUBTREE_MOVED = "subtreeMoved";
+    public static final String NODES_COLUMN_POSITIONS_CHANGED = "nodesColumnPositionsChanged";
     public static final String SUBTREE_CREATED = "subtreeCreated";
     public static final String MESSAGE_LOG = "Sending message : {}";
     public static final String DEFAULT_ERROR_MESSAGE = "Unknown error";
@@ -307,6 +309,20 @@ public class NotificationService {
                 .setHeader(HEADER_PARENT_NODE, referenceNodeUuid)
                 .build()
         );
+    }
+
+    @PostCompletion
+    public void emitColumnsChanged(UUID studyUuid, UUID parentNodeUuid, List<UUID> orderedUuids) {
+        try {
+            sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(orderedUuids))
+                    .setHeader(HEADER_STUDY_UUID, studyUuid)
+                    .setHeader(HEADER_UPDATE_TYPE, NODES_COLUMN_POSITIONS_CHANGED)
+                    .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
+                    .build()
+            );
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Unable to notify on column positions update", e);
+        }
     }
 
     @PostCompletion
