@@ -195,5 +195,5 @@ gridsuite:
       name: state-estimation-server
       base-uri: http://state-estimation-server/
     -
-      name: spreadsheet-config-server
-      base-uri: http://spreadsheet-config-server/
+      name: study-config-server
+      base-uri: http://study-config-server/
