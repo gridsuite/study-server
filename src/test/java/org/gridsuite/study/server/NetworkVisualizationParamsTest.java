@@ -41,6 +41,7 @@ import org.springframework.messaging.Message;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -69,7 +70,15 @@ class NetworkVisualizationParamsTest {
 
     private static final String NETWORK_VISU_PARAMETERS_UUID_STRING = "5218bc26-1196-4ac5-a860-d7342359bca7";
     private static final UUID NETWORK_VISU_PARAMETERS_UUID = UUID.fromString(NETWORK_VISU_PARAMETERS_UUID_STRING);
-    private static String NETWORK_VISU_DEFAULT_PARAMETERS_JSON;
+    private static final String NETWORK_VISU_DEFAULT_PARAMETERS_JSON;
+
+    static {
+        try {
+            NETWORK_VISU_DEFAULT_PARAMETERS_JSON = TestUtils.resourceToString("/network-visulization-default-parameters.json");
+        } catch (IOException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
 
     private static final long TIMEOUT = 1000;
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
@@ -86,11 +95,10 @@ class NetworkVisualizationParamsTest {
     private StudyConfigService studyConfigService;
 
     @BeforeEach
-    void setup(final MockWebServer server) throws Exception {
+    void setup(final MockWebServer server) {
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         studyConfigService.setStudyConfigServerBaseUri(baseUrl);
-        NETWORK_VISU_DEFAULT_PARAMETERS_JSON = TestUtils.resourceToString("/network-visulization-default-parameters.json");
 
         final Dispatcher dispatcher = new Dispatcher() {
             @Override
