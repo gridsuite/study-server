@@ -1714,6 +1714,25 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/network-visualizations/parameters")
+    @Operation(summary = "Get network visualization parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network visualization parameters")})
+    public ResponseEntity<String> getNetworkVisualizationParametersValues(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getNetworkVisualizationParametersValues(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/network-visualizations/parameters")
+    @Operation(summary = "set network visualization parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network visualization parameters are set")})
+    public ResponseEntity<Void> setNetworkVisualizationParametersValues(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) String networkVisualizationParametersValues,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setNetworkVisualizationParametersValues(studyUuid, networkVisualizationParametersValues, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/optional-services")
     @Operation(summary = "Get all the optional services and their status")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of optional services")})

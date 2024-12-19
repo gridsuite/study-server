@@ -75,4 +75,7 @@ gridsuite:
       base-uri: http://localhost:5033
     -
       name: state-estimation-server
-      base-uri: http://localhost:5040
+      base-uri: http://localhost:6040
+    -
+      name: spreadsheet-config-server
+      base-uri: http://localhost:5035/
