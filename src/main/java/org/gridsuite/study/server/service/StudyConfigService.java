@@ -45,7 +45,7 @@ public class StudyConfigService {
 
     @Autowired
     public StudyConfigService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
-        this.studyConfigServerBaseUri = remoteServicesProperties.getServiceUri("study-config-server");
+        this.studyConfigServerBaseUri = remoteServicesProperties.getServiceUri("spreadsheet-config-server");
         this.restTemplate = restTemplate;
     }
 
