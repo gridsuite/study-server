@@ -84,6 +84,7 @@ public class NotificationService {
     public static final String UPDATE_TYPE_STATE_ESTIMATION_RESULT = "stateEstimationResult";
     public static final String UPDATE_TYPE_STATE_ESTIMATION_STATUS = "stateEstimation_status";
     public static final String UPDATE_TYPE_COMPUTATION_PARAMETERS = "computationParametersUpdated";
+    public static final String UPDATE_NETWORK_VISUALIZATION_PARAMETERS = "networkVisualizationParametersUpdated";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
     public static final String MODIFICATIONS_STASHING_IN_PROGRESS = "stashingInProgress";
@@ -178,6 +179,14 @@ public class NotificationService {
                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_COMPUTATION_PARAMETERS)
                .setHeader(HEADER_COMPUTATION_TYPE, computationType.name())
                .build());
+    }
+
+    @PostCompletion
+    public void emitNetworkVisualizationParamsChanged(UUID studyUuid) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_UPDATE_TYPE, UPDATE_NETWORK_VISUALIZATION_PARAMETERS)
+                .build());
     }
 
     public void emitStudyCreationError(UUID studyUuid, String userId, String errorMessage) {
