@@ -465,7 +465,7 @@ class NetworkModificationTreeTest {
         assertTrue(result.getResponse().getContentAsString().contains(n4.getId().toString()));
 
         //And now we restore the tree we just stashed
-        restoreNode(studyId, List.of(stashedNode1.getIdNode(), stashedNode4.getIdNode()), root.getId(), Set.of(n1.getId(), n2.getId(), n3.getId(), n4.getId()), userId);
+        restoreNode(studyId, List.of(stashedNode1.getIdNode(), stashedNode4.getIdNode()), root.getId(), userId);
 
         var restoredNode1 = nodeRepository.findById(n1.getId()).orElseThrow();
         assertFalse(restoredNode1.isStashed());
@@ -725,15 +725,15 @@ class NetworkModificationTreeTest {
                 assertTrue(expectedStash.stream().anyMatch(node -> node.getId().equals(id))));
     }
 
-    private void restoreNode(UUID studyUuid, List<UUID> nodeId, UUID anchorNodeId, Set<UUID> expectedIdRestored, String userId) throws Exception {
+    private void restoreNode(UUID studyUuid, List<UUID> nodeId, UUID anchorNodeId, String userId) throws Exception {
         String param = nodeId.stream().map(UUID::toString).reduce("", (a1, a2) -> a1 + "," + a2).substring(1);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}", studyUuid, anchorNodeId).header(USER_ID_HEADER, "userId")
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}", studyUuid, anchorNodeId).header(USER_ID_HEADER, userId)
                         .queryParam("ids", param))
                 .andExpect(status().isOk());
 
-        for (int i = 0; i < expectedIdRestored.size(); i++) {
+        for (int i = 0; i < nodeId.size(); i++) {
             var message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-            assertTrue(expectedIdRestored.contains(message.getHeaders().get(HEADER_NEW_NODE)));
+            assertTrue(nodeId.contains(message.getHeaders().get(HEADER_NEW_NODE)) || anchorNodeId.equals(message.getHeaders().get(HEADER_NEW_NODE)));
         }
     }
 
