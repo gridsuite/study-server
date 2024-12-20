@@ -611,9 +611,17 @@ public class NetworkModificationTreeService {
             nodeToRestore.setStashed(false);
             nodeToRestore.setStashDate(null);
             nodesRepository.save(nodeToRestore);
-            notificationService.emitNodeInserted(studyId, anchorNodeId, nodeId, InsertMode.AFTER, anchorNodeId);
-            restoreNodeChildren(studyId, nodeId);
+            if (hasChildren(nodeId)) {
+                restoreNodeChildren(studyId, nodeId);
+                notificationService.emitSubtreeInserted(studyId, nodeId, anchorNodeId);
+            } else {
+                notificationService.emitNodeInserted(studyId, anchorNodeId, nodeId, InsertMode.CHILD, anchorNodeId);
+            }
         }
+    }
+
+    private boolean hasChildren(UUID nodeId) {
+        return nodesRepository.countByParentNodeIdNode(nodeId) > 0;
     }
 
     @Transactional
@@ -647,7 +655,6 @@ public class NetworkModificationTreeService {
             nodeEntity.setStashed(false);
             nodeEntity.setStashDate(null);
             nodesRepository.save(nodeEntity);
-            notificationService.emitNodeInserted(studyId, parentNodeId, nodeEntity.getIdNode(), InsertMode.AFTER, parentNodeId);
             restoreNodeChildren(studyId, nodeEntity.getIdNode());
         });
     }
