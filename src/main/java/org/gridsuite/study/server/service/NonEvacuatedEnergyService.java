@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyContingencies;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyGeneratorCappingsByType;
@@ -75,15 +74,11 @@ public class NonEvacuatedEnergyService {
 
     private final ObjectMapper objectMapper;
 
-    private final NetworkModificationTreeService networkModificationTreeService;
-
     @Autowired
     NonEvacuatedEnergyService(RemoteServicesProperties remoteServicesProperties,
-                              NetworkModificationTreeService networkModificationTreeService,
                               ObjectMapper objectMapper,
                               RestTemplate restTemplate) {
         this.sensitivityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("sensitivity-analysis-server");
-        this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;
     }
@@ -92,8 +87,8 @@ public class NonEvacuatedEnergyService {
         this.sensitivityAnalysisServerBaseUri = sensitivityAnalysisServerBaseUri + DELIMITER;
     }
 
-    public void assertNonEvacuatedEnergyNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
-        String nonEvacuatedEnergyStatus = getNonEvacuatedEnergyStatus(nodeUuid, rootNetworkUuid);
+    public void assertNonEvacuatedEnergyNotRunning(UUID resultUuid) {
+        String nonEvacuatedEnergyStatus = getNonEvacuatedEnergyStatus(resultUuid);
         if (NonEvacuatedEnergyStatus.RUNNING.name().equals(nonEvacuatedEnergyStatus)) {
             throw new StudyException(NON_EVACUATED_ENERGY_RUNNING);
         }
@@ -139,9 +134,8 @@ public class NonEvacuatedEnergyService {
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getNonEvacuatedEnergyResult(UUID nodeUuid, UUID rootNetworkUuid) {
+    public String getNonEvacuatedEnergyResult(UUID resultUuid) {
         String result;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
         if (resultUuid == null) {
             return null;
         }
@@ -162,9 +156,8 @@ public class NonEvacuatedEnergyService {
         return result;
     }
 
-    public String getNonEvacuatedEnergyStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+    public String getNonEvacuatedEnergyStatus(UUID resultUuid) {
         String result;
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
 
         if (resultUuid == null) {
             return null;
@@ -183,11 +176,10 @@ public class NonEvacuatedEnergyService {
         return result;
     }
 
-    public void stopNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+    public void stopNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        UUID resultUuid = networkModificationTreeService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS);
         if (resultUuid == null) {
             return;
         }

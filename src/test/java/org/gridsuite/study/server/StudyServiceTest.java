@@ -164,7 +164,7 @@ class StudyServiceTest {
 
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
+        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(CASE_UUID.toString());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/network", studyUuid)
@@ -181,7 +181,7 @@ class StudyServiceTest {
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
 
         wireMockUtils.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
-        wireMockUtils.verifyImportNetwork(postNetworkStubId, CASE_UUID.toString());
+        wireMockUtils.verifyImportNetwork(postNetworkStubId, CASE_UUID.toString(), null);
         wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, CASE_UUID.toString());
     }
 
@@ -209,7 +209,7 @@ class StudyServiceTest {
 
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(CASE_UUID_STRING, newImportParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
+        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(CASE_UUID_STRING, newImportParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(CASE_UUID.toString());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/network", studyUuid)
@@ -228,7 +228,7 @@ class StudyServiceTest {
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
 
         wireMockUtils.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
-        wireMockUtils.verifyImportNetwork(postNetworkStubId, CASE_UUID_STRING);
+        wireMockUtils.verifyImportNetwork(postNetworkStubId, CASE_UUID_STRING, null);
         wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, CASE_UUID.toString());
     }
 
@@ -257,7 +257,7 @@ class StudyServiceTest {
         // mock API calls
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(caseUuid.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(caseUuid.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
+        UUID postNetworkStubId = wireMockUtils.stubImportNetwork(caseUuid.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", WireMockUtils.FIRST_VARIANT_ID, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(caseUuid.toString());
         when(loadFlowService.createDefaultLoadFlowParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
         when(shortCircuitService.createParameters(null)).thenReturn(SHORTCIRCUIT_PARAMETERS_UUID);
@@ -277,7 +277,7 @@ class StudyServiceTest {
 
         // assert API calls have been made
         wireMockUtils.verifyCaseExists(caseExistsStubId, caseUuid.toString());
-        wireMockUtils.verifyImportNetwork(postNetworkStubId, caseUuid.toString());
+        wireMockUtils.verifyImportNetwork(postNetworkStubId, caseUuid.toString(), WireMockUtils.FIRST_VARIANT_ID);
         wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, caseUuid.toString());
 
         return studyUuid;

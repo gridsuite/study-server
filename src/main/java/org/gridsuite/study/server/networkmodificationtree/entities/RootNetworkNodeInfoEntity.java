@@ -28,6 +28,8 @@ import java.util.UUID;
     indexes = {
         @Index(name = "rootNetworkNodeEntity_rootNetworkId_idx", columnList = "root_network_id"),
         @Index(name = "rootNetworkNodeEntity_nodeId_idx", columnList = "node_info_id"),
+        @Index(name = "rootNetworkNodeEntity_nodeId_rootNeworkId_idx", columnList = "node_info_id, root_network_id", unique = true),
+
     })
 public class RootNetworkNodeInfoEntity {
 

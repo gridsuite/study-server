@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesMetadataRest;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
@@ -126,10 +127,13 @@ class DynamicSimulationServiceTest {
     @MockBean
     private RootNetworkService rootNetworkService;
 
+    @MockBean
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
+
     @BeforeEach
     void setup() {
         // setup networkModificationTreeService mock in all normal cases
-        given(networkModificationTreeService.getComputationResultUuid(NODE_UUID, ROOTNETWORK_UUID, ComputationType.DYNAMIC_SIMULATION)).willReturn(RESULT_UUID);
+        given(rootNetworkNodeInfoService.getComputationResultUuid(NODE_UUID, ROOTNETWORK_UUID, ComputationType.DYNAMIC_SIMULATION)).willReturn(RESULT_UUID);
     }
 
     @Test
@@ -142,7 +146,7 @@ class DynamicSimulationServiceTest {
         given(dynamicSimulationClient.run(eq(""), any(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(new ReportInfos(REPORT_UUID, NODE_UUID)), any(), any())).willReturn(RESULT_UUID);
 
         // call method to be tested
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", STUDY_UUID, NODE_UUID, ROOTNETWORK_UUID, REPORT_UUID, null, "testUserId");
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", NODE_UUID, ROOTNETWORK_UUID, NETWORK_UUID, VARIANT_1_ID, REPORT_UUID, null, "testUserId");
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);
@@ -162,7 +166,7 @@ class DynamicSimulationServiceTest {
         given(timeSeriesClient.getTimeSeriesGroupMetadata(TIME_SERIES_UUID)).willReturn(timeSeriesGroupMetadata);
 
         // call method to be tested
-        List<TimeSeriesMetadataInfos> resultTimeSeriesMetadataList = dynamicSimulationService.getTimeSeriesMetadataList(NODE_UUID, ROOTNETWORK_UUID);
+        List<TimeSeriesMetadataInfos> resultTimeSeriesMetadataList = dynamicSimulationService.getTimeSeriesMetadataList(RESULT_UUID);
 
         // check result
         // metadata must be identical to expected
@@ -187,7 +191,7 @@ class DynamicSimulationServiceTest {
         given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID, null)).willReturn(timeSeries);
 
         // call method to be tested
-        List<DoubleTimeSeries> timeSeriesResult = dynamicSimulationService.getTimeSeriesResult(NODE_UUID, ROOTNETWORK_UUID, null);
+        List<DoubleTimeSeries> timeSeriesResult = dynamicSimulationService.getTimeSeriesResult(RESULT_UUID, null);
 
         // check result
         // must contain two elements
@@ -210,7 +214,7 @@ class DynamicSimulationServiceTest {
         given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID, null)).willReturn(timeSeries);
 
         // call method to be tested
-        assertThrows(StudyException.class, () -> dynamicSimulationService.getTimeSeriesResult(NODE_UUID, ROOTNETWORK_UUID, null));
+        assertThrows(StudyException.class, () -> dynamicSimulationService.getTimeSeriesResult(RESULT_UUID, null));
     }
 
     @Test
@@ -241,7 +245,7 @@ class DynamicSimulationServiceTest {
         given(timeSeriesClient.getTimeSeriesGroup(TIMELINE_UUID, null)).willReturn(timelineSeries);
 
         // call method to be tested
-        List<TimelineEventInfos> timelineResult = dynamicSimulationService.getTimelineResult(NODE_UUID, ROOTNETWORK_UUID);
+        List<TimelineEventInfos> timelineResult = dynamicSimulationService.getTimelineResult(RESULT_UUID);
 
         // check result
         // must contain 4 timeline events
@@ -262,7 +266,7 @@ class DynamicSimulationServiceTest {
 
         // call method to be tested
         assertThatExceptionOfType(StudyException.class).isThrownBy(() ->
-            dynamicSimulationService.getTimelineResult(NODE_UUID, ROOTNETWORK_UUID)
+            dynamicSimulationService.getTimelineResult(RESULT_UUID)
         ).withMessage("Timelines can not be a type: %s, expected type: %s",
                         timelines.get(0).getClass().getSimpleName(),
                         StringTimeSeries.class.getSimpleName());
@@ -290,7 +294,7 @@ class DynamicSimulationServiceTest {
 
         // call method to be tested
         assertThatExceptionOfType(StudyException.class).isThrownBy(() ->
-            dynamicSimulationService.getTimelineResult(NODE_UUID, ROOTNETWORK_UUID)
+            dynamicSimulationService.getTimelineResult(RESULT_UUID)
         ).withMessage("Error while deserializing timeline event: %s", objectMapper.writeValueAsString(timelineEventInfosList.get(0)));
     }
 
@@ -300,7 +304,7 @@ class DynamicSimulationServiceTest {
         given(dynamicSimulationClient.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.CONVERGED);
 
         // call method to be tested
-        DynamicSimulationStatus status = dynamicSimulationService.getStatus(NODE_UUID, ROOTNETWORK_UUID);
+        DynamicSimulationStatus status = dynamicSimulationService.getStatus(RESULT_UUID);
 
         // check result
         // status must be "CONVERGED"
@@ -321,17 +325,17 @@ class DynamicSimulationServiceTest {
     void testAssertDynamicSimulationNotRunning() {
 
         // test not running
-        assertDoesNotThrow(() -> dynamicSimulationService.assertDynamicSimulationNotRunning(NODE_UUID, ROOTNETWORK_UUID));
+        assertDoesNotThrow(() -> dynamicSimulationService.assertDynamicSimulationNotRunning(RESULT_UUID));
     }
 
     @Test
     void testAssertDynamicSimulationRunning() {
         // setup for running node
         given(dynamicSimulationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSimulationStatus.RUNNING);
-        given(networkModificationTreeService.getComputationResultUuid(NODE_UUID_RUNNING, ROOTNETWORK_UUID, ComputationType.DYNAMIC_SIMULATION)).willReturn(RESULT_UUID_RUNNING);
+        given(rootNetworkNodeInfoService.getComputationResultUuid(NODE_UUID_RUNNING, ROOTNETWORK_UUID, ComputationType.DYNAMIC_SIMULATION)).willReturn(RESULT_UUID_RUNNING);
 
         // test running
-        assertThrows(StudyException.class, () -> dynamicSimulationService.assertDynamicSimulationNotRunning(NODE_UUID_RUNNING, ROOTNETWORK_UUID));
+        assertThrows(StudyException.class, () -> dynamicSimulationService.assertDynamicSimulationNotRunning(RESULT_UUID_RUNNING));
     }
 
     @Test

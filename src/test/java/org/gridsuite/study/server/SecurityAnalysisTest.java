@@ -47,6 +47,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
@@ -60,6 +62,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
+import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.gridsuite.study.server.utils.TestUtils.getBinaryAsBuffer;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -79,7 +82,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SecurityAnalysisTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(SecurityAnalysisTest.class);
 
-    private static final UUID SECURITY_ANALYSIS_PARAMETERS_UUID = UUID.randomUUID();
     private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID = "11111111-9594-4e55-8ec7-07ea965d24eb";
     private static final String SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID = "22222222-9594-4e55-8ec7-07ea965d24eb";
@@ -97,7 +99,7 @@ class SecurityAnalysisTest {
     private static final String CONTINGENCIES_COUNT = "2";
 
     public static final String SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":0.0,\"lowVoltageProportionalThreshold\":0.0,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1}";
-    public static final String SECURITY_ANALYSIS_UPDATED_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":90.0,\"lowVoltageProportionalThreshold\":0.6,\"highVoltageAbsoluteThreshold\":90.0,\"highVoltageProportionalThreshold\":0.1,\"flowProportionalThreshold\":0.2}";
+    private static final String SECURITY_ANALYSIS_PROFILE_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":30.0,\"lowVoltageProportionalThreshold\":0.4,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1}";
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
@@ -113,6 +115,24 @@ class SecurityAnalysisTest {
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String VARIANT_ID_3 = "variant_3";
+
+    private static final String SECURITY_ANALYSIS_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
+    private static final UUID SECURITY_ANALYSIS_PARAMETERS_UUID = UUID.fromString(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
+    private static final String NO_PROFILE_USER_ID = "noProfileUser";
+    private static final String NO_PARAMS_IN_PROFILE_USER_ID = "noParamInProfileUser";
+    private static final String INVALID_PARAMS_IN_PROFILE_USER_ID = "invalidParamInProfileUser";
+    private static final String PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING = "f09f5282-8e34-48b5-b66e-7ef9f3f36c4f";
+    private static final String VALID_PARAMS_IN_PROFILE_USER_ID = "validParamInProfileUser";
+    private static final String PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING = "1cec4a7b-ab7e-4d78-9dd7-ce73c5ef11d9";
+    private static final String PROFILE_SECURITY_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
+    private static final String USER_PROFILE_NO_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}";
+    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"securityAnalysisParameterId\":\"" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
+    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"securityAnalysisParameterId\":\"" + PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
+    private static final String DUPLICATED_PARAMS_JSON = "\"" + PROFILE_SECURITY_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
+
+    //output destinations
+    private static final String STUDY_UPDATE_DESTINATION = "study.update";
+    private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private static final String CSV_TRANSLATION_DTO_STRING = "{translationsObject}";
 
@@ -147,6 +167,9 @@ class SecurityAnalysisTest {
     private LoadFlowService loadFlowService;
 
     @Autowired
+    private UserAdminService userAdminService;
+
+    @Autowired
     private StudyRepository studyRepository;
 
     @Autowired
@@ -176,6 +199,7 @@ class SecurityAnalysisTest {
         actionsService.setActionsServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         loadFlowService.setLoadFlowServerBaseUri(baseUrl);
+        userAdminService.setUserAdminServerBaseUri(baseUrl);
 
         limitTypeJson = objectMapper.writeValueAsString(List.of(LimitViolationType.CURRENT.name(), LimitViolationType.HIGH_VOLTAGE.name()));
 
@@ -261,6 +285,30 @@ class SecurityAnalysisTest {
                         //Method PUT
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
                     }
+                } else if (path.matches("/v1/parameters")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING));
+                } else if (path.matches("/v1/users/" + NO_PROFILE_USER_ID + "/profile")) {
+                    return new MockResponse(404);
+                } else if (path.matches("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_NO_PARAMS_JSON);
+                } else if (path.matches("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_VALID_PARAMS_JSON);
+                } else if (path.matches("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_INVALID_PARAMS_JSON);
+                } else if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING) && method.equals("POST")) {
+                    // params duplication request KO
+                    return new MockResponse(404);
+                } else if (path.matches("/v1/parameters/" + PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING) && method.equals("GET")) {
+                    return new MockResponse(404);
+                } else if (path.matches("/v1/parameters\\?duplicateFrom=" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING) && method.equals("POST")) {
+                    // params duplication request OK
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), DUPLICATED_PARAMS_JSON);
+                } else if (path.matches("/v1/parameters/" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING) && method.equals("GET")) {
+                    // profile params get request OK
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
+                } else if (path.matches("/v1/parameters/" + PROFILE_SECURITY_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING + "/provider") && method.equals("PATCH")) {
+                    // provider update in duplicated params OK
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/parameters") && method.equals("POST")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
                 } else if (path.matches("/v1/parameters/default") && method.equals("POST")) {
@@ -277,7 +325,7 @@ class SecurityAnalysisTest {
     @Test
     void testSecurityAnalysis(final MockWebServer server) throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
@@ -344,7 +392,7 @@ class SecurityAnalysisTest {
     @Test
     void testResetUuidResultWhenSAFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
-        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
+        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), null);
         UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
@@ -352,8 +400,8 @@ class SecurityAnalysisTest {
 
         // Set an uuid result in the database
         rootNetworkNodeInfoService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, SECURITY_ANALYSIS);
-        assertNotNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
-        assertEquals(resultUuid, networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
+        assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
+        assertEquals(resultUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
@@ -363,7 +411,7 @@ class SecurityAnalysisTest {
         studyService.runSecurityAnalysis(studyEntity.getId(), List.of(), modificationNode.getId(), rootNetworkUuid, "");
 
         // Test reset uuid result in the database
-        assertNull(networkModificationTreeService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
+        assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
 
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -374,7 +422,7 @@ class SecurityAnalysisTest {
     //test security analysis on network 2 will fail
     @Test
     void testSecurityAnalysisFailedForNotification(final MockWebServer server) throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_2_STRING), CASE_2_UUID);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_2_STRING), CASE_2_UUID, null);
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
@@ -403,7 +451,7 @@ class SecurityAnalysisTest {
         /*
          *  what follows is mostly for test coverage -> a failed message without receiver is sent -> will be ignored by consumer
          */
-        StudyEntity studyEntity2 = insertDummyStudy(UUID.fromString(NETWORK_UUID_3_STRING), CASE_3_UUID);
+        StudyEntity studyEntity2 = insertDummyStudy(UUID.fromString(NETWORK_UUID_3_STRING), CASE_3_UUID, null);
         UUID studyUuid2 = studyEntity2.getId();
         UUID rootNodeUuid2 = getRootNode(studyUuid2).getId();
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyUuid2, rootNodeUuid2, UUID.randomUUID(), VARIANT_ID, "node 2");
@@ -531,10 +579,10 @@ class SecurityAnalysisTest {
         assertEquals(0, integerResponse.intValue());
     }
 
-    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
+    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID securityAnalysisParametersUuid) {
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null,
-                UUID.randomUUID(), null, null, null,
+                UUID.randomUUID(), null, securityAnalysisParametersUuid, null,
                 defaultNonEvacuatedEnergyParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
@@ -583,7 +631,7 @@ class SecurityAnalysisTest {
 
     @Test
     void testSecurityAnalysisParameters(final MockWebServer server) throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
+        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), null);
         UUID studyNameUserIdUuid = studyEntity.getId();
         assertNotNull(studyNameUserIdUuid);
         //get security analysis parameters but since it wasn't created before it will create the default parameters and then return them
@@ -608,7 +656,7 @@ class SecurityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID)));
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSecurityAnalysisParametersUuid());
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         //get security analysis parameters but with an already registered securityAnalysisParametersUuid
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
@@ -623,14 +671,14 @@ class SecurityAnalysisTest {
                         .content(mnBodyJson)).andExpect(
                 status().isOk());
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID)));
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSecurityAnalysisParametersUuid());
     }
 
     @Test
     void testCreateSecurityAnalysisParameters(final MockWebServer server) throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
+        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), null);
         UUID studyUuid = studyEntity.getId();
         assertNotNull(studyUuid);
         assertNull(studyEntity.getSecurityAnalysisParametersUuid());
@@ -645,7 +693,7 @@ class SecurityAnalysisTest {
 
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyUuid).orElseThrow().getSecurityAnalysisParametersUuid());
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         Set<String> requests = TestUtils.getRequestsDone(1, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters")));
     }
@@ -653,7 +701,7 @@ class SecurityAnalysisTest {
     @Test
     void getResultZippedCsv(final MockWebServer server) throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
@@ -722,7 +770,7 @@ class SecurityAnalysisTest {
     @Test
     void getResultZippedCsvNotFound(final MockWebServer server) throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID_3, "node 1");
@@ -777,5 +825,79 @@ class SecurityAnalysisTest {
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         }
+    }
+
+    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)
+                    .header("userId", userId)
+                    .contentType(MediaType.ALL)
+                    .content(parameters))
+            .andExpect(status().is(status.value()));
+
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
+        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
+    }
+
+    @Test
+    void testResetSecurityAnalysisParametersUserHasNoProfile(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SECURITY_ANALYSIS_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PROFILE_USER_ID, HttpStatus.OK);
+
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID_STRING))); // update existing with dft
+    }
+
+    @Test
+    void testResetSecurityAnalysisParametersUserHasNoParamsInProfile(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SECURITY_ANALYSIS_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID_STRING))); // update existing with dft
+    }
+
+    @Test
+    void testResetSecurityAnalysisParametersUserHasInvalidParamsInProfile(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SECURITY_ANALYSIS_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
+
+        var requests = TestUtils.getRequestsDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID_STRING))); // update existing with dft
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING))); // post duplicate ko
+    }
+
+    @Test
+    void testResetSecurityAnalysisParametersUserHasValidParamsInProfile(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SECURITY_ANALYSIS_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+
+        var requests = TestUtils.getRequestsDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID_STRING))); // 2 requests: 1 get for provider and then delete existing
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
+    }
+
+    @Test
+    void testResetSecurityAnalysisParametersUserHasValidParamsInProfileButNoExistingSecurityAnalysisParams(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
     }
 }

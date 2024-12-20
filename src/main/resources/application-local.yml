@@ -4,12 +4,12 @@ server:
 spring:
   rabbitmq:
     addresses: localhost
-  data:
-    elasticsearch:
-      host: localhost
-      ## to fill if authentication is needed
-      # user:
-      # password:
+  elasticsearch:
+    uris:
+      - http://localhost:9200
+    ## to fill if authentication is needed
+    # username:
+    # password:
 
 powsybl-ws:
   database:
@@ -75,4 +75,7 @@ gridsuite:
       base-uri: http://localhost:5033
     -
       name: state-estimation-server
-      base-uri: http://localhost:5040
+      base-uri: http://localhost:6040
+    -
+      name: spreadsheet-config-server
+      base-uri: http://localhost:5035/
