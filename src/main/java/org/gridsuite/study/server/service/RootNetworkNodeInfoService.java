@@ -12,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.modification.NetworkModificationContextInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
@@ -405,6 +406,13 @@ public class RootNetworkNodeInfoService {
             studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
                 .map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).forEach(stateEstimationService::deleteStateEstimationResult)) // TODO delete all with one request only
         );
+    }
+
+    public NetworkModificationContextInfos getNetworkModificationContextInfos(UUID rootNetworkUuid, UUID nodeUuid, UUID networkUuid) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        String variantId = rootNetworkNodeInfoEntity.getVariantId();
+        UUID reportUuid = rootNetworkNodeInfoEntity.getModificationReports().get(nodeUuid);
+        return new NetworkModificationContextInfos(networkUuid, variantId, reportUuid, nodeUuid);
     }
 
     private List<UUID> getReportUuids(RootNetworkNodeInfo rootNetworkNodeInfo) {

@@ -22,6 +22,8 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
+import org.gridsuite.study.server.dto.modification.MultipleNetworkModificationsInfos;
+import org.gridsuite.study.server.dto.modification.NetworkModificationContextInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
@@ -56,12 +58,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
 
+import javax.swing.text.html.Option;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -542,7 +546,8 @@ public class StudyService {
         StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
         StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId());
-        networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudyUuid);
+        //TODO: to fix, should not have any root network UUID here
+        networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudyUuid, self.getStudyFirstRootNetworkUuid(sourceStudyUuid));
         rootNetworkService.duplicateStudyRootNetworks(newStudyEntity, sourceStudyUuid);
 
         UUID sourceStudyFirstRootNetworkUuid = self.getStudyFirstRootNetworkUuid(newStudyEntity.getId());
@@ -1301,16 +1306,36 @@ public class StudyService {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
-                UUID rootNetworkUuid = rootNetworkEntity.getId();
-                RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
-                UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-                String variantId = rootNetworkNodeInfoEntity.getVariantId();
-                UUID reportUuid = rootNetworkNodeInfoEntity.getModificationReports().get(nodeUuid);
+            List<Optional<NetworkModificationResult>> networkModificationResults = null;
+            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            List<RootNetworkEntity> studyRootNetworkEntities = rootNetworkService.getStudyRootNetworks(studyUuid);
 
-                Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModification(studyUuid, createModificationAttributes, groupUuid, variantId, reportUuid, nodeUuid, rootNetworkUuid);
-                updateNode(studyUuid, nodeUuid, rootNetworkUuid, networkModificationResult);
-            });
+            /*
+             * temporary solution - there is no way to create a modification and to apply it to several network contexts
+             * - we create a modification without applying it - we get its UUID
+             * - we apply this modification to multiple network context - we get a list of NetworkModificationResults
+             */
+            // Create modification in networkModificationServer without applying it, and getting it's UUID
+            Optional<UUID> modificationUuid = networkModificationService.createModificationWithoutApplying(studyUuid, createModificationAttributes, groupUuid);
+            if (modificationUuid.isPresent()) {
+                // if creating is successful, applying this modification to all root network contexts - each network context will generate a NetworkModificationResult
+                networkModificationResults = networkModificationService.applyModifications(new MultipleNetworkModificationsInfos(
+                    List.of(modificationUuid.get()),
+                    studyRootNetworkEntities.stream().map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationContextInfos(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid())
+                ).toList()));
+            }
+            if (networkModificationResults != null) {
+                int index = 0;
+                // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
+                for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults) {
+                    if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
+                        emitNetworkModificationImpacts(studyUuid, nodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
+                    }
+                    index++;
+                }
+            }
+            // invalidate all nodeUuid children
+            updateStatuses(studyUuid, nodeUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1434,7 +1459,8 @@ public class StudyService {
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
 
         StudyEntity studyEntity = studyRepository.findById(targetStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid);
+        //TODO: tofix, should not have rootNetworkUuid here, but this method returns data linked to a specific root network
+        AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, getStudyFirstRootNetworkUuid(sourceStudyUuid));
         UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity);
         notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
@@ -1856,11 +1882,6 @@ public class StudyService {
 
         Collections.reverse(nodeIds);
         return nodeIds;
-    }
-
-    private void updateNode(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Optional<NetworkModificationResult> networkModificationResult) {
-        networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, rootNetworkUuid, modificationResult));
-        updateStatuses(studyUuid, nodeUuid);
     }
 
     private void emitNetworkModificationImpacts(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NetworkModificationResult networkModificationResult) {
