@@ -546,7 +546,7 @@ public class StudyService {
         StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
         StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId());
-        //TODO: to fix, should not have any root network UUID here
+        //TODO: to fix, should not have any root network UUID here - necessary because getStudyTree needs rootNetworkUUID for now to get all nodes status
         networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudyUuid, self.getStudyFirstRootNetworkUuid(sourceStudyUuid));
         rootNetworkService.duplicateStudyRootNetworks(newStudyEntity, sourceStudyUuid);
 
@@ -1832,7 +1832,7 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public List<Report> getParentNodesReport(UUID nodeUuid, UUID rootNetworkUuid, boolean nodeOnlyReport, ReportType reportType, Set<String> severityLevels) {
-        AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
+        AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid, rootNetworkUuid);
 
         if (isNonRootNodeWithComputationReportType(nodeInfos, reportType)) {
             UUID reportUuid = getReportUuidForNode(nodeUuid, rootNetworkUuid, reportType);
