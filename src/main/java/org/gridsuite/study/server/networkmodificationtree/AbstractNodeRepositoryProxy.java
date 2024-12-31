@@ -39,6 +39,7 @@ public abstract class AbstractNodeRepositoryProxy<T extends AbstractNodeInfoEnti
         node.setId(nodeInfoEntity.getId());
         node.setName(nodeInfoEntity.getName());
         node.setDescription(nodeInfoEntity.getDescription());
+        node.setColumnPosition(nodeInfoEntity.getColumnPosition());
         node.setReadOnly(nodeInfoEntity.getReadOnly());
         return node;
     }
