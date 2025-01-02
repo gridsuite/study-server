@@ -132,7 +132,7 @@ class NetworkModificationTest {
 
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
 
-    private static final Report REPORT_TEST = Report.builder().id(UUID.randomUUID()).message("test").severities(List.of(StudyConstants.Severity.WARN)).build();
+    private static final Report REPORT_TEST = Report.builder().id(UUID.randomUUID()).message("test").severity(StudyConstants.Severity.WARN).build();
 
     private static final String TEST_FILE = "testCase.xiidm";
 

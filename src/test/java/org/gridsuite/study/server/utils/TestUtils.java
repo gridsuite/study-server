@@ -103,6 +103,15 @@ public final class TestUtils {
         return studyEntity;
     }
 
+    public static StudyEntity createDummyStudy(UUID networkUuid, String networkId, UUID caseUuid, String caseFormat, String caseName, UUID reportUuid, UUID networkVisuParametersUuid) {
+        StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
+                .networkVisualizationParametersUuid(networkVisuParametersUuid)
+                .build();
+        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build();
+        studyEntity.addRootNetwork(rootNetworkEntity);
+        return studyEntity;
+    }
+
     public static StudyEntity createDummyStudy(UUID networkUuid, String networkId, UUID caseUuid, String caseFormat, String caseName, UUID reportUuid,
                                                UUID loadFlowParametersUuid,
                                                UUID shortCircuitParametersUuid,

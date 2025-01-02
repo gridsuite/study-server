@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -84,6 +85,7 @@ public class NotificationService {
     public static final String UPDATE_TYPE_STATE_ESTIMATION_RESULT = "stateEstimationResult";
     public static final String UPDATE_TYPE_STATE_ESTIMATION_STATUS = "stateEstimation_status";
     public static final String UPDATE_TYPE_COMPUTATION_PARAMETERS = "computationParametersUpdated";
+    public static final String UPDATE_NETWORK_VISUALIZATION_PARAMETERS = "networkVisualizationParametersUpdated";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
     public static final String MODIFICATIONS_STASHING_IN_PROGRESS = "stashingInProgress";
@@ -113,6 +115,7 @@ public class NotificationService {
     public static final String NODE_RENAMED = "nodeRenamed";
     public static final String NODE_BUILD_STATUS_UPDATED = "nodeBuildStatusUpdated";
     public static final String SUBTREE_MOVED = "subtreeMoved";
+    public static final String NODES_COLUMN_POSITIONS_CHANGED = "nodesColumnPositionsChanged";
     public static final String SUBTREE_CREATED = "subtreeCreated";
     public static final String MESSAGE_LOG = "Sending message : {}";
     public static final String DEFAULT_ERROR_MESSAGE = "Unknown error";
@@ -181,6 +184,14 @@ public class NotificationService {
                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_COMPUTATION_PARAMETERS)
                .setHeader(HEADER_COMPUTATION_TYPE, computationType.name())
                .build());
+    }
+
+    @PostCompletion
+    public void emitNetworkVisualizationParamsChanged(UUID studyUuid) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_UPDATE_TYPE, UPDATE_NETWORK_VISUALIZATION_PARAMETERS)
+                .build());
     }
 
     public void emitStudyCreationError(UUID studyUuid, String userId, String errorMessage) {
@@ -307,6 +318,20 @@ public class NotificationService {
                 .setHeader(HEADER_PARENT_NODE, referenceNodeUuid)
                 .build()
         );
+    }
+
+    @PostCompletion
+    public void emitColumnsChanged(UUID studyUuid, UUID parentNodeUuid, List<UUID> orderedUuids) {
+        try {
+            sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(orderedUuids))
+                    .setHeader(HEADER_STUDY_UUID, studyUuid)
+                    .setHeader(HEADER_UPDATE_TYPE, NODES_COLUMN_POSITIONS_CHANGED)
+                    .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
+                    .build()
+            );
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Unable to notify on column positions update", e);
+        }
     }
 
     @PostCompletion

@@ -468,7 +468,7 @@ class NetworkModificationTreeTest {
         assertTrue(result.getResponse().getContentAsString().contains(n4.getId().toString()));
 
         //And now we restore the tree we just stashed
-        restoreNode(studyId, List.of(stashedNode1.getIdNode(), stashedNode4.getIdNode()), root.getId(), Set.of(n1.getId(), n2.getId(), n3.getId(), n4.getId()), userId);
+        restoreNode(studyId, List.of(stashedNode1.getIdNode(), stashedNode4.getIdNode()), root.getId(), userId);
 
         var restoredNode1 = nodeRepository.findById(n1.getId()).orElseThrow();
         assertFalse(restoredNode1.isStashed());
@@ -728,15 +728,15 @@ class NetworkModificationTreeTest {
                 assertTrue(expectedStash.stream().anyMatch(node -> node.getId().equals(id))));
     }
 
-    private void restoreNode(UUID studyUuid, List<UUID> nodeId, UUID anchorNodeId, Set<UUID> expectedIdRestored, String userId) throws Exception {
-        String param = nodeId.stream().map(UUID::toString).reduce("", (a1, a2) -> a1 + "," + a2).substring(1);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}", studyUuid, anchorNodeId).header(USER_ID_HEADER, "userId")
+    private void restoreNode(UUID studyUuid, List<UUID> nodeIds, UUID anchorNodeId, String userId) throws Exception {
+        String param = nodeIds.stream().map(UUID::toString).reduce("", (a1, a2) -> a1 + "," + a2).substring(1);
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}", studyUuid, anchorNodeId).header(USER_ID_HEADER, userId)
                         .queryParam("ids", param))
                 .andExpect(status().isOk());
 
-        for (int i = 0; i < expectedIdRestored.size(); i++) {
+        for (int i = 0; i < nodeIds.size(); i++) {
             var message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-            assertTrue(expectedIdRestored.contains(message.getHeaders().get(HEADER_NEW_NODE)));
+            assertTrue(nodeIds.contains(message.getHeaders().get(HEADER_NEW_NODE)) || anchorNodeId.equals(message.getHeaders().get(HEADER_NEW_NODE)));
         }
     }
 
@@ -875,6 +875,34 @@ class NetworkModificationTreeTest {
                 .content(objectWriter.writeValueAsString(node1))
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testUpdateNodesColumnPositions() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        final NetworkModificationNode node1 = buildNetworkModificationNode("nod", "silently", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        final NetworkModificationNode node2 = buildNetworkModificationNode("nodding", "politely", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(root.getStudyId(), root, node1, userId);
+        createNode(root.getStudyId(), root, node2, userId);
+        assertNull(node1.getColumnPosition());
+        node1.setColumnPosition(1);
+        node2.setColumnPosition(0);
+        List<NetworkModificationNode> nodes = List.of(node1, node2);
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes/{parentUuid}/children-column-positions", root.getStudyId(), root.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectWriter.writeValueAsString(nodes))
+                .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+
+        List<UUID> nodesUuids = List.of(node2.getId(), node1.getId());
+        for (NetworkModificationNodeInfoEntity entity : networkModificationNodeInfoRepository.findAllById(nodesUuids)) {
+            assertEquals(entity.getId().equals(node2.getId()) ? 0 : 1, entity.getColumnPosition());
+        }
+
+        checkColumnsChangedMessageSent(root.getStudyId(), root.getId(), nodesUuids);
+        checkElementUpdatedMessageSent(root.getStudyId(), userId);
     }
 
     // This test is for a part of the code that is not used yet
@@ -1339,6 +1367,14 @@ class NetworkModificationTreeTest {
         Message<byte[]> message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
         assertEquals(elementUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
         assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
+    }
+
+    private void checkColumnsChangedMessageSent(UUID studyUuid, UUID parentNodeUuid, List<UUID> orderedUuids) throws Exception {
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(NotificationService.NODES_COLUMN_POSITIONS_CHANGED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(parentNodeUuid, message.getHeaders().get(NotificationService.HEADER_PARENT_NODE));
+        assertEquals(objectMapper.writeValueAsString(orderedUuids), new String(message.getPayload()));
     }
 
     private void checkUpdateNodesMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {

@@ -65,6 +65,7 @@ public class ConsumerService {
     private final LoadFlowService loadFlowService;
     private final UserAdminService userAdminService;
     private final NetworkModificationTreeService networkModificationTreeService;
+    private final StudyConfigService studyConfigService;
     private final ShortCircuitService shortCircuitService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final VoltageInitService voltageInitService;
@@ -80,6 +81,7 @@ public class ConsumerService {
                            UserAdminService userAdminService,
                            NetworkModificationTreeService networkModificationTreeService,
                            SensitivityAnalysisService sensitivityAnalysisService,
+                           StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService) {
         this.objectMapper = objectMapper;
@@ -91,6 +93,7 @@ public class ConsumerService {
         this.userAdminService = userAdminService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
+        this.studyConfigService = studyConfigService;
         this.shortCircuitService = shortCircuitService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.voltageInitService = voltageInitService;
@@ -251,11 +254,12 @@ public class ConsumerService {
         UUID shortCircuitParametersUuid = createDefaultShortCircuitAnalysisParameters(userId, userProfileInfos);
         UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters(userId, userProfileInfos);
         UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters(userId, userProfileInfos);
+        UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters();
         UUID voltageInitParametersUuid = createDefaultVoltageInitParameters(userId, userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
-            voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
+            voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid,
             importParameters, importReportUuid);
     }
 
@@ -364,6 +368,15 @@ public class ConsumerService {
             return voltageInitService.createVoltageInitParameters(null);
         } catch (final Exception e) {
             LOGGER.error("Error while creating default parameters for voltage init", e);
+            return null;
+        }
+    }
+
+    private UUID createDefaultNetworkVisualizationParameters() {
+        try {
+            return studyConfigService.createDefaultNetworkVisualizationParameters();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating network visualization default parameters", e);
             return null;
         }
     }
