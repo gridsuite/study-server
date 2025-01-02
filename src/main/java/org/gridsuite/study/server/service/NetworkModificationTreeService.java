@@ -445,6 +445,27 @@ public class NetworkModificationTreeService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
+    @Transactional
+    public void updateNodesColumnPositions(UUID studyUuid, UUID parentUuid, List<NetworkModificationNode> childrenNodes, String userId) {
+        // Convert to a map for quick lookup
+        Map<UUID, Integer> nodeIdToColumnPosition = childrenNodes.stream()
+                .collect(Collectors.toMap(NetworkModificationNode::getId, NetworkModificationNode::getColumnPosition));
+
+        List<UUID> childrenIds = childrenNodes.stream().map(NetworkModificationNode::getId).toList();
+        networkModificationNodeInfoRepository.findAllById(childrenIds).forEach(entity -> {
+            Integer newColumnPosition = nodeIdToColumnPosition.get(entity.getId());
+            entity.setColumnPosition(Objects.requireNonNull(newColumnPosition));
+        });
+
+        List<UUID> orderedUuids = childrenNodes.stream()
+            .sorted(Comparator.comparingInt(AbstractNode::getColumnPosition))
+            .map(NetworkModificationNode::getId)
+            .toList();
+
+        notificationService.emitColumnsChanged(studyUuid, parentUuid, orderedUuids);
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
     private boolean isRenameNode(AbstractNode node) {
         NetworkModificationNode renameNode = NetworkModificationNode.builder()
             .id(node.getId())
@@ -590,9 +611,17 @@ public class NetworkModificationTreeService {
             nodeToRestore.setStashed(false);
             nodeToRestore.setStashDate(null);
             nodesRepository.save(nodeToRestore);
-            notificationService.emitNodeInserted(studyId, anchorNodeId, nodeId, InsertMode.AFTER, anchorNodeId);
-            restoreNodeChildren(studyId, nodeId);
+            if (hasChildren(nodeId)) {
+                restoreNodeChildren(studyId, nodeId);
+                notificationService.emitSubtreeInserted(studyId, nodeId, anchorNodeId);
+            } else {
+                notificationService.emitNodeInserted(studyId, anchorNodeId, nodeId, InsertMode.CHILD, anchorNodeId);
+            }
         }
+    }
+
+    private boolean hasChildren(UUID nodeId) {
+        return nodesRepository.countByParentNodeIdNode(nodeId) > 0;
     }
 
     @Transactional
@@ -626,7 +655,6 @@ public class NetworkModificationTreeService {
             nodeEntity.setStashed(false);
             nodeEntity.setStashDate(null);
             nodesRepository.save(nodeEntity);
-            notificationService.emitNodeInserted(studyId, parentNodeId, nodeEntity.getIdNode(), InsertMode.AFTER, parentNodeId);
             restoreNodeChildren(studyId, nodeEntity.getIdNode());
         });
     }

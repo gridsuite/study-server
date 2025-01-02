@@ -1336,6 +1336,19 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/tree/nodes/{parentUuid}/children-column-positions")
+    @Operation(summary = "update children column positions")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "the node column positions have been updated"),
+        @ApiResponse(responseCode = "404", description = "The study or a node was not found")})
+    public ResponseEntity<Void> updateNodesColumnPositions(@RequestBody List<NetworkModificationNode> children,
+                                                 @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                 @Parameter(description = "parent node uuid") @PathVariable("parentUuid") UUID parentUuid,
+                                                 @RequestHeader(HEADER_USER_ID) String userId) {
+        networkModificationTreeService.updateNodesColumnPositions(studyUuid, parentUuid, children, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
     @Operation(summary = "get simplified node")
     @ApiResponses(value = {
@@ -1764,6 +1777,25 @@ public class StudyController {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
         studyService.copyVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/network-visualizations/parameters")
+    @Operation(summary = "Get network visualization parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network visualization parameters")})
+    public ResponseEntity<String> getNetworkVisualizationParametersValues(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getNetworkVisualizationParametersValues(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/network-visualizations/parameters")
+    @Operation(summary = "set network visualization parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network visualization parameters are set")})
+    public ResponseEntity<Void> setNetworkVisualizationParametersValues(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) String networkVisualizationParametersValues,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setNetworkVisualizationParametersValues(studyUuid, networkVisualizationParametersValues, userId);
         return ResponseEntity.ok().build();
     }
 

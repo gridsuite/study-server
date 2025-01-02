@@ -93,6 +93,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "sensitivityAnalysisParametersUuid")
     private UUID sensitivityAnalysisParametersUuid;
 
+    @Column(name = "networkVisualizationParametersUuid")
+    private UUID networkVisualizationParametersUuid;
+
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "nonEvacuatedEnergyParametersEntity_id",
         referencedColumnName = "id",
