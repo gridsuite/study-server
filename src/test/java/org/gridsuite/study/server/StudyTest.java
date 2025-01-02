@@ -147,10 +147,10 @@ class StudyTest {
     private static final NetworkInfos NETWORK_INFOS = new NetworkInfos(NETWORK_UUID, "20140116_0830_2D4_UX1_pst");
     private static final NetworkInfos NOT_EXISTING_NETWORK_INFOS = new NetworkInfos(NOT_EXISTING_NETWORK_UUID, "not_existing_network_id");
     private static final UUID REPORT_UUID = UUID.randomUUID();
-    private static final Report REPORT_TEST = Report.builder().id(REPORT_UUID).message("test").severities(List.of(StudyConstants.Severity.WARN)).build();
+    private static final Report REPORT_TEST = Report.builder().id(REPORT_UUID).message("test").severity(StudyConstants.Severity.WARN).build();
     private static final UUID REPORT_LOG_PARENT_UUID = UUID.randomUUID();
     private static final UUID REPORT_ID = UUID.randomUUID();
-    private static final List<ReportLog> REPORT_LOGS = List.of(new ReportLog("test", Set.of(StudyConstants.Severity.WARN), REPORT_LOG_PARENT_UUID));
+    private static final List<ReportLog> REPORT_LOGS = List.of(new ReportLog("test", StudyConstants.Severity.WARN, REPORT_LOG_PARENT_UUID));
     private static final String VARIANT_ID = "variant_1";
     private static final String POST = "POST";
     private static final String DELETE = "DELETE";
@@ -219,6 +219,9 @@ class StudyTest {
     private static final String PROFILE_VOLTAGE_INIT_DUPLICATED_PARAMETERS_UUID_STRING = "d4ce25e1-27a7-401d-a721-04425fe24587";
     private static final String DUPLICATED_VOLTAGE_INIT_PARAMS_JSON = "\"" + PROFILE_VOLTAGE_INIT_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
 
+    private static final String NETWORK_VISUALIZATION_DUPLICATED_PARAMETERS_UUID_STRING = "407a4bec-6f1a-400f-98f0-e5bcf37d4fcf";
+    private static final String DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON = "\"" + NETWORK_VISUALIZATION_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
+
     private static final String DEFAULT_PROVIDER = "defaultProvider";
 
     @Value("${non-evacuated-energy.default-provider}")
@@ -265,6 +268,9 @@ class StudyTest {
 
     @Autowired
     private StateEstimationService stateEstimationService;
+
+    @Autowired
+    private StudyConfigService studyConfigService;
 
     @MockBean
     private EquipmentInfosService equipmentInfosService;
@@ -395,6 +401,7 @@ class StudyTest {
         loadflowService.setLoadFlowServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
         stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
+        studyConfigService.setStudyConfigServerBaseUri(baseUrl);
 
         String baseUrlWireMock = wireMockServer.baseUrl();
         networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
@@ -515,6 +522,12 @@ class StudyTest {
                     }
                 } else if (path.matches("/v1/parameters/.*") && DELETE.equals(request.getMethod())) {
                     return new MockResponse(200);
+                } else if (path.matches("/v1/network-visualizations-params/.*") && DELETE.equals(request.getMethod())) {
+                    return new MockResponse(200);
+                } else if (path.matches("/v1/network-visualizations-params/default")) {
+                    return new MockResponse(200);
+                } else if (path.matches("/v1/network-visualizations-params/duplicate\\?duplicateFrom=.*")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
                 } else if (path.matches("/v1/parameters/.*/provider")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/default-provider")) {
@@ -848,6 +861,7 @@ class StudyTest {
         UUID studyUuid = createStudy(server, "userId", CASE_UUID);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID()); // does not have default params
+        studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
 
         UUID stubUuid = wireMockUtils.stubNetworkModificationDeleteGroup();
@@ -858,7 +872,7 @@ class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(7, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(8, server);
         assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + CASE_UUID)));
@@ -866,6 +880,7 @@ class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getLoadFlowParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSecurityAnalysisParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSensitivityAnalysisParametersUuid())));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-visualizations-params/" + studyEntity.getNetworkVisualizationParametersUuid())));
     }
 
     @Test
@@ -1098,7 +1113,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        int nbRequest = 9;
+        int nbRequest = 10;
         if (parameterDuplicatedUuid != null && !parameterDuplicationSuccess) {
             nbRequest += 5;
         }
@@ -1131,7 +1146,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(9, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(10, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/exists", caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/disableExpiration", caseUuid))));
@@ -1159,7 +1174,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(10, server);
+        var requests = TestUtils.getRequestsDone(11, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
         assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=%s", caseUuid, true)));
         // note : it's a new case UUID
@@ -1377,7 +1392,7 @@ class StudyTest {
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(9, server);
+        var requests = TestUtils.getRequestsDone(10, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", NEW_STUDY_CASE_UUID)));
@@ -1577,6 +1592,7 @@ class StudyTest {
         studyEntity.setSecurityAnalysisParametersUuid(UUID.randomUUID());
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID());
         studyEntity.setSensitivityAnalysisParametersUuid(UUID.randomUUID());
+        studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
         testDuplicateStudy(mockWebServer, study1Uuid);
     }
@@ -1587,7 +1603,9 @@ class StudyTest {
         StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
         studyEntity.setLoadFlowParametersUuid(null);
         studyEntity.setSecurityAnalysisParametersUuid(null);
+        studyEntity.setVoltageInitParametersUuid(null);
         studyEntity.setSensitivityAnalysisParametersUuid(null);
+        studyEntity.setNetworkVisualizationParametersUuid(null);
         studyRepository.save(studyEntity);
         testDuplicateStudy(mockWebServer, study1Uuid);
     }
@@ -1704,6 +1722,12 @@ class StudyTest {
             assertNotNull(duplicatedStudy.getLoadFlowParametersUuid());
             numberOfRequests++;
         }
+        if (sourceStudy.getNetworkVisualizationParametersUuid() == null) {
+            assertNull(duplicatedStudy.getNetworkVisualizationParametersUuid());
+        } else {
+            assertNotNull(duplicatedStudy.getNetworkVisualizationParametersUuid());
+            numberOfRequests++;
+        }
         if (sourceStudy.getShortCircuitParametersUuid() == null) {
             assertNull(duplicatedStudy.getShortCircuitParametersUuid());
         } else {
@@ -1729,6 +1753,9 @@ class StudyTest {
         }
         if (sourceStudy.getSensitivityAnalysisParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getSensitivityAnalysisParametersUuid())).count());
+        }
+        if (sourceStudy.getNetworkVisualizationParametersUuid() != null) {
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/network-visualizations-params/duplicate\\?duplicateFrom=" + sourceStudy.getNetworkVisualizationParametersUuid())).count());
         }
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*/duplicate")).count());
         return duplicatedStudy;
