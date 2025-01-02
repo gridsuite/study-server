@@ -1,0 +1,21 @@
+{
+  "id": "5218bc26-1196-4ac5-a860-d7342359bca7",
+  "mapParameters": {
+    "lineFullPath": true,
+    "lineParallelPath": true,
+    "lineFlowMode": "feeders",
+    "lineFlowColorMode": "nominalVoltage",
+    "lineFlowAlertThreshold": 100,
+    "mapManualRefresh": false,
+    "mapBaseMap": "mapbox"
+  },
+  "singleLineDiagramParameters": {
+    "diagonalLabel": false,
+    "centerLabel": false,
+    "substationLayout": "horizontal",
+    "componentLibrary": ""
+  },
+  "networkAreaDiagramParameters": {
+    "initNadWithGeoData": true
+  }
+}

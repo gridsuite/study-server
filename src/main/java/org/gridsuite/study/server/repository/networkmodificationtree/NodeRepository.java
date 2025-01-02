@@ -20,6 +20,8 @@ import java.util.UUID;
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  */
 public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
+    long countByParentNodeIdNode(UUID id);
+
     List<NodeEntity> findAllByParentNodeIdNode(UUID id);
 
     List<NodeEntity> findAllByStudyId(UUID id);
