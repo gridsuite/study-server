@@ -210,13 +210,13 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
+    @DeleteMapping(value = "/studies/{studyUuid}/root-networks")
     @Operation(summary = "Create root network for study")
     @ApiResponse(responseCode = "200", description = "Root network created")
     public ResponseEntity<Void> deleteRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
-                                                    @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                    @RequestBody List<UUID> rootNetworkUuids,
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.deleteRootNetwork(studyUuid, rootNetworkUuid, userId);
+        studyService.deleteRootNetwork(studyUuid, rootNetworkUuids, userId);
         return ResponseEntity.ok().build();
     }
 

@@ -286,11 +286,13 @@ public class StudyService {
     }
 
     @Transactional
-    public void deleteRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId) {
+    public void deleteRootNetwork(UUID studyUuid, List<UUID> rootNetworkUuids, String userId) {
         assertIsStudyExist(studyUuid);
-        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
+        rootNetworkUuids.forEach(rootNetworkUuid -> {
+            rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
 
-        rootNetworkService.delete(rootNetworkUuid);
+            rootNetworkService.delete(rootNetworkUuid);
+        });
     }
 
     @Transactional
