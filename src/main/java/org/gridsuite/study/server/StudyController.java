@@ -216,7 +216,7 @@ public class StudyController {
     public ResponseEntity<Void> deleteRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                     @RequestBody List<UUID> rootNetworkUuids,
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.deleteRootNetwork(studyUuid, rootNetworkUuids, userId);
+        studyService.deleteRootNetworks(studyUuid, rootNetworkUuids, userId);
         return ResponseEntity.ok().build();
     }
 
