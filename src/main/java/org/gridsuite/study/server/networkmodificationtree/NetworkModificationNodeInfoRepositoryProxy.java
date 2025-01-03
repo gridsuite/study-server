@@ -23,9 +23,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
         @SuppressWarnings("unused")
-        RootNetworkNodeInfoEntity rootNetworkNodeStatusEntity = node.getFirstRootNetworkNodeInfosEntity();
         NetworkModificationNode networkModificationNode = NetworkModificationNode.builder().modificationGroupUuid(node.getModificationGroupUuid()).build();
-        networkModificationNode.completeDtoFromRootNetworkNodeInfo(rootNetworkNodeStatusEntity);
         return completeNodeInfo(node, networkModificationNode);
     }
 }

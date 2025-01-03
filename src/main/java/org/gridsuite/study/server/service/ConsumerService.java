@@ -116,7 +116,7 @@ public class ConsumerService {
                         NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
 
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
                 } catch (Exception e) {
                     LOGGER.error(e.toString());
                 }
@@ -140,7 +140,7 @@ public class ConsumerService {
 
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_CANCELLED);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), NotificationService.UPDATE_TYPE_BUILD_CANCELLED);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -164,7 +164,7 @@ public class ConsumerService {
 
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitNodeBuildFailed(studyUuid, receiverObj.getNodeUuid(), message.getHeaders().get(HEADER_MESSAGE, String.class));
+                    notificationService.emitNodeBuildFailed(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message.getHeaders().get(HEADER_MESSAGE, String.class));
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -395,8 +395,13 @@ public class ConsumerService {
                     UUID studyUuid = receiver.getStudyUuid();
                     String userId = receiver.getUserId();
 
-                    studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
-                    notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
+                    switch(receiver.getCaseImportAction()) {
+                        case STUDY_CREATION -> {
+                            studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+                            notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
+                        }
+                        case ROOT_NETWORK_CREATION, ROOT_NETWORK_MODIFICATION -> notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
+                    }
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
                 }
@@ -435,6 +440,7 @@ public class ConsumerService {
                 notificationService.emitStudyError(
                     studyUuid,
                     receiverObj.getNodeUuid(),
+                    receiverObj.getRootNetworkUuid(),
                     computationType.getUpdateFailedType(),
                     errorMessage,
                     userId);
@@ -455,7 +461,7 @@ public class ConsumerService {
                 rootNetworkNodeInfoService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), null, computationType);
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notification for stopped computation
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateStatusType());
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
 
                 LOGGER.info("{} stopped for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
             } catch (JsonProcessingException e) {
@@ -477,6 +483,7 @@ public class ConsumerService {
                 notificationService.emitStudyError(
                     studyUuid,
                     receiverObj.getNodeUuid(),
+                    receiverObj.getRootNetworkUuid(),
                     updateType,
                     errorMessage,
                     userId
@@ -502,8 +509,8 @@ public class ConsumerService {
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notifications
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateStatusType());
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), computationType.getUpdateResultType());
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateResultType());
             }));
     }
 
