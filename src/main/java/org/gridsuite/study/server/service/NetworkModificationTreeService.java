@@ -367,7 +367,9 @@ public class NetworkModificationTreeService {
         List<AbstractNode> allNodeInfos = new ArrayList<>();
         repositories.forEach((key, repository) -> allNodeInfos.addAll(repository.getAll(
             nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()))));
-        completeNodeInfos(allNodeInfos, rootNetworkUuid);
+        if (rootNetworkUuid != null) {
+            completeNodeInfos(allNodeInfos, rootNetworkUuid);
+        }
         Map<UUID, AbstractNode> fullMap = allNodeInfos.stream().collect(Collectors.toMap(AbstractNode::getId, Function.identity()));
 
         nodes.stream()

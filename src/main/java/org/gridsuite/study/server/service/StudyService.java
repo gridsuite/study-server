@@ -290,6 +290,7 @@ public class StudyService {
 
             rootNetworkService.delete(rootNetworkUuid);
         });
+        notificationService.emitRootNetworksUpdated(studyUuid);
     }
 
     @Transactional
@@ -552,8 +553,7 @@ public class StudyService {
         StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
         StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId());
-        //TODO: to fix, should not have any root network UUID here - necessary because getStudyTree needs rootNetworkUUID for now to get all nodes status
-        networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudyUuid, self.getStudyFirstRootNetworkUuid(sourceStudyUuid));
+        networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudyUuid, null);
         rootNetworkService.duplicateStudyRootNetworks(newStudyEntity, sourceStudyUuid);
 
         UUID sourceStudyFirstRootNetworkUuid = self.getStudyFirstRootNetworkUuid(newStudyEntity.getId());
@@ -1496,7 +1496,7 @@ public class StudyService {
 
         StudyEntity studyEntity = studyRepository.findById(targetStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         //TODO: tofix, should not have rootNetworkUuid here, but this method returns data linked to a specific root network
-        AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, getStudyFirstRootNetworkUuid(sourceStudyUuid));
+        AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity);
         notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(targetStudyUuid, userId);

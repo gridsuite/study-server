@@ -301,10 +301,10 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         //TODO: to fix, should not have any root network uuid here
-        RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         //TODO: to parallelize ?
         rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
-            studyService.invalidateBuild(studyUuid, rootNode.getId(), rootNetworkEntity.getId(), false, false, true)
+            studyService.invalidateBuild(studyUuid, rootNodeUuid, rootNetworkEntity.getId(), false, false, true)
         );
 
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
