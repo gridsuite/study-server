@@ -1825,17 +1825,26 @@ public class StudyService {
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nodeUuid);
-            //TODO : not ok, creating multiple times the same modification for each root network
-            rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
-                UUID rootNetworkUuid = rootNetworkEntity.getId();
-                RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
-                UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-                Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModifications(modificationUuidList, networkUuid, networkModificationNodeInfoEntity, rootNetworkNodeInfoEntity, action);
-                // invalidate the whole subtree except the target node (we have built this node during the duplication)
-                networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, rootNetworkUuid, modificationResult));
-            });
-            //TODO: NOT WORKING WELL, NOTIF HAS TO TARGET ROOT NETWORK UUID
-            updateStatuses(studyUuid, nodeUuid, true, true, true);
+            List<RootNetworkEntity> studyRootNetworkEntities = rootNetworkService.getStudyRootNetworks(studyUuid);
+            List<UUID> updatedModificationUuidList = networkModificationService.handleNetworkModificationsWithoutApplying(modificationUuidList, networkModificationNodeInfoEntity, action);
+
+            List<Optional<NetworkModificationResult>> networkModificationResults = networkModificationService.applyModifications(new MultipleNetworkModificationsInfos(
+                updatedModificationUuidList,
+                studyRootNetworkEntities.stream().map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationContextInfos(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid())
+                ).toList()));
+
+            if (networkModificationResults != null) {
+                int index = 0;
+                // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
+                for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults) {
+                    if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
+                        emitNetworkModificationImpacts(studyUuid, nodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
+                    }
+                    index++;
+                }
+            }
+            // invalidate all nodeUuid children
+            updateStatuses(studyUuid, nodeUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }

@@ -358,6 +358,19 @@ public class NetworkModificationService {
                 }).getBody();
     }
 
+    public List<UUID> handleNetworkModificationsWithoutApplying(List<UUID> modificationUuidList, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity, ModificationsActionType action) {
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
+            .queryParam(QUERY_PARAM_ACTION, action.name());
+
+        HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
+        return restTemplate.exchange(
+            getNetworkModificationServerURI(false) + path.buildAndExpand(networkModificationNodeInfoEntity.getModificationGroupUuid()).toUriString(),
+            HttpMethod.PUT,
+            httpEntity,
+            new ParameterizedTypeReference<List<UUID>>() {
+            }).getBody();
+    }
+
     public void createModifications(UUID sourceGroupUuid, UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
