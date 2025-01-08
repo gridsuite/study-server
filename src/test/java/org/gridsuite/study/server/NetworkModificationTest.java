@@ -227,7 +227,6 @@ class NetworkModificationTest {
     private UUID userNoProfileStubId;
 
     private static final String ERROR_MESSAGE = "nullPointerException: unexpected null somewhere";
-    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setup(final MockWebServer server) {

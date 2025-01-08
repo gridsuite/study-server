@@ -393,9 +393,9 @@ public class StudyService {
 
             StudyEntity duplicatedStudy = duplicateStudy(basicStudyInfos, sourceStudyUuid, userId);
 
-            rootNetworkService.getStudyRootNetworks(duplicatedStudy.getId()).forEach(rootNetworkEntity -> {
-                reindexStudy(duplicatedStudy, rootNetworkEntity.getId());
-            });
+            rootNetworkService.getStudyRootNetworks(duplicatedStudy.getId()).forEach(rootNetworkEntity ->
+                reindexStudy(duplicatedStudy, rootNetworkEntity.getId())
+            );
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -1495,7 +1495,6 @@ public class StudyService {
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
 
         StudyEntity studyEntity = studyRepository.findById(targetStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        //TODO: tofix, should not have rootNetworkUuid here, but this method returns data linked to a specific root network
         AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity);
         notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);

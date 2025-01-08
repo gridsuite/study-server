@@ -395,12 +395,11 @@ public class ConsumerService {
                     UUID studyUuid = receiver.getStudyUuid();
                     String userId = receiver.getUserId();
 
-                    switch (receiver.getCaseImportAction()) {
-                        case STUDY_CREATION -> {
-                            studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
-                            notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
-                        }
-                        case ROOT_NETWORK_CREATION, ROOT_NETWORK_MODIFICATION -> notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
+                    if (receiver.getCaseImportAction() == CaseImportAction.STUDY_CREATION) {
+                        studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+                        notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
+                    } else {
+                        notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
                     }
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);

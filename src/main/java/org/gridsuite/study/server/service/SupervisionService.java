@@ -304,7 +304,6 @@ public class SupervisionService {
     public void invalidateAllNodesBuilds(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        //TODO: to fix, should not have any root network uuid here
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         //TODO: to parallelize ?
         rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
