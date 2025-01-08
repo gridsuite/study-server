@@ -182,7 +182,7 @@ class SecurityAnalysisTest {
     private final String studyUpdateDestination = "study.update";
     private final String saResultDestination = "sa.result";
     private final String saStoppedDestination = "sa.stopped";
-    private final String saFailedDestination = "sa.failed";
+    private final String saFailedDestination = "sa.run.dlx";
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
