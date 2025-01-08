@@ -489,7 +489,9 @@ public class NetworkModificationTreeService {
     public AbstractNode getNode(UUID nodeId, UUID rootNetworkUuid) {
         AbstractNode node = getSimpleNode(nodeId);
         nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
-        completeNodeInfos(List.of(node), rootNetworkUuid);
+        if (rootNetworkUuid != null) {
+            completeNodeInfos(List.of(node), rootNetworkUuid);
+        }
         return node;
     }
 

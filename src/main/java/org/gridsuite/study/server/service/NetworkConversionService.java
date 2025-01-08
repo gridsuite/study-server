@@ -30,6 +30,7 @@ import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -71,13 +72,10 @@ public class NetworkConversionService {
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
             .queryParam(CASE_UUID, caseUuid)
+            .queryParamIfPresent(QUERY_PARAM_VARIANT_ID, Optional.ofNullable(variantId))
             .queryParam(REPORT_UUID, importReportUuid)
             .queryParam(QUERY_PARAM_RECEIVER, receiver)
             .queryParam(CASE_FORMAT, caseFormat);
-
-        if (variantId != null) {
-            builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
 
         String path = builder
                 .buildAndExpand()

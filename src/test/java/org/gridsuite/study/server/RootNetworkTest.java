@@ -102,6 +102,7 @@ class RootNetworkTest {
     private static final String NEW_CASE_NAME = "newCaseName";
     private static final String NEW_CASE_FORMAT = "newCaseFormat";
     private static final UUID NEW_REPORT_UUID = UUID.randomUUID();
+    private static final UUID DUPLICATE_CASE_UUID = UUID.randomUUID();
 
     private static final String NODE_1_NAME = "node1";
     private static final String NODE_2_NAME = "node2";
@@ -185,6 +186,7 @@ class RootNetworkTest {
         importParameters.put("param2", "value2");
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
             .willReturn(WireMock.ok())).getId();
+        Mockito.doReturn(DUPLICATE_CASE_UUID).when(caseService).duplicateCase(caseUuid, true);
 
         // request execution - returns RootNetworkCreationRequestInfos
         String response = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}", studyEntity.getId(), caseUuid, caseFormat)
@@ -197,7 +199,7 @@ class RootNetworkTest {
 
         wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
             false,
-            Map.of("caseUuid", WireMock.equalTo(caseUuid.toString()),
+            Map.of("caseUuid", WireMock.equalTo(DUPLICATE_CASE_UUID.toString()),
                 "caseFormat", WireMock.equalTo(caseFormat),
                 "receiver", WireMock.matching(".*rootNetworkUuid.*")),
                 objectMapper.writeValueAsString(importParameters)
@@ -233,6 +235,7 @@ class RootNetworkTest {
         String caseFormat = "newCaseFormat";
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
             .willReturn(WireMock.serverError().withBody("Error when creating root network"))).getId();
+        Mockito.doReturn(DUPLICATE_CASE_UUID).when(caseService).duplicateCase(caseUuid, true);
 
         // request execution - returns RootNetworkCreationRequestInfos
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}", studyEntity.getId(), caseUuid, caseFormat)
@@ -242,12 +245,13 @@ class RootNetworkTest {
 
         wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
             false,
-            Map.of("caseUuid", WireMock.equalTo(caseUuid.toString()),
+            Map.of("caseUuid", WireMock.equalTo(DUPLICATE_CASE_UUID.toString()),
                 "caseFormat", WireMock.equalTo(caseFormat),
                 "receiver", WireMock.matching(".*rootNetworkUuid.*")),
             null
         );
 
+        Mockito.verify(caseService, Mockito.times(1)).duplicateCase(caseUuid, true);
         // check no rootNetworkCreationRequest has been saved
         assertEquals(0, rootNetworkCreationRequestRepository.count());
     }
@@ -375,7 +379,9 @@ class RootNetworkTest {
         // before deletion, check we have 2 root networks for study
         assertEquals(2, rootNetworkService.getStudyRootNetworks(studyEntity.getId()).size());
 
-        mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}", studyEntity.getId(), rootNetworkEntityToDelete.getId())
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(List.of(rootNetworkEntityToDelete.getId())))
                 .header("userId", USER_ID))
             .andExpect(status().isOk());
 

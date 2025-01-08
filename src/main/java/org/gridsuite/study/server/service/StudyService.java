@@ -789,9 +789,9 @@ public class StudyService {
     }
 
     public void assertNoBuildNoComputationForNode(UUID studyUuid, UUID nodeUuid) {
-        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetwork -> {
-            rootNetworkNodeInfoService.assertComputationNotRunning(nodeUuid, rootNetwork.getId());
-        });
+        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
+            rootNetworkNodeInfoService.assertComputationNotRunning(nodeUuid, rootNetwork.getId())
+        );
         rootNetworkNodeInfoService.assertNoRootNetworkNodeIsBuilding(studyUuid);
     }
 
@@ -1482,9 +1482,9 @@ public class StudyService {
             updateStatuses(studyUuid, nodeToMoveUuid, false, true, true);
             oldChildren.forEach(child -> updateStatuses(studyUuid, child.getIdNode(), false, true, true));
         } else {
-            rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
-                invalidateBuild(studyUuid, nodeToMoveUuid, rootNetworkEntity.getId(), false, true, true);
-            });
+            rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
+                invalidateBuild(studyUuid, nodeToMoveUuid, rootNetworkEntity.getId(), false, true, true)
+            );
         }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
@@ -1711,9 +1711,9 @@ public class StudyService {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         boolean invalidateChildrenBuild = stashChildren || networkModificationTreeService.hasModifications(nodeId, false);
-        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
-            invalidateBuild(studyUuid, nodeId, rootNetworkEntity.getId(), false, !invalidateChildrenBuild, true);
-        });
+        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
+            invalidateBuild(studyUuid, nodeId, rootNetworkEntity.getId(), false, !invalidateChildrenBuild, true)
+        );
         networkModificationTreeService.doStashNode(nodeId, stashChildren);
 
         if (startTime.get() != null) {
@@ -1798,18 +1798,15 @@ public class StudyService {
                 if (!targetNodeBelongsToSourceNodeSubTree) {
                     // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
                     networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, targetNodeUuid, rootNetworkUuid, modificationResult));
-                    //TODO : should take rootnetworkuuid as param
                     updateStatuses(studyUuid, targetNodeUuid, buildTargetNode, true, true);
                 }
                 if (moveBetweenNodes) {
                     // invalidate the whole subtree including the source node
                     networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, originNodeUuid, rootNetworkUuid, modificationResult));
-                    //TODO : should take rootnetworkuuid as param
                     updateStatuses(studyUuid, originNodeUuid, false, true, true);
                 }
             });
         } finally {
-            //TODO : should take rootnetworkuuid as param
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
             if (moveBetweenNodes) {
                 notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids);

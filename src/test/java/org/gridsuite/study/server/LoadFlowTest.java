@@ -519,7 +519,7 @@ class LoadFlowTest {
     void testResetUuidResultWhenLFFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), LOADFLOW_PARAMETERS_UUID);
-        RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
+        RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId(), null);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), rootNetworkUuid));

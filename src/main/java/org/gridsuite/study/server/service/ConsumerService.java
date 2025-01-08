@@ -395,7 +395,7 @@ public class ConsumerService {
                     UUID studyUuid = receiver.getStudyUuid();
                     String userId = receiver.getUserId();
 
-                    switch(receiver.getCaseImportAction()) {
+                    switch (receiver.getCaseImportAction()) {
                         case STUDY_CREATION -> {
                             studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
                             notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);

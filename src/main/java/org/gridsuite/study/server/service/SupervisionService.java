@@ -8,7 +8,6 @@ package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -135,17 +134,22 @@ public class SupervisionService {
     }
 
     @Transactional
-    public Long deleteStudyIndexedEquipmentsAndTombstoned(UUID studyUuid, UUID rootNetworkUuid) {
+    public Long deleteStudyIndexedEquipmentsAndTombstoned(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
 
-        UUID networkUUID = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        Long nbIndexesToDelete = getStudyIndexedEquipmentsCount(networkUUID) + getStudyIndexedTombstonedEquipmentsCount(networkUUID);
-        equipmentInfosService.deleteAllByNetworkUuid(networkUUID);
+        AtomicReference<Long> nbIndexesToDelete = new AtomicReference<>(0L);
+
+        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
+            UUID networkUUID = rootNetworkService.getNetworkUuid(rootNetworkEntity.getId());
+            nbIndexesToDelete.updateAndGet(v -> v + getStudyIndexedEquipmentsCount(networkUUID) + getStudyIndexedTombstonedEquipmentsCount(networkUUID));
+            equipmentInfosService.deleteAllByNetworkUuid(networkUUID);
+        });
+
         studyService.updateStudyIndexationStatus(studyUuid, StudyIndexationStatus.NOT_INDEXED);
 
         LOGGER.trace("Indexed equipments deletion for study \"{}\": {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        return nbIndexesToDelete;
+        return nbIndexesToDelete.get();
     }
 
     private Integer deleteLoadflowResults() {

@@ -408,6 +408,7 @@ public class RootNetworkNodeInfoService {
         );
     }
 
+    @Transactional
     public NetworkModificationContextInfos getNetworkModificationContextInfos(UUID rootNetworkUuid, UUID nodeUuid, UUID networkUuid) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();

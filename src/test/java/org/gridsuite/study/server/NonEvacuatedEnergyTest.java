@@ -411,7 +411,7 @@ class NonEvacuatedEnergyTest {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
-        RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
+        RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId(), null);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), rootNetworkUuid));
 

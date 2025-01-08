@@ -31,10 +31,12 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -43,6 +45,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -81,7 +85,7 @@ class SupervisionControllerTest {
     @Autowired
     private ObjectMapper mapper;
 
-    @MockBean
+    @SpyBean
     private RootNetworkService rootNetworkService;
 
     @Autowired
@@ -89,8 +93,12 @@ class SupervisionControllerTest {
 
     @Autowired
     private RestClient restClient;
+
     @Autowired
     private StudyTestUtils studyTestUtils;
+
+    @MockBean
+    private NetworkService networkService;
 
     private static EquipmentInfos toEquipmentInfos(Identifiable<?> i) {
         return EquipmentInfos.builder()
@@ -120,7 +128,7 @@ class SupervisionControllerTest {
 
         //TODO: removing it still works, check if it's normal
 //        when(networkModificationTreeService.getVariantId(NODE_UUID, any())).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
-        when(networkModificationTreeService.getStudyTree(STUDY_UUID)).thenReturn(RootNode.builder().studyId(STUDY_UUID).id(NODE_UUID).build());
+        when(networkModificationTreeService.getStudyTree(STUDY_UUID, null)).thenReturn(RootNode.builder().studyId(STUDY_UUID).id(NODE_UUID).build());
         when(networkConversionService.checkStudyIndexationStatus(NETWORK_UUID)).thenReturn(true);
     }
 
@@ -217,12 +225,14 @@ class SupervisionControllerTest {
     void testInvalidateAllNodesBuilds() throws Exception {
         initStudy();
 
+        Mockito.doNothing().when(networkService).deleteVariants(eq(NETWORK_UUID), any());
+
         mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/nodes/builds", STUDY_UUID))
             .andExpect(status().isOk());
 
         assertIndexationCount(74, 0);
         assertIndexationStatus(STUDY_UUID, StudyIndexationStatus.INDEXED.name());
-
+        Mockito.verify(networkService, Mockito.times(1)).deleteVariants(eq(NETWORK_UUID), any());
     }
 
     @Test
