@@ -223,7 +223,7 @@ class VoltageInitTest {
     private final String studyUpdateDestination = "study.update";
     private final String voltageInitResultDestination = "voltageinit.result";
     private final String voltageInitStoppedDestination = "voltageinit.stopped";
-    private final String voltageInitFailedDestination = "voltageinit.failed";
+    private final String voltageInitFailedDestination = "voltageinit.run.dlx";
     private final String voltageInitCancelFailedDestination = "voltageinit.cancelfailed";
     private final String elementUpdateDestination = "element.update";
     @Autowired

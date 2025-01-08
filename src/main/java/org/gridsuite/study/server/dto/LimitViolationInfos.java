@@ -24,6 +24,8 @@ public class LimitViolationInfos {
 
     private String subjectId;
 
+    private String locationId;
+
     private Double limit;
 
     private String limitName;
