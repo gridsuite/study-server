@@ -142,7 +142,7 @@ class LoadFlowTest {
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
     private static final String LOADFLOW_RESULT_DESTINATION = "loadflow.result";
     private static final String LOADFLOW_STOPPED_DESTINATION = "loadflow.stopped";
-    private static final String LOADFLOW_FAILED_DESTINATION = "loadflow.failed";
+    private static final String LOADFLOW_FAILED_DESTINATION = "loadflow.run.dlx";
 
     @Autowired
     private MockMvc mockMvc;
