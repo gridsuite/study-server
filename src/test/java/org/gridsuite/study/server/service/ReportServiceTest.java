@@ -50,6 +50,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -131,6 +132,12 @@ class ReportServiceTest {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(getNodeReport(UUID.fromString(reportId), reportId)));
                 } else if (path.matches("/v1/reports/" + NOT_FOUND_REPORT_UUID + "/duplicate")) {
                     return new MockResponse(HttpStatus.NOT_FOUND.value());
+                } else if (path.matches("/v1/reports/" + MODIFICATION_CHILD_NODE1_REPORT_UUID + "/aggregated-severities")) {
+                    return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(Set.of("INFO")));
+                } else if (path.matches("/v1/reports/" + ROOT_NODE_REPORT_UUID + "/aggregated-severities")) {
+                    return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(Set.of("WARN")));
+                } else if (path.matches("/v1/reports/.*/aggregated-severities")) {
+                    return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(Set.of("UNKNOWN")));
                 } else {
                     LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
                     return new MockResponse.Builder().code(HttpStatus.I_AM_A_TEAPOT.value()).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
@@ -241,6 +248,14 @@ class ReportServiceTest {
         checkReports(child1Reports, List.of(child1ExpectedReport));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
+        // get only Child1 aggregated severities
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report/{reportId}/aggregated-severities", rootNode.getStudyId(), child1.getId(), MODIFICATION_CHILD_NODE1_REPORT_UUID))
+            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+        Set<String> child1AggregatedSeverities = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertEquals(Set.of("INFO"), child1AggregatedSeverities);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*/aggregated-severities")));
+
         // get Child2 report + parents
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), firstRootNetworkUuid, child2.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
@@ -253,6 +268,13 @@ class ReportServiceTest {
         childrenAndParentsExpectedReports.add(child2ExpectedReport);
         checkReports(child2AndParentsReports, childrenAndParentsExpectedReports);
         assertTrue(TestUtils.getRequestsDone(childrenAndParentsExpectedReports.size(), server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report/aggregated-severities", rootNode.getStudyId(), node.getId()))
+            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+        Set<String> child2AggregatedSeverities = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertEquals(Set.of("WARN", "UNKNOWN"), child2AggregatedSeverities);
+        assertTrue(TestUtils.getRequestsDone(2, server).stream().anyMatch(r -> r.matches("/v1/reports/.*/aggregated-severities")));
 
         // get Child1 report + parents
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), firstRootNetworkUuid, child1.getId()))

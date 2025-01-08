@@ -180,7 +180,7 @@ class SensitivityAnalysisTest {
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
     private static final String SENSITIVITY_ANALYSIS_RESULT_DESTINATION = "sensitivityanalysis.result";
     private static final String SENSITIVITY_ANALYSIS_STOPPED_DESTINATION = "sensitivityanalysis.stopped";
-    private static final String SENSITIVITY_ANALYSIS_FAILED_DESTINATION = "sensitivityanalysis.failed";
+    private static final String SENSITIVITY_ANALYSIS_FAILED_DESTINATION = "sensitivityanalysis.run.dlx";
 
     private static final byte[] SENSITIVITY_RESULTS_AS_CSV = {0x00, 0x01};
 

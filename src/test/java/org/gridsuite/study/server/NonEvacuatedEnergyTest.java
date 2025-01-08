@@ -155,7 +155,7 @@ class NonEvacuatedEnergyTest {
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
     private static final String NON_EVACUATED_ENERGY_RESULT_DESTINATION = "nonEvacuatedEnergy.result";
     private static final String NON_EVACUATED_ENERGY_STOPPED_DESTINATION = "nonEvacuatedEnergy.stopped";
-    private static final String NON_EVACUATED_ENERGY_FAILED_DESTINATION = "nonEvacuatedEnergy.failed";
+    private static final String NON_EVACUATED_ENERGY_FAILED_DESTINATION = "nonEvacuatedEnergy.run.dlx";
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired

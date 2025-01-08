@@ -679,7 +679,7 @@ class StudyTest {
             String receiverUrlString = matcher.group(1);
             input.send(MessageBuilder.withPayload("").setHeader("receiver", URLDecoder.decode(receiverUrlString, StandardCharsets.UTF_8))
                     .setHeader("errorMessage", errorMessage)
-                    .build(), "case.import.failed");
+                    .build(), "case.import.start.dlx");
         }
     }
 

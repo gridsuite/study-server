@@ -1858,6 +1858,22 @@ public class StudyService {
         return reportService.getReportLogs(UUID.fromString(reportId), messageFilter, severityLevels);
     }
 
+    public Set<String> getNodeReportAggregatedSeverities(UUID reportId) {
+        return reportService.getReportAggregatedSeverities(reportId);
+    }
+
+    public Set<String> getParentNodesAggregatedReportSeverities(UUID nodeUuid, UUID rootNetworkUuid) {
+        List<UUID> nodeIds = nodesTree(nodeUuid);
+        Set<String> severities = new HashSet<>();
+        Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
+
+        for (UUID nodeId : nodeIds) {
+            UUID reportId = modificationReportsMap.getOrDefault(nodeId, networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid));
+            severities.addAll(reportService.getReportAggregatedSeverities(reportId));
+        }
+        return severities;
+    }
+
     @Transactional(readOnly = true)
     public List<ReportLog> getParentNodesReportLogs(UUID nodeUuid, UUID rootNetworkUuid, String messageFilter, Set<String> severityLevels) {
         List<UUID> nodeIds = nodesTree(nodeUuid);

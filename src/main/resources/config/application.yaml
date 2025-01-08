@@ -3,7 +3,6 @@ spring:
     name: study-server
   main:
     allow-circular-references: true
-
   cloud:
     function:
       definition: "consumeSaResult;consumeSaStopped;consumeSaFailed;consumeSaCancelFailed;\
@@ -32,8 +31,8 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.cancelfailed
           group: studySaCancelFailedGroup
         consumeSaFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.failed
-          group: studySaFailedGroup
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.run.dlx
+          group: dlq
         consumeDsResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.result
           group: studyDsResultGroup
@@ -41,8 +40,8 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.stopped
           group: studyDsStoppedGroup
         consumeDsFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.failed
-          group: studyDsFailedGroup
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.run.dlx
+          group: dlq
         consumeBuildResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.result
           group: studyBuildResultGroup
@@ -50,8 +49,8 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.stopped
           group: studyBuildStoppedGroup
         consumeBuildFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.failed
-          group: studyBuildFailedGroup
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.run.dlx
+          group: dlq
         consumeLoadFlowResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.result
           group: studyLoadFlowResultGroup
@@ -59,8 +58,8 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.stopped
           group: studyLoadFlowStoppedGroup
         consumeLoadFlowFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.failed
-          group: studyLoadFlowFailedGroup
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.run.dlx
+          group: dlq
         consumeLoadFlowCancelFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.cancelfailed
           group: studyLoadFlowCancelFailedGroup
@@ -71,8 +70,8 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.stopped
           group: studySensitivityAnalysisStoppedGroup
         consumeSensitivityAnalysisFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.failed
-          group: studySensitivityAnalysisFailedGroup
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.run.dlx
+          group: dlq
         consumeSensitivityAnalysisCancelFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.cancelfailed
           group: studySensitivityAnalysisCancelFailedGroup
@@ -83,8 +82,8 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.stopped
           group: studyNonEvacuatedEnergyStoppedGroup
         consumeNonEvacuatedEnergyFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.failed
-          group: studyNonEvacuatedEnergyFailedGroup
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.run.dlx
+          group: dlq
         consumeNonEvacuatedEnergyCancelFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.cancelfailed
           group: studyNonEvacuatedEnergyCancelFailedGroup
@@ -95,8 +94,8 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.stopped
           group: studyShortCircuitAnalysisStoppedGroup
         consumeShortCircuitAnalysisFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.failed
-          group: studyShortCircuitAnalysisFailedGroup
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.run.dlx
+          group: dlq
         consumeShortCircuitAnalysisCancelFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.cancelfailed
           group: studyShortCircuitAnalysisCancelFailedGroup
@@ -107,8 +106,8 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.stopped
           group: studyVoltageInitStoppedGroup
         consumeVoltageInitFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.failed
-          group: studyVoltageInitFailedGroup
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.run.dlx
+          group: dlq
         consumeVoltageInitCancelFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.cancelfailed
           group: studyVoltageInitCancelFailedGroup
@@ -119,14 +118,14 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.stopped
           group: studyStateEstimationStoppedGroup
         consumeStateEstimationFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.failed
-          group: studyStateEstimationFailedGroup
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.run.dlx
+          group: dlq
         consumeCaseImportSucceeded-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.succeeded
           group: studyCaseImportSucceededGroup
         consumeCaseImportFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.failed
-          group: studyCaseImportFailedGroup
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.start.dlx
+          group: dlq
       output-bindings: publishStudyUpdate-out-0;publishElementUpdate-out-0
 
 powsybl:
