@@ -31,6 +31,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
+import org.gridsuite.study.server.utils.StudyTestUtils;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -169,6 +170,8 @@ class ShortCircuitTest implements WithAssertions {
     private final String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.run.dlx";
     @Autowired
     private StudyService studyService;
+    @Autowired
+    private StudyTestUtils studyTestUtils;
 
     @BeforeEach
     void setup(final MockWebServer server) throws Exception {
@@ -313,6 +316,7 @@ class ShortCircuitTest implements WithAssertions {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "node 1");
@@ -332,12 +336,12 @@ class ShortCircuitTest implements WithAssertions {
         UUID unknownModificationNodeUuid = UUID.randomUUID();
 
         // run a short circuit analysis on root node (not allowed)
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, rootNodeUuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
                         .header("userId", "userId"))
                 .andExpect(status().isForbidden());
 
         //run an all-buses short circuit analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
@@ -350,7 +354,7 @@ class ShortCircuitTest implements WithAssertions {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
         // get short circuit result
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode3Uuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid))
             .andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON));
@@ -358,26 +362,26 @@ class ShortCircuitTest implements WithAssertions {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=FULL")));
 
         // export short circuit analysis csv result
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, modificationNode3Uuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
                 .param("type", "ALL_BUSES")
                 .content(CSV_HEADERS)).andExpectAll(status().isOk(), content().bytes(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv")));
 
         // get short circuit result but with unknown node
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, unknownModificationNodeUuid)).andExpect(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, firstRootNetworkUuid, unknownModificationNodeUuid)).andExpect(
                 status().isNoContent());
 
         assertTrue(TestUtils.getRequestsDone(0, server).isEmpty());
 
         // get short circuit status
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
 
         // stop short circuit analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode3Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
                 .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
@@ -386,7 +390,7 @@ class ShortCircuitTest implements WithAssertions {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
 
         // short circuit analysis failed
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode2Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode2Uuid)
                 .header(HEADER_USER_ID, "testUserId"))
                 .andExpect(status().isOk()).andReturn();
 
@@ -423,6 +427,7 @@ class ShortCircuitTest implements WithAssertions {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING_NOT_FOUND), UUID.fromString(CASE_SHORT_CIRCUIT_UUID_STRING_NOT_FOUND), null);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "node 1");
@@ -436,11 +441,11 @@ class ShortCircuitTest implements WithAssertions {
                 modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_4, "node 4");
         UUID modificationNode4Uuid = modificationNode4.getId();
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, rootNodeUuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
                         .header("userId", "userId"))
                 .andExpect(status().isForbidden());
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode4Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode4Uuid)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
@@ -454,7 +459,7 @@ class ShortCircuitTest implements WithAssertions {
 
         // export short circuit analysis csv result not found
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, modificationNode4Uuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode4Uuid)
                 .param("type", "ALL_BUSES")
                 .content(CSV_HEADERS)).andExpectAll(status().isNotFound());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv")));
@@ -465,6 +470,7 @@ class ShortCircuitTest implements WithAssertions {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID_2, "node 1");
@@ -473,7 +479,7 @@ class ShortCircuitTest implements WithAssertions {
         UUID unknownModificationNodeUuid = UUID.randomUUID();
 
         //run a short circuit analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode1Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)
                 .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
@@ -486,34 +492,34 @@ class ShortCircuitTest implements WithAssertions {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
         // get fault types
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
-                        studyNameUserIdUuid, modificationNode1Uuid, ComputationType.SHORT_CIRCUIT, "fault-types"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
+                        studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, ComputationType.SHORT_CIRCUIT, "fault-types"))
                 .andExpectAll(status().isOk());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault-types")));
 
         // get short circuit result with pagination
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20&sort=id,DESC", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20&sort=id,DESC", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged\\?mode=FULL&page=0&size=20&sort=id,DESC")));
 
         // get short circuit result with pagination but with unknown node
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20", studyNameUserIdUuid, unknownModificationNodeUuid)).andExpect(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20", studyNameUserIdUuid, firstRootNetworkUuid, unknownModificationNodeUuid)).andExpect(
                 status().isNoContent());
 
         assertTrue(TestUtils.getRequestsDone(0, server).isEmpty());
 
         // get short circuit status
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
 
         // stop short circuit analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)
                 .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
@@ -527,6 +533,7 @@ class ShortCircuitTest implements WithAssertions {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
             UUID.randomUUID(), VARIANT_ID, "node 1");
@@ -544,13 +551,13 @@ class ShortCircuitTest implements WithAssertions {
             modificationNode3Uuid, UUID.randomUUID(), VARIANT_ID_3, "node 4");
 
         // run a one bus short circuit analysis on root node (not allowed)
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, rootNodeUuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
                 .param("busId", "BUS_TEST_ID")
                 .header("userId", "userId"))
             .andExpect(status().isForbidden());
 
         //run a one bus short circuit analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
                 .param("busId", "BUS_TEST_ID")
                 .header("userId", "userId"))
             .andExpect(status().isOk());
@@ -566,7 +573,7 @@ class ShortCircuitTest implements WithAssertions {
         assertEquals(1, rootNetworkNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
 
         // get one bus short circuit result
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode3Uuid)
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
             .param("type", ShortcircuitAnalysisType.ONE_BUS.name()))
             .andExpectAll(
                 status().isOk(),
@@ -576,7 +583,7 @@ class ShortCircuitTest implements WithAssertions {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "\\?mode=FULL")));
 
         // get short circuit result with pagination
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20&sort=id,DESC&filters=fakeFilters", studyNameUserIdUuid, modificationNode3Uuid)
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20&sort=id,DESC&filters=fakeFilters", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
             .param("type", ShortcircuitAnalysisType.ONE_BUS.name())
         ).andExpectAll(
             status().isOk(),
@@ -585,7 +592,7 @@ class ShortCircuitTest implements WithAssertions {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/feeder_results/paged\\?mode=FULL&filters=fakeFilters&page=0&size=20&sort=id,DESC")));
 
         // get one bus short circuit status
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, modificationNode3Uuid)
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
             .param("type", ShortcircuitAnalysisType.ONE_BUS.name()))
             .andExpectAll(
                 status().isOk(),
@@ -663,31 +670,32 @@ class ShortCircuitTest implements WithAssertions {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         // No short circuit result
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)).andExpectAll(
                 status().isNoContent());
 
         // No one bus short circuit result
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode1Uuid)
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)
                     .param("type", ShortcircuitAnalysisType.ONE_BUS.name()))
                 .andExpectAll(status().isNoContent());
 
         // NOT_FOUND short circuit analysis result csv
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, modificationNode1Uuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)
                 .param("type", ShortcircuitAnalysisType.ONE_BUS.name())
                 .content(CSV_HEADERS)).andExpectAll(status().isNotFound());
 
         // No short circuit status
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, modificationNode1Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)).andExpectAll(
                 status().isNoContent());
 
         // stop non-existing short circuit analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode1Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)
                 .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
     }
@@ -697,6 +705,7 @@ class ShortCircuitTest implements WithAssertions {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "node 1");
@@ -711,7 +720,7 @@ class ShortCircuitTest implements WithAssertions {
         UUID modificationNode3Uuid = modificationNode3.getId();
 
         //run a short circuit analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
                         .header("userId", "userId"))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -724,7 +733,7 @@ class ShortCircuitTest implements WithAssertions {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
         //run a one bus short circuit analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
                         .param("busId", "BUS_TEST_ID")
                         .header("userId", "userId"))
                 .andExpect(status().isOk())
