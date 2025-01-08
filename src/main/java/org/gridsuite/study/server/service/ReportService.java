@@ -111,4 +111,12 @@ public class ReportService {
             return UUID.randomUUID();
         }
     }
+
+    public Set<String> getReportAggregatedSeverities(@NonNull UUID id) {
+        var path = UriComponentsBuilder.fromPath("{id}/aggregated-severities").buildAndExpand(id).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<Set<String>>() {
+        }).getBody();
+    }
 }
