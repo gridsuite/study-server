@@ -1071,6 +1071,25 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportLogs(reportId, messageFilter, severityLevels));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report/{reportId}/aggregated-severities", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get node report severities")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report severities"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Set<String>> getNodeReportAggregatedSeverities(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                       @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                       @Parameter(description = "reportId") @PathVariable("reportId") UUID reportId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReportAggregatedSeverities(reportId));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report/aggregated-severities", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get the report severities of the given node and all its parents")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report severities of the node and all its parent"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Set<String>> getParentNodesAggregatedReportSeverities(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                       @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesAggregatedReportSeverities(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report/logs", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get the report logs of the given node and all its parents")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report logs of the node and all its parent"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
@@ -1293,6 +1312,19 @@ public class StudyController {
                                                  @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
         networkModificationTreeService.updateNode(studyUuid, node, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/tree/nodes/{parentUuid}/children-column-positions")
+    @Operation(summary = "update children column positions")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "the node column positions have been updated"),
+        @ApiResponse(responseCode = "404", description = "The study or a node was not found")})
+    public ResponseEntity<Void> updateNodesColumnPositions(@RequestBody List<NetworkModificationNode> children,
+                                                 @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                 @Parameter(description = "parent node uuid") @PathVariable("parentUuid") UUID parentUuid,
+                                                 @RequestHeader(HEADER_USER_ID) String userId) {
+        networkModificationTreeService.updateNodesColumnPositions(studyUuid, parentUuid, children, userId);
         return ResponseEntity.ok().build();
     }
 
