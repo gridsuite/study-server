@@ -285,11 +285,16 @@ public class StudyService {
     @Transactional
     public void deleteRootNetworks(UUID studyUuid, List<UUID> rootNetworkUuids, String userId) {
         assertIsStudyExist(studyUuid);
-        rootNetworkUuids.forEach(rootNetworkUuid -> {
-            rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
+        List<RootNetworkEntity> rootNetworkEntities = rootNetworkService.getStudyRootNetworks(studyUuid);
+        if (rootNetworkUuids.size() >= rootNetworkEntities.size()) {
+            throw new StudyException(ROOT_NETWORK_DELETE_FORBIDDEN);
+        }
+        if (!rootNetworkEntities.stream().map(RootNetworkEntity::getId).collect(Collectors.toSet()).containsAll(rootNetworkUuids)) {
+            throw new StudyException(ROOT_NETWORK_NOT_FOUND);
+        }
 
-            rootNetworkService.delete(rootNetworkUuid);
-        });
+        rootNetworkUuids.forEach(rootNetworkService::delete);
+
         notificationService.emitRootNetworksUpdated(studyUuid);
     }
 

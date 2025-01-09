@@ -1115,7 +1115,7 @@ public class StudyController {
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportLogs(reportId, messageFilter, severityLevels));
     }
-    
+
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/aggregated-severities", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get node report severities")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report severities"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})

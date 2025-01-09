@@ -61,7 +61,8 @@ public class RestResponseEntityExceptionHandler {
                     -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(type);
             case NOT_ALLOWED,
                     BAD_NODE_TYPE,
-                    NODE_NAME_ALREADY_EXIST
+                    NODE_NAME_ALREADY_EXIST,
+                    ROOT_NETWORK_DELETE_FORBIDDEN
                     -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(exception.getMessage());
             case CANT_DELETE_ROOT_NODE -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
             case CREATE_NETWORK_MODIFICATION_FAILED,

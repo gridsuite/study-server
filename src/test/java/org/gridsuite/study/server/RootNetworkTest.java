@@ -410,6 +410,42 @@ class RootNetworkTest {
     }
 
     @Test
+    void testDeleteRootNetworkFailed() throws Exception {
+        // create study with one root node, two network modification node and a root network
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        networkModificationTreeService.createRoot(studyEntity);
+        UUID firstRootNetworkUuid = rootNetworkService.getStudyRootNetworks(studyEntity.getId()).get(0).getId();
+
+        // create a second root network - will create a root network link between this and each node
+        RootNetworkEntity secondRootNetwork = rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
+            .id(UUID.randomUUID())
+            .importParameters(Map.of("param1", "value1", "param2", "value2"))
+            .caseInfos(new CaseInfos(CASE_UUID2, CASE_NAME2, CASE_FORMAT2))
+            .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
+            .reportUuid(REPORT_UUID2)
+            .build());
+
+        // try to delete all root networks
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(List.of(firstRootNetworkUuid, secondRootNetwork.getId())))
+                .header("userId", USER_ID))
+            .andExpect(status().isForbidden());
+
+        assertEquals(2, rootNetworkService.getStudyRootNetworks(studyEntity.getId()).size());
+
+        // try to delete unknown root network
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(List.of(UUID.randomUUID())))
+                .header("userId", USER_ID))
+            .andExpect(status().isNotFound());
+
+        assertEquals(2, rootNetworkService.getStudyRootNetworks(studyEntity.getId()).size());
+    }
+
+    @Test
     void testUpdateRootNetworkCase() throws Exception {
         final UUID studyUuid = UUID.randomUUID();
         final UUID rootNetworkUuid = UUID.randomUUID();
