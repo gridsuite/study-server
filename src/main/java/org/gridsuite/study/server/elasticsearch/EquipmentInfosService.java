@@ -387,14 +387,24 @@ public class EquipmentInfosService {
     }
 
     public List<TombstonedEquipmentInfos> searchTombstonedEquipments(@NonNull final String query) {
-        NativeQuery nativeSearchQuery = new NativeQueryBuilder()
-                .withQuery(QueryStringQuery.of(qs -> qs.query(query))._toQuery())
-                .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
-                .build();
+        int pageIndex = 0;
+        List<TombstonedEquipmentInfos> tombstonedEquipmentInfos = new ArrayList<>();
+        boolean hasMoreResults;
+        do {
+            NativeQuery nativeSearchQuery = new NativeQueryBuilder()
+                    .withQuery(QueryStringQuery.of(qs -> qs.query(query))._toQuery())
+                    .withPageable(PageRequest.of(pageIndex, PAGE_MAX_SIZE))
+                    .build();
 
-        return elasticsearchOperations.search(nativeSearchQuery, TombstonedEquipmentInfos.class)
-                .stream()
-                .map(SearchHit::getContent)
-                .toList();
+            List<TombstonedEquipmentInfos> currentTombstonedEquipmentInfos = elasticsearchOperations.search(nativeSearchQuery, TombstonedEquipmentInfos.class)
+                    .stream()
+                    .map(SearchHit::getContent)
+                    .toList();
+
+            tombstonedEquipmentInfos.addAll(currentTombstonedEquipmentInfos);
+            hasMoreResults = currentTombstonedEquipmentInfos.size() == PAGE_MAX_SIZE;
+            pageIndex++;
+        } while (hasMoreResults);
+        return tombstonedEquipmentInfos;
     }
 }
