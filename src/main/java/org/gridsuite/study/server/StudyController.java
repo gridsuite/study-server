@@ -1705,6 +1705,29 @@ public class StudyController {
 
     // --- Dynamic Simulation Endpoints END --- //
 
+    // --- Dynamic Security Analysis Endpoints BEGIN --- //
+
+    @PostMapping(value = "/studies/{studyUuid}/dynamic-security-analysis/parameters")
+    @Operation(summary = "set dynamic security analysis parameters on study, reset to default one if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis parameters are set")})
+    public ResponseEntity<Void> setDynamicSecurityAnalysisParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) String dsaParameter,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setDynamicSecurityAnalysisParameters(studyUuid, dsaParameter, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/dynamic-security-analysis/parameters")
+    @Operation(summary = "Get dynamic security analysis parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis parameters")})
+    public ResponseEntity<String> getDynamicSecurityAnalysisParameters(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getDynamicSecurityAnalysisParameters(studyUuid));
+    }
+
+    // --- Dynamic Security Analysis Endpoints END --- //
+
     @GetMapping(value = "/studies/{studyUuid}/security-analysis/parameters")
     @Operation(summary = "Get security analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters")})
