@@ -301,6 +301,7 @@ public class StudyService {
     @Transactional
     public RootNetworkCreationRequestInfos createRootNetworkRequest(UUID studyUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        rootNetworkService.assertMaximumByStudyIsNotReached(studyUuid);
 
         UUID importReportUuid = UUID.randomUUID();
         UUID rootNetworkUuid = UUID.randomUUID();

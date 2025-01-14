@@ -13,4 +13,6 @@ import java.util.UUID;
 
 public interface RootNetworkCreationRequestRepository extends JpaRepository<RootNetworkCreationRequestEntity, UUID> {
     List<RootNetworkCreationRequestEntity> findAllByStudyUuid(UUID studyUuid);
+
+    int countAllByStudyUuid(UUID studyUuid);
 }

@@ -29,14 +29,15 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.StudyException.Type.DELETE_ROOT_NETWORK_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.ROOT_NETWORK_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.*;
 
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
  */
 @Service
 public class RootNetworkService {
+    private static int MAXIMUM_ROOT_NETWORK_BY_STUDY = 3;
+
     private final RootNetworkRepository rootNetworkRepository;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final NetworkService networkService;
@@ -245,5 +246,11 @@ public class RootNetworkService {
             .map(rootNetworkCreationEntity -> new RootNetworkMinimalInfos(rootNetworkCreationEntity.getId(), true)).toList());
 
         return result;
+    }
+
+    public void assertMaximumByStudyIsNotReached(UUID studyUuid) {
+        if (rootNetworkRepository.countAllByStudyId(studyUuid) + rootNetworkCreationRequestRepository.countAllByStudyUuid(studyUuid) >= MAXIMUM_ROOT_NETWORK_BY_STUDY) {
+            throw new StudyException(MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED);
+        }
     }
 }
