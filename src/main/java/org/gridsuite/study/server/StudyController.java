@@ -189,11 +189,12 @@ public class StudyController {
     @Operation(summary = "Create root network for study")
     @ApiResponse(responseCode = "200", description = "Root network created")
     public ResponseEntity<RootNetworkCreationRequestInfos> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
+                                                                              @RequestParam(value = "name") String name,
                                                                               @RequestParam(value = CASE_UUID) UUID caseUuid,
                                                                               @RequestParam(value = CASE_FORMAT) String caseFormat,
                                                                               @RequestBody(required = false) Map<String, Object> importParameters,
                                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, caseUuid, caseFormat, importParameters, userId));
+        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, name, caseUuid, caseFormat, importParameters, userId));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")

@@ -299,13 +299,13 @@ public class StudyService {
     }
 
     @Transactional
-    public RootNetworkCreationRequestInfos createRootNetworkRequest(UUID studyUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
+    public RootNetworkCreationRequestInfos createRootNetworkRequest(UUID studyUuid, String rootNetworkName, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
+        rootNetworkService.assertCanCreateRootNetwork(studyUuid, rootNetworkName);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        rootNetworkService.assertMaximumByStudyIsNotReached(studyUuid);
 
         UUID importReportUuid = UUID.randomUUID();
         UUID rootNetworkUuid = UUID.randomUUID();
-        RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, userId);
+        RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, rootNetworkName, userId);
         UUID clonedCaseUuid = caseService.duplicateCase(caseUuid, true);
         try {
             networkConversionService.persistNetwork(clonedCaseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
@@ -322,6 +322,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntityOpt = rootNetworkService.getCreationRequest(rootNetworkInfos.getId());
         if (rootNetworkCreationRequestEntityOpt.isPresent()) {
+            rootNetworkInfos.setName(rootNetworkCreationRequestEntityOpt.get().getName());
             rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
             rootNetworkService.deleteCreationRequest(rootNetworkCreationRequestEntityOpt.get());
         } else {
@@ -1176,7 +1177,7 @@ public class StudyService {
                 .build();
 
         var study = studyRepository.save(studyEntity);
-        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().id(UUID.randomUUID()).networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).build());
+        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().id(UUID.randomUUID()).name(caseInfos.getCaseName()).networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).build());
         networkModificationTreeService.createBasicTree(study);
 
         return study;

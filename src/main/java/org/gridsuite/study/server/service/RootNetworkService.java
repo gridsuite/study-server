@@ -167,6 +167,7 @@ public class RootNetworkService {
                 self.createRootNetwork(newStudyEntity,
                     RootNetworkInfos.builder()
                         .id(UUID.randomUUID())
+                        .name(rootNetworkEntityToDuplicate.getName())
                         .importParameters(newImportParameters)
                         .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getCaseName(), rootNetworkEntityToDuplicate.getCaseFormat()))
                         .networkInfos(new NetworkInfos(clonedNetworkUuid, rootNetworkEntityToDuplicate.getNetworkId()))
@@ -177,8 +178,8 @@ public class RootNetworkService {
         );
     }
 
-    public RootNetworkCreationRequestEntity insertCreationRequest(UUID rootNetworkInCreationUuid, StudyEntity studyEntity, String userId) {
-        return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).studyUuid(studyEntity.getId()).userId(userId).build());
+    public RootNetworkCreationRequestEntity insertCreationRequest(UUID rootNetworkInCreationUuid, StudyEntity studyEntity, String rootNetworkName, String userId) {
+        return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).name(rootNetworkName).studyUuid(studyEntity.getId()).userId(userId).build());
     }
 
     public void assertIsRootNetworkInStudy(UUID studyUuid, UUID rootNetworkUuid) {
@@ -240,17 +241,29 @@ public class RootNetworkService {
 
         // return RootNetworkMinimalInfos with isCreating as false when in rootNetworkRepository
         result.addAll(rootNetworkRepository.findAllByStudyId(studyUuid).stream()
-            .map(rootNetworkEntity -> new RootNetworkMinimalInfos(rootNetworkEntity.getId(), false)).toList());
+            .map(rootNetworkEntity -> new RootNetworkMinimalInfos(rootNetworkEntity.getId(), rootNetworkEntity.getName(), false)).toList());
         // return RootNetworkMinimalInfos with isCreating as true when in rootNetworkCreationRequestRepository
         result.addAll(rootNetworkCreationRequestRepository.findAllByStudyUuid(studyUuid).stream()
-            .map(rootNetworkCreationEntity -> new RootNetworkMinimalInfos(rootNetworkCreationEntity.getId(), true)).toList());
+            .map(rootNetworkCreationEntity -> new RootNetworkMinimalInfos(rootNetworkCreationEntity.getId(), rootNetworkCreationEntity.getName(), true)).toList());
 
         return result;
     }
 
-    public void assertMaximumByStudyIsNotReached(UUID studyUuid) {
+    public void assertCanCreateRootNetwork(UUID studyUuid, String rootNetworkName) {
+        assertMaximumByStudyIsNotReached(studyUuid);
+        assertNameNotExistInStudy(studyUuid, rootNetworkName);
+    }
+
+    private void assertMaximumByStudyIsNotReached(UUID studyUuid) {
         if (rootNetworkRepository.countAllByStudyId(studyUuid) + rootNetworkCreationRequestRepository.countAllByStudyUuid(studyUuid) >= MAXIMUM_ROOT_NETWORK_BY_STUDY) {
             throw new StudyException(MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED);
+        }
+    }
+
+    private void assertNameNotExistInStudy(UUID studyUuid, String name) {
+        if (rootNetworkRepository.findByNameAndStudyId(name, studyUuid).isPresent() ||
+            rootNetworkCreationRequestRepository.findByNameAndStudyUuid(name, studyUuid).isPresent()) {
+            throw new StudyException(NOT_ALLOWED);
         }
     }
 }
