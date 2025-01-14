@@ -1,0 +1,27 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="lesaulnierkev (generated)" id="1736849911856-10">
+        <addColumn tableName="root_network">
+            <column name="name" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet id="update the new NAME column of root_network to get the CASE_NAME" author="lesaulnierkev">
+        <sql>update root_network set name = case_name</sql>
+    </changeSet>
+
+    <changeSet id="Add not nullable constraint on name column of root_network" author="lesaulnierkev">
+        <addNotNullConstraint tableName="root_network" columnName="name"/>
+    </changeSet>
+    <changeSet author="lesaulnierkev (generated)" id="1736849911856-11">
+        <addColumn tableName="root_network_creation_request">
+            <column name="name" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet id="update the new NAME column of root_network_creation_request to get the CASE_NAME" author="lesaulnierkev">
+        <sql>update root_network_creation_request set name = 'temporary_name'</sql>
+    </changeSet>
+
+    <changeSet id="Add not nullable constraint on name column of root_network_creation_request" author="lesaulnierkev">
+        <addNotNullConstraint tableName="root_network_creation_request" columnName="name"/>
+    </changeSet>
+</databaseChangeLog>

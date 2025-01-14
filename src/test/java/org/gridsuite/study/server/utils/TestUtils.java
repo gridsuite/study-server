@@ -97,7 +97,7 @@ public final class TestUtils {
             .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
             .voltageInitParameters(new StudyVoltageInitParametersEntity(applyModifications))
             .build();
-        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(importReportUuid).build();
+        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(importReportUuid).build();
         studyEntity.addRootNetwork(rootNetworkEntity);
 
         return studyEntity;
@@ -107,7 +107,7 @@ public final class TestUtils {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
                 .networkVisualizationParametersUuid(networkVisuParametersUuid)
                 .build();
-        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build();
+        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build();
         studyEntity.addRootNetwork(rootNetworkEntity);
         return studyEntity;
     }
@@ -125,7 +125,7 @@ public final class TestUtils {
                 .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
                 .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
                 .build();
-        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build();
+        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build();
         studyEntity.addRootNetwork(rootNetworkEntity);
         return studyEntity;
     }
@@ -134,7 +134,7 @@ public final class TestUtils {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
             .shortCircuitParametersUuid(UUID.randomUUID())
             .build();
-        studyEntity.addRootNetwork(RootNetworkEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId("netId").networkUuid(networkUuid).reportUuid(reportUuid).build());
+        studyEntity.addRootNetwork(RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId("netId").networkUuid(networkUuid).reportUuid(reportUuid).build());
 
         return studyEntity;
     }

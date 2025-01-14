@@ -9,7 +9,6 @@ package org.gridsuite.study.server.networkmodificationtree;
 
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 
 /**
@@ -23,9 +22,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
         @SuppressWarnings("unused")
-        RootNetworkNodeInfoEntity rootNetworkNodeStatusEntity = node.getFirstRootNetworkNodeInfosEntity();
         NetworkModificationNode networkModificationNode = NetworkModificationNode.builder().modificationGroupUuid(node.getModificationGroupUuid()).build();
-        networkModificationNode.completeDtoFromRootNetworkNodeInfo(rootNetworkNodeStatusEntity);
         return completeNodeInfo(node, networkModificationNode);
     }
 }

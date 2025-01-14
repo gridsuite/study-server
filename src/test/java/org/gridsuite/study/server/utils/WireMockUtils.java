@@ -144,8 +144,16 @@ public class WireMockUtils {
         ).getId();
     }
 
-    public UUID stubNetworkModificationPost(String responseBody) {
+    public UUID stubNetworkModificationPostWithoutApplying(String responseBody) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION))
+            .willReturn(WireMock.ok()
+                .withBody(responseBody)
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+        ).getId();
+    }
+
+    public UUID stubNetworkModificationPostApply(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION + DELIMITER + "apply"))
             .willReturn(WireMock.ok()
                 .withBody(responseBody)
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
@@ -208,15 +216,21 @@ public class WireMockUtils {
         verifyGetRequest(stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications-count", Map.of(QUERY_PARAM_STASHED, WireMock.equalTo("false")));
     }
 
-    public void verifyNetworkModificationPost(UUID stubId, String requestBody, String networkUuid) {
+    public void verifyNetworkModificationPost(UUID stubId, String requestBody) {
         verifyPostRequest(stubId, URI_NETWORK_MODIFICATION, false,
-            Map.of("networkUuid", WireMock.equalTo(networkUuid), "groupUuid", WireMock.matching(".*")),
+            Map.of("groupUuid", WireMock.matching(".*")),
             requestBody);
     }
 
-    public void verifyNetworkModificationPostWithVariant(UUID stubId, String requestBody, String networkUuid, String variantId) {
+    public void verifyNetworkModificationPostWithoutApplying(UUID stubId, String requestBody) {
         verifyPostRequest(stubId, URI_NETWORK_MODIFICATION, false,
-            Map.of("networkUuid", WireMock.equalTo(networkUuid), "groupUuid", WireMock.matching(".*"), "variantId", WireMock.equalTo(variantId)),
+            Map.of(),
+            requestBody);
+    }
+
+    public void verifyNetworkModificationApplyWithVariant(UUID stubId, String requestBody) {
+        verifyPostRequest(stubId, URI_NETWORK_MODIFICATION + DELIMITER + "apply", false,
+            Map.of(),
             requestBody);
     }
 

@@ -36,6 +36,9 @@ public class RootNetworkEntity {
     @Column(name = "id")
     private UUID id;
 
+    @Column(name = "name", nullable = false)
+    private String name;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "studyUuid", foreignKey = @ForeignKey(name = "rootNetwork_study_id_fk_constraint"))
     private StudyEntity study;
@@ -77,6 +80,7 @@ public class RootNetworkEntity {
     public RootNetworkInfos toDto() {
         RootNetworkInfos.RootNetworkInfosBuilder rootNetworkInfosBuilder = RootNetworkInfos.builder();
         rootNetworkInfosBuilder.id(this.id)
+            .name(this.name)
             .networkInfos(new NetworkInfos(this.networkUuid, this.networkId))
             .importParameters(this.importParameters)
             .caseInfos(new CaseInfos(this.caseUuid, this.caseName, this.caseFormat))

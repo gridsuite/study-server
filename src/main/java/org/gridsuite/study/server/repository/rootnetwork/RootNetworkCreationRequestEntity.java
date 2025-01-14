@@ -25,6 +25,8 @@ public class RootNetworkCreationRequestEntity {
     @Id
     private UUID id;
 
+    private String name;
+
     private UUID studyUuid;
 
     private String userId;

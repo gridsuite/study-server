@@ -12,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.modification.NetworkModificationContextInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
@@ -315,8 +316,15 @@ public class RootNetworkNodeInfoService {
             .toList();
     }
 
-    public void assertNoRootNetworkModificationInfoIsBuilding(UUID studyUuid) {
+    public void assertNoRootNetworkNodeIsBuilding(UUID studyUuid) {
         if (rootNetworkNodeInfoRepository.existsByStudyUuidAndBuildStatus(studyUuid, BuildStatus.BUILDING)) {
+            throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
+        }
+    }
+
+    public void assertNetworkNodeIsNotBuilding(UUID rootNetworkUuid, UUID nodeUuid) {
+        NodeBuildStatusEmbeddable buildStatusEmbeddable = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        if (buildStatusEmbeddable.getGlobalBuildStatus().isBuilding() || buildStatusEmbeddable.getLocalBuildStatus().isBuilding()) {
             throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
         }
     }
@@ -398,6 +406,14 @@ public class RootNetworkNodeInfoService {
             studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
                 .map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).forEach(stateEstimationService::deleteStateEstimationResult)) // TODO delete all with one request only
         );
+    }
+
+    @Transactional
+    public NetworkModificationContextInfos getNetworkModificationContextInfos(UUID rootNetworkUuid, UUID nodeUuid, UUID networkUuid) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        String variantId = rootNetworkNodeInfoEntity.getVariantId();
+        UUID reportUuid = rootNetworkNodeInfoEntity.getModificationReports().get(nodeUuid);
+        return new NetworkModificationContextInfos(networkUuid, variantId, reportUuid, nodeUuid);
     }
 
     private List<UUID> getReportUuids(RootNetworkNodeInfo rootNetworkNodeInfo) {
