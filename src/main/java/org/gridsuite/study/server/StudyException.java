@@ -121,7 +121,8 @@ public class StudyException extends RuntimeException {
         GET_NETWORK_VISUALIZATION_PARAMETERS_FAILED,
         ROOT_NETWORK_NOT_FOUND,
         ROOT_NETWORK_DELETE_FORBIDDEN,
-        ROOT_NETWORK_CREATION_FAILED
+        ROOT_NETWORK_CREATION_FAILED,
+        MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED
     }
 
     private final Type type;
