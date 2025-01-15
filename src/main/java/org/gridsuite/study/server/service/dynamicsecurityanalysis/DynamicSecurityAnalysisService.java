@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, RTE (http://www.rte-france.com)
+ * Copyright (c) 2025, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -24,8 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_RUNNING;
+import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -111,10 +110,10 @@ public class DynamicSecurityAnalysisService {
         return dynamicSecurityAnalysisClient.getResultsCount();
     }
 
-    public void assertDynamicSimulationNotRunning(UUID resultUuid) {
+    public void assertDynamicSecurityAnalysisNotRunning(UUID resultUuid) {
         DynamicSecurityAnalysisStatus status = getStatus(resultUuid);
         if (DynamicSecurityAnalysisStatus.RUNNING == status) {
-            throw new StudyException(DYNAMIC_SIMULATION_RUNNING);
+            throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_RUNNING);
         }
     }
 
