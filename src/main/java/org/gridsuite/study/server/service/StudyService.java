@@ -19,6 +19,7 @@ import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
@@ -2127,18 +2128,23 @@ public class StudyService {
         // launch dynamic simulation
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID dynamicSResultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyUuid), nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, mergeParameters, userId);
+        UUID dynamicSimulationResultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyUuid), nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, mergeParameters, userId);
 
         // update result uuid and notification
-        updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicSResultUuid, DYNAMIC_SIMULATION);
+        updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicSimulationResultUuid, DYNAMIC_SIMULATION);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
 
-        return dynamicSResultUuid;
+        return dynamicSimulationResultUuid;
     }
 
     // --- Dynamic Simulation service methods END --- //
 
     // --- Dynamic Security Analysis service methods BEGIN --- //
+
+    public UUID getDynamicSecurityAnalysisParametersUuid(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return studyEntity.getDynamicSecurityAnalysisParametersUuid();
+    }
 
     @Transactional
     public String getDynamicSecurityAnalysisParameters(UUID studyUuid) {
@@ -2195,6 +2201,50 @@ public class StudyService {
                 LOGGER.error("Could not remove dynamic security analysis parameters with uuid:" + dynamicSecurityAnalysisParametersUuid, e);
             }
         }
+    }
+
+    @Transactional
+    public UUID runDynamicSecurityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+
+        // pre-condition check
+        String lfStatus = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
+        if (!LoadFlowStatus.CONVERGED.name().equals(lfStatus)) {
+            throw new StudyException(NOT_ALLOWED, "Load flow must run successfully before running dynamic security analysis");
+        }
+
+        DynamicSimulationStatus dsStatus = rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid);
+        if (DynamicSimulationStatus.CONVERGED != dsStatus) {
+            throw new StudyException(NOT_ALLOWED, "Dynamic simulation must run successfully before running dynamic security analysis");
+        }
+
+        // clean previous result if exist
+        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS);
+        if (prevResultUuid != null) {
+            dynamicSecurityAnalysisService.deleteResult(prevResultUuid);
+        }
+
+        // get dynamic simulation result uuid
+        UUID dynamicSimulationResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION);
+
+        // get dynamic security analysis parameters uuid
+        UUID dynamicSecurityAnalysisParametersUuid = getDynamicSecurityAnalysisParametersUuid(studyUuid);
+
+        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(DYNAMIC_SECURITY_ANALYSIS.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS, reportUuid);
+
+        // launch dynamic security analysis
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        UUID dynamicSecurityAnalysisResultUuid = dynamicSecurityAnalysisService.runDynamicSecurityAnalysis(getDynamicSimulationProvider(studyUuid),
+            nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, dynamicSimulationResultUuid, dynamicSecurityAnalysisParametersUuid, userId);
+
+        // update result uuid and notification
+        updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicSecurityAnalysisResultUuid, DYNAMIC_SECURITY_ANALYSIS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
+
+        return dynamicSecurityAnalysisResultUuid;
     }
 
     // --- Dynamic Security Analysis service methods END --- //

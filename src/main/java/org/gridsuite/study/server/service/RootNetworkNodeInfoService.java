@@ -11,6 +11,7 @@ import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
@@ -543,6 +544,12 @@ public class RootNetworkNodeInfoService {
     public DynamicSimulationStatus getDynamicSimulationStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION);
         return dynamicSimulationService.getStatus(resultUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public DynamicSecurityAnalysisStatus getDynamicSecurityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS);
+        return dynamicSecurityAnalysisService.getStatus(resultUuid);
     }
 
     public String getSensitivityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
