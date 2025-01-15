@@ -23,6 +23,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
 import org.gridsuite.study.server.dto.modification.MultipleNetworkModificationsInfos;
+import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
@@ -1351,20 +1352,11 @@ public class StudyService {
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             List<RootNetworkEntity> studyRootNetworkEntities = rootNetworkService.getStudyRootNetworks(studyUuid);
 
-            /*
-             * temporary solution - there is no way to create a modification and to apply it to several network contexts
-             * - we create a modification without applying it - we get its UUID
-             * - we apply this modification to multiple network context - we get a list of NetworkModificationResults
-             */
-            // Create modification in networkModificationServer without applying it, and getting it's UUID
-            Optional<UUID> modificationUuid = networkModificationService.createModificationWithoutApplying(studyUuid, createModificationAttributes, groupUuid);
-            if (modificationUuid.isPresent()) {
-                // if creating is successful, applying this modification to all root network contexts - each network context will generate a NetworkModificationResult
-                networkModificationResults = networkModificationService.applyModifications(new MultipleNetworkModificationsInfos(
-                    List.of(modificationUuid.get()),
-                    studyRootNetworkEntities.stream().map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationContextInfos(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid())
-                ).toList()));
-            }
+            List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
+                .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid()))
+                .toList();
+            networkModificationResults = networkModificationService.createModification(studyUuid, groupUuid, Pair.of(createModificationAttributes, modificationApplicationContexts));
+
             if (networkModificationResults != null) {
                 int index = 0;
                 // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
@@ -1831,7 +1823,7 @@ public class StudyService {
 
             List<Optional<NetworkModificationResult>> networkModificationResults = networkModificationService.applyModifications(new MultipleNetworkModificationsInfos(
                 updatedModificationUuidList,
-                studyRootNetworkEntities.stream().map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationContextInfos(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid())
+                studyRootNetworkEntities.stream().map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid())
                 ).toList()));
 
             if (networkModificationResults != null) {

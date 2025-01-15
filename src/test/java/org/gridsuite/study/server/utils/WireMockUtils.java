@@ -144,7 +144,7 @@ public class WireMockUtils {
         ).getId();
     }
 
-    public UUID stubNetworkModificationPostWithoutApplying(String responseBody) {
+    public UUID stubNetworkModificationPost(String responseBody) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION))
             .willReturn(WireMock.ok()
                 .withBody(responseBody)
@@ -230,6 +230,12 @@ public class WireMockUtils {
 
     public void verifyNetworkModificationApplyWithVariant(UUID stubId, String requestBody) {
         verifyPostRequest(stubId, URI_NETWORK_MODIFICATION + DELIMITER + "apply", false,
+            Map.of(),
+            requestBody);
+    }
+
+    public void verifyNetworkModificationPostWithVariant(UUID stubId, String requestBody) {
+        verifyPostRequest(stubId, URI_NETWORK_MODIFICATION, false,
             Map.of(),
             requestBody);
     }

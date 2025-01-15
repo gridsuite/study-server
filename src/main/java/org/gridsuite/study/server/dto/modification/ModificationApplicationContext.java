@@ -8,4 +8,4 @@ package org.gridsuite.study.server.dto.modification;
 
 import java.util.UUID;
 
-public record NetworkModificationContextInfos(UUID networkUuid, String variantId, UUID reportUuid, UUID nodeUuid) { }
+public record ModificationApplicationContext(UUID networkUuid, String variantId, UUID reportUuid, UUID nodeUuid) { }

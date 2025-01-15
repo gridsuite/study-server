@@ -9,4 +9,4 @@ package org.gridsuite.study.server.dto.modification;
 import java.util.List;
 import java.util.UUID;
 
-public record MultipleNetworkModificationsInfos(List<UUID> modificationsUuid, List<NetworkModificationContextInfos> networkModificationContextInfos) { }
+public record MultipleNetworkModificationsInfos(List<UUID> modificationsUuid, List<ModificationApplicationContext> networkModificationContextInfos) { }
