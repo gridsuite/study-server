@@ -24,7 +24,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
+import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SECURITY_ANALYSIS_RUNNING;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -49,6 +50,10 @@ public class DynamicSecurityAnalysisService {
 
     public UUID createParameters(String parameters) {
         return dynamicSecurityAnalysisClient.createParameters(parameters);
+    }
+
+    public UUID createDefaultParameters() {
+        return dynamicSecurityAnalysisClient.createDefaultParameters();
     }
 
     public void updateParameters(UUID parametersUuid, String parametersInfos) {

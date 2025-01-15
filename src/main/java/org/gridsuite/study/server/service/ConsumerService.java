@@ -20,6 +20,7 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
@@ -70,6 +71,7 @@ public class ConsumerService {
     private final ShortCircuitService shortCircuitService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final VoltageInitService voltageInitService;
+    private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -84,7 +86,8 @@ public class ConsumerService {
                            SensitivityAnalysisService sensitivityAnalysisService,
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                           VoltageInitService voltageInitService) {
+                           VoltageInitService voltageInitService,
+                           DynamicSecurityAnalysisService dynamicSecurityAnalysisService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -98,6 +101,7 @@ public class ConsumerService {
         this.shortCircuitService = shortCircuitService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.voltageInitService = voltageInitService;
+        this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
     }
 
     @Bean
@@ -257,10 +261,12 @@ public class ConsumerService {
         UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters(userId, userProfileInfos);
         UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters();
         UUID voltageInitParametersUuid = createDefaultVoltageInitParameters(userId, userProfileInfos);
+        UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
-            voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid,
+            voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
             importParameters, importReportUuid);
     }
 
@@ -378,6 +384,26 @@ public class ConsumerService {
             return studyConfigService.createDefaultNetworkVisualizationParameters();
         } catch (final Exception e) {
             LOGGER.error("Error while creating network visualization default parameters", e);
+            return null;
+        }
+    }
+
+    private UUID createDefaultDynamicSecurityAnalysisParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getDynamicSecurityAnalysisParameterId() != null) {
+            // try to access/duplicate the user profile Dynamic Security Analysis parameters
+            try {
+                return dynamicSecurityAnalysisService.duplicateParameters(userProfileInfos.getDynamicSecurityAnalysisParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate dynamic security analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                        userProfileInfos.getDynamicSecurityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad dynamic security analysis parameters in profile => use default values
+        try {
+            return dynamicSecurityAnalysisService.createDefaultParameters();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default parameters for dynamic security analysis", e);
             return null;
         }
     }
@@ -539,6 +565,21 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeDsFailed() {
         return message -> consumeCalculationFailed(message, DYNAMIC_SIMULATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDsaResult() {
+        return message -> consumeCalculationResult(message, DYNAMIC_SECURITY_ANALYSIS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDsaStopped() {
+        return message -> consumeCalculationStopped(message, DYNAMIC_SECURITY_ANALYSIS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDsaFailed() {
+        return message -> consumeCalculationFailed(message, DYNAMIC_SECURITY_ANALYSIS);
     }
 
     @Bean
