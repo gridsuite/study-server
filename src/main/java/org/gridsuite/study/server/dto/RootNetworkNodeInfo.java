@@ -37,6 +37,8 @@ public class RootNetworkNodeInfo {
 
     private UUID dynamicSimulationResultUuid;
 
+    private UUID dynamicSecurityAnalysisResultUuid;
+
     private UUID stateEstimationResultUuid;
 
     private NodeBuildStatus nodeBuildStatus;
@@ -55,6 +57,7 @@ public class RootNetworkNodeInfo {
             .sensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid)
             .nonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid)
             .dynamicSimulationResultUuid(dynamicSimulationResultUuid)
+            .dynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid)
             .stateEstimationResultUuid(stateEstimationResultUuid)
             .nodeBuildStatus(nodeBuildStatus.toEntity())
             .build();

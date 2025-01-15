@@ -23,6 +23,7 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
@@ -59,6 +60,7 @@ public class RootNetworkNodeInfoService {
     private final ShortCircuitService shortCircuitService;
     private final VoltageInitService voltageInitService;
     private final DynamicSimulationService dynamicSimulationService;
+    private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
     private final ReportService reportService;
 
@@ -73,6 +75,7 @@ public class RootNetworkNodeInfoService {
                                       ShortCircuitService shortCircuitService,
                                       VoltageInitService voltageInitService,
                                       DynamicSimulationService dynamicSimulationService,
+                                      DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                                       StateEstimationService stateEstimationService,
                                       ReportService reportService) {
         this.rootNetworkRepository = rootNetworkRepository;
@@ -86,6 +89,7 @@ public class RootNetworkNodeInfoService {
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationService = dynamicSimulationService;
+        this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.stateEstimationService = stateEstimationService;
         this.reportService = reportService;
     }
@@ -129,6 +133,7 @@ public class RootNetworkNodeInfoService {
                 rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(computationResultUuid);
             case VOLTAGE_INITIALIZATION -> rootNetworkNodeInfoEntity.setVoltageInitResultUuid(computationResultUuid);
             case DYNAMIC_SIMULATION -> rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(computationResultUuid);
+            case DYNAMIC_SECURITY_ANALYSIS -> rootNetworkNodeInfoEntity.setDynamicSecurityAnalysisResultUuid(computationResultUuid);
             case STATE_ESTIMATION -> rootNetworkNodeInfoEntity.setStateEstimationResultUuid(computationResultUuid);
         }
     }
@@ -184,6 +189,11 @@ public class RootNetworkNodeInfoService {
             UUID dynamicSimulationResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, DYNAMIC_SIMULATION);
             if (dynamicSimulationResultUuid != null) {
                 deleteNodeInfos.addDynamicSimulationResultUuid(dynamicSimulationResultUuid);
+            }
+
+            UUID dynamicSecurityAnalysisResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, DYNAMIC_SECURITY_ANALYSIS);
+            if (dynamicSecurityAnalysisResultUuid != null) {
+                deleteNodeInfos.addDynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid);
             }
 
             UUID stateEstimationResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, STATE_ESTIMATION);
@@ -299,6 +309,7 @@ public class RootNetworkNodeInfoService {
             case SHORT_CIRCUIT_ONE_BUS -> rootNetworkNodeInfoEntity.getOneBusShortCircuitAnalysisResultUuid();
             case VOLTAGE_INITIALIZATION -> rootNetworkNodeInfoEntity.getVoltageInitResultUuid();
             case DYNAMIC_SIMULATION -> rootNetworkNodeInfoEntity.getDynamicSimulationResultUuid();
+            case DYNAMIC_SECURITY_ANALYSIS -> rootNetworkNodeInfoEntity.getDynamicSecurityAnalysisResultUuid();
             case STATE_ESTIMATION -> rootNetworkNodeInfoEntity.getStateEstimationResultUuid();
         };
     }
@@ -371,6 +382,9 @@ public class RootNetworkNodeInfoService {
         if (rootNetworkNodeInfo.getDynamicSimulationResultUuid() != null) {
             rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(rootNetworkNodeInfo.getDynamicSimulationResultUuid());
         }
+        if (rootNetworkNodeInfo.getDynamicSecurityAnalysisResultUuid() != null) {
+            rootNetworkNodeInfoEntity.setDynamicSecurityAnalysisResultUuid(rootNetworkNodeInfo.getDynamicSecurityAnalysisResultUuid());
+        }
         if (rootNetworkNodeInfo.getVoltageInitResultUuid() != null) {
             rootNetworkNodeInfoEntity.setVoltageInitResultUuid(rootNetworkNodeInfo.getVoltageInitResultUuid());
         }
@@ -395,6 +409,8 @@ public class RootNetworkNodeInfoService {
                 .map(RootNetworkNodeInfo::getVoltageInitResultUuid).filter(Objects::nonNull).forEach(voltageInitService::deleteVoltageInitResult)), // TODO delete all with one request only
             studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
                 .map(RootNetworkNodeInfo::getDynamicSimulationResultUuid).filter(Objects::nonNull).forEach(dynamicSimulationService::deleteResult)), // TODO delete all with one request only
+            studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
+                .map(RootNetworkNodeInfo::getDynamicSecurityAnalysisResultUuid).filter(Objects::nonNull).forEach(dynamicSecurityAnalysisService::deleteResult)), // TODO delete all with one request only
             studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
                 .map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).forEach(stateEstimationService::deleteStateEstimationResult)) // TODO delete all with one request only
         );

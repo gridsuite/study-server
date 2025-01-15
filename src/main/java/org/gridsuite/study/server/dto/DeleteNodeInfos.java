@@ -31,13 +31,18 @@ public class DeleteNodeInfos {
     private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
 
     private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
+
     private List<UUID> nonEvacuatedEnergyResultUuids = new ArrayList<>();
 
     private List<UUID> shortCircuitAnalysisResultUuids = new ArrayList<>();
+
     private List<UUID> oneBusShortCircuitAnalysisResultUuids = new ArrayList<>();
 
     private List<UUID> voltageInitResultUuids = new ArrayList<>();
+
     private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
+
+    private List<UUID> dynamicSecurityAnalysisResultUuids = new ArrayList<>();
 
     private List<UUID> stateEstimationResultUuids = new ArrayList<>();
 
@@ -63,6 +68,10 @@ public class DeleteNodeInfos {
 
     public void addDynamicSimulationResultUuid(UUID dynamicSimulationResultUuid) {
         dynamicSimulationResultUuids.add(dynamicSimulationResultUuid);
+    }
+
+    public void addDynamicSecurityAnalysisResultUuid(UUID dynamicSecurityAnalysisResultUuid) {
+        dynamicSecurityAnalysisResultUuids.add(dynamicSecurityAnalysisResultUuid);
     }
 
     public void addSensitivityAnalysisResultUuid(UUID sensitivityAnalysisResultUuid) {
