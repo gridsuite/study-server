@@ -261,9 +261,13 @@ public class RootNetworkService {
     }
 
     private void assertNameNotExistInStudy(UUID studyUuid, String name) {
-        if (rootNetworkRepository.findByNameAndStudyId(name, studyUuid).isPresent() ||
-            rootNetworkCreationRequestRepository.findByNameAndStudyUuid(name, studyUuid).isPresent()) {
+        if (isRootNetworkNameExistsInStudy(studyUuid, name)) {
             throw new StudyException(NOT_ALLOWED);
         }
+    }
+
+    public boolean isRootNetworkNameExistsInStudy(UUID studyUuid, String rootNetworkName) {
+        return rootNetworkRepository.findByNameAndStudyId(rootNetworkName, studyUuid).isPresent() ||
+            rootNetworkCreationRequestRepository.findByNameAndStudyUuid(rootNetworkName, studyUuid).isPresent();
     }
 }
