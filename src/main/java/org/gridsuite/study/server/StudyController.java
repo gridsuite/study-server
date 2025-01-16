@@ -211,6 +211,16 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @RequestMapping(method = RequestMethod.HEAD, value = "/studies/{studyUuid}/root-networks")
+    @Operation(summary = "Check if an element with this name and this type already exists in the given directory")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
+        @ApiResponse(responseCode = "204", description = "The element doesn't exist")})
+    public ResponseEntity<Void> elementExists(@PathVariable("studyUuid") UUID studyUuid,
+                                              @PathVariable("name") String rootNetworkName) {
+        HttpStatus status = rootNetworkService.isRootNetworkNameExistsInStudy(studyUuid, rootNetworkName) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
+    }
+
     @DeleteMapping(value = "/studies/{studyUuid}/root-networks")
     @Operation(summary = "Create root network for study")
     @ApiResponse(responseCode = "200", description = "Root network created")
