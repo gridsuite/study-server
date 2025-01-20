@@ -54,6 +54,14 @@ class NetworkVariantsListenerTests {
         NetworkVariantsListener listener = new NetworkVariantsListener(NETWORK_UUID, equipmentInfosService);
 
         listener.onVariantRemoved(VARIANT_ID);
+        listener.onVariantCreated("variant_1", "variant_2");
+        listener.onVariantOverwritten("variant_2", "variant_3");
+        listener.onUpdate(null, null, null, null, null);
+        listener.onExtensionUpdate(null, null, null, null, null);
+        listener.onPropertyAdded(null, null, null);
+        listener.onPropertyReplaced(null, null, null, null);
+        listener.onPropertyRemoved(null, null, null);
+
         List<EquipmentInfos> equipmentInfos = equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID);
         assertEquals(2, equipmentInfos.size());
         assertEquals(2, equipmentInfos.stream().filter(eq -> eq.getVariantId().equals(VariantManagerConstants.INITIAL_VARIANT_ID)).count());
