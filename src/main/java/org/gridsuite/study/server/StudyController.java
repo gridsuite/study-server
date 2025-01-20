@@ -216,7 +216,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
         @ApiResponse(responseCode = "204", description = "The element doesn't exist")})
     public ResponseEntity<Void> elementExists(@PathVariable("studyUuid") UUID studyUuid,
-                                              @PathVariable("name") String rootNetworkName) {
+                                              @RequestParam("name") String rootNetworkName) {
         HttpStatus status = rootNetworkService.isRootNetworkNameExistsInStudy(studyUuid, rootNetworkName) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
     }
