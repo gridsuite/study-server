@@ -292,6 +292,7 @@ public class StudyService {
         if (!rootNetworkEntities.stream().map(RootNetworkEntity::getId).collect(Collectors.toSet()).containsAll(rootNetworkUuids)) {
             throw new StudyException(ROOT_NETWORK_NOT_FOUND);
         }
+        notificationService.emitRootNetworksDeletionStarted(studyUuid, rootNetworkUuids);
 
         rootNetworkUuids.forEach(rootNetworkService::delete);
 
@@ -314,6 +315,7 @@ public class StudyService {
             throw new StudyException(ROOT_NETWORK_CREATION_FAILED);
         }
 
+        notificationService.emitRootNetworksUpdated(studyUuid);
         return rootNetworkCreationRequestEntity.toDto();
     }
 
