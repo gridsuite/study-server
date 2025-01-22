@@ -56,6 +56,7 @@ class RepositoriesTest {
                 .build();
         RootNetworkEntity rootNetworkEntity1 = RootNetworkEntity.builder()
             .id(UUID.randomUUID())
+            .name("rootNetworkName")
             .networkUuid(UUID.randomUUID())
             .networkId("networkId")
             .caseFormat("caseFormat")
@@ -68,6 +69,7 @@ class RepositoriesTest {
                 .id(UUID.randomUUID())
                 .rootNetworks(List.of(RootNetworkEntity.builder()
                     .id(UUID.randomUUID())
+                    .name("rootNetworkName2")
                     .networkUuid(UUID.randomUUID())
                     .networkId("networkId2")
                     .caseFormat("caseFormat2")
@@ -84,6 +86,7 @@ class RepositoriesTest {
             .build();
         RootNetworkEntity rootNetworkEntity3 = RootNetworkEntity.builder()
             .id(UUID.randomUUID())
+            .name("rootNetworkName3")
             .networkUuid(UUID.randomUUID())
             .networkId("networkId3")
             .caseFormat("caseFormat3")
@@ -126,6 +129,7 @@ class RepositoriesTest {
 
         RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder()
             .id(UUID.randomUUID())
+            .name("rootNetworkName")
             .networkUuid(UUID.randomUUID())
             .networkId("networkId")
             .caseFormat("caseFormat")
