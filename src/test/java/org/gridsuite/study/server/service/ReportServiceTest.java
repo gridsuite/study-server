@@ -249,7 +249,7 @@ class ReportServiceTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         // get only Child1 aggregated severities
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report/{reportId}/aggregated-severities", rootNode.getStudyId(), child1.getId(), MODIFICATION_CHILD_NODE1_REPORT_UUID))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/aggregated-severities", rootNode.getStudyId(), firstRootNetworkUuid, child1.getId(), MODIFICATION_CHILD_NODE1_REPORT_UUID))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         Set<String> child1AggregatedSeverities = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
@@ -269,7 +269,7 @@ class ReportServiceTest {
         checkReports(child2AndParentsReports, childrenAndParentsExpectedReports);
         assertTrue(TestUtils.getRequestsDone(childrenAndParentsExpectedReports.size(), server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report/aggregated-severities", rootNode.getStudyId(), node.getId()))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/aggregated-severities", rootNode.getStudyId(), firstRootNetworkUuid, node.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         Set<String> child2AggregatedSeverities = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
