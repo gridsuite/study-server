@@ -2100,18 +2100,13 @@ class NetworkModificationTest {
         UUID nodeUuid1 = node1.getId();
         UUID modification1 = UUID.randomUUID();
         UUID modification2 = UUID.randomUUID();
-        UUID duplicatedModification1 = UUID.randomUUID();
-        UUID duplicatedModification2 = UUID.randomUUID();
         String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
-        String duplicatedModificationUuidListBody = mapper.writeValueAsString(Arrays.asList(duplicatedModification1, duplicatedModification2));
 
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("COPY"))
                 .willReturn(WireMock.ok()
-                        .withBody(duplicatedModificationUuidListBody)
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
-
-        UUID stubPostId = wireMockUtils.stubNetworkModificationPostApply(mapper.writeValueAsString(Optional.empty()));
+                    .withBody(mapper.writeValueAsString(List.of(Optional.empty())))
+                    .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
         // duplicate 2 modifications in node1
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
@@ -2126,14 +2121,12 @@ class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
         checkElementUpdatedMessageSent(studyUuid, userId);
 
-        List<UUID> expectedList = List.of(modification1, modification2);
-        String expectedBody = mapper.writeValueAsString(expectedList);
+        Pair<List<UUID>, List<ModificationApplicationContext>> modificationBody = Pair.of(List.of(modification1, modification2), List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
+        String expectedBody = mapper.writeValueAsString(modificationBody);
         String url = "/v1/groups/" + node1.getModificationGroupUuid();
         wireMockUtils.verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(
                         "action", WireMock.equalTo("COPY")),
                 expectedBody);
-        MultipleNetworkModificationsInfos applyModificationBody = new MultipleNetworkModificationsInfos(List.of(duplicatedModification1, duplicatedModification2), List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
-        wireMockUtils.verifyNetworkModificationApplyWithVariant(stubPostId, mapper.writeValueAsString(applyModificationBody));
 
         // now we do the same but on a built node
         RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid1, studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
@@ -2143,10 +2136,8 @@ class NetworkModificationTest {
         groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("COPY"))
                 .willReturn(WireMock.ok()
-                        .withBody(duplicatedModificationUuidListBody)
+                        .withBody(mapper.writeValueAsString(List.of(Optional.of(NetworkModificationResult.builder().build()))))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
-
-        stubPostId = wireMockUtils.stubNetworkModificationPostApply(mapper.writeValueAsString(List.of(Optional.of(NetworkModificationResult.builder().build()))));
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
                         studyUuid, nodeUuid1)
@@ -2163,13 +2154,10 @@ class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
 
-        expectedList = List.of(modification1, modification2);
-        expectedBody = mapper.writeValueAsString(expectedList);
         url = "/v1/groups/" + node1.getModificationGroupUuid();
         wireMockUtils.verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(
                         "action", WireMock.equalTo("COPY")),
                 expectedBody);
-        wireMockUtils.verifyNetworkModificationApplyWithVariant(stubPostId, mapper.writeValueAsString(applyModificationBody));
     }
 
     @Test

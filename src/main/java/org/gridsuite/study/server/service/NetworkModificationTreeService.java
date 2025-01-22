@@ -152,7 +152,7 @@ public class NetworkModificationTreeService {
         UUID newGroupUuid = UUID.randomUUID();
         UUID modificationGroupUuid = self.getModificationGroupUuid(nodeToCopyUuid);
         //First we create the modification group
-        networkModificationService.createModifications(modificationGroupUuid, newGroupUuid);
+        networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid);
 
         //Then we create the node
         NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationNodeInfoRepository.findById(nodeToCopyUuid).orElseThrow(() -> new StudyException(GET_MODIFICATIONS_FAILED));
@@ -400,7 +400,7 @@ public class NetworkModificationTreeService {
             model.setName(getSuffixedNodeName(study.getId(), model.getName()));
 
             nextParentId = self.createNode(study, nodeParentId, model, InsertMode.CHILD, null).getId();
-            networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId);
+            networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId);
         } else {
             // when cloning studyTree, we don't clone root node
             // if cloning the whole study, the root node is previously created

@@ -152,14 +152,6 @@ public class WireMockUtils {
         ).getId();
     }
 
-    public UUID stubNetworkModificationPostApply(String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION + DELIMITER + "apply"))
-            .willReturn(WireMock.ok()
-                .withBody(responseBody)
-                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
-    }
-
     public UUID stubNetworkModificationPostWithError(String requestBody) {
         return stubNetworkModificationPostWithError(requestBody, "Internal Server Error");
     }
@@ -219,18 +211,6 @@ public class WireMockUtils {
     public void verifyNetworkModificationPost(UUID stubId, String requestBody) {
         verifyPostRequest(stubId, URI_NETWORK_MODIFICATION, false,
             Map.of("groupUuid", WireMock.matching(".*")),
-            requestBody);
-    }
-
-    public void verifyNetworkModificationPostWithoutApplying(UUID stubId, String requestBody) {
-        verifyPostRequest(stubId, URI_NETWORK_MODIFICATION, false,
-            Map.of(),
-            requestBody);
-    }
-
-    public void verifyNetworkModificationApplyWithVariant(UUID stubId, String requestBody) {
-        verifyPostRequest(stubId, URI_NETWORK_MODIFICATION + DELIMITER + "apply", false,
-            Map.of(),
             requestBody);
     }
 

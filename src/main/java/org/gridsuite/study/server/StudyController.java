@@ -592,7 +592,7 @@ public class StudyController {
                                                         @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid,
                                                         @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
-        studyService.moveModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, userId);
+        studyService.moveNetworkModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -613,10 +613,10 @@ public class StudyController {
         }
         switch (action) {
             case COPY, INSERT:
-                studyService.createModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId, action);
+                studyService.createNetworkModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId, action);
                 break;
             case MOVE:
-                studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId);
+                studyService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId);
                 break;
             default:
                 throw new StudyException(Type.UNKNOWN_ACTION_TYPE);

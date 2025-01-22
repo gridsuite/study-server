@@ -22,7 +22,6 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
-import org.gridsuite.study.server.dto.modification.MultipleNetworkModificationsInfos;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
@@ -1357,7 +1356,7 @@ public class StudyService {
             List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
                 .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid()))
                 .toList();
-            networkModificationResults = networkModificationService.createModification(studyUuid, groupUuid, Pair.of(createModificationAttributes, modificationApplicationContexts));
+            networkModificationResults = networkModificationService.createModification(groupUuid, Pair.of(createModificationAttributes, modificationApplicationContexts));
 
             if (networkModificationResults != null) {
                 int index = 0;
@@ -1765,7 +1764,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void moveModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, String userId) {
+    public void moveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, String userId) {
         if (originNodeUuid == null) {
             throw new StudyException(MISSING_PARAMETER, "The parameter 'originNodeUuid' must be defined when moving modifications");
         }
@@ -1814,19 +1813,18 @@ public class StudyService {
     }
 
     @Transactional
-    public void createModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, String userId, StudyConstants.ModificationsActionType action) {
+    public void createNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, String userId, StudyConstants.ModificationsActionType action) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
-            NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nodeUuid);
             List<RootNetworkEntity> studyRootNetworkEntities = rootNetworkService.getStudyRootNetworks(studyUuid);
-            List<UUID> updatedModificationUuidList = networkModificationService.handleNetworkModificationsWithoutApplying(modificationUuidList, networkModificationNodeInfoEntity, action);
+            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
 
-            List<Optional<NetworkModificationResult>> networkModificationResults = networkModificationService.applyModifications(new MultipleNetworkModificationsInfos(
-                updatedModificationUuidList,
-                studyRootNetworkEntities.stream().map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid())
-                ).toList()));
+            List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
+                .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid()))
+                .toList();
+            List<Optional<NetworkModificationResult>> networkModificationResults = networkModificationService.createModifications(groupUuid, action, Pair.of(modificationUuidList, modificationApplicationContexts));
 
             if (networkModificationResults != null) {
                 int index = 0;
