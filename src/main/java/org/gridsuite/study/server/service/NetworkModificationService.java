@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
@@ -329,10 +330,19 @@ public class NetworkModificationService {
                 }).getBody();
     }
 
-    public List<Optional<NetworkModificationResult>> createModifications(UUID groupUuid, ModificationsActionType action,
+    public List<Optional<NetworkModificationResult>> duplicateOrInsertModifications(UUID groupUuid, ModificationsActionType action,
+                                                                                    Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
+        return handleModifications(groupUuid, null, action, modificationContextInfos);
+    }
+
+    private List<Optional<NetworkModificationResult>> handleModifications(UUID groupUuid, UUID originGroupUuid, ModificationsActionType action,
                                                                          Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam(QUERY_PARAM_ACTION, action.name());
+
+        if (originGroupUuid != null) {
+            path.queryParam("originGroupUuid", originGroupUuid);
+        }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -365,23 +375,8 @@ public class NetworkModificationService {
         }
     }
 
-    public Optional<NetworkModificationResult> duplicateModificationsInGroup(UUID originGroupUuid, UUID networkUuid, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "duplications")
-            .queryParam(NETWORK_UUID, networkUuid)
-            .queryParam(REPORT_UUID, rootNetworkNodeInfoEntity.getModificationReports().get(networkModificationNodeInfoEntity.getId()))
-            .queryParam(REPORTER_ID, networkModificationNodeInfoEntity.getId())
-            .queryParam(VARIANT_ID, rootNetworkNodeInfoEntity.getVariantId())
-            .queryParam("duplicateFrom", originGroupUuid);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        return restTemplate.exchange(
-            getNetworkModificationServerURI(false) + path.buildAndExpand(networkModificationNodeInfoEntity.getModificationGroupUuid()).toUriString(),
-            HttpMethod.PUT,
-            new HttpEntity<>(headers),
-            new ParameterizedTypeReference<Optional<NetworkModificationResult>>() {
-            }).getBody();
+    public List<Optional<NetworkModificationResult>> duplicateModificationsFromGroup(UUID groupUuid, UUID originGroupUuid, Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
+        return handleModifications(groupUuid, originGroupUuid, StudyConstants.ModificationsActionType.COPY, modificationContextInfos);
     }
 
     private String buildReceiver(UUID nodeUuid, UUID rootNetworkUuid) {

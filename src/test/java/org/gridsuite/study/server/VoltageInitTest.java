@@ -297,11 +297,11 @@ class VoltageInitTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_STATUS_JSON);
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + MODIFICATIONS_GROUP_UUID + "\"");
-                } else if (path.matches("/v1/groups/.*/duplications.*")) {
+                } else if (path.matches("/v1/groups/.*" + "\\?action=COPY&originGroupUuid=.*")) {
                     Optional<NetworkModificationResult> networkModificationResult =
                             createModificationResultWithElementImpact(SimpleImpactType.MODIFICATION,
                                     IdentifiableType.GENERATOR, "genId", Set.of("s1"));
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(networkModificationResult));
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of(networkModificationResult)));
                 } else if (path.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/network-modifications\\?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST));
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/stop.*")
@@ -631,7 +631,7 @@ class VoltageInitTest {
     }
 
     @Test
-    void testCopyVoltageInitModifications(final MockWebServer server) throws Exception {
+    void testInsertVoltageInitModifications(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID_STRING), false);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
@@ -656,7 +656,7 @@ class VoltageInitTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
         // just retrieve modifications list from modificationNode3Uuid
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/modifications", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
                 .header("userId", "userId")).andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(2, server).stream().allMatch(r ->
                 r.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/network-modifications\\?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=false") ||
@@ -664,12 +664,12 @@ class VoltageInitTest {
         ));
 
         // clone and copy modifications to modificationNode3Uuid
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/modifications", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
             .header("userId", "userId")).andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
-                r.matches("/v1/groups/.*/duplications.*")
+                r.matches("/v1/groups/.*\\?action=COPY&originGroupUuid=.*")
         ));
 
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid);

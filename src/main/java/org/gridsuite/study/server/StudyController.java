@@ -613,7 +613,7 @@ public class StudyController {
         }
         switch (action) {
             case COPY, INSERT:
-                studyService.createNetworkModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId, action);
+                studyService.duplicateOrInsertNetworkModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId, action);
                 break;
             case MOVE:
                 studyService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId);
@@ -1793,7 +1793,7 @@ public class StudyController {
         return studyService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/modifications", produces = MediaType.TEXT_PLAIN_VALUE)
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", produces = MediaType.TEXT_PLAIN_VALUE)
     @Operation(summary = "Get the voltage init modifications from a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init modifications was returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found, or has no voltage init result")})
     public ResponseEntity<String> getVoltageInitModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
@@ -1803,16 +1803,16 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(studyService.getVoltageInitModifications(nodeUuid, rootNetworkUuid));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/modifications", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init")
     @Operation(summary = "Clone the voltage init modifications, then append them to node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init modifications have been appended.")})
-    public ResponseEntity<Void> copyVoltageInitModifications(@PathVariable("studyUuid") UUID studyUuid,
-                                                             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                             @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @RequestHeader(HEADER_USER_ID) String userId) {
+    public ResponseEntity<Void> insertVoltageInitModifications(@PathVariable("studyUuid") UUID studyUuid,
+                                                               @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                               @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
-        studyService.copyVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        studyService.insertVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 

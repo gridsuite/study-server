@@ -1345,6 +1345,7 @@ public class StudyService {
         }
     }
 
+    @Transactional
     public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
@@ -1813,7 +1814,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void createNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, String userId, StudyConstants.ModificationsActionType action) {
+    public void duplicateOrInsertNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, String userId, StudyConstants.ModificationsActionType action) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
@@ -1824,7 +1825,7 @@ public class StudyService {
             List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
                 .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid()))
                 .toList();
-            List<Optional<NetworkModificationResult>> networkModificationResults = networkModificationService.createModifications(groupUuid, action, Pair.of(modificationUuidList, modificationApplicationContexts));
+            List<Optional<NetworkModificationResult>> networkModificationResults = networkModificationService.duplicateOrInsertModifications(groupUuid, action, Pair.of(modificationUuidList, modificationApplicationContexts));
 
             if (networkModificationResults != null) {
                 int index = 0;
@@ -2210,7 +2211,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void copyVoltageInitModifications(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+    public void insertVoltageInitModifications(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         // get modifications group uuid associated to voltage init results
         UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
         UUID voltageInitModificationsGroupUuid = voltageInitService.getModificationsGroupUuid(nodeUuid, resultUuid);
@@ -2222,15 +2223,27 @@ public class StudyService {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
-            NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nodeUuid);
-            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
-            UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.duplicateModificationsInGroup(voltageInitModificationsGroupUuid, networkUuid, networkModificationNodeInfoEntity, rootNetworkNodeInfoEntity);
+
+            List<RootNetworkEntity> studyRootNetworkEntities = rootNetworkService.getStudyRootNetworks(studyUuid);
+            List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
+                .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid()))
+                .toList();
+            List<Optional<NetworkModificationResult>> networkModificationResults = networkModificationService.duplicateModificationsFromGroup(networkModificationTreeService.getModificationGroupUuid(nodeUuid), voltageInitModificationsGroupUuid, Pair.of(List.of(), modificationApplicationContexts));
+
+            if (networkModificationResults != null) {
+                int index = 0;
+                // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
+                for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults) {
+                    if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
+                        emitNetworkModificationImpacts(studyUuid, nodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
+                    }
+                    index++;
+                }
+            }
 
             voltageInitService.resetModificationsGroupUuid(nodeUuid, resultUuid);
 
             // invalidate the whole subtree except the target node (we have built this node during the duplication)
-            networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, rootNetworkUuid, modificationResult));
             notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT); // send notification voltage init result has changed
             updateStatuses(studyUuid, nodeUuid, true, true, false);  // do not delete the voltage init results
         } finally {

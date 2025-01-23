@@ -63,7 +63,7 @@ public class VoltageInitResultConsumer {
                 if (studyService.shouldApplyModifications(studyUuid)) {
                     consumerService.getNodeReceiver(message).ifPresent(nodeReceiver -> {
                         String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-                        studyService.copyVoltageInitModifications(studyUuid, nodeReceiver.getNodeUuid(), nodeReceiver.getRootNetworkUuid(), userId);
+                        studyService.insertVoltageInitModifications(studyUuid, nodeReceiver.getNodeUuid(), nodeReceiver.getRootNetworkUuid(), userId);
                     });
                 }
             });
