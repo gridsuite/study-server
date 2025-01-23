@@ -290,6 +290,16 @@ public class RootNetworkNodeInfoService {
             }
         }
 
+        UUID dynamicSimulationResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, DYNAMIC_SIMULATION);
+        if (dynamicSimulationResultUuid != null) {
+            invalidateNodeInfos.addDynamicSimulationResultUuid(dynamicSimulationResultUuid);
+        }
+
+        UUID dynamicSecurityAnalysisResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, DYNAMIC_SECURITY_ANALYSIS);
+        if (dynamicSecurityAnalysisResultUuid != null) {
+            invalidateNodeInfos.addDynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid);
+        }
+
         UUID stateEstimationResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, STATE_ESTIMATION);
         if (stateEstimationResultUuid != null) {
             invalidateNodeInfos.addStateEstimationResultUuid(stateEstimationResultUuid);

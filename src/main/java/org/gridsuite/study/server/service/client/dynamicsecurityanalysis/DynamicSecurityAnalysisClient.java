@@ -48,6 +48,67 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
     // --- Related parameters methods --- //
 
+    public String getDefaultProvider() {
+        String endPointUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, "default-provider");
+
+        String url = UriComponentsBuilder
+                .fromHttpUrl(endPointUrl)
+                .toUriString();
+
+        // call dynamic-security-analysis REST API
+        try {
+            return getRestTemplate().getForObject(url, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PROVIDER_NOT_FOUND);
+            }
+            throw handleHttpError(e, GET_DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PROVIDER_FAILED);
+        }
+    }
+
+    public String getProvider(UUID parametersUuid) {
+        String endPointUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
+
+        String url = UriComponentsBuilder
+                .fromHttpUrl(endPointUrl + "{uuid}/provider")
+                .buildAndExpand(parametersUuid)
+                .toUriString();
+
+        // call dynamic-security-analysis REST API
+        try {
+            return getRestTemplate().getForObject(url, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_PROVIDER_NOT_FOUND);
+            }
+            throw handleHttpError(e, GET_DYNAMIC_SECURITY_ANALYSIS_PROVIDER_FAILED);
+        }
+    }
+
+    public void updateProvider(UUID parametersUuid, String provider) {
+        Objects.requireNonNull(parametersUuid);
+        Objects.requireNonNull(provider);
+
+        String endPointUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
+
+        String url = UriComponentsBuilder
+                .fromHttpUrl(endPointUrl + "{uuid}/provider")
+                .buildAndExpand(parametersUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(provider, headers);
+
+        // call dynamic-security-analysis REST API
+        try {
+            getRestTemplate().put(url, httpEntity);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_DYNAMIC_SECURITY_ANALYSIS_PROVIDER_FAILED);
+        }
+    }
+
     public String getParameters(UUID parametersUuid) {
 
         String endPointUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
@@ -180,7 +241,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam(QUERY_PARAM_REPORT_UUID, reportInfos.reportUuid())
                 .queryParam(QUERY_PARAM_REPORTER_ID, reportInfos.nodeUuid())
-                .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.DYNAMIC_SIMULATION.reportKey);
+                .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.DYNAMIC_SECURITY_ANALYSIS.reportKey);
         var uriComponent = uriComponentsBuilder
                 .buildAndExpand(networkUuid);
 
