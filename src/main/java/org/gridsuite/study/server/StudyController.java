@@ -1108,7 +1108,7 @@ public class StudyController {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportLogs(reportId, messageFilter, severityLevels));
     }
-    
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report/{reportId}/aggregated-severities", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get node report severities")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report severities"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
