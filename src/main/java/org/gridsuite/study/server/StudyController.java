@@ -181,7 +181,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/root-networks")
     @Operation(summary = "Get root networks for study")
     @ApiResponse(responseCode = "200", description = "List of root networks")
-    public ResponseEntity<List<RootNetworkMinimalInfos>> getRootNetworks(@PathVariable("studyUuid") UUID studyUuid) {
+    public ResponseEntity<List<BasicRootNetworkInfos>> getRootNetworks(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(rootNetworkService.getRootNetworks(studyUuid));
     }
 

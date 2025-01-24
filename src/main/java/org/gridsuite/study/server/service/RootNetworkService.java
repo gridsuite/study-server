@@ -14,7 +14,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
-import org.gridsuite.study.server.dto.RootNetworkMinimalInfos;
+import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
@@ -236,15 +236,15 @@ public class RootNetworkService {
         rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity);
     }
 
-    public List<RootNetworkMinimalInfos> getRootNetworks(UUID studyUuid) {
-        List<RootNetworkMinimalInfos> result = new ArrayList<>();
+    public List<BasicRootNetworkInfos> getRootNetworks(UUID studyUuid) {
+        List<BasicRootNetworkInfos> result = new ArrayList<>();
 
         // return RootNetworkMinimalInfos with isCreating as false when in rootNetworkRepository
         result.addAll(rootNetworkRepository.findAllByStudyId(studyUuid).stream()
-            .map(rootNetworkEntity -> new RootNetworkMinimalInfos(rootNetworkEntity.getId(), rootNetworkEntity.getName(), false)).toList());
+            .map(rootNetworkEntity -> new BasicRootNetworkInfos(rootNetworkEntity.getId(), rootNetworkEntity.getName(), false)).toList());
         // return RootNetworkMinimalInfos with isCreating as true when in rootNetworkCreationRequestRepository
         result.addAll(rootNetworkCreationRequestRepository.findAllByStudyUuid(studyUuid).stream()
-            .map(rootNetworkCreationEntity -> new RootNetworkMinimalInfos(rootNetworkCreationEntity.getId(), rootNetworkCreationEntity.getName(), true)).toList());
+            .map(rootNetworkCreationEntity -> new BasicRootNetworkInfos(rootNetworkCreationEntity.getId(), rootNetworkCreationEntity.getName(), true)).toList());
 
         return result;
     }

@@ -611,12 +611,12 @@ class RootNetworkTest {
         String response = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks", studyEntity.getId()))
             .andExpect(status().isOk())
             .andReturn().getResponse().getContentAsString();
-        List<RootNetworkMinimalInfos> result = objectMapper.readValue(response, new TypeReference<>() { });
+        List<BasicRootNetworkInfos> result = objectMapper.readValue(response, new TypeReference<>() { });
         assertEquals(3, result.size());
 
-        RootNetworkMinimalInfos requestRootNetwork = result.stream().filter(rootNetworkMinimalInfos -> rootNetworkMinimalInfos.rootNetworkUuid().equals(requestUuid)).findFirst().orElseThrow(() -> new Exception("this should be in the results"));
+        BasicRootNetworkInfos requestRootNetwork = result.stream().filter(rootNetworkMinimalInfos -> rootNetworkMinimalInfos.rootNetworkUuid().equals(requestUuid)).findFirst().orElseThrow(() -> new Exception("this should be in the results"));
         assertTrue(requestRootNetwork.isCreating());
-        RootNetworkMinimalInfos createdRootNetwork = result.stream().filter(rootNetworkMinimalInfos -> rootNetworkMinimalInfos.rootNetworkUuid().equals(rootNetworkEntity.getId())).findFirst().orElseThrow(() -> new Exception("this should be in the results"));
+        BasicRootNetworkInfos createdRootNetwork = result.stream().filter(rootNetworkMinimalInfos -> rootNetworkMinimalInfos.rootNetworkUuid().equals(rootNetworkEntity.getId())).findFirst().orElseThrow(() -> new Exception("this should be in the results"));
         assertFalse(createdRootNetwork.isCreating());
     }
 
