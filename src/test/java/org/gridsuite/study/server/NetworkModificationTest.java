@@ -584,7 +584,6 @@ class NetworkModificationTest {
 
         // Build first node with errors
         networkModificationResult.get().setApplicationStatus(NetworkModificationResult.ApplicationStatus.WITH_ERRORS);
-        Optional<UUID> modificationUuid = Optional.of(UUID.randomUUID());
         UUID stubPostId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(List.of(networkModificationResult)));
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                         .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)

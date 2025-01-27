@@ -58,7 +58,7 @@ public final class JsonUtils {
     public static String getModificationContextJsonString(ObjectMapper objectMapper, Pair<String, List<ModificationApplicationContext>> modificationContextInfos) throws JsonProcessingException, NoSuchFieldException {
         ObjectNode modificationJson = (ObjectNode) objectMapper.readTree(modificationContextInfos.getFirst());
         ObjectNode modificationContextJson = objectMapper.valueToTree(modificationContextInfos);
-        modificationContextJson.put(Pair.class.getDeclaredField("first").getName(), modificationJson);
+        modificationContextJson.set(Pair.class.getDeclaredField("first").getName(), modificationJson);
         return modificationContextJson.toString();
     }
 }
