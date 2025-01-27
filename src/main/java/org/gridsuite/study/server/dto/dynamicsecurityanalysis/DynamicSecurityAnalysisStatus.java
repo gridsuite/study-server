@@ -13,6 +13,6 @@ package org.gridsuite.study.server.dto.dynamicsecurityanalysis;
 public enum DynamicSecurityAnalysisStatus {
     NOT_DONE,
     RUNNING,
-    CONVERGED,
-    DIVERGED
+    SUCCEED,
+    FAILED
 }
