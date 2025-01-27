@@ -285,16 +285,16 @@ public class StudyService {
     @Transactional
     public void deleteRootNetworks(UUID studyUuid, List<UUID> rootNetworkUuids, String userId) {
         assertIsStudyExist(studyUuid);
-        List<RootNetworkEntity> rootNetworkEntities = rootNetworkService.getStudyRootNetworks(studyUuid);
-        if (rootNetworkUuids.size() >= rootNetworkEntities.size()) {
+        List<RootNetworkEntity> allRootNetworkEntities = rootNetworkService.getStudyRootNetworks(studyUuid);
+        if (rootNetworkUuids.size() >= allRootNetworkEntities.size()) {
             throw new StudyException(ROOT_NETWORK_DELETE_FORBIDDEN);
         }
-        if (!rootNetworkEntities.stream().map(RootNetworkEntity::getId).collect(Collectors.toSet()).containsAll(rootNetworkUuids)) {
+        if (!allRootNetworkEntities.stream().map(RootNetworkEntity::getId).collect(Collectors.toSet()).containsAll(rootNetworkUuids)) {
             throw new StudyException(ROOT_NETWORK_NOT_FOUND);
         }
         notificationService.emitRootNetworksDeletionStarted(studyUuid, rootNetworkUuids);
 
-        rootNetworkUuids.forEach(rootNetworkService::delete);
+        rootNetworkService.deleteRootNetworks(rootNetworkUuids.stream());
 
         notificationService.emitRootNetworksUpdated(studyUuid);
     }
@@ -328,7 +328,7 @@ public class StudyService {
             rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
             rootNetworkService.deleteCreationRequest(rootNetworkCreationRequestEntityOpt.get());
         } else {
-            rootNetworkService.delete(rootNetworkInfos);
+            rootNetworkService.deleteRootNetworks(List.of(rootNetworkInfos));
         }
         notificationService.emitRootNetworksUpdated(studyUuid);
     }
@@ -493,7 +493,7 @@ public class StudyService {
                 CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                     Stream.concat(
                         // delete all distant resources linked to rootNetworks
-                        rootNetworkService.getDeleteRootNetworkInfosFutures(deleteStudyInfos.getRootNetworkInfosList()).stream(),
+                        rootNetworkService.getDeleteRootNetworkInfosFutures(deleteStudyInfos.getRootNetworkInfosList()),
                         // delete all distant resources linked to nodes
                         Stream.of(studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuids().stream().filter(Objects::nonNull).forEach(networkModificationService::deleteModifications))) // TODO delete all with one request only
                     ).toArray(CompletableFuture[]::new)

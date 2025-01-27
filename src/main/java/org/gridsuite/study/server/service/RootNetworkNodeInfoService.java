@@ -384,8 +384,8 @@ public class RootNetworkNodeInfoService {
         }
     }
 
-    public List<CompletableFuture<Void>> getDeleteRootNetworkNodeInfosFutures(List<RootNetworkNodeInfo> rootNetworkNodeInfo) {
-        return List.of(
+    public Stream<CompletableFuture<Void>> getDeleteRootNetworkNodeInfosFutures(List<RootNetworkNodeInfo> rootNetworkNodeInfo) {
+        return Stream.of(
             studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkNodeInfo.stream().map(this::getReportUuids).flatMap(Collection::stream).toList())),
             studyServerExecutionService.runAsync(() -> rootNetworkNodeInfo.stream()
                 .map(RootNetworkNodeInfo::getLoadFlowResultUuid).filter(Objects::nonNull).forEach(loadFlowService::deleteLoadFlowResult)), // TODO delete all with one request only
