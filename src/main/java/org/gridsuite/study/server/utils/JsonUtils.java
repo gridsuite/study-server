@@ -7,10 +7,16 @@
 package org.gridsuite.study.server.utils;
 
 import com.fasterxml.jackson.core.JsonPointer;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.MissingNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.NonNull;
+import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
+import org.springframework.data.util.Pair;
 
+import java.util.List;
 import java.util.function.Predicate;
 
 public final class JsonUtils {
@@ -47,5 +53,12 @@ public final class JsonUtils {
      */
     public static JsonNode nodeAt(@NonNull final JsonNode node, @NonNull final JsonPointer... pointers) {
         return nodeAt(node, jsonNode -> !jsonNode.isMissingNode(), pointers);
+    }
+
+    public static String getModificationContextJsonString(ObjectMapper objectMapper, Pair<String, List<ModificationApplicationContext>> modificationContextInfos) throws JsonProcessingException, NoSuchFieldException {
+        ObjectNode modificationJson = (ObjectNode) objectMapper.readTree(modificationContextInfos.getFirst());
+        ObjectNode modificationContextJson = objectMapper.valueToTree(modificationContextInfos);
+        modificationContextJson.put(Pair.class.getDeclaredField("first").getName(), modificationJson);
+        return modificationContextJson.toString();
     }
 }
