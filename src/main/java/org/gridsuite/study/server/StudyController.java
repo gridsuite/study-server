@@ -1991,6 +1991,15 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(studyService.getStudyFirstRootNetworkUuid(studyUuid), filterUuid));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/filters/elements")
+    @Operation(summary = "Evaluate a list of filters on root node to get matched elements")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched elements")})
+    public ResponseEntity<String> exportFilters(
+        @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "Filters uuid to be resolved") @RequestParam("filtersUuid") List<UUID> filtersUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilters(studyService.getStudyFirstRootNetworkUuid(studyUuid), filtersUuid));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/state-estimation/run")
     @Operation(summary = "run state estimation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation has started")})

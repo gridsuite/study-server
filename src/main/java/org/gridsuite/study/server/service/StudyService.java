@@ -2361,6 +2361,12 @@ public class StudyService {
         return filterService.exportFilter(rootNetworkService.getNetworkUuid(rootNetworkUuid), filterUuid);
     }
 
+    public String exportFilters(UUID rootNetworkUuid, List<UUID> filtersUuid) {
+        //Same choice of root node network as the function for a single filter
+        //TODO update this function too when root network logic has been refined for filters
+        return filterService.exportFilters(rootNetworkService.getNetworkUuid(rootNetworkUuid), filtersUuid);
+    }
+
     @Transactional
     public UUID runStateEstimation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         Objects.requireNonNull(studyUuid);
