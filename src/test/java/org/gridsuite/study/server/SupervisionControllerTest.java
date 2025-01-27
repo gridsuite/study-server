@@ -26,7 +26,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.utils.StudyTestUtils;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,7 +94,7 @@ class SupervisionControllerTest {
     private RestClient restClient;
 
     @Autowired
-    private StudyTestUtils studyTestUtils;
+    private TestUtils studyTestUtils;
 
     @MockBean
     private NetworkService networkService;

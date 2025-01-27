@@ -18,9 +18,11 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.junit.platform.commons.util.StringUtils;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -35,12 +37,19 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
+@Service
 public final class TestUtils {
 
     private static final long TIMEOUT = 100;
 
-    private TestUtils() {
-        throw new IllegalStateException("Utility class");
+    private final RootNetworkRepository rootNetworkRepository;
+
+    public TestUtils(RootNetworkRepository rootNetworkRepository) {
+        this.rootNetworkRepository = rootNetworkRepository;
+    }
+
+    public UUID getStudyFirstRootNetworkUuid(UUID studyUuid) {
+        return rootNetworkRepository.findAllByStudyId(studyUuid).get(0).getId();
     }
 
     public static Set<RequestWithBody> getRequestsWithBodyDone(int n, MockWebServer server) {

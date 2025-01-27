@@ -8,6 +8,7 @@ package org.gridsuite.study.server.repository.rootnetwork;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
@@ -90,5 +91,9 @@ public class RootNetworkEntity {
         rootNetworkInfosBuilder.rootNetworkNodeInfos(this.rootNetworkNodeInfos.stream().map(RootNetworkNodeInfoEntity::toDto).collect(Collectors.toList()));
 
         return rootNetworkInfosBuilder.build();
+    }
+
+    public BasicRootNetworkInfos toBasicDto() {
+        return new BasicRootNetworkInfos(getId(), getName(), false);
     }
 }

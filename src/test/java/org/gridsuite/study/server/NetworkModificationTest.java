@@ -214,7 +214,7 @@ class NetworkModificationTest {
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @Autowired
-    private StudyTestUtils studyTestUtils;
+    private TestUtils studyTestUtils;
 
     //output destinations
     private static final String STUDY_UPDATE_DESTINATION = "study.update";

@@ -74,7 +74,7 @@ public class RootNetworkService {
     }
 
     public UUID getNetworkUuid(UUID rootNetworkUuid) {
-        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getNetworkUuid).orElse(null);
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
     }
 
     public UUID getRootReportUuid(UUID rootNetworkUuid) {
@@ -243,16 +243,11 @@ public class RootNetworkService {
     }
 
     public List<BasicRootNetworkInfos> getRootNetworks(UUID studyUuid) {
-        List<BasicRootNetworkInfos> result = new ArrayList<>();
-
-        // return RootNetworkMinimalInfos with isCreating as false when in rootNetworkRepository
-        result.addAll(rootNetworkRepository.findAllByStudyId(studyUuid).stream()
-            .map(rootNetworkEntity -> new BasicRootNetworkInfos(rootNetworkEntity.getId(), rootNetworkEntity.getName(), false)).toList());
-        // return RootNetworkMinimalInfos with isCreating as true when in rootNetworkCreationRequestRepository
-        result.addAll(rootNetworkCreationRequestRepository.findAllByStudyUuid(studyUuid).stream()
-            .map(rootNetworkCreationEntity -> new BasicRootNetworkInfos(rootNetworkCreationEntity.getId(), rootNetworkCreationEntity.getName(), true)).toList());
-
-        return result;
+        return Stream
+            .concat(
+                rootNetworkRepository.findAllByStudyId(studyUuid).stream().map(RootNetworkEntity::toBasicDto),
+                rootNetworkCreationRequestRepository.findAllByStudyUuid(studyUuid).stream().map(RootNetworkCreationRequestEntity::toBasicDto))
+            .toList();
     }
 
     public void assertCanCreateRootNetwork(UUID studyUuid, String rootNetworkName) {

@@ -325,7 +325,7 @@ class StudyTest {
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
-    private StudyTestUtils studyTestUtils;
+    private TestUtils studyTestUtils;
 
     private static EquipmentInfos toEquipmentInfos(Line line) {
         return EquipmentInfos.builder()

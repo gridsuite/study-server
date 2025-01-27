@@ -40,7 +40,6 @@ import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEner
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-import org.gridsuite.study.server.utils.StudyTestUtils;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -232,7 +231,7 @@ class VoltageInitTest {
     @Autowired
     private StudyService studyService;
     @Autowired
-    private StudyTestUtils studyTestUtils;
+    private TestUtils studyTestUtils;
 
     @BeforeEach
     void setup(final MockWebServer server) throws Exception {

@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkCreationRequestInfos;
 
 import java.util.UUID;
@@ -37,5 +38,9 @@ public class RootNetworkCreationRequestEntity {
             .studyUuid(this.getStudyUuid())
             .userId(this.getUserId())
             .build();
+    }
+
+    public BasicRootNetworkInfos toBasicDto() {
+        return new BasicRootNetworkInfos(getId(), getName(), true);
     }
 }
