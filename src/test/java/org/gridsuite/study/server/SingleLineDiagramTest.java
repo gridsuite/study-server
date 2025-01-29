@@ -35,6 +35,7 @@ import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEner
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.MatcherJson;
+import org.gridsuite.study.server.utils.StudyTestUtils;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -138,6 +139,8 @@ class SingleLineDiagramTest {
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
     private StudyService studyService;
+    @Autowired
+    private StudyTestUtils studyTestUtils;
 
     @BeforeEach
     void setup(final MockWebServer server) {
@@ -245,6 +248,7 @@ class SingleLineDiagramTest {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         UUID randomUuid = UUID.randomUUID();
 
@@ -252,8 +256,8 @@ class SingleLineDiagramTest {
         UUID modificationNodeUuid = modificationNode1.getId();
 
         //get the voltage level diagram svg
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false&language=en",
-                studyNameUserIdUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false&language=en",
+                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
                         status().isOk(),
                         content().contentType(MediaType.APPLICATION_XML),
                         content().string("byte"));
@@ -263,8 +267,8 @@ class SingleLineDiagramTest {
                 NETWORK_UUID_STRING)));
 
         //get the voltage level diagram svg without language
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false",
-                studyNameUserIdUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false",
+                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_XML),
                 content().string("byte"));
@@ -274,8 +278,8 @@ class SingleLineDiagramTest {
                 NETWORK_UUID_STRING)));
 
         //get the voltage level diagram svg on a variant node
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false",
-            studyNameUserIdUuid, modificationNodeUuid, "voltageLevelId")).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false",
+            studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "voltageLevelId")).andExpectAll(
             status().isOk(),
             content().contentType(MediaType.APPLICATION_JSON),
             content().string("svgandmetadata"));
@@ -285,12 +289,12 @@ class SingleLineDiagramTest {
             NETWORK_UUID_STRING, VARIANT_ID)));
 
         //get the voltage level diagram svg from a study that doesn't exist
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg",
-                randomUuid, rootNodeUuid, "voltageLevelId")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg",
+                randomUuid, randomUuid, rootNodeUuid, "voltageLevelId")).andExpect(status().isNotFound());
 
         //get the voltage level diagram svg and metadata sldDisplayMode = STATE_VARIABLE
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false&language=en",
-                studyNameUserIdUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false&language=en",
+                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
                         status().isOk(),
                         content().contentType(MediaType.APPLICATION_JSON),
                         content().string("svgandmetadata"));
@@ -299,8 +303,8 @@ class SingleLineDiagramTest {
                 NETWORK_UUID_STRING, StudyConstants.SldDisplayMode.STATE_VARIABLE)));
 
         //get the voltage level diagram svg and metadata sldDisplayMode = FEEDER_POSITION
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false&sldDisplayMode=" + StudyConstants.SldDisplayMode.FEEDER_POSITION + "&language=en",
-                studyNameUserIdUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false&sldDisplayMode=" + StudyConstants.SldDisplayMode.FEEDER_POSITION + "&language=en",
+                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON),
                 content().string("FEEDER_POSITION"));
@@ -311,12 +315,12 @@ class SingleLineDiagramTest {
 
         // get the voltage level diagram svg and metadata from a study that doesn't
         // exist
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata",
-                randomUuid, rootNodeUuid, "voltageLevelId")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata",
+                randomUuid, randomUuid, rootNodeUuid, "voltageLevelId")).andExpect(status().isNotFound());
 
         // get the substation diagram svg
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false",
-                        studyNameUserIdUuid, rootNodeUuid, "substationId")).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false",
+                        studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationId")).andExpectAll(
                                 status().isOk(),
                                 content().contentType(MediaType.APPLICATION_XML),
                                 content().string("substation-byte"));
@@ -326,12 +330,12 @@ class SingleLineDiagramTest {
                 NETWORK_UUID_STRING)));
 
         // get the substation diagram svg from a study that doesn't exist
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg",
-                randomUuid, rootNodeUuid, "substationId")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg",
+                randomUuid, randomUuid, rootNodeUuid, "substationId")).andExpect(status().isNotFound());
 
         // get the substation diagram svg and metadata
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false",
-                studyNameUserIdUuid, rootNodeUuid, "substationId")).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false",
+                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON),
                 content().string("substation-svgandmetadata"));
@@ -341,11 +345,11 @@ class SingleLineDiagramTest {
                 NETWORK_UUID_STRING)));
 
         // get the substation diagram svg and metadata from a study that doesn't exist
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata",
-                        randomUuid, rootNodeUuid, "substationId")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata",
+                        randomUuid, randomUuid, rootNodeUuid, "substationId")).andExpect(status().isNotFound());
 
         // get the network area diagram
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true&voltageLevelsIds=vlFr1A", studyNameUserIdUuid, rootNodeUuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true&voltageLevelsIds=vlFr1A", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid))
             .andExpectAll(
                 content().contentType(MediaType.APPLICATION_JSON),
                 status().isOk(),
@@ -355,11 +359,11 @@ class SingleLineDiagramTest {
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&withGeoData=true&voltageLevelsIds=vlFr1A")));
 
         // get the network area diagram from a study that doesn't exist
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true&voltageLevelsIds=vlFr1A", randomUuid, rootNodeUuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true&voltageLevelsIds=vlFr1A", randomUuid, randomUuid, rootNodeUuid))
             .andExpect(status().isNotFound());
 
         //get voltage levels
-        mvcResult = getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "VOLTAGE_LEVEL", null, objectMapper.writeValueAsString(List.of()), TestUtils.resourceToString("/network-voltage-levels-infos.json"));
+        mvcResult = getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "VOLTAGE_LEVEL", null, objectMapper.writeValueAsString(List.of()), TestUtils.resourceToString("/network-voltage-levels-infos.json"));
         List<VoltageLevelInfos> vliListResponse = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
         assertThat(vliListResponse, new MatcherJson<>(objectMapper, List.of(
                 VoltageLevelInfos.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").build(),
@@ -374,76 +378,76 @@ class SingleLineDiagramTest {
                 VoltageLevelInfos.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").build())));
 
         //get the lines-graphics of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/lines", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/lines?networkUuid=%s", NETWORK_UUID_STRING)));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines?lineId=LINEID1&lineId=LINEID2", studyNameUserIdUuid, modificationNodeUuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/lines?lineId=LINEID1&lineId=LINEID2", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/lines?networkUuid=%s&variantId=%s&lineId=LINEID1&lineId=LINEID2", NETWORK_UUID_STRING, VARIANT_ID)));
 
         //get the substation-graphics of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/substations", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/substations", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substations?networkUuid=%s", NETWORK_UUID_STRING)));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/substations?substationId=BBE1AA&substationId=BBE2AA", studyNameUserIdUuid, modificationNodeUuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/substations?substationId=BBE1AA&substationId=BBE2AA", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substations?networkUuid=%s&variantId=%s&substationId=BBE1AA&substationId=BBE2AA", NETWORK_UUID_STRING, VARIANT_ID)));
 
         //get the lines map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "LINE", null, objectMapper.writeValueAsString(List.of()), "[]");
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "LINE", null, objectMapper.writeValueAsString(List.of("BBE1AA")), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "LINE", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "LINE", null, objectMapper.writeValueAsString(List.of("BBE1AA")), "[]");
 
         //get the substation map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "SUBSTATION", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "SUBSTATION", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         //get the 2 windings transformers map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "TWO_WINDINGS_TRANSFORMER", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "TWO_WINDINGS_TRANSFORMER", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         //get the 3 windings transformers map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "THREE_WINDINGS_TRANSFORMER", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "THREE_WINDINGS_TRANSFORMER", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         //get the generators map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "GENERATOR", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "GENERATOR", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         //get the batteries map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "BATTERY", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "BATTERY", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         //get the dangling lines map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "DANGLING_LINE", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "DANGLING_LINE", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         //get the hvdc lines map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "HVDC_LINE", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "HVDC_LINE", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         //get the lcc converter stations map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "LCC_CONVERTER_STATION", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "LCC_CONVERTER_STATION", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         //get the vsc converter stations map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "VSC_CONVERTER_STATION", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "VSC_CONVERTER_STATION", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         //get the loads map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "LOAD", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "LOAD", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         //get the shunt compensators map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "SHUNT_COMPENSATOR", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "SHUNT_COMPENSATOR", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         //get the static var compensators map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "STATIC_VAR_COMPENSATOR", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "STATIC_VAR_COMPENSATOR", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         //get the voltage levels map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "VOLTAGE_LEVEL", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "VOLTAGE_LEVEL", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         //get all map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "MAP", "all", null, objectMapper.writeValueAsString(List.of()), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "all", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         // get the svg component libraries
         mockMvc.perform(get("/v1/svg-component-libraries")).andExpectAll(
@@ -453,29 +457,29 @@ class SingleLineDiagramTest {
         assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg-component-libraries"));
 
         // Test getting non existing voltage level or substation svg
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false", studyNameUserIdUuid, rootNodeUuid, "voltageLevelNotFoundId")).andExpectAll(status().isNotFound());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelNotFoundId")).andExpectAll(status().isNotFound());
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/svg/%s/voltageLevelNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en", NETWORK_UUID_STRING)));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", studyNameUserIdUuid, rootNodeUuid, "voltageLevelNotFoundId")).andExpectAll(status().isNotFound());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelNotFoundId")).andExpectAll(status().isNotFound());
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/svg-and-metadata/%s/voltageLevelNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=%s&language=en", NETWORK_UUID_STRING, StudyConstants.SldDisplayMode.STATE_VARIABLE)));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false", studyNameUserIdUuid, rootNodeUuid, "substationNotFoundId")).andExpectAll(status().isNotFound());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationNotFoundId")).andExpectAll(status().isNotFound());
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substation-svg/%s/substationNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal", NETWORK_UUID_STRING)));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false", studyNameUserIdUuid, rootNodeUuid, "substationNotFoundId")).andExpectAll(status().isNotFound());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationNotFoundId")).andExpectAll(status().isNotFound());
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substation-svg-and-metadata/%s/substationNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en", NETWORK_UUID_STRING)));
 
         // Test other errors when getting voltage level or substation svg
-        assertThrows(ServletException.class, () -> mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false", studyNameUserIdUuid, rootNodeUuid, "voltageLevelErrorId")));
+        assertThrows(ServletException.class, () -> mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelErrorId")));
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/svg/%s/voltageLevelErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en", NETWORK_UUID_STRING)));
 
-        assertThrows(ServletException.class, () -> mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", studyNameUserIdUuid, rootNodeUuid, "voltageLevelErrorId")));
+        assertThrows(ServletException.class, () -> mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelErrorId")));
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/svg-and-metadata/%s/voltageLevelErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=%s&language=en", NETWORK_UUID_STRING, StudyConstants.SldDisplayMode.STATE_VARIABLE)));
 
-        assertThrows(ServletException.class, () -> mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false", studyNameUserIdUuid, rootNodeUuid, "substationErrorId")));
+        assertThrows(ServletException.class, () -> mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationErrorId")));
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substation-svg/%s/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal", NETWORK_UUID_STRING)));
 
-        assertThrows(ServletException.class, () -> mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false", studyNameUserIdUuid, rootNodeUuid, "substationErrorId")));
+        assertThrows(ServletException.class, () -> mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationErrorId")));
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substation-svg-and-metadata/%s/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en", NETWORK_UUID_STRING)));
     }
 
@@ -484,34 +488,35 @@ class SingleLineDiagramTest {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_VARIANT_ERROR_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ERROR_ID, "node 1");
         UUID modificationNodeUuid = modificationNode1.getId();
 
         //get the voltage level diagram svg on a non existing variant
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false",
-            studyNameUserIdUuid, modificationNodeUuid, "voltageLevelId")).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false",
+            studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "voltageLevelId")).andExpectAll(
             status().isNoContent());
 
         //get the voltage level diagram svg and metadata on a non existing variant
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false",
-            studyNameUserIdUuid, modificationNodeUuid, "voltageLevelId")).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false",
+            studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "voltageLevelId")).andExpectAll(
             status().isNoContent());
 
         //get the substation diagram svg on a non existing variant
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false",
-            studyNameUserIdUuid, modificationNodeUuid, "substationId")).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false",
+            studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "substationId")).andExpectAll(
             status().isNoContent());
 
         //get the substation diagram svg and metadata on a non existing variant
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false",
-            studyNameUserIdUuid, modificationNodeUuid, "substationId")).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false",
+            studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "substationId")).andExpectAll(
             status().isNoContent());
 
         //get the network area diagram on a non existing variant
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram?depth=0&voltageLevelsIds=vlFr1A",
-            studyNameUserIdUuid, modificationNodeUuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?depth=0&voltageLevelsIds=vlFr1A",
+            studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)).andExpectAll(
             status().isNoContent());
     }
 
@@ -566,7 +571,7 @@ class SingleLineDiagramTest {
         return modificationNode;
     }
 
-    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNodeUuid, String infoType, String elementType, List<Double> nominalVoltages, String requestBody, String responseBody) throws Exception {
+    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNetworkUuid, UUID rootNodeUuid, String infoType, String elementType, List<Double> nominalVoltages, String requestBody, String responseBody) throws Exception {
         List<String> nominalVoltageStrings = new ArrayList<>();
 
         if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
@@ -577,7 +582,7 @@ class SingleLineDiagramTest {
         String nominalVoltagesParam = nominalVoltageStrings.isEmpty() ? null : objectMapper.writeValueAsString(nominalVoltageStrings);
         UUID stubUuid = wireMockUtils.stubNetworkElementsInfosPost(NETWORK_UUID_STRING, infoType, elementType, nominalVoltages, responseBody);
 
-        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
+        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNetworkUuid, rootNodeUuid)
                 .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
                 .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
                 .queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, nominalVoltagesParam)
