@@ -49,10 +49,10 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
     // --- Related parameters methods --- //
 
     public String getDefaultProvider() {
-        String endPointUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, "default-provider");
+        String endPointUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, null);
 
         String url = UriComponentsBuilder
-                .fromHttpUrl(endPointUrl)
+                .fromHttpUrl(endPointUrl + "default-provider")
                 .toUriString();
 
         // call dynamic-security-analysis REST API
