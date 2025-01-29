@@ -528,7 +528,7 @@ class StudyTest {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/network-visualizations-params/default")) {
                     return new MockResponse(200);
-                } else if (path.matches("/v1/network-visualizations-params/duplicate\\?duplicateFrom=.*")) {
+                } else if (path.matches("/v1/network-visualizations-params\\?duplicateFrom=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
                 } else if (path.matches("/v1/parameters/.*/provider")) {
                     return new MockResponse(200);
@@ -1761,7 +1761,7 @@ class StudyTest {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getSensitivityAnalysisParametersUuid())).count());
         }
         if (sourceStudy.getNetworkVisualizationParametersUuid() != null) {
-            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/network-visualizations-params/duplicate\\?duplicateFrom=" + sourceStudy.getNetworkVisualizationParametersUuid())).count());
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/network-visualizations-params\\?duplicateFrom=" + sourceStudy.getNetworkVisualizationParametersUuid())).count());
         }
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*/duplicate")).count());
         return duplicatedStudy;
