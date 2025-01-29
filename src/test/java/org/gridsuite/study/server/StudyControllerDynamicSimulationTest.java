@@ -41,7 +41,6 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.utils.PropertyType;
-import org.gridsuite.study.server.utils.StudyTestUtils;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.json.JSONObject;
@@ -196,7 +195,7 @@ class StudyControllerDynamicSimulationTest {
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @Autowired
-    private StudyTestUtils studyTestUtils;
+    private TestUtils studyTestUtils;
 
     @SpyBean
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
@@ -263,7 +262,7 @@ class StudyControllerDynamicSimulationTest {
         UUID newNodeId = UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE)));
         modificationNode.setId(newNodeId);
         assertThat(mess.getHeaders()).containsEntry(NotificationService.HEADER_INSERT_MODE, InsertMode.CHILD.name());
-        rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyService.getStudyFirstRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
+        rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
         return modificationNode;
     }
 

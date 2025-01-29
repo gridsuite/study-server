@@ -35,7 +35,6 @@ import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEner
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.SendInput;
-import org.gridsuite.study.server.utils.StudyTestUtils;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -161,7 +160,7 @@ class NonEvacuatedEnergyTest {
     @Autowired
     private StudyService studyService;
     @Autowired
-    private StudyTestUtils studyTestUtils;
+    private TestUtils studyTestUtils;
 
     @BeforeEach
     void setup(final MockWebServer server) {
@@ -411,7 +410,7 @@ class NonEvacuatedEnergyTest {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
         UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
-        RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
+        RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId(), null);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), rootNetworkUuid));
 
@@ -532,7 +531,7 @@ class NonEvacuatedEnergyTest {
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).build());
 
         return modificationNode;

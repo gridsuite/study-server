@@ -27,7 +27,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
-import org.gridsuite.study.server.utils.StudyTestUtils;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -108,7 +107,7 @@ class ReportServiceTest {
     @Autowired
     private RootNetworkService rootNetworkService;
     @Autowired
-    private StudyTestUtils studyTestUtils;
+    private TestUtils studyTestUtils;
 
     @BeforeEach
     void setup(final MockWebServer server) {
@@ -163,7 +162,7 @@ class ReportServiceTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.randomUUID(), UUID.randomUUID(), "caseName", "", ROOT_NODE_REPORT_UUID);
         studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
-        return networkModificationTreeService.getStudyTree(studyEntity.getId());
+        return networkModificationTreeService.getStudyTree(studyEntity.getId(), null);
     }
 
     @Test
@@ -249,7 +248,7 @@ class ReportServiceTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         // get only Child1 aggregated severities
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report/{reportId}/aggregated-severities", rootNode.getStudyId(), child1.getId(), MODIFICATION_CHILD_NODE1_REPORT_UUID))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/aggregated-severities", rootNode.getStudyId(), firstRootNetworkUuid, child1.getId(), MODIFICATION_CHILD_NODE1_REPORT_UUID))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         Set<String> child1AggregatedSeverities = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
@@ -269,7 +268,7 @@ class ReportServiceTest {
         checkReports(child2AndParentsReports, childrenAndParentsExpectedReports);
         assertTrue(TestUtils.getRequestsDone(childrenAndParentsExpectedReports.size(), server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report/aggregated-severities", rootNode.getStudyId(), node.getId()))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/aggregated-severities", rootNode.getStudyId(), firstRootNetworkUuid, node.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         Set<String> child2AggregatedSeverities = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
