@@ -41,7 +41,6 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.utils.PropertyType;
-import org.gridsuite.study.server.utils.StudyTestUtils;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.json.JSONObject;
