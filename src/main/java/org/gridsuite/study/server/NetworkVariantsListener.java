@@ -44,13 +44,18 @@ public class NetworkVariantsListener implements NetworkListener {
     }
 
     @Override
-    public void onUpdate(Identifiable identifiable, String attribute, Object oldValue, Object newValue) {
+    public void onVariantCreated(String sourceVariantId, String targetVariantId) {
         // Nothing to do in this listener
     }
 
     @Override
     public void onVariantRemoved(String variantId) {
         equipmentInfosService.deleteVariants(networkUuid, List.of(variantId));
+    }
+
+    @Override
+    public void onVariantOverwritten(String sourceVariantId, String targetVariantId) {
+        // Nothing to do in this listener
     }
 
     @Override
@@ -64,7 +69,7 @@ public class NetworkVariantsListener implements NetworkListener {
     }
 
     @Override
-    public void onUpdate(Identifiable<?> identifiable, String s, String s1, Object o, Object o1) {
+    public void onUpdate(Identifiable identifiable, String attribute, String variantId, Object oldValue, Object newValue) {
         // Implement the method here
     }
 
@@ -74,7 +79,22 @@ public class NetworkVariantsListener implements NetworkListener {
     }
 
     @Override
-    public void onExtensionUpdate(Extension<?> extension, String s, Object o, Object o1) {
+    public void onExtensionUpdate(Extension<?> extension, String s, String variantId, Object o, Object o1) {
         // Implement the method here
+    }
+
+    @Override
+    public void onPropertyAdded(Identifiable identifiable, String attribute, Object newValue) {
+        // Nothing to do in this listener
+    }
+
+    @Override
+    public void onPropertyReplaced(Identifiable identifiable, String attribute, Object oldValue, Object newValue) {
+        // Nothing to do in this listener
+    }
+
+    @Override
+    public void onPropertyRemoved(Identifiable identifiable, String attribute, Object oldValue) {
+        // Nothing to do in this listener
     }
 }
