@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.powsybl.commons.report.ReportNode;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
@@ -59,6 +60,7 @@ public class NetworkModificationTreeService {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkRepository rootNetworkRepository;
+    private final ReportService reportService;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
@@ -67,7 +69,8 @@ public class NetworkModificationTreeService {
                                           NetworkModificationService networkModificationService,
                                           @Lazy NetworkModificationTreeService networkModificationTreeService,
                                           RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                                          RootNetworkService rootNetworkService, RootNetworkRepository rootNetworkRepository) {
+                                          RootNetworkService rootNetworkService, RootNetworkRepository rootNetworkRepository,
+                                          ReportService reportService) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
@@ -79,6 +82,7 @@ public class NetworkModificationTreeService {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkRepository = rootNetworkRepository;
+        this.reportService = reportService;
     }
 
     private NodeEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
@@ -419,9 +423,13 @@ public class NetworkModificationTreeService {
             .build();
 
         NetworkModificationNode networkModificationNode = createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
+        ReportNode reportNode = ReportNode.newRootReportNode().withMessageTemplate(modificationNode.getId().toString(), modificationNode.getId().toString()).build();
+        reportService.sendReport(getModificationReportUuid(networkModificationNode.getId(), studyEntity.getFirstRootNetwork().getId(), networkModificationNode.getId()), reportNode);
 
+        BuildInfos buildInfos = getBuildInfos(modificationNode.getId(), studyEntity.getFirstRootNetwork().getId());
+        Map<UUID, UUID> nodeUuidToReportUuid = buildInfos.getReportsInfos().stream().collect(Collectors.toMap(ReportInfos::nodeUuid, ReportInfos::reportUuid));
         rootNetworkNodeInfoService.updateRootNetworkNode(networkModificationNode.getId(), studyEntity.getFirstRootNetwork().getId(),
-            RootNetworkNodeInfo.builder().variantId(FIRST_VARIANT_ID).nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
+            RootNetworkNodeInfo.builder().variantId(FIRST_VARIANT_ID).nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).modificationReports(nodeUuidToReportUuid).build());
     }
 
     @Transactional
