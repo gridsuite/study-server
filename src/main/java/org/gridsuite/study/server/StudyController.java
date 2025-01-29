@@ -942,13 +942,6 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/dynamic-security-analysis/provider")
-    @Operation(summary = "Get dynamic security analysis provider for a specified study, empty string means default provider")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis provider is returned")})
-    public ResponseEntity<String> getDynamicSecurityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getDynamicSimulationProvider(studyUuid));
-    }
-
     @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "set short-circuit analysis parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set"),
