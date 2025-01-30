@@ -278,7 +278,6 @@ class StudyServiceTest {
         when(loadFlowService.createDefaultLoadFlowParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
         when(shortCircuitService.createParameters(null)).thenReturn(SHORTCIRCUIT_PARAMETERS_UUID);
 
-
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                 .header("userId", userId)
                 .param(CASE_FORMAT_PARAM, "UCTE"))
