@@ -2,6 +2,7 @@ package org.gridsuite.study.server.dto;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 
 import java.util.List;
@@ -10,8 +11,11 @@ import java.util.UUID;
 
 @Builder
 @Getter
+@Setter
 public class RootNetworkInfos {
     private UUID id;
+
+    private String name;
 
     private List<RootNetworkNodeInfo> rootNetworkNodeInfos;
 
@@ -27,6 +31,7 @@ public class RootNetworkInfos {
     public RootNetworkEntity toEntity() {
         RootNetworkEntity.RootNetworkEntityBuilder rootNetworkEntityBuilder = RootNetworkEntity.builder()
             .id(id)
+            .name(name)
             .networkUuid(networkInfos.getNetworkUuid())
             .networkId(networkInfos.getNetworkId())
             .caseUuid(caseInfos.getCaseUuid())
