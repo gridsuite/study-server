@@ -458,8 +458,26 @@ public class WireMockUtils {
         ).getId();
     }
 
+    public UUID stubFiltersExport(String networkUuid, List<String> filtersUuid, String responseBody) {
+        MappingBuilder requestPatternBuilder = WireMock.get(WireMock.urlPathEqualTo("/v1/filters/export"))
+            .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid));
+        for (String filterUuid : filtersUuid) {
+            requestPatternBuilder.withQueryParam(IDS, WireMock.equalTo(filterUuid));
+        }
+        return wireMock.stubFor(requestPatternBuilder.willReturn(WireMock.ok().withBody(responseBody))).getId();
+    }
+
     public void verifyFilterExport(UUID stubUuid, String filterUuid, String networkUuid) {
         verifyGetRequest(stubUuid, "/v1/filters/" + filterUuid + "/export",
                 Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid)));
+    }
+
+    public void verifyFiltersExport(UUID stubUuid, List<String> filtersUuid, String networkUuid) {
+        Map<String, StringValuePattern> queryParams = new HashMap<>();
+        queryParams.put(NETWORK_UUID, WireMock.equalTo(networkUuid));
+        for (String filterUuid : filtersUuid) {
+            queryParams.put(IDS, WireMock.equalTo(filterUuid));
+        }
+        verifyGetRequest(stubUuid, "/v1/filters/export", queryParams);
     }
 }
