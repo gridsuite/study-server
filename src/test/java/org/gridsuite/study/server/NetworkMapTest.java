@@ -161,6 +161,9 @@ class NetworkMapTest {
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
+                if (path.matches("/v1/reports/.*") && "PUT".equals(request.getMethod())) {
+                    return new MockResponse(200);
+                }
                 switch (path) {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VL_ID_1 + "/buses-or-busbar-sections?variantId=first_variant_id":
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), busesDataAsString);
