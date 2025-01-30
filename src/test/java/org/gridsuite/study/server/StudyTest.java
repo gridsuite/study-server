@@ -491,8 +491,10 @@ class StudyTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(REPORT_LOGS));
                 } else if (path.matches("/v1/reports/.*/logs.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(REPORT_LOGS));
-                } else if (path.matches("/v1/reports/.*")) {
+                } else if (path.matches("/v1/reports/.*") && !"PUT".equals(request.getMethod())) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(REPORT_TEST));
+                } else if (path.matches("/v1/reports/.*") && "PUT".equals(request.getMethod())) {
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS, "XIIDM");
                     return new MockResponse(200);
@@ -1113,7 +1115,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        int nbRequest = 10;
+        int nbRequest = 11;
         if (parameterDuplicatedUuid != null && !parameterDuplicationSuccess) {
             nbRequest += 5;
         }
@@ -1123,6 +1125,7 @@ class StudyTest {
         if (!parameterDuplicationSuccess) {
             assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
         }
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", caseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + userId + "/profile")));
         if (parameterDuplicatedUuid != null) {
