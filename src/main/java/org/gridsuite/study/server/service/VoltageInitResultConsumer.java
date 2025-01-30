@@ -49,7 +49,7 @@ public class VoltageInitResultConsumer {
             if (Boolean.TRUE.equals(alert)) {
                 String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
                 Double alertThreshold = msg.getHeaders().get(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, Double.class);
-                notificationService.emitStudyAlert(studyUuid, nodeReceiver.getNodeUuid(), userId, new StudyAlert(AlertLevel.WARNING, HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Map.of("threshold", alertThreshold.toString())));
+                notificationService.emitStudyAlert(studyUuid, nodeReceiver.getNodeUuid(), nodeReceiver.getRootNetworkUuid(), userId, new StudyAlert(AlertLevel.WARNING, HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Map.of("threshold", alertThreshold.toString())));
             }
         });
     }
@@ -63,7 +63,7 @@ public class VoltageInitResultConsumer {
                 if (studyService.shouldApplyModifications(studyUuid)) {
                     consumerService.getNodeReceiver(message).ifPresent(nodeReceiver -> {
                         String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-                        studyService.copyVoltageInitModifications(studyUuid, nodeReceiver.getNodeUuid(), nodeReceiver.getRootNetworkUuid(), userId);
+                        studyService.insertVoltageInitModifications(studyUuid, nodeReceiver.getNodeUuid(), nodeReceiver.getRootNetworkUuid(), userId);
                     });
                 }
             });

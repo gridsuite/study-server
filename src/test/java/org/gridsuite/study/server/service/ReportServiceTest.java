@@ -106,6 +106,8 @@ class ReportServiceTest {
     private RootNetworkRepository rootNetworkRepository;
     @Autowired
     private RootNetworkService rootNetworkService;
+    @Autowired
+    private TestUtils studyTestUtils;
 
     @BeforeEach
     void setup(final MockWebServer server) {
@@ -160,16 +162,17 @@ class ReportServiceTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.randomUUID(), UUID.randomUUID(), "caseName", "", ROOT_NODE_REPORT_UUID);
         studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
-        return networkModificationTreeService.getStudyTree(studyEntity.getId());
+        return networkModificationTreeService.getStudyTree(studyEntity.getId(), null);
     }
 
     @Test
     void testReport(final MockWebServer server) throws Exception {
         RootNode rootNode = createRoot();
         StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyEntity.getId());
         List<Report> expectedRootReports = List.of(getNodeReport(ROOT_NODE_REPORT_UUID, rootNode.getId().toString()));
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), rootNode.getId()))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), firstRootNetworkUuid, rootNode.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         List<Report> reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
@@ -181,14 +184,14 @@ class ReportServiceTest {
         output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);  // message for modification node creation
         List<Report> expectedNodeReports = List.of(getNodeReport(MODIFICATION_NODE_REPORT_UUID, node.getId().toString()));
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), node.getId()))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), firstRootNetworkUuid, node.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
         checkReports(reports, expectedNodeReports);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), node.getId()))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), firstRootNetworkUuid, node.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
@@ -201,6 +204,7 @@ class ReportServiceTest {
     void testMultipleReport(final MockWebServer server) throws Exception {
         RootNode rootNode = createRoot();
         StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyEntity.getId());
         NetworkModificationNode node = networkModificationTreeService.createNode(studyEntity, rootNode.getId(), createModificationNodeInfo("Modification Node"), InsertMode.AFTER, null);
         NetworkModificationNode child1 = networkModificationTreeService.createNode(studyEntity, node.getId(), createModificationNodeInfo("Child 1"), InsertMode.AFTER, null);
         NetworkModificationNode child2 = networkModificationTreeService.createNode(studyEntity, node.getId(), createModificationNodeInfo("Child 2"), InsertMode.AFTER, null);
@@ -236,7 +240,7 @@ class ReportServiceTest {
                 .build();
 
         // get only Child1 report
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), child1.getId()))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), firstRootNetworkUuid, child1.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         List<Report> child1Reports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
@@ -244,7 +248,7 @@ class ReportServiceTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         // get only Child1 aggregated severities
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report/{reportId}/aggregated-severities", rootNode.getStudyId(), child1.getId(), MODIFICATION_CHILD_NODE1_REPORT_UUID))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/aggregated-severities", rootNode.getStudyId(), firstRootNetworkUuid, child1.getId(), MODIFICATION_CHILD_NODE1_REPORT_UUID))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         Set<String> child1AggregatedSeverities = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
@@ -252,7 +256,7 @@ class ReportServiceTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*/aggregated-severities")));
 
         // get Child2 report + parents
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), child2.getId()))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), firstRootNetworkUuid, child2.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         List<Report> child2AndParentsReports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
@@ -264,7 +268,7 @@ class ReportServiceTest {
         checkReports(child2AndParentsReports, childrenAndParentsExpectedReports);
         assertTrue(TestUtils.getRequestsDone(childrenAndParentsExpectedReports.size(), server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report/aggregated-severities", rootNode.getStudyId(), node.getId()))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/aggregated-severities", rootNode.getStudyId(), firstRootNetworkUuid, node.getId()))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         Set<String> child2AggregatedSeverities = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
@@ -272,7 +276,7 @@ class ReportServiceTest {
         assertTrue(TestUtils.getRequestsDone(2, server).stream().anyMatch(r -> r.matches("/v1/reports/.*/aggregated-severities")));
 
         // get Child1 report + parents
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), child1.getId()))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=false&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), firstRootNetworkUuid, child1.getId()))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
         List<Report> child1AndParentsReports = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });

@@ -208,15 +208,15 @@ public class WireMockUtils {
         verifyGetRequest(stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications-count", Map.of(QUERY_PARAM_STASHED, WireMock.equalTo("false")));
     }
 
-    public void verifyNetworkModificationPost(UUID stubId, String requestBody, String networkUuid) {
+    public void verifyNetworkModificationPost(UUID stubId, String requestBody) {
         verifyPostRequest(stubId, URI_NETWORK_MODIFICATION, false,
-            Map.of("networkUuid", WireMock.equalTo(networkUuid), "groupUuid", WireMock.matching(".*")),
+            Map.of("groupUuid", WireMock.matching(".*")),
             requestBody);
     }
 
-    public void verifyNetworkModificationPostWithVariant(UUID stubId, String requestBody, String networkUuid, String variantId) {
+    public void verifyNetworkModificationPostWithVariant(UUID stubId, String requestBody) {
         verifyPostRequest(stubId, URI_NETWORK_MODIFICATION, false,
-            Map.of("networkUuid", WireMock.equalTo(networkUuid), "groupUuid", WireMock.matching(".*"), "variantId", WireMock.equalTo(variantId)),
+            Map.of(),
             requestBody);
     }
 
