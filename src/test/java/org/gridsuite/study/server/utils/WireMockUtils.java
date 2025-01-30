@@ -405,7 +405,7 @@ public class WireMockUtils {
     }
 
     public void verifySendReport(UUID stubUuid) {
-        verifyPutRequest(stubUuid,"/v1/reports/.*",true, Map.of(),null);
+        verifyPutRequest(stubUuid, "/v1/reports/.*", true, Map.of(), null);
     }
 
     public void verifyCountriesGet(UUID stubUuid, String networkUuid) {
