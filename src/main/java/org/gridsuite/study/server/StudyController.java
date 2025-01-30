@@ -1813,25 +1813,27 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getDynamicSecurityAnalysisParameters(studyUuid));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-security-analysis/run")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-security-analysis/run")
     @Operation(summary = "run dynamic security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis has started")})
     public ResponseEntity<Void> runDynamicSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                     @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
+        studyService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-security-analysis/status")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-security-analysis/status")
     @Operation(summary = "Get the status of dynamic security analysis result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The status of dynamic security analysis result"),
         @ApiResponse(responseCode = "204", description = "No dynamic security analysis status"),
         @ApiResponse(responseCode = "404", description = "The dynamic security analysis has not been found")})
     public ResponseEntity<DynamicSecurityAnalysisStatus> getDynamicSecurityAnalysisStatus(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                          @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        DynamicSecurityAnalysisStatus result = rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        DynamicSecurityAnalysisStatus result = rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(nodeUuid, rootNetworkUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
     }
