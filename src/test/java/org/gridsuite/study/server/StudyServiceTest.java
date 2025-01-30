@@ -274,12 +274,14 @@ class StudyServiceTest {
         CountDownLatch countDownLatch = new CountDownLatch(1);
         UUID postNetworkStubId = wireMockUtils.stubImportNetwork(caseUuid.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", WireMockUtils.FIRST_VARIANT_ID, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(caseUuid.toString());
+        UUID sendReportStubId = wireMockUtils.stubSendReport();
         when(loadFlowService.createDefaultLoadFlowParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
         when(shortCircuitService.createParameters(null)).thenReturn(SHORTCIRCUIT_PARAMETERS_UUID);
 
+
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
-                        .header("userId", userId)
-                        .param(CASE_FORMAT_PARAM, "UCTE"))
+                .header("userId", userId)
+                .param(CASE_FORMAT_PARAM, "UCTE"))
             .andExpect(status().isOk())
             .andReturn();
         String resultAsString = result.getResponse().getContentAsString();
@@ -294,6 +296,7 @@ class StudyServiceTest {
         wireMockUtils.verifyCaseExists(caseExistsStubId, caseUuid.toString());
         wireMockUtils.verifyImportNetwork(postNetworkStubId, caseUuid.toString(), WireMockUtils.FIRST_VARIANT_ID);
         wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, caseUuid.toString());
+        wireMockUtils.verifySendReport(sendReportStubId);
 
         return studyUuid;
     }
