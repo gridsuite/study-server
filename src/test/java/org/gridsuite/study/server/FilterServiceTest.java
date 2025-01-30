@@ -269,6 +269,7 @@ class FilterServiceTest {
     @Test
     void testExportFilters() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyEntity.getId());
         UUID studyUuid = studyEntity.getId();
         String responseBody = """
             [
@@ -303,8 +304,8 @@ class FilterServiceTest {
                         """;
         UUID stubUuid = wireMockUtils.stubFiltersExport(NETWORK_UUID_STRING, FILTERS_UUID_STRING, responseBody);
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/filters/elements?filtersUuid=" + FILTERS_UUID_STRING.stream().collect(Collectors.joining(",")),
-                studyUuid))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/filters/elements?filtersUuid=" + FILTERS_UUID_STRING.stream().collect(Collectors.joining(",")),
+                studyUuid, firstRootNetworkUuid))
             .andExpect(status().isOk())
             .andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
