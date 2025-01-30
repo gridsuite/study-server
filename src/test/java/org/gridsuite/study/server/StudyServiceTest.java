@@ -19,6 +19,7 @@ import org.gridsuite.study.server.service.CaseService;
 import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkConversionService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.ReportService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -83,6 +84,9 @@ class StudyServiceTest {
     private NetworkConversionService networkConversionService;
 
     @Autowired
+    private ReportService reportService;
+
+    @Autowired
     private ObjectMapper mapper;
     private ObjectWriter objectWriter;
 
@@ -127,6 +131,8 @@ class StudyServiceTest {
 
         caseService.setCaseServerBaseUri(wireMockServer.baseUrl());
         networkConversionService.setNetworkConversionServerBaseUri(wireMockServer.baseUrl());
+        reportService.setReportServerBaseUri(wireMockServer.baseUrl());
+
     }
 
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
