@@ -1213,9 +1213,10 @@ public class StudyController {
         @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
         @Parameter(description = "What against to match") @RequestParam(value = "fieldSelector") EquipmentInfosService.FieldSelector fieldSelector,
         @Parameter(description = "Should search in upstream built node") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
-        @Parameter(description = "Equipment type") @RequestParam(value = "equipmentType", required = false) String equipmentType) {
+        @Parameter(description = "Equipment type") @RequestParam(value = "equipmentType", required = false) String equipmentType,
+        @Parameter(description = "Equipment subtype") @RequestParam(value = "equipmentSubType", required = false) String equipmentSubType) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-            .body(studyService.searchEquipments(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userInput, fieldSelector, equipmentType, inUpstreamBuiltParentNode));
+            .body(studyService.searchEquipments(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userInput, fieldSelector, equipmentType, equipmentSubType, inUpstreamBuiltParentNode));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
