@@ -222,8 +222,8 @@ public class StudyController {
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/root-networks")
-    @Operation(summary = "Create root network for study")
-    @ApiResponse(responseCode = "200", description = "Root network created")
+    @Operation(summary = "Delete root networks for study")
+    @ApiResponse(responseCode = "200", description = "Root network deleted")
     public ResponseEntity<Void> deleteRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                     @RequestBody List<UUID> rootNetworkUuids,
                                                     @RequestHeader(HEADER_USER_ID) String userId) {

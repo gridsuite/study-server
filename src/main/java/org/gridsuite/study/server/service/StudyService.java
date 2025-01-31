@@ -295,6 +295,7 @@ public class StudyService {
         notificationService.emitRootNetworksDeletionStarted(studyUuid, rootNetworkUuids);
 
         rootNetworkService.deleteRootNetworks(rootNetworkUuids.stream());
+        rootNetworkService.recalculateRootNetworkOrder(studyUuid);
 
         notificationService.emitRootNetworksUpdated(studyUuid);
     }

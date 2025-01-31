@@ -101,7 +101,7 @@ public class RootNetworkNodeInfoService {
 
     public void createNodeLinks(@NonNull UUID studyUuid, @NonNull NetworkModificationNodeInfoEntity modificationNodeInfoEntity) {
         // For each root network create a link with the node
-        rootNetworkRepository.findAllByStudyId(studyUuid).forEach(rootNetworkEntity -> {
+        rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid).forEach(rootNetworkEntity -> {
             RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity(modificationNodeInfoEntity.getId());
             addLink(modificationNodeInfoEntity, rootNetworkEntity, newRootNetworkNodeInfoEntity);
         });

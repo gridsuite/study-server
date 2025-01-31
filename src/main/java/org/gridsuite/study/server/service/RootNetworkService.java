@@ -119,12 +119,25 @@ public class RootNetworkService {
 
     @Transactional
     public RootNetworkEntity createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
+        RootNetworkEntity rootNetworkEntity = saveWithOrder(studyEntity.getId(), rootNetworkInfos.toEntity());
         studyEntity.addRootNetwork(rootNetworkEntity);
 
         rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity);
 
         return rootNetworkEntity;
+    }
+
+    private RootNetworkEntity saveWithOrder(UUID studyUuid, RootNetworkEntity rootNetworkEntity) {
+        int rootNetworkCount = rootNetworkRepository.countAllByStudyId(studyUuid);
+        rootNetworkEntity.setRootNetworkOrder(rootNetworkCount);
+        return rootNetworkRepository.save(rootNetworkEntity);
+    }
+
+    public void recalculateRootNetworkOrder(UUID studyUuid) {
+        List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid);
+        for (int i = 0; i < rootNetworkEntities.size(); i++) {
+            rootNetworkEntities.get(i).setRootNetworkOrder(i);
+        }
     }
 
     public List<UUID> getAllNetworkUuids() {
@@ -144,16 +157,16 @@ public class RootNetworkService {
     }
 
     public List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
-        return rootNetworkRepository.findAllByStudyId(studyUuid);
+        return rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid);
     }
 
     public List<RootNetworkInfos> getStudyRootNetworkInfosWithRootNetworkNodeInfos(UUID studyUuid) {
-        return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream().map(RootNetworkEntity::toDto).toList();
+        return rootNetworkRepository.findAllWithInfosByStudyIdOrderByRootNetworkOrder(studyUuid).stream().map(RootNetworkEntity::toDto).toList();
     }
 
     @Transactional
     public void duplicateStudyRootNetworks(StudyEntity newStudyEntity, UUID sourceStudyUuid) {
-        List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllWithInfosByStudyId(sourceStudyUuid);
+        List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllWithInfosByStudyIdOrderByRootNetworkOrder(sourceStudyUuid);
         rootNetworkEntities.forEach(rootNetworkEntityToDuplicate -> {
                 List<VariantInfos> networkVariants = networkService.getNetworkVariants(rootNetworkEntityToDuplicate.getNetworkUuid());
                 List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(2).collect(Collectors.toList());
@@ -245,7 +258,7 @@ public class RootNetworkService {
     public List<BasicRootNetworkInfos> getRootNetworks(UUID studyUuid) {
         return Stream
             .concat(
-                rootNetworkRepository.findAllByStudyId(studyUuid).stream().map(RootNetworkEntity::toBasicDto),
+                rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid).stream().map(RootNetworkEntity::toBasicDto),
                 rootNetworkCreationRequestRepository.findAllByStudyUuid(studyUuid).stream().map(RootNetworkCreationRequestEntity::toBasicDto))
             .toList();
     }

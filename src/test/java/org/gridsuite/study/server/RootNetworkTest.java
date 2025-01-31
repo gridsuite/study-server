@@ -266,7 +266,7 @@ class RootNetworkTest {
         studyRepository.save(studyEntity);
 
         // create another dummy root networks for the same entity
-        createDummyRootNetwork(studyEntity);
+        createDummyRootNetwork(studyEntity, "dummyRootNetwork");
 
         // insert a creation request for the same study entity
         rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder()
@@ -620,6 +620,70 @@ class RootNetworkTest {
         assertFalse(createdRootNetwork.isCreating());
     }
 
+    @Test
+    void getOrderedRootNetworksFromController() throws Exception {
+        // create study with one root node, two network modification node and a root network
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+
+        createDummyRootNetwork(studyEntity, "dummyRootNetwork1");
+        createDummyRootNetwork(studyEntity, "dummyRootNetwork2");
+
+        // check controller
+        String response = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks", studyEntity.getId()))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        List<BasicRootNetworkInfos> result = objectMapper.readValue(response, new TypeReference<>() { });
+        assertEquals(3, result.size());
+        assertEquals("rootNetworkName", result.get(0).name());
+        assertEquals("dummyRootNetwork1", result.get(1).name());
+        assertEquals("dummyRootNetwork2", result.get(2).name());
+    }
+
+    @Test
+    void getOrderedRootNetworksFromService() throws Exception {
+        // create study with one root node, two network modification node and a root network
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+
+        createDummyRootNetwork(studyEntity, "dummyRootNetwork1");
+        createDummyRootNetwork(studyEntity, "dummyRootNetwork2");
+
+        // after creating 3 root networks, check rootNetworkOrder to assert they are correctly incremented
+        List<RootNetworkEntity> result = rootNetworkService.getStudyRootNetworks(studyEntity.getId());
+        assertEquals(3, result.size());
+        // check rootNetworkOrdered is ordered by creation ordered
+        assertEquals(0, result.get(0).getRootNetworkOrder());
+        assertEquals("rootNetworkName", result.get(0).getName());
+        assertEquals(1, result.get(1).getRootNetworkOrder());
+        assertEquals("dummyRootNetwork1", result.get(1).getName());
+        assertEquals(2, result.get(2).getRootNetworkOrder());
+        assertEquals("dummyRootNetwork2", result.get(2).getName());
+
+        // delete the 2nd root network
+        studyService.deleteRootNetworks(studyEntity.getId(), List.of(result.get(1).getId()), null);
+
+        // check "dummyRootNetwork2" root network order have been updated correctly
+        List<RootNetworkEntity> resultAfterDeletion = rootNetworkService.getStudyRootNetworks(studyEntity.getId());
+        assertEquals(2, resultAfterDeletion.size());
+        assertEquals(0, resultAfterDeletion.get(0).getRootNetworkOrder());
+        assertEquals("rootNetworkName", resultAfterDeletion.get(0).getName());
+        assertEquals(1, resultAfterDeletion.get(1).getRootNetworkOrder());
+        assertEquals("dummyRootNetwork2", resultAfterDeletion.get(1).getName());
+
+        createDummyRootNetwork(studyEntity, "dummyRootNetwork3");
+
+        // check "dummyRootNetwork3" root network order have been created correctly
+        List<RootNetworkEntity> resultAfterCreation = rootNetworkService.getStudyRootNetworks(studyEntity.getId());
+        assertEquals(3, resultAfterCreation.size());
+        assertEquals(0, resultAfterCreation.get(0).getRootNetworkOrder());
+        assertEquals("rootNetworkName", resultAfterCreation.get(0).getName());
+        assertEquals(1, resultAfterCreation.get(1).getRootNetworkOrder());
+        assertEquals("dummyRootNetwork2", resultAfterCreation.get(1).getName());
+        assertEquals(2, resultAfterCreation.get(2).getRootNetworkOrder());
+        assertEquals("dummyRootNetwork3", resultAfterCreation.get(2).getName());
+    }
+
     private Map<String, Object> createConsumeCaseImportSucceededHeaders(String networkUuid, String networkId, String caseFormat, String caseName, CaseImportReceiver caseImportReceiver, Map<String, String> importParameters) throws JsonProcessingException {
         Map<String, Object> headers = new HashMap<>();
         headers.put("networkUuid", networkUuid);
@@ -631,10 +695,10 @@ class RootNetworkTest {
         return headers;
     }
 
-    private void createDummyRootNetwork(StudyEntity studyEntity) {
+    private void createDummyRootNetwork(StudyEntity studyEntity, String name) {
         rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
             .id(UUID.randomUUID())
-            .name("dummyRootNetwork")
+            .name(name)
             .caseInfos(new CaseInfos(UUID.randomUUID(), "caseName", "caseFormat"))
             .networkInfos(new NetworkInfos(UUID.randomUUID(), UUID.randomUUID().toString()))
             .reportUuid(UUID.randomUUID())

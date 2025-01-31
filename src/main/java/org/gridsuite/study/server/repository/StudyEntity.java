@@ -8,6 +8,7 @@ package org.gridsuite.study.server.repository;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -115,15 +116,12 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
         ))
     private StudyVoltageInitParametersEntity voltageInitParameters;
 
-    @Value
-    public static class StudyNetworkUuid {
-        UUID networkUuid;
-    }
-
     //TODO temporary, for now we are only working with one rootNetwork
     @Transient
     public RootNetworkEntity getFirstRootNetwork() {
-        return rootNetworks.get(0);
+        return rootNetworks.stream()
+            .filter(rootNetworkEntity -> rootNetworkEntity.getRootNetworkOrder() == 0)
+            .findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
     }
 
     public void addRootNetwork(RootNetworkEntity rootNetworkEntity) {

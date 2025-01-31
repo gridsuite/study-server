@@ -16,6 +16,6 @@ public class StudyTestUtils {
 
     @Transactional
     public UUID getStudyFirstRootNetworkUuid(UUID studyUuid) {
-        return rootNetworkRepository.findAllByStudyId(studyUuid).get(0).getId();
+        return rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid).get(0).getId();
     }
 }
