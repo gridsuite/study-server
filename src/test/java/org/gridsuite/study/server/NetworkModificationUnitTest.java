@@ -21,6 +21,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.NetworkService;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,6 +96,8 @@ class NetworkModificationUnitTest {
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
+    @Autowired
+    private TestUtils studyTestUtils;
 
     @BeforeEach
     void setup() {
@@ -108,6 +111,7 @@ class NetworkModificationUnitTest {
 
         RootNetworkEntity firstRootNetworkEntity = RootNetworkEntity.builder()
             .id(UUID.randomUUID())
+            .name("rootNetworkName")
             .networkUuid(NETWORK_UUID)
             .networkId("netId")
             .caseUuid(CASE_LOADFLOW_UUID)
@@ -143,8 +147,9 @@ class NetworkModificationUnitTest {
         assertEquals(BuildStatus.BUILT, rootNetworkNodeInfoEntity1.getNodeBuildStatus().getLocalBuildStatus());
         assertEquals(BuildStatus.BUILT, rootNetworkNodeInfoEntity2.getNodeBuildStatus().getLocalBuildStatus());
         assertEquals(BuildStatus.NOT_BUILT, rootNetworkNodeInfoEntity3.getNodeBuildStatus().getLocalBuildStatus());
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
 
-        studyController.unbuildNode(studyUuid, node1Uuid);
+        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node1Uuid);
 
         /*       rootNode
          *          |

@@ -90,10 +90,10 @@ class StudyControllerDynamicSimulationTest {
     private static final String STUDY_END_POINT = "studies";
 
     private static final String STUDY_BASE_URL = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
-    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RUN = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/run";
+    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RUN = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/run";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_PARAMETERS = "{studyUuid}/dynamic-simulation/parameters";
-    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result";
-    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_STATUS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/status";
+    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/result";
+    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_STATUS = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/status";
 
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/models";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS = "{studyUuid}/dynamic-simulation/mappings";
@@ -140,7 +140,7 @@ class StudyControllerDynamicSimulationTest {
     private static final UUID STUDY_UUID = UUID.randomUUID();
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
-    public static final UUID ROOTNETWORK_UUID = UUID.randomUUID();
+    private static final UUID ROOT_NETWORK_UUID = UUID.randomUUID();
     private static final UUID NODE_NOT_DONE_UUID = UUID.randomUUID();
     private static final UUID ROOTNETWORK_NOT_DONE_UUID = UUID.randomUUID();
     private static final UUID NODE_NOT_RUN_UUID = UUID.randomUUID();
@@ -194,6 +194,9 @@ class StudyControllerDynamicSimulationTest {
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
+    @Autowired
+    private TestUtils studyTestUtils;
+
     @SpyBean
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
@@ -206,7 +209,7 @@ class StudyControllerDynamicSimulationTest {
 
     @BeforeEach
     public void setup() {
-        Mockito.doReturn(ROOTNETWORK_UUID).when(studyService).getStudyFirstRootNetworkUuid(STUDY_UUID);
+        Mockito.doReturn(ROOT_NETWORK_UUID).when(studyService).getStudyFirstRootNetworkUuid(STUDY_UUID);
     }
 
     @AfterEach
@@ -259,7 +262,7 @@ class StudyControllerDynamicSimulationTest {
         UUID newNodeId = UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE)));
         modificationNode.setId(newNodeId);
         assertThat(mess.getHeaders()).containsEntry(NotificationService.HEADER_INSERT_MODE, InsertMode.CHILD.name());
-        rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyService.getStudyFirstRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
+        rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
         return modificationNode;
     }
 
@@ -268,6 +271,7 @@ class StudyControllerDynamicSimulationTest {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
@@ -279,7 +283,7 @@ class StudyControllerDynamicSimulationTest {
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
-                        studyUuid, modificationNode1Uuid)
+                        studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
@@ -320,12 +324,13 @@ class StudyControllerDynamicSimulationTest {
         // create a root node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
 
         // --- call endpoint to be tested --- //
         // run on root node => forbidden
         studyClient.perform(post(UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT) + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
-                studyUuid, rootNodeUuid, MAPPING_NAME_01)
+                studyUuid, firstRootNetworkUuid, rootNodeUuid, MAPPING_NAME_01)
                 .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isForbidden());
     }
@@ -335,6 +340,7 @@ class StudyControllerDynamicSimulationTest {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
@@ -347,7 +353,7 @@ class StudyControllerDynamicSimulationTest {
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
-                        studyUuid, modificationNode1Uuid)
+                        studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
@@ -410,6 +416,7 @@ class StudyControllerDynamicSimulationTest {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
@@ -422,7 +429,7 @@ class StudyControllerDynamicSimulationTest {
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
-                        studyUuid, modificationNode1Uuid)
+                        studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
@@ -464,7 +471,7 @@ class StudyControllerDynamicSimulationTest {
         // --- call endpoint to be tested --- //
         // get result from a node not yet done
         studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT + DELIMITER + "timeseries",
-                STUDY_UUID, NODE_NOT_DONE_UUID)
+                STUDY_UUID, ROOTNETWORK_NOT_DONE_UUID, NODE_NOT_DONE_UUID)
                 .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isNoContent());
     }
@@ -480,13 +487,13 @@ class StudyControllerDynamicSimulationTest {
 
         // setup DynamicSimulationService mock
         Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicSimulationResultUuid(RESULT_UUID).build()))
-            .when(rootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOTNETWORK_UUID);
+            .when(rootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOT_NETWORK_UUID);
         Mockito.doAnswer(invocation -> timeSeries).when(dynamicSimulationService).getTimeSeriesResult(RESULT_UUID, null);
 
         // --- call endpoint to be tested --- //
         // get result from a node done
         MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT + DELIMITER + "timeseries",
-                        STUDY_UUID, NODE_UUID)
+                        STUDY_UUID, ROOT_NETWORK_UUID, NODE_UUID)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
 
@@ -508,7 +515,7 @@ class StudyControllerDynamicSimulationTest {
         // --- call endpoint to be tested --- //
         // get result from a node not yet done
         studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT + DELIMITER + "timeline",
-                        STUDY_UUID, NODE_NOT_DONE_UUID)
+                        STUDY_UUID, ROOTNETWORK_NOT_DONE_UUID, NODE_NOT_DONE_UUID)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isNoContent());
     }
@@ -524,13 +531,13 @@ class StudyControllerDynamicSimulationTest {
 
         // setup DynamicSimulationService mock
         Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicSimulationResultUuid(RESULT_UUID).build()))
-            .when(rootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOTNETWORK_UUID);
+            .when(rootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOT_NETWORK_UUID);
         Mockito.doAnswer(invocation -> timelineEventInfosList).when(dynamicSimulationService).getTimelineResult(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get result from a node done
         MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT + DELIMITER + "timeline",
-                        STUDY_UUID, NODE_UUID, ROOTNETWORK_UUID)
+                        STUDY_UUID, ROOT_NETWORK_UUID, NODE_UUID)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
 
@@ -549,7 +556,7 @@ class StudyControllerDynamicSimulationTest {
         // --- call endpoint to be tested --- //
         // get result from a node not yet run
         studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_STATUS,
-                        STUDY_UUID, NODE_NOT_RUN_UUID)
+                        STUDY_UUID, ROOT_NETWORK_UUID, NODE_NOT_RUN_UUID)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isNoContent());
     }
@@ -559,7 +566,7 @@ class StudyControllerDynamicSimulationTest {
         // setup DynamicSimulationService mock
         // timeseries metadata
         Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicSimulationResultUuid(RESULT_UUID).build()))
-            .when(rootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOTNETWORK_UUID);
+            .when(rootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOT_NETWORK_UUID);
         List<TimeSeriesMetadataInfos> timeSeriesMetadataInfosList = List.of(new TimeSeriesMetadataInfos(TIME_SERIES_NAME_1), new TimeSeriesMetadataInfos(TIME_SERIES_NAME_2));
 
         Mockito.doAnswer(invocation -> timeSeriesMetadataInfosList).when(dynamicSimulationService).getTimeSeriesMetadataList(RESULT_UUID);
@@ -567,7 +574,7 @@ class StudyControllerDynamicSimulationTest {
         // --- call endpoint to be tested --- //
         // get timeseries metadata from a node done
         MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT + DELIMITER + "timeseries/metadata",
-                        STUDY_UUID, NODE_UUID, ROOTNETWORK_UUID)
+                        STUDY_UUID, ROOT_NETWORK_UUID, NODE_UUID)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
 
@@ -584,13 +591,13 @@ class StudyControllerDynamicSimulationTest {
     void testGetDynamicSimulationStatus() throws Exception {
         // setup DynamicSimulationService mock
         Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicSimulationResultUuid(RESULT_UUID).build()))
-            .when(rootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOTNETWORK_UUID);
+            .when(rootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOT_NETWORK_UUID);
         Mockito.doAnswer(invocation -> DynamicSimulationStatus.DIVERGED).when(dynamicSimulationService).getStatus(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get status from a node done
         MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_STATUS,
-                        STUDY_UUID, NODE_UUID, ROOTNETWORK_UUID)
+                        STUDY_UUID, ROOT_NETWORK_UUID, NODE_UUID)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
         DynamicSimulationStatus statusResult = objectMapper.readValue(result.getResponse().getContentAsString(), DynamicSimulationStatus.class);

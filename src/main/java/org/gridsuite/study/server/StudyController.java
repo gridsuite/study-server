@@ -109,12 +109,12 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudies());
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/case/name")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/case/name")
     @Operation(summary = "Get study case name")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study case name"),
                            @ApiResponse(responseCode = "204", description = "The study has no case name attached")})
-    public ResponseEntity<String> getStudyCaseName(@PathVariable("studyUuid") UUID studyUuid) {
-        String studyCaseName = rootNetworkService.getCaseName(studyService.getStudyFirstRootNetworkUuid(studyUuid));
+    public ResponseEntity<String> getStudyCaseName(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        String studyCaseName = rootNetworkService.getCaseName(rootNetworkUuid);
         return StringUtils.isEmpty(studyCaseName) ? ResponseEntity.noContent().build() : ResponseEntity.ok().body(studyCaseName);
     }
 
@@ -178,15 +178,23 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/root-networks")
+    @Operation(summary = "Get root networks for study")
+    @ApiResponse(responseCode = "200", description = "List of root networks")
+    public ResponseEntity<List<BasicRootNetworkInfos>> getRootNetworks(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(rootNetworkService.getRootNetworks(studyUuid));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/root-networks")
     @Operation(summary = "Create root network for study")
     @ApiResponse(responseCode = "200", description = "Root network created")
     public ResponseEntity<RootNetworkCreationRequestInfos> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
+                                                                              @RequestParam(value = "name") String name,
                                                                               @RequestParam(value = CASE_UUID) UUID caseUuid,
                                                                               @RequestParam(value = CASE_FORMAT) String caseFormat,
                                                                               @RequestBody(required = false) Map<String, Object> importParameters,
                                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, caseUuid, caseFormat, importParameters, userId));
+        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, name, caseUuid, caseFormat, importParameters, userId));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
@@ -203,13 +211,23 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
+    @RequestMapping(method = RequestMethod.HEAD, value = "/studies/{studyUuid}/root-networks")
+    @Operation(summary = "Check if an element with this name and this type already exists in the given directory")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
+        @ApiResponse(responseCode = "204", description = "The element doesn't exist")})
+    public ResponseEntity<Void> elementExists(@PathVariable("studyUuid") UUID studyUuid,
+                                              @RequestParam("name") String rootNetworkName) {
+        HttpStatus status = rootNetworkService.isRootNetworkNameExistsInStudy(studyUuid, rootNetworkName) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
+    }
+
+    @DeleteMapping(value = "/studies/{studyUuid}/root-networks")
     @Operation(summary = "Create root network for study")
     @ApiResponse(responseCode = "200", description = "Root network created")
     public ResponseEntity<Void> deleteRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
-                                                    @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                    @RequestBody List<UUID> rootNetworkUuids,
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.deleteRootNetwork(studyUuid, rootNetworkUuid, userId);
+        studyService.deleteRootNetworks(studyUuid, rootNetworkUuids, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -241,59 +259,60 @@ public class StudyController {
                                               @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                               @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode,
                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.moveStudyNode(studyUuid, nodeToCutUuid, rootNetworkUuid, referenceNodeUuid, insertMode, userId);
+        studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId);
         return ResponseEntity.ok().build();
     }
 
-    @RequestMapping(value = "/studies/{studyUuid}/network", method = RequestMethod.HEAD)
+    @RequestMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", method = RequestMethod.HEAD)
     @Operation(summary = "check study root network existence")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The network does exist"),
         @ApiResponse(responseCode = "204", description = "The network doesn't exist")})
-    public ResponseEntity<Void> checkNetworkExistence(@PathVariable("studyUuid") UUID studyUuid) {
-        UUID networkUUID = rootNetworkService.getNetworkUuid(studyService.getStudyFirstRootNetworkUuid(studyUuid));
+    public ResponseEntity<Void> checkNetworkExistence(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        UUID networkUUID = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         return networkStoreService.doesNetworkExist(networkUUID)
             ? ResponseEntity.ok().build()
             : ResponseEntity.noContent().build();
 
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/network", params = {"caseUuid"})
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", params = {"caseUuid"})
     @Operation(summary = "recreate study network of a study from an existing case")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Study network recreation has started"),
         @ApiResponse(responseCode = "424", description = "The case doesn't exist")})
     public ResponseEntity<BasicStudyInfos> recreateNetworkFromCase(@PathVariable("studyUuid") UUID studyUuid,
+                                                                 @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                  @RequestBody(required = false) Map<String, Object> importParameters,
                                                                  @RequestParam(value = "caseUuid") UUID caseUuid,
                                                                  @Parameter(description = "case format") @RequestParam(name = "caseFormat", required = false) String caseFormat,
                                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.recreateNetwork(caseUuid, userId, studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), caseFormat, importParameters);
+        studyService.recreateNetwork(caseUuid, userId, studyUuid, rootNetworkUuid, caseFormat, importParameters);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/network")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network")
     @Operation(summary = "recreate study network of a study from its case")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Study network recreation has started"),
         @ApiResponse(responseCode = "424", description = "The study's case doesn't exist")})
     public ResponseEntity<BasicStudyInfos> recreateStudyNetwork(@PathVariable("studyUuid") UUID studyUuid,
+                                                                @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                 @RequestHeader(HEADER_USER_ID) String userId,
                                                                 @Parameter(description = "case format") @RequestParam(name = "caseFormat", required = false) String caseFormat
     ) {
-        studyService.recreateNetwork(userId, studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), caseFormat);
+        studyService.recreateNetwork(userId, studyUuid, rootNetworkUuid, caseFormat);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/indexation/status")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status")
     @Operation(summary = "check study indexation")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The study indexation status"),
         @ApiResponse(responseCode = "204", description = "The study indexation status doesn't exist"),
         @ApiResponse(responseCode = "404", description = "The study or network doesn't exist")})
-    public ResponseEntity<String> checkStudyIndexationStatus(@PathVariable("studyUuid") UUID studyUuid) {
-        String result = studyService.getStudyIndexationStatus(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)).name();
+    public ResponseEntity<String> checkStudyIndexationStatus(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        String result = studyService.getStudyIndexationStatus(studyUuid, rootNetworkUuid).name();
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -308,8 +327,7 @@ public class StudyController {
                                                 @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCutParentNodeUuid") UUID subtreeToCutParentNodeUuid,
                                                 @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, rootNetworkUuid, referenceNodeUuid, userId);
+        studyService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, referenceNodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -328,12 +346,13 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg")
     @Operation(summary = "get the voltage level diagram for the given network and voltage level")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg"),
         @ApiResponse(responseCode = "404", description = "The voltage level has not been found")})
     public ResponseEntity<byte[]> getVoltageLevelDiagram(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
@@ -356,17 +375,18 @@ public class StudyController {
                 voltageLevelId,
                 diagramParameters,
                 nodeUuid,
-                studyService.getStudyFirstRootNetworkUuid(studyUuid));
+                rootNetworkUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata")
     @Operation(summary = "get the voltage level diagram for the given network and voltage level")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg and metadata"),
         @ApiResponse(responseCode = "404", description = "The voltage level has not been found")})
     public ResponseEntity<String> getVoltageLevelDiagramAndMetadata(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
@@ -389,86 +409,91 @@ public class StudyController {
                 voltageLevelId,
                 diagramParameters,
                 nodeUuid,
-                studyService.getStudyFirstRootNetworkUuid(studyUuid));
+                rootNetworkUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/buses-or-busbar-sections")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/buses-or-busbar-sections")
     @Operation(summary = "get buses the for a given network and a given voltage level")
     @ApiResponse(responseCode = "200", description = "The buses list of the network for given voltage level")
     public ResponseEntity<List<IdentifiableInfos>> getVoltageLevelBusesOrBusbarSections(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusesOrBusbarSections(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), voltageLevelId, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusesOrBusbarSections(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/substation-id")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/substation-id")
     @Operation(summary = "get the substation ID for a given network and a given voltage level")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The substation Id for a voltageLevel")})
     public ResponseEntity<String> getVoltageLevelSubstationId(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "voltageLevelId") @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().body(studyService.getVoltageLevelSubstationId(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), voltageLevelId, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().body(studyService.getVoltageLevelSubstationId(studyUuid, nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/{hvdcId}/shunt-compensators")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/{hvdcId}/shunt-compensators")
     @Operation(summary = "For a given hvdc line, get its related Shunt compensators in case of LCC converter station")
     @ApiResponse(responseCode = "200", description = "Hvdc line type and its shunt compensators on each side")
     public ResponseEntity<String> getHvdcLineShuntCompensators(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("hvdcId") String hvdcId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        String hvdcInfos = studyService.getHvdcLineShuntCompensators(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode, hvdcId);
+        String hvdcInfos = studyService.getHvdcLineShuntCompensators(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, hvdcId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(hvdcInfos);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/lines")
     @Operation(summary = "Get Network lines graphics")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of line graphics with the given ids, all otherwise")})
     public ResponseEntity<String> getLineGraphics(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Lines ids") @RequestParam(name = "lineId", required = false) List<String> linesIds) {
-        UUID firstRootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLinesGraphics(rootNetworkService.getNetworkUuid(firstRootNetworkUuid), nodeUuid, firstRootNetworkUuid, linesIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLinesGraphics(rootNetworkService.getNetworkUuid(rootNetworkUuid), nodeUuid, rootNetworkUuid, linesIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/substations")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/substations")
     @Operation(summary = "Get Network substations graphics")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of substation graphics with the given ids, all otherwise")})
     public ResponseEntity<String> getSubstationGraphics(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
-        UUID firstRootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsGraphics(rootNetworkService.getNetworkUuid(firstRootNetworkUuid), nodeUuid, firstRootNetworkUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsGraphics(rootNetworkService.getNetworkUuid(rootNetworkUuid), nodeUuid, rootNetworkUuid, substationsIds));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/equipments-ids")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/equipments-ids")
     @Operation(summary = "Get equipment ids ")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of equipment ids")})
     public ResponseEntity<String> getNetworkElementsIds(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestBody(required = false) List<String> substationsIds,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
             @Parameter(description = "equipment type") @RequestParam(name = "equipmentType") String equipmentType,
             @Parameter(description = "Nominal Voltages") @RequestParam(name = "nominalVoltages", required = false) List<Double> nominalVoltages) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsIds(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), substationsIds, inUpstreamBuiltParentNode, equipmentType, nominalVoltages));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsIds(nodeUuid, rootNetworkUuid, substationsIds, inUpstreamBuiltParentNode, equipmentType, nominalVoltages));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/elements")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements")
     @Operation(summary = "Get network elements infos")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of network elements infos")})
     public ResponseEntity<String> getNetworkElementsInfos(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestBody(required = false) List<String> substationsIds,
             @Parameter(description = "Info type") @RequestParam(name = "infoType") String infoType,
@@ -477,79 +502,85 @@ public class StudyController {
             @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
             @Parameter(description = "Nominal Voltages") @RequestParam(name = "nominalVoltages", required = false) List<Double> nominalVoltages) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), substationsIds, infoType, elementType, inUpstreamBuiltParentNode, nominalVoltages));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, rootNetworkUuid, substationsIds, infoType, elementType, inUpstreamBuiltParentNode, nominalVoltages));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements/{elementId}")
     @Operation(summary = "Get network elements infos")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of network elements infos")})
     public ResponseEntity<String> getNetworkElementInfos(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Element id") @PathVariable("elementId") String elementId,
             @Parameter(description = "Element type") @RequestParam(name = "elementType") String elementType,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
             @Parameter(description = "Info type parameters") InfoTypeParameters infoTypeParameters) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementInfos(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), elementType, infoTypeParameters, elementId, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementInfos(studyUuid, nodeUuid, rootNetworkUuid, elementType, infoTypeParameters, elementId, inUpstreamBuiltParentNode));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/countries")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/countries")
     @Operation(summary = "Get network countries")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of countries")})
     public ResponseEntity<String> getNetworkCountries(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkCountries(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkCountries(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/nominal-voltages")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/nominal-voltages")
     @Operation(summary = "Get network nominal voltages")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of nominal voltages")})
     public ResponseEntity<String> getNetworkNominalVoltages(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkNominalVoltages(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkNominalVoltages(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}/voltage-level-id")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}/voltage-level-id")
     @Operation(summary = "Get Voltage level ID for a specific line or 2WT or 3WT and a given side")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage level id attached to line or 2WT or 3WT"), @ApiResponse(responseCode = "204", description = "No voltageLevel ID found")})
     public ResponseEntity<String> getBranchOr3WTVoltageLevelId(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("equipmentId") String equipmentId,
             @RequestParam(value = "side") ThreeSides side,
             @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        String voltageLevelId = studyService.getBranchOr3WTVoltageLevelId(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode, equipmentId, side);
+        String voltageLevelId = studyService.getBranchOr3WTVoltageLevelId(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, equipmentId, side);
         return StringUtils.isEmpty(voltageLevelId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(voltageLevelId);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels/{voltageLevelId}/equipments")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/voltage-levels/{voltageLevelId}/equipments")
     @Operation(summary = "Get voltage level equipments")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Voltage level equipments")})
     public ResponseEntity<String> getVoltageLevelEquipments(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "voltage level id") @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelEquipments(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), substationsIds, inUpstreamBuiltParentNode, voltageLevelId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelEquipments(nodeUuid, rootNetworkUuid, substationsIds, inUpstreamBuiltParentNode, voltageLevelId));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/all")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/all")
     @Operation(summary = "Get Network equipments description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of equipments data")})
     public ResponseEntity<String> getAllMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllMapData(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllMapData(nodeUuid, rootNetworkUuid, substationsIds));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}")
@@ -560,9 +591,8 @@ public class StudyController {
                                                         @PathVariable("modificationUuid") UUID modificationUuid,
                                                         @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid,
                                                         @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
-        studyService.moveModifications(studyUuid, nodeUuid, nodeUuid, rootNetworkUuid, List.of(modificationUuid), beforeUuid, userId);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.moveNetworkModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -576,18 +606,17 @@ public class StudyController {
                                                          @RequestBody List<UUID> modificationsToCopyUuidList,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         if (originNodeUuid != null) {
             studyService.assertIsNodeExist(studyUuid, originNodeUuid);
-            studyService.assertCanModifyNode(studyUuid, originNodeUuid, rootNetworkUuid);
+            studyService.assertCanUpdateModifications(studyUuid, originNodeUuid);
         }
         switch (action) {
             case COPY, INSERT:
-                studyService.createModifications(studyUuid, nodeUuid, rootNetworkUuid, modificationsToCopyUuidList, userId, action);
+                studyService.duplicateOrInsertNetworkModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId, action);
                 break;
             case MOVE:
-                studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, rootNetworkUuid, modificationsToCopyUuidList, null, userId);
+                studyService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId);
                 break;
             default:
                 throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
@@ -595,84 +624,91 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run")
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run")
     @Operation(summary = "run loadflow on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow has started")})
     public ResponseEntity<Void> runLoadFlow(
             @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "The limit reduction") @RequestParam(name = "limitReduction", required = false) Float limitReduction,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runLoadFlow(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId, limitReduction);
+        studyService.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, userId, limitReduction);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/result")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/result")
     @Operation(summary = "Get a loadflow result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow result"),
         @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
         @ApiResponse(responseCode = "404", description = "The loadflow result has not been found")})
     public ResponseEntity<String> getLoadflowResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                    @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                     @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
                                                     Sort sort) {
-        String result = rootNetworkNodeInfoService.getLoadFlowResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), filters, sort);
+        String result = rootNetworkNodeInfoService.getLoadFlowResult(nodeUuid, rootNetworkUuid, filters, sort);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/status")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/status")
     @Operation(summary = "Get the loadflow status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow status"),
         @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
         @ApiResponse(responseCode = "404", description = "The loadflow status has not been found")})
     public ResponseEntity<String> getLoadFlowStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        String result = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/stop")
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/stop")
     @Operation(summary = "stop loadflow on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow has been stopped")})
     public ResponseEntity<Void> stopLoadFlow(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        rootNetworkNodeInfoService.stopLoadFlow(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
+        rootNetworkNodeInfoService.stopLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run")
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run")
     @Operation(summary = "run short circuit analysis on study")
     @ApiResponse(responseCode = "200", description = "The short circuit analysis has started")
     public ResponseEntity<Void> runShortCircuit(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestParam(value = "busId", required = false) Optional<String> busId,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runShortCircuit(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), busId, userId);
+        studyService.runShortCircuit(studyUuid, nodeUuid, rootNetworkUuid, busId, userId);
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop")
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/stop")
     @Operation(summary = "stop security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis has been stopped")})
     public ResponseEntity<Void> stopShortCircuitAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                         @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
-        rootNetworkNodeInfoService.stopShortCircuitAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
+        rootNetworkNodeInfoService.stopShortCircuitAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result")
     @Operation(summary = "Get a short circuit analysis result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis result"),
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
     public ResponseEntity<String> getShortCircuitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                        @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                         @Parameter(description = "BASIC (faults without limits and feeders), " +
                                                             "FULL (faults with both), " +
@@ -682,80 +718,86 @@ public class StudyController {
                                                         @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
                                                         @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false, defaultValue = "false") boolean paged,
                                                         Pageable pageable) {
-        String result = rootNetworkNodeInfoService.getShortCircuitAnalysisResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), mode, type, filters, paged, pageable);
+        String result = rootNetworkNodeInfoService.getShortCircuitAnalysisResult(nodeUuid, rootNetworkUuid, mode, type, filters, paged, pageable);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status")
     @Operation(summary = "Get the short circuit analysis status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis status"),
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The short circuit analysis status has not been found")})
     public ResponseEntity<String> getShortCircuitAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                 @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type) {
-        String result = rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), type);
+        String result = rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, type);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result/csv")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result/csv")
     @Operation(summary = "Get a short circuit analysis csv result")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis csv export"),
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
     public ResponseEntity<byte[]> getShortCircuitAnalysisCsvResult(
             @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "type") @RequestParam(value = "type") ShortcircuitAnalysisType type,
             @Parameter(description = "headersCsv") @RequestBody String headersCsv) {
-        return ResponseEntity.ok().body(rootNetworkNodeInfoService.getShortCircuitAnalysisCsvResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), type, headersCsv));
+        return ResponseEntity.ok().body(rootNetworkNodeInfoService.getShortCircuitAnalysisCsvResult(nodeUuid, rootNetworkUuid, type, headersCsv));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run")
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run")
     @Operation(summary = "run voltage init on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has started"),
         @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
     public ResponseEntity<Void> runVoltageInit(
             @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runVoltageInit(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
+        studyService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/stop")
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/stop")
     @Operation(summary = "stop security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has been stopped")})
     public ResponseEntity<Void> stopVoltageInit(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        rootNetworkNodeInfoService.stopVoltageInit(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
+        rootNetworkNodeInfoService.stopVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/result")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/result")
     @Operation(summary = "Get a voltage init result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init result"),
         @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
         @ApiResponse(responseCode = "404", description = "The voltage init has not been found")})
     public ResponseEntity<String> getVoltageInitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getVoltageInitResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        String result = rootNetworkNodeInfoService.getVoltageInitResult(nodeUuid, rootNetworkUuid);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/status")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/status")
     @Operation(summary = "Get the voltage init status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init status"),
         @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
         @ApiResponse(responseCode = "404", description = "The voltage init status has not been found")})
     public ResponseEntity<String> getVoltageInitStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                       @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        String result = rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, rootNetworkUuid);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -787,16 +829,16 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(formatsJson);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}")
     @Operation(summary = "export the study's network in the given format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network in the given format")})
     public ResponseEntity<byte[]> exportNetwork(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("format") String format,
             @RequestParam(value = "formatParameters", required = false) String parametersJson,
             @RequestParam(value = "fileName") String fileName) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
         ExportNetworkInfos exportNetworkInfos = studyService.exportNetwork(nodeUuid, rootNetworkUuid, format, parametersJson, fileName);
 
@@ -805,74 +847,80 @@ public class StudyController {
         return ResponseEntity.ok().headers(header).contentType(MediaType.APPLICATION_OCTET_STREAM).body(exportNetworkInfos.getNetworkData());
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run")
     @Operation(summary = "run security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has started")})
     public ResponseEntity<Void> runSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                          @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         List<String> nonNullcontingencyListNames = contingencyListNames != null ? contingencyListNames : Collections.emptyList();
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
+        studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result")
     @Operation(summary = "Get a security analysis result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis result"),
         @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
     public ResponseEntity<String> getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                  @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                   @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
                                                                   @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
                                                                   Pageable pageable) {
-        String result = rootNetworkNodeInfoService.getSecurityAnalysisResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), resultType, filters, pageable);
+        String result = rootNetworkNodeInfoService.getSecurityAnalysisResult(nodeUuid, rootNetworkUuid, resultType, filters, pageable);
         return result != null ? ResponseEntity.ok().body(result) :
                ResponseEntity.noContent().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result/csv")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result/csv")
     @Operation(summary = "Get a security analysis result on study - CSV export")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis result csv export"),
         @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
     public byte[] getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                            @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
                                                                            @Parameter(description = "Csv translation (JSON)") @RequestBody String csvTranslations) {
-        return rootNetworkNodeInfoService.getSecurityAnalysisResultCsv(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), resultType, csvTranslations);
+        return rootNetworkNodeInfoService.getSecurityAnalysisResultCsv(nodeUuid, rootNetworkUuid, resultType, csvTranslations);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/contingency-count")
     @Operation(summary = "Get contingency count for a list of contingency list on a study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The contingency count")})
     public ResponseEntity<Integer> getContingencyCount(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames) {
-        return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListNames) ? 0 : studyService.getContingencyCount(studyUuid, contingencyListNames, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)));
+        return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListNames) ? 0 : studyService.getContingencyCount(studyUuid, contingencyListNames, nodeUuid, rootNetworkUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/limit-violations")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/limit-violations")
     @Operation(summary = "Get limit violations.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The limit violations")})
     public ResponseEntity<List<LimitViolationInfos>> getLimitViolations(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                       @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
                                                        @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
                                                        Sort sort) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), filters, globalFilters, sort));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(nodeUuid, rootNetworkUuid, filters, globalFilters, sort));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/computation/result/enum-values")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computation/result/enum-values")
     @Operation(summary = "Get Enum values")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The Enum values")})
     public ResponseEntity<List<String>> getResultEnumValues(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                    @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                     @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                     @Parameter(description = "Computing Type") @RequestParam(name = "computingType") ComputationType computingType,
                                                                     @Parameter(description = "Enum name") @RequestParam(name = "enumName") String enumName) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getResultEnumValues(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), computingType, enumName));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getResultEnumValues(nodeUuid, rootNetworkUuid, computingType, enumName));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
@@ -949,12 +997,13 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getShortCircuitParametersInfo(studyUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")
     @Operation(summary = "get the substation diagram for the given network and substation")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg"),
         @ApiResponse(responseCode = "404", description = "The substation has not been found")})
     public ResponseEntity<byte[]> getSubstationDiagram(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("substationId") String substationId,
             @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
@@ -973,17 +1022,18 @@ public class StudyController {
                 .language(language)
                 .build();
         byte[] result = studyService.getSubstationSvg(substationId,
-                diagramParameters, substationLayout, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+                diagramParameters, substationLayout, nodeUuid, rootNetworkUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata")
     @Operation(summary = "get the substation diagram for the given network and substation")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg and metadata"),
         @ApiResponse(responseCode = "404", description = "The substation has not been found")})
     public ResponseEntity<String> getSubstationDiagramAndMetadata(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("substationId") String substationId,
             @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
@@ -1006,99 +1056,111 @@ public class StudyController {
                 diagramParameters,
                 substationLayout,
                 nodeUuid,
-                studyService.getStudyFirstRootNetworkUuid(studyUuid));
+                rootNetworkUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram")
     @Operation(summary = "get the network area diagram for the given network and voltage levels")
     @ApiResponse(responseCode = "200", description = "The svg")
     public ResponseEntity<String> getNeworkAreaDiagram(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Voltage levels ids") @RequestParam(name = "voltageLevelsIds") List<String> voltageLevelsIds,
             @Parameter(description = "depth") @RequestParam(name = "depth", defaultValue = "0") int depth,
             @Parameter(description = "Initialize NAD with Geographical Data") @RequestParam(name = "withGeoData", defaultValue = "true") boolean withGeoData) {
-        String result = studyService.getNetworkAreaDiagram(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), voltageLevelsIds, depth, withGeoData);
+        String result = studyService.getNetworkAreaDiagram(nodeUuid, rootNetworkUuid, voltageLevelsIds, depth, withGeoData);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/status")
     @Operation(summary = "Get the security analysis status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis status"),
         @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The security analysis status has not been found")})
     public ResponseEntity<String> getSecurityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                  @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        SecurityAnalysisStatus status = rootNetworkNodeInfoService.getSecurityAnalysisStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        SecurityAnalysisStatus status = rootNetworkNodeInfoService.getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid);
         return status != null ? ResponseEntity.ok().body(status.name()) :
                 ResponseEntity.noContent().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop")
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/stop")
     @Operation(summary = "stop security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
     public ResponseEntity<Void> stopSecurityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                     @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        rootNetworkNodeInfoService.stopSecurityAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
+        rootNetworkNodeInfoService.stopSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/parent-nodes-report", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get node report with its parent nodes")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<List<Report>> getParentNodesReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                    @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                     @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                     @Parameter(description = "Node only report") @RequestParam(value = "nodeOnlyReport", required = false, defaultValue = "true") boolean nodeOnlyReport,
                                                                     @Parameter(description = "The report Type") @RequestParam(name = "reportType") StudyService.ReportType reportType,
                                                                     @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReport(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), nodeOnlyReport, reportType, severityLevels));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReport(nodeUuid, rootNetworkUuid, nodeOnlyReport, reportType, severityLevels));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report/{reportId}/logs", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/logs", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get node report logs")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report logs"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<List<ReportLog>> getNodeReportLogs(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                             @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                              @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @Parameter(description = "reportId") @PathVariable("reportId") String reportId,
                                                              @Parameter(description = "the message filter") @RequestParam(name = "message", required = false) String messageFilter,
                                                              @Parameter(description = "Severity levels filter") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportLogs(reportId, messageFilter, severityLevels));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report/{reportId}/aggregated-severities", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/aggregated-severities", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get node report severities")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report severities"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Set<String>> getNodeReportAggregatedSeverities(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                       @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                        @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                        @Parameter(description = "reportId") @PathVariable("reportId") UUID reportId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReportAggregatedSeverities(reportId));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report/aggregated-severities", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/aggregated-severities", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get the report severities of the given node and all its parents")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report severities of the node and all its parent"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Set<String>> getParentNodesAggregatedReportSeverities(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                       @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                        @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesAggregatedReportSeverities(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report/logs", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get the report logs of the given node and all its parents")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report logs of the node and all its parent"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<List<ReportLog>> getParentNodesReportLogs(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                    @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                     @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                     @Parameter(description = "the message filter") @RequestParam(name = "message", required = false) String messageFilter,
                                                                     @Parameter(description = "Severity levels filter") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReportLogs(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), messageFilter, severityLevels));
+        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReportLogs(nodeUuid, rootNetworkUuid, messageFilter, severityLevels));
     }
 
     @GetMapping(value = "/svg-component-libraries")
@@ -1127,9 +1189,8 @@ public class StudyController {
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
-        studyService.createNetworkModification(studyUuid, modificationAttributes, nodeUuid, rootNetworkUuid, userId);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.createNetworkModification(studyUuid, modificationAttributes, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1141,9 +1202,8 @@ public class StudyController {
                                                           @Parameter(description = "Network modification UUID") @PathVariable("uuid") UUID networkModificationUuid,
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
-        studyService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, rootNetworkUuid, networkModificationUuid, userId);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, networkModificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1154,9 +1214,8 @@ public class StudyController {
                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                            @Parameter(description = "Network modification UUIDs") @RequestParam(name = "uuids", required = false) List<UUID> networkModificationUuids,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
-        studyService.deleteNetworkModifications(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
 
         return ResponseEntity.ok().build();
     }
@@ -1169,12 +1228,11 @@ public class StudyController {
                                                                @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
                                                                @Parameter(description = "Stashed Modification") @RequestParam(name = "stashed", required = true) Boolean stashed,
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         if (stashed.booleanValue()) {
-            studyService.stashNetworkModifications(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId);
+            studyService.stashNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
         } else {
-            studyService.restoreNetworkModifications(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId);
+            studyService.restoreNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
         }
         return ResponseEntity.ok().build();
     }
@@ -1187,9 +1245,8 @@ public class StudyController {
                                                           @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
                                                           @Parameter(description = "New activated value") @RequestParam(name = "activated", required = true) Boolean activated,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
-        studyService.updateNetworkModificationsActivation(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId, activated);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.updateNetworkModificationsActivation(studyUuid, nodeUuid, networkModificationUuids, userId, activated);
         return ResponseEntity.ok().build();
     }
 
@@ -1200,7 +1257,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.searchStudies(query));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Search equipments in elasticsearch")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "List of equipments found"),
@@ -1210,13 +1267,14 @@ public class StudyController {
     public ResponseEntity<List<EquipmentInfos>> searchEquipments(
         @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+        @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
         @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
         @Parameter(description = "What against to match") @RequestParam(value = "fieldSelector") EquipmentInfosService.FieldSelector fieldSelector,
         @Parameter(description = "Should search in upstream built node") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
         @Parameter(description = "Equipment type") @RequestParam(value = "equipmentType", required = false) String equipmentType,
         @Parameter(description = "Equipment subtype") @RequestParam(value = "equipmentSubType", required = false) String equipmentSubType) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-            .body(studyService.searchEquipments(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userInput, fieldSelector, equipmentType, equipmentSubType, inUpstreamBuiltParentNode));
+            .body(studyService.searchEquipments(nodeUuid, rootNetworkUuid, userInput, fieldSelector, equipmentType, equipmentSubType, inUpstreamBuiltParentNode));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
@@ -1241,8 +1299,7 @@ public class StudyController {
                                            @Parameter(description = "ids of children to remove") @RequestParam("ids") List<UUID> nodeIds,
                                            @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.deleteNodes(studyUuid, nodeIds, rootNetworkUuid, deleteChildren, userId);
+        studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1255,8 +1312,7 @@ public class StudyController {
                                                  @Parameter(description = "id of child to delete (move to trash)") @PathVariable("id") UUID nodeId,
                                                  @Parameter(description = "stashChildren") @RequestParam(value = "stashChildren", defaultValue = "false") boolean stashChildren,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.stashNode(studyUuid, nodeId, rootNetworkUuid, stashChildren, userId);
+        studyService.stashNode(studyUuid, nodeId, stashChildren, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1284,8 +1340,9 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "network modification tree"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public ResponseEntity<RootNode> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
+    public ResponseEntity<RootNode> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                               @Parameter(description = "root network uuid") @RequestParam(value = "rootNetworkUuid", required = false) UUID rootNetworkUuid) {
+        RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid, rootNetworkUuid);
         return rootNode != null ?
             ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNode)
             : ResponseEntity.notFound().build();
@@ -1297,8 +1354,9 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "network modification subtree"),
         @ApiResponse(responseCode = "404", description = "The study or the parent node not found")})
     public ResponseEntity<NetworkModificationNode> getNetworkModificationSubtree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                                 @Parameter(description = "parent node uuid") @RequestParam(value = "parentNodeUuid") UUID parentNodeUuid) {
-        NetworkModificationNode parentNode = (NetworkModificationNode) networkModificationTreeService.getStudySubtree(studyUuid, parentNodeUuid);
+                                                                 @Parameter(description = "parent node uuid") @RequestParam(value = "parentNodeUuid") UUID parentNodeUuid,
+                                                                 @Parameter(description = "root network uuid") @RequestParam(value = "rootNetworkUuid", required = false) UUID rootNetworkUuid) {
+        NetworkModificationNode parentNode = (NetworkModificationNode) networkModificationTreeService.getStudySubtree(studyUuid, parentNodeUuid, rootNetworkUuid);
         return parentNode != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(parentNode)
                 : ResponseEntity.notFound().build();
@@ -1335,8 +1393,9 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "simplified nodes (without children"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<AbstractNode> getNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                @Parameter(description = "node uuid") @PathVariable("id") UUID nodeId) {
-        AbstractNode node = networkModificationTreeService.getNode(nodeId);
+                                                @Parameter(description = "node uuid") @PathVariable("id") UUID nodeId,
+                                                @Parameter(description = "root network uuid") @RequestParam(value = "rootNetworkUuid", required = false) UUID rootNetworkUuid) {
+        AbstractNode node = networkModificationTreeService.getNode(nodeId, rootNetworkUuid);
         return node != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(node)
                 : ResponseEntity.notFound().build();
@@ -1363,39 +1422,40 @@ public class StudyController {
         return ResponseEntity.ok().body(networkModificationTreeService.getUniqueNodeName(studyUuid));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/build")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build")
     @Operation(summary = "build a study node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been built"),
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist"),
                            @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
     public ResponseEntity<Void> buildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                          @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertNoBuildNoComputationForRootNetworkNode(nodeUuid, rootNetworkUuid);
         studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/unbuild")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/unbuild")
     @Operation(summary = "unbuild a study node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been unbuilt"),
         @ApiResponse(responseCode = "404", description = "The study or node doesn't exist"),
         @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
     public ResponseEntity<Void> unbuildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                          @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
         studyService.unbuildNode(studyUuid, nodeUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/build/stop")
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build/stop")
     @Operation(summary = "stop a node build")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The build has been stopped"),
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
     public ResponseEntity<Void> stopBuild(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                      @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.stopBuild(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        studyService.stopBuild(nodeUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -1429,11 +1489,12 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getDefaultDynamicSimulationProvider());
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/reindex-all")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all")
     @Operation(summary = "reindex the study")
     @ApiResponse(responseCode = "200", description = "Study reindexed")
-    public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        studyService.reindexStudy(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+    public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                             @Parameter(description = "root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        studyService.reindexStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -1449,41 +1510,44 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run")
     @Operation(summary = "run sensitivity analysis on study")
         @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has started"), @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
     public ResponseEntity<Void> runSensitivityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                       @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runSensitivityAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
+        studyService.runSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result")
     @Operation(summary = "Get a sensitivity analysis result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis result"),
         @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
     public ResponseEntity<String> getSensitivityAnalysisResult(
         @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
         @Parameter(description = "results selector") @RequestParam("selector") String selector) {
-        String result = rootNetworkNodeInfoService.getSensitivityAnalysisResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), selector);
+        String result = rootNetworkNodeInfoService.getSensitivityAnalysisResult(nodeUuid, rootNetworkUuid, selector);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get a sensitivity analysis result as csv")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Csv of sensitivity analysis results"),
         @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
     public ResponseEntity<byte[]> exportSensitivityResultsAsCsv(
         @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
         @RequestBody SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
-        byte[] result = rootNetworkNodeInfoService.exportSensitivityResultsAsCsv(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), sensitivityAnalysisCsvFileInfos);
+        byte[] result = rootNetworkNodeInfoService.exportSensitivityResultsAsCsv(nodeUuid, rootNetworkUuid, sensitivityAnalysisCsvFileInfos);
         HttpHeaders responseHeaders = new HttpHeaders();
         responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
         responseHeaders.setContentDispositionFormData("attachment", "sensitivity_results.csv");
@@ -1494,39 +1558,42 @@ public class StudyController {
                 .body(result);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options")
     @Operation(summary = "Get sensitivity analysis filter options on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis filter options"),
         @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
     public ResponseEntity<String> getSensitivityAnalysisFilterOptions(
         @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
         @Parameter(description = "results selector") @RequestParam("selector") String selector) {
-        String result = rootNetworkNodeInfoService.getSensitivityResultsFilterOptions(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), selector);
+        String result = rootNetworkNodeInfoService.getSensitivityResultsFilterOptions(nodeUuid, rootNetworkUuid, selector);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/status")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/status")
     @Operation(summary = "Get the sensitivity analysis status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis status"),
         @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The sensitivity analysis status has not been found")})
     public ResponseEntity<String> getSensitivityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                               @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getSensitivityAnalysisStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        String result = rootNetworkNodeInfoService.getSensitivityAnalysisStatus(nodeUuid, rootNetworkUuid);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/stop")
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/stop")
     @Operation(summary = "stop sensitivity analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has been stopped")})
     public ResponseEntity<Void> stopSensitivityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                         @RequestHeader(HEADER_USER_ID) String userId) {
-        rootNetworkNodeInfoService.stopSensitivityAnalysis(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
+        rootNetworkNodeInfoService.stopSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1607,8 +1674,7 @@ public class StudyController {
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.createDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
         return ResponseEntity.ok().build();
     }
@@ -1622,8 +1688,7 @@ public class StudyController {
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
         return ResponseEntity.ok().build();
     }
@@ -1637,69 +1702,73 @@ public class StudyController {
                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                               @Parameter(description = "Dynamic simulation event UUIDs") @RequestParam("eventUuids") List<UUID> eventUuids,
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.deleteDynamicSimulationEvents(studyUuid, nodeUuid, userId, eventUuids);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/run")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/run")
     @Operation(summary = "run dynamic simulation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation has started")})
     public ResponseEntity<Void> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                     @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                      @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runDynamicSimulation(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), parameters, userId);
+        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries/metadata")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries/metadata")
     @Operation(summary = "Get list of time series metadata of dynamic simulation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Time series metadata of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation metadata"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
     public ResponseEntity<List<TimeSeriesMetadataInfos>> getDynamicSimulationTimeSeriesMetadata(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                                @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<TimeSeriesMetadataInfos> result = rootNetworkNodeInfoService.getDynamicSimulationTimeSeriesMetadata(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        List<TimeSeriesMetadataInfos> result = rootNetworkNodeInfoService.getDynamicSimulationTimeSeriesMetadata(nodeUuid, rootNetworkUuid);
         return CollectionUtils.isEmpty(result) ? ResponseEntity.noContent().build() :
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries")
     @Operation(summary = "Get all time series of dynamic simulation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All time series of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation timeseries"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
     public ResponseEntity<List<DoubleTimeSeries>> getDynamicSimulationTimeSeriesResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                       @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                                        @Parameter(description = "timeSeriesNames") @RequestParam(name = "timeSeriesNames", required = false) List<String> timeSeriesNames) {
-        List<DoubleTimeSeries> result = rootNetworkNodeInfoService.getDynamicSimulationTimeSeries(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), timeSeriesNames);
+        List<DoubleTimeSeries> result = rootNetworkNodeInfoService.getDynamicSimulationTimeSeries(nodeUuid, rootNetworkUuid, timeSeriesNames);
         return CollectionUtils.isEmpty(result) ? ResponseEntity.noContent().build() :
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeline")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeline")
     @Operation(summary = "Get timeline events of dynamic simulation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Timeline events of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation timeline events"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
     public ResponseEntity<List<TimelineEventInfos>> getDynamicSimulationTimelineResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                       @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<TimelineEventInfos> result = rootNetworkNodeInfoService.getDynamicSimulationTimeline(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        List<TimelineEventInfos> result = rootNetworkNodeInfoService.getDynamicSimulationTimeline(nodeUuid, rootNetworkUuid);
         return CollectionUtils.isEmpty(result) ? ResponseEntity.noContent().build() :
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/status")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/status")
     @Operation(summary = "Get the status of dynamic simulation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The status of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation status"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
     public ResponseEntity<DynamicSimulationStatus> getDynamicSimulationStatus(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        DynamicSimulationStatus result = rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        DynamicSimulationStatus result = rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -1725,25 +1794,26 @@ public class StudyController {
         return studyService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", produces = MediaType.TEXT_PLAIN_VALUE)
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", produces = MediaType.TEXT_PLAIN_VALUE)
     @Operation(summary = "Get the voltage init modifications from a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init modifications was returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found, or has no voltage init result")})
     public ResponseEntity<String> getVoltageInitModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                              @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(studyService.getVoltageInitModifications(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)));
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(studyService.getVoltageInitModifications(nodeUuid, rootNetworkUuid));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/modifications", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init")
     @Operation(summary = "Clone the voltage init modifications, then append them to node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init modifications have been appended.")})
-    public ResponseEntity<Void> copyVoltageInitModifications(@PathVariable("studyUuid") UUID studyUuid,
-                                                             @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @RequestHeader(HEADER_USER_ID) String userId) {
+    public ResponseEntity<Void> insertVoltageInitModifications(@PathVariable("studyUuid") UUID studyUuid,
+                                                               @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                               @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        UUID rootNetworkUuid = studyService.getStudyFirstRootNetworkUuid(studyUuid);
-        studyService.assertCanModifyNode(studyUuid, nodeUuid, rootNetworkUuid);
-        studyService.copyVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.insertVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1823,16 +1893,17 @@ public class StudyController {
         return studyService.setSensitivityAnalysisParameters(studyUuid, sensitivityAnalysisParameters, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/factors-count")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/factors-count")
     @Operation(summary = "Get the factors count of sensitivity parameters")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The factors count of sensitivity parameters")})
     public ResponseEntity<Long> getSensitivityAnalysisFactorsCount(
             @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Is Injections Set") @RequestParam(name = "isInjectionsSet", required = false) Boolean isInjectionsSet,
             SensitivityFactorsIdsByGroup factorsIds) {
-        return ResponseEntity.ok().body(sensitivityAnalysisService.getSensitivityAnalysisFactorsCount(rootNetworkService.getNetworkUuid(studyService.getStudyFirstRootNetworkUuid(studyUuid)),
-            networkModificationTreeService.getVariantId(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)), factorsIds, isInjectionsSet));
+        return ResponseEntity.ok().body(sensitivityAnalysisService.getSensitivityAnalysisFactorsCount(rootNetworkService.getNetworkUuid(rootNetworkUuid),
+            networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid), factorsIds, isInjectionsSet));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")
@@ -1855,47 +1926,51 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/run")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/non-evacuated-energy/run")
     @Operation(summary = "run sensitivity analysis non evacuated energy on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy has started")})
     public ResponseEntity<UUID> runNonEvacuatedEnergy(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                      @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                       @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runNonEvacuatedEnergy(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId));
+        return ResponseEntity.ok().body(studyService.runNonEvacuatedEnergy(studyUuid, nodeUuid, rootNetworkUuid, userId));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/result")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/non-evacuated-energy/result")
     @Operation(summary = "Get a sensitivity analysis non evacuated energy result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy result"),
         @ApiResponse(responseCode = "204", description = "No sensitivity analysis non evacuated energy has been done yet"),
         @ApiResponse(responseCode = "404", description = "The sensitivity analysis non evacuated energy has not been found")})
     public ResponseEntity<String> getNonEvacuatedEnergyResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                              @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getNonEvacuatedEnergyResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        String result = rootNetworkNodeInfoService.getNonEvacuatedEnergyResult(nodeUuid, rootNetworkUuid);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/status")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/non-evacuated-energy/status")
     @Operation(summary = "Get the sensitivity analysis non evacuated energy status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy status"),
         @ApiResponse(responseCode = "204", description = "No sensitivity analysis non evacuated energy has been done yet"),
         @ApiResponse(responseCode = "404", description = "The sensitivity analysis status non evacuated energy has not been found")})
     public ResponseEntity<String> getNonEvacuatedEnergyStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                              @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getNonEvacuatedEnergyStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        String result = rootNetworkNodeInfoService.getNonEvacuatedEnergyStatus(nodeUuid, rootNetworkUuid);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/non-evacuated-energy/stop")
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/non-evacuated-energy/stop")
     @Operation(summary = "stop sensitivity analysis non evacuated energy on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis non evacuated energy has been stopped")})
     public ResponseEntity<Void> stopNonEvacuatedEnergy(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                       @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
-        rootNetworkNodeInfoService.stopNonEvacuatedEnergy(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
+        rootNetworkNodeInfoService.stopNonEvacuatedEnergy(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1972,66 +2047,82 @@ public class StudyController {
                 remoteServicesInspector.convertServicesInfoToAboutInfo(Objects.requireNonNullElseGet(suiteServersInfo.getBody(), Map::of)));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/filters/evaluate")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/evaluate")
     @Operation(summary = "Evaluate a filter to get matched elements")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched elements")})
     public ResponseEntity<String> evaluateFilter(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
             @RequestBody String filter) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFilter(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), inUpstreamBuiltParentNode, filter));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFilter(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, filter));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/filters/{filterUuid}/elements")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/filters/{filterUuid}/elements")
     @Operation(summary = "Evaluate a filter on root node to get matched elements")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched elements")})
     public ResponseEntity<String> exportFilter(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "Filter uuid to be applied") @PathVariable("filterUuid") UUID filterUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(studyService.getStudyFirstRootNetworkUuid(studyUuid), filterUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(rootNetworkUuid, filterUuid));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/state-estimation/run")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/filters/elements")
+    @Operation(summary = "Evaluate a list of filters on root node to get matched elements")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched elements")})
+    public ResponseEntity<String> exportFilters(
+        @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+        @Parameter(description = "Filters uuid to be resolved") @RequestParam("filtersUuid") List<UUID> filtersUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilters(rootNetworkUuid, filtersUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/run")
     @Operation(summary = "run state estimation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation has started")})
     public ResponseEntity<Void> runStateEstimation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                    @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runStateEstimation(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid), userId);
+        studyService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/state-estimation/result")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/result")
     @Operation(summary = "Get a state estimation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation result"),
         @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
         @ApiResponse(responseCode = "404", description = "The state estimation has not been found")})
     public ResponseEntity<String> getStateEstimationResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                           @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getStateEstimationResult(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        String result = rootNetworkNodeInfoService.getStateEstimationResult(nodeUuid, rootNetworkUuid);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/state-estimation/status")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/status")
     @Operation(summary = "Get the state estimation status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation status"),
         @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
         @ApiResponse(responseCode = "404", description = "The state estimation status has not been found")})
     public ResponseEntity<String> getStateEstimationStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String status = rootNetworkNodeInfoService.getStateEstimationStatus(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        String status = rootNetworkNodeInfoService.getStateEstimationStatus(nodeUuid, rootNetworkUuid);
         return status != null ? ResponseEntity.ok().body(status) : ResponseEntity.noContent().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/state-estimation/stop")
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/stop")
     @Operation(summary = "stop state estimation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation has been stopped")})
     public ResponseEntity<Void> stopStateEstimation(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                     @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        rootNetworkNodeInfoService.stopStateEstimation(studyUuid, nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid));
+        rootNetworkNodeInfoService.stopStateEstimation(studyUuid, nodeUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
     }
 }
