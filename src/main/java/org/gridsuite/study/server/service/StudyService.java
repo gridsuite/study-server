@@ -2440,6 +2440,10 @@ public class StudyService {
         return filterService.exportFilter(rootNetworkService.getNetworkUuid(rootNetworkUuid), filterUuid);
     }
 
+    public String exportFilters(UUID rootNetworkUuid, List<UUID> filtersUuid) {
+        return filterService.exportFilters(rootNetworkService.getNetworkUuid(rootNetworkUuid), filtersUuid);
+    }
+
     @Transactional
     public UUID runStateEstimation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         Objects.requireNonNull(studyUuid);
