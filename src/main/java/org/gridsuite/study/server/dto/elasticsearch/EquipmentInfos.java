@@ -49,6 +49,9 @@ public class EquipmentInfos extends BasicEquipmentInfos {
     @Field("equipmentType")
     String type;
 
+    @Field(type = FieldType.Keyword)
+    Set<String> equipmentSubType;
+
     @Field(type = FieldType.Nested, includeInParent = true)
     Set<VoltageLevelInfos> voltageLevels;
 

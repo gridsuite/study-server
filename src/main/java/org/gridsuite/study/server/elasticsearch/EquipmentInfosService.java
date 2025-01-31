@@ -79,7 +79,7 @@ public class EquipmentInfosService {
     static final String EQUIPMENT_NAME = "equipmentName.fullascii";
     static final String EQUIPMENT_ID = "equipmentId.fullascii";
     static final String EQUIPMENT_TYPE = "equipmentType.keyword";
-    static final String EQUIPMENT_SUB_TYPE = "subType.keyword";
+    static final String EQUIPMENT_SUB_TYPE = "equipmentSubType.keyword";
 
     private final EquipmentInfosRepository equipmentInfosRepository;
 
