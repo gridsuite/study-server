@@ -19,12 +19,14 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.FILTER_API_VERSION;
-import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyException.Type.EVALUATE_FILTER_FAILED;
+import static org.gridsuite.study.server.StudyException.Type.NETWORK_NOT_FOUND;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -35,6 +37,7 @@ public class FilterService {
 
     public static final String FILTER_END_POINT_EVALUATE = "/filters/evaluate";
     public static final String FILTER_END_POINT_EXPORT = "/filters/{id}/export";
+    public static final String FILTERS_END_POINT_EXPORT = "/filters/export";
 
     private final RestTemplate restTemplate;
 
@@ -87,6 +90,19 @@ public class FilterService {
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
         uriComponentsBuilder.queryParam("networkUuid", networkUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand(filterUuid);
+
+        return restTemplate.getForObject(uriComponent.toUriString(), String.class);
+    }
+
+    public String exportFilters(UUID networkUuid, List<UUID> filtersUuid) {
+        Objects.requireNonNull(networkUuid);
+        Objects.requireNonNull(filtersUuid);
+        String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTERS_END_POINT_EXPORT;
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
+        uriComponentsBuilder.queryParam("networkUuid", networkUuid);
+        uriComponentsBuilder.queryParam("ids", filtersUuid);
+        var uriComponent = uriComponentsBuilder.buildAndExpand();
 
         return restTemplate.getForObject(uriComponent.toUriString(), String.class);
     }
