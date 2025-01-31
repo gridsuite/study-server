@@ -641,7 +641,7 @@ class RootNetworkTest {
     }
 
     @Test
-    void getOrderedRootNetworksFromService() throws Exception {
+    void getOrderedRootNetworksFromService() {
         // create study with one root node, two network modification node and a root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
