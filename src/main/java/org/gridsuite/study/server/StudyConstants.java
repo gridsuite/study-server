@@ -55,6 +55,7 @@ public final class StudyConstants {
     public static final String GROUP_UUID = "groupUuid";
     public static final String REPORT_UUID = "reportUuid";
     public static final String UUIDS = "uuids";
+    public static final String IDS = "ids";
     public static final String QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND = "errorOnGroupNotFound";
     public static final String QUERY_PARAM_REPORT_DEFAULT_NAME = "defaultName";
     public static final String QUERY_PARAM_REPORT_SEVERITY_LEVEL = "severityLevels";
@@ -69,6 +70,7 @@ public final class StudyConstants {
     public static final String HEADER_IMPORT_PARAMETERS = "importParameters";
     public static final String HEADER_MESSAGE = "message";
     public static final String HEADER_USER_ID = "userId";
+    public static final String HEADER_ERROR_MESSAGE = "x-exception-message";
     public static final String QUERY_PARAM_ONLY_STASHED = "onlyStashed";
     public static final String QUERY_PARAM_STASHED = "stashed";
     public static final String QUERY_PARAM_ACTIVATED = "activated";

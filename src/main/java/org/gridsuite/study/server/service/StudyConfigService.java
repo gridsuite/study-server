@@ -64,7 +64,7 @@ public class StudyConfigService {
 
     public UUID duplicateNetworkVisualizationParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
-        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_URI + "/duplicate")
+        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_URI)
                 .queryParam("duplicateFrom", sourceParametersUuid)
                 .buildAndExpand().toUriString();
         HttpHeaders headers = new HttpHeaders();

@@ -108,7 +108,7 @@ class StudyServiceDynamicSimulationTest {
         willDoNothing().given(rootNetworkNodeInfoService).updateComputationResultUuid(NODE_UUID, ROOTNETWORK_UUID, RESULT_UUID, DYNAMIC_SIMULATION);
 
         // setup NotificationService mock
-        willDoNothing().given(notificationService).emitStudyChanged(STUDY_UUID, NODE_UUID, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        willDoNothing().given(notificationService).emitStudyChanged(STUDY_UUID, NODE_UUID, ROOTNETWORK_UUID, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 
     @Test

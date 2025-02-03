@@ -179,7 +179,7 @@ class SensitivityAnalysisTest {
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
     private static final String SENSITIVITY_ANALYSIS_RESULT_DESTINATION = "sensitivityanalysis.result";
     private static final String SENSITIVITY_ANALYSIS_STOPPED_DESTINATION = "sensitivityanalysis.stopped";
-    private static final String SENSITIVITY_ANALYSIS_FAILED_DESTINATION = "sensitivityanalysis.failed";
+    private static final String SENSITIVITY_ANALYSIS_FAILED_DESTINATION = "sensitivityanalysis.run.dlx";
 
     private static final byte[] SENSITIVITY_RESULTS_AS_CSV = {0x00, 0x01};
 
@@ -187,6 +187,8 @@ class SensitivityAnalysisTest {
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
     private StudyService studyService;
+    @Autowired
+    private TestUtils studyTestUtils;
 
     @BeforeEach
     void setup(final MockWebServer server) {
@@ -310,12 +312,12 @@ class SensitivityAnalysisTest {
         server.setDispatcher(dispatcher);
     }
 
-    private void testSensitivityAnalysisWithNodeUuid(final MockWebServer server, UUID studyUuid, UUID nodeUuid, UUID resultUuid) throws Exception {
+    private void testSensitivityAnalysisWithRootNetworkUuidAndNodeUuid(final MockWebServer server, UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, UUID resultUuid) throws Exception {
         // sensitivity analysis not found
         mockMvc.perform(get("/v1/sensitivity-analysis/results/{resultUuid}", NOT_FOUND_SENSITIVITY_ANALYSIS_UUID)).andExpect(status().isNotFound());
 
         // run sensitivity analysis
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, nodeUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, rootNetworkUuid, nodeUuid)
             .header("userId", "userId")
             .header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
 
@@ -337,18 +339,18 @@ class SensitivityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*?receiver=.*nodeUuid.*")));
 
         // get sensitivity analysis result
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, nodeUuid, "fakeJsonSelector"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, rootNetworkUuid, nodeUuid, "fakeJsonSelector"))
             .andExpectAll(status().isOk(), content().string(FAKE_RESULT_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/results/" + resultUuid)));
 
         // get sensitivity analysis result filter options
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, nodeUuid, "fakeJsonSelector"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, rootNetworkUuid, nodeUuid, "fakeJsonSelector"))
                 .andExpectAll(status().isOk(), content().string(FAKE_RESULT_JSON));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/results/" + resultUuid + "/filter-options")));
 
         // get sensitivity analysis status
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/status", studyUuid, nodeUuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/status", studyUuid, rootNetworkUuid, nodeUuid)).andExpectAll(
             status().isOk(),
             content().string(SENSITIVITY_ANALYSIS_STATUS_JSON));
 
@@ -361,13 +363,13 @@ class SensitivityAnalysisTest {
                 .csvHeaders(List.of("h1", "h2", "h3"))
                 .build());
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", studyUuid, UUID.randomUUID())
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", studyUuid, rootNetworkUuid, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("userId", "userId")
                         .content(content))
                 .andExpectAll(status().isNotFound(), content().string("\"SENSITIVITY_ANALYSIS_NOT_FOUND\""));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", studyUuid, nodeUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", studyUuid, rootNetworkUuid, nodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("userId", "userId")
                         .content(content))
@@ -375,7 +377,7 @@ class SensitivityAnalysisTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/results/" + resultUuid + "/csv")));
         // stop sensitivity analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/stop", studyUuid, nodeUuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/stop", studyUuid, rootNetworkUuid, nodeUuid)
                 .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
@@ -392,6 +394,7 @@ class SensitivityAnalysisTest {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
@@ -401,23 +404,23 @@ class SensitivityAnalysisTest {
         UUID modificationNode3Uuid = modificationNode3.getId();
 
         // run sensitivity analysis on root node (not allowed)
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyNameUserIdUuid, rootNodeUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
             .header(HEADER_USER_ID, "testUserId"))
             .andExpect(status().isForbidden());
 
-        testSensitivityAnalysisWithNodeUuid(server, studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
-        testSensitivityAnalysisWithNodeUuid(server, studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
+        testSensitivityAnalysisWithRootNetworkUuidAndNodeUuid(server, studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
+        testSensitivityAnalysisWithRootNetworkUuidAndNodeUuid(server, studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
-                studyNameUserIdUuid, UUID.randomUUID(), "fakeJsonSelector"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
+                studyNameUserIdUuid, firstRootNetworkUuid, UUID.randomUUID(), "fakeJsonSelector"))
             .andExpectAll(status().isNoContent());
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}",
-                        studyNameUserIdUuid, UUID.randomUUID(), "fakeJsonSelector"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}",
+                        studyNameUserIdUuid, firstRootNetworkUuid, UUID.randomUUID(), "fakeJsonSelector"))
                 .andExpectAll(status().isNoContent());
 
         // run additional sensitivity analysis for deletion test
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyNameUserIdUuid, modificationNode2Uuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode2Uuid)
                 .header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk())
             .andReturn();
 
@@ -462,33 +465,33 @@ class SensitivityAnalysisTest {
 
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID))
             .willReturn(WireMock.notFound().withBody("Oups did I ever let think suc a thing existed ?")));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
-                studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
+                studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, "fakeJsonSelector"))
             .andExpectAll(status().isNoContent());
 
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID))
             .willReturn(WireMock.serverError().withBody("{ \"message\": \"Oups\" }")));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
-                studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
+                studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, "fakeJsonSelector"))
             .andExpectAll(status().isNoContent());
 
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID))
             .willReturn(WireMock.serverError().withBody("flat message")));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
-                studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
+                studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, "fakeJsonSelector"))
             .andExpectAll(status().isNoContent());
     }
 
     @Test
     void testGetSensitivityResultWithWrongId() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
-        UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         UUID notFoundSensitivityUuid = UUID.randomUUID();
         UUID studyUuid = studyEntity.getId();
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, firstRootNetworkUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
                 .andExpect(status().isNoContent()).andReturn();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, firstRootNetworkUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
                 .andExpect(status().isNoContent()).andReturn();
 
         String baseUrlWireMock = wireMock.baseUrl();
@@ -497,9 +500,9 @@ class SensitivityAnalysisTest {
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNodeUuid = modificationNode1.getId();
-        rootNetworkNodeInfoService.updateComputationResultUuid(modificationNodeUuid, rootNetworkUuid, notFoundSensitivityUuid, SENSITIVITY_ANALYSIS);
-        assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
-        assertEquals(notFoundSensitivityUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
+        rootNetworkNodeInfoService.updateComputationResultUuid(modificationNodeUuid, firstRootNetworkUuid, notFoundSensitivityUuid, SENSITIVITY_ANALYSIS);
+        assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNodeUuid, firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
+        assertEquals(notFoundSensitivityUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNodeUuid, firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
 
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid))
                 .willReturn(WireMock.notFound()));
@@ -507,10 +510,10 @@ class SensitivityAnalysisTest {
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid + "/filter-options" + ".*"))
                 .willReturn(WireMock.notFound()));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, firstRootNetworkUuid, modificationNodeUuid, FAKE_RESULT_JSON))
                 .andExpect(status().isNotFound()).andReturn();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, modificationNodeUuid, FAKE_RESULT_JSON))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, firstRootNetworkUuid, modificationNodeUuid, FAKE_RESULT_JSON))
                 .andExpect(status().isNotFound()).andReturn();
     }
 
@@ -518,25 +521,25 @@ class SensitivityAnalysisTest {
     void testResetUuidResultWhenSAFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
-        UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
-        RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyEntity.getId());
+        RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId(), null);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
-        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), rootNetworkUuid));
+        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), firstRootNetworkUuid));
 
         // Set an uuid result in the database
-        rootNetworkNodeInfoService.updateComputationResultUuid(modificationNode.getId(), rootNetworkUuid, resultUuid, SENSITIVITY_ANALYSIS);
-        assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SENSITIVITY_ANALYSIS));
-        assertEquals(resultUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SENSITIVITY_ANALYSIS));
+        rootNetworkNodeInfoService.updateComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, resultUuid, SENSITIVITY_ANALYSIS);
+        assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
+        assertEquals(resultUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
 
         StudyService studyService = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), SENSITIVITY_ANALYSIS_FAILED_DESTINATION);
             return resultUuid;
         }).when(studyService).runSensitivityAnalysis(any(), any(), any(), any());
-        studyService.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "testUserId");
+        studyService.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId(), firstRootNetworkUuid, "testUserId");
 
         // Test reset uuid result in the database
-        assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SENSITIVITY_ANALYSIS));
+        assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
 
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -549,12 +552,13 @@ class SensitivityAnalysisTest {
     void testSensitivityAnalysisFailedForNotification(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_2_STRING), CASE_2_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         //run failing sensitivity analysis (because in network 2)
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, modificationNode1Uuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
             .header(HEADER_USER_ID, "testUserId"))
             .andExpect(status().isOk());
 
@@ -577,11 +581,12 @@ class SensitivityAnalysisTest {
          */
         studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_3_STRING), CASE_3_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyUuid2 = studyEntity.getId();
+        UUID firstRootNetworkUuid2 = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid2);
         UUID rootNodeUuid2 = getRootNodeUuid(studyUuid2);
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyUuid2, rootNodeUuid2, UUID.randomUUID(), VARIANT_ID, "node 2");
         UUID modificationNode1Uuid2 = modificationNode2.getId();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid2, modificationNode1Uuid2)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid2, firstRootNetworkUuid2, modificationNode1Uuid2)
             .header(HEADER_USER_ID, "testUserId"))
             .andExpect(status().isOk());
 
@@ -625,7 +630,7 @@ class SensitivityAnalysisTest {
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).build());
 
         return modificationNode;
@@ -710,8 +715,9 @@ class SensitivityAnalysisTest {
     void testGetSensitivityAnalysisFactorsCount(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        MockHttpServletRequestBuilder requestBuilder = get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/factors-count", studyNameUserIdUuid, rootNodeUuid);
+        MockHttpServletRequestBuilder requestBuilder = get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/factors-count", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid);
         IDS.getIds().forEach((key, list) -> requestBuilder.queryParam(String.format("ids[%s]", key), list.stream().map(UUID::toString).toArray(String[]::new)));
 
         String resultAsString = mockMvc.perform(requestBuilder.header("userId", "userId"))

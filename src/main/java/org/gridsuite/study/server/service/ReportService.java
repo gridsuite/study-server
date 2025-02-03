@@ -6,6 +6,10 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.commons.PowsyblException;
+import com.powsybl.commons.report.ReportNode;
 import lombok.NonNull;
 import org.apache.poi.util.StringUtil;
 import org.gridsuite.study.server.RemoteServicesProperties;
@@ -27,7 +31,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_MESSAGE_FILTER;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_DEFAULT_NAME;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_SEVERITY_LEVEL;
+import static org.gridsuite.study.server.StudyConstants.REPORT_API_VERSION;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -41,13 +48,16 @@ public class ReportService {
 
     private final RestTemplate restTemplate;
 
+    private final ObjectMapper objectMapper;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(ReportService.class);
 
     @Autowired
     public ReportService(RemoteServicesProperties remoteServicesProperties,
-                         RestTemplate restTemplate) {
+                         RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.reportServerBaseUri = remoteServicesProperties.getServiceUri("report-server");
         this.restTemplate = restTemplate;
+        this.objectMapper = objectMapper;
     }
 
     public void setReportServerBaseUri(String reportServerBaseUri) {
@@ -109,6 +119,27 @@ public class ReportService {
         } catch (Exception e) {
             LOGGER.error("Error while duplicating report : {}", e.getMessage());
             return UUID.randomUUID();
+        }
+    }
+
+    public Set<String> getReportAggregatedSeverities(@NonNull UUID id) {
+        var path = UriComponentsBuilder.fromPath("{id}/aggregated-severities").buildAndExpand(id).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<Set<String>>() {
+        }).getBody();
+    }
+
+    public void sendReport(UUID reportUuid, ReportNode reportNode) {
+        var path = UriComponentsBuilder.fromPath("{reportUuid}")
+            .buildAndExpand(reportUuid)
+            .toUriString();
+        var headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        try {
+            restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.PUT, new HttpEntity<>(objectMapper.writeValueAsString(reportNode), headers), ReportNode.class);
+        } catch (JsonProcessingException error) {
+            throw new PowsyblException("error creating report", error);
         }
     }
 }

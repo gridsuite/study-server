@@ -76,7 +76,7 @@ class StateEstimationTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StateEstimationTest.class);
 
-    private static final String STATE_ESTIMATION_URL_BASE = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/state-estimation/";
+    private static final String STATE_ESTIMATION_URL_BASE = "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/";
 
     private static final String CASE_LOADFLOW_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
 
@@ -100,7 +100,7 @@ class StateEstimationTest {
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
     private static final String ESTIM_RESULT_JSON_DESTINATION = "stateestimation.result";
     private static final String ESTIM_STOPPED_DESTINATION = "stateestimation.stopped";
-    private static final String ESTIM_FAILED_DESTINATION = "stateestimation.failed";
+    private static final String ESTIM_FAILED_DESTINATION = "stateestimation.run.dlx";
 
     @Autowired
     private MockMvc mockMvc;
@@ -129,10 +129,13 @@ class StateEstimationTest {
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
     private StudyService studyService;
+    @Autowired
+    private TestUtils studyTestUtils;
 
     @AllArgsConstructor
     private static class StudyNodeIds {
         UUID studyId;
+        UUID rootNetworkUuid;
         UUID nodeId;
     }
 
@@ -219,9 +222,10 @@ class StateEstimationTest {
         networkModificationTreeService.createRoot(studyEntity);
         // with a node
         UUID studyUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         NetworkModificationNode node = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), variantId, nodeName);
-        return new StudyNodeIds(studyUuid, node.getId());
+        return new StudyNodeIds(studyUuid, firstRootNetworkUuid, node.getId());
     }
 
     private RootNode getRootNode(UUID study) throws Exception {
@@ -233,7 +237,7 @@ class StateEstimationTest {
     }
 
     private void runEstim(final MockWebServer server, StudyNodeIds ids) throws Exception {
-        mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.nodeId)
+        mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
@@ -263,7 +267,7 @@ class StateEstimationTest {
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyService.getStudyFirstRootNetworkUuid(studyUuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).build());
 
         return modificationNode;
@@ -288,13 +292,13 @@ class StateEstimationTest {
         runEstim(server, ids);
 
         // get estim result
-        MvcResult mvcResult = mockMvc.perform(get(STATE_ESTIMATION_URL_BASE + "result", ids.studyId, ids.nodeId)).andExpectAll(
+        MvcResult mvcResult = mockMvc.perform(get(STATE_ESTIMATION_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId)).andExpectAll(
                 status().isOk()).andReturn();
         assertEquals(TestUtils.resourceToString("/estim-result.json"), mvcResult.getResponse().getContentAsString());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID)));
 
         // get estim status
-        mockMvc.perform(get(STATE_ESTIMATION_URL_BASE + "status", ids.studyId, ids.nodeId)).andExpectAll(
+        mockMvc.perform(get(STATE_ESTIMATION_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId)).andExpectAll(
                 status().isOk(),
                 content().string(ESTIM_STATUS_JSON));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/status")));
@@ -333,7 +337,7 @@ class StateEstimationTest {
         runEstim(server, ids);
 
         // stop running estim
-        mockMvc.perform(put(STATE_ESTIMATION_URL_BASE + "stop", ids.studyId, ids.nodeId)).andExpect(status().isOk());
+        mockMvc.perform(put(STATE_ESTIMATION_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId)).andExpect(status().isOk());
         checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_RESULT);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
     }
@@ -342,7 +346,7 @@ class StateEstimationTest {
     void testFailure(final MockWebServer server) throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2");
 
-        mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.nodeId)
+        mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
         checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_FAILED);

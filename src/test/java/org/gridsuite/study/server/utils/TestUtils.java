@@ -18,9 +18,11 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.junit.platform.commons.util.StringUtils;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -35,12 +37,19 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
+@Service
 public final class TestUtils {
 
     private static final long TIMEOUT = 100;
 
-    private TestUtils() {
-        throw new IllegalStateException("Utility class");
+    private final RootNetworkRepository rootNetworkRepository;
+
+    public TestUtils(RootNetworkRepository rootNetworkRepository) {
+        this.rootNetworkRepository = rootNetworkRepository;
+    }
+
+    public UUID getStudyFirstRootNetworkUuid(UUID studyUuid) {
+        return rootNetworkRepository.findAllByStudyId(studyUuid).get(0).getId();
     }
 
     public static Set<RequestWithBody> getRequestsWithBodyDone(int n, MockWebServer server) {
@@ -97,7 +106,7 @@ public final class TestUtils {
             .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
             .voltageInitParameters(new StudyVoltageInitParametersEntity(applyModifications))
             .build();
-        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(importReportUuid).build();
+        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(importReportUuid).build();
         studyEntity.addRootNetwork(rootNetworkEntity);
 
         return studyEntity;
@@ -107,7 +116,7 @@ public final class TestUtils {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
                 .networkVisualizationParametersUuid(networkVisuParametersUuid)
                 .build();
-        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build();
+        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build();
         studyEntity.addRootNetwork(rootNetworkEntity);
         return studyEntity;
     }
@@ -125,7 +134,7 @@ public final class TestUtils {
                 .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
                 .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
                 .build();
-        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build();
+        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build();
         studyEntity.addRootNetwork(rootNetworkEntity);
         return studyEntity;
     }
@@ -134,7 +143,7 @@ public final class TestUtils {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
             .shortCircuitParametersUuid(UUID.randomUUID())
             .build();
-        studyEntity.addRootNetwork(RootNetworkEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId("netId").networkUuid(networkUuid).reportUuid(reportUuid).build());
+        studyEntity.addRootNetwork(RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId("netId").networkUuid(networkUuid).reportUuid(reportUuid).build());
 
         return studyEntity;
     }
