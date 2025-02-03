@@ -145,7 +145,6 @@ class StudyTest {
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final String USER_ID_HEADER = "userId";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
-    private static final UUID CLONED_NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
     private static final UUID NOT_EXISTING_NETWORK_UUID = UUID.randomUUID();
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final UUID NOT_EXISTING_NETWORK_CASE_UUID = UUID.fromString(NOT_EXISTING_NETWORK_CASE_UUID_STRING);
@@ -359,16 +358,14 @@ class StudyTest {
         when(equipmentInfosService.getTombstonedEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("8"));
         when(equipmentInfosService.getTombstonedEquipmentInfosCount(NETWORK_UUID)).then((Answer<Long>) invocation -> Long.parseLong("4"));
 
-        when(networkStoreService.getVariantsInfos(UUID.fromString(CLONED_NETWORK_UUID_STRING)))
-                .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
+        when(networkStoreService.cloneNetwork(NETWORK_UUID, List.of(VariantManagerConstants.INITIAL_VARIANT_ID))).thenReturn(network);
+        when(networkStoreService.getNetworkUuid(network)).thenReturn(NETWORK_UUID);
+        when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
         when(networkStoreService.getVariantsInfos(UUID.fromString(NETWORK_UUID_STRING)))
                 .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0),
                         new VariantInfos(VARIANT_ID, 1)));
-        when(networkStoreService.cloneNetwork(NETWORK_UUID, List.of("InitialState"))).thenReturn(network);
-        when(networkStoreService.getNetworkUuid(network)).thenReturn(NETWORK_UUID);
-        when(networkStoreService.getNetworkUuid(network)).thenReturn(CLONED_NETWORK_UUID);
-
-        when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
+        when(networkStoreService.getVariantsInfos(UUID.fromString(CLONED_NETWORK_UUID_STRING)))
+                .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
 
         doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
     }
@@ -386,7 +383,6 @@ class StudyTest {
     void setup(final MockWebServer server) throws Exception {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
-
         network.getVariantManager().cloneVariant(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID);
         network.getVariantManager().setWorkingVariant(VariantManagerConstants.INITIAL_VARIANT_ID);
         initMockBeans(network);
@@ -1600,6 +1596,7 @@ class StudyTest {
         // duplicate the study
         StudyEntity duplicatedStudy = duplicateStudy(mockWebServer, study1Uuid);
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
+
         // Verify that the network was cloned with only one variant
         List<VariantInfos> networkVariants = networkService.getNetworkVariants(UUID.fromString(CLONED_NETWORK_UUID_STRING));
         assertEquals(1, networkVariants.size(), "Network should be cloned with only one variant");

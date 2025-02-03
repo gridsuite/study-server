@@ -156,6 +156,7 @@ public class RootNetworkService {
         List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllWithInfosByStudyId(sourceStudyUuid);
         rootNetworkEntities.forEach(rootNetworkEntityToDuplicate -> {
                 List<VariantInfos> networkVariants = networkService.getNetworkVariants(rootNetworkEntityToDuplicate.getNetworkUuid());
+                // Clone only the initial variant
                 List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(1).collect(Collectors.toList());
                 Network clonedNetwork = networkService.cloneNetwork(rootNetworkEntityToDuplicate.getNetworkUuid(), targetVariantIds);
                 UUID clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
