@@ -2072,7 +2072,7 @@ public class StudyService {
 
     }
 
-    public List<ModelInfos> getDynamicSimulationModels(UUID studyUuid, UUID nodeUuid) {
+    public List<ModelInfos> getDynamicSimulationModels(UUID studyUuid) {
         // load configured parameters persisted in the study server DB
         DynamicSimulationParametersInfos configuredParameters = getDynamicSimulationParameters(studyUuid);
         String mapping = configuredParameters.getMapping();
