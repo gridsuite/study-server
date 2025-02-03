@@ -1609,14 +1609,13 @@ public class StudyController {
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/models")
+    @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/models")
     @Operation(summary = "Get models of dynamic simulation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All models of dynamic simulation"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation models"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation models has not been found")})
-    public ResponseEntity<List<ModelInfos>> getDynamicSimulationModels(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid, nodeUuid);
+    public ResponseEntity<List<ModelInfos>> getDynamicSimulationModels(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid) {
+        List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid);
         return models != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(models) :
                 ResponseEntity.noContent().build();
     }
