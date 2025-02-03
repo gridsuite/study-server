@@ -2113,7 +2113,7 @@ public class StudyService {
 
     }
 
-    public List<ModelInfos> getDynamicSimulationModels(UUID studyUuid, UUID nodeUuid) {
+    public List<ModelInfos> getDynamicSimulationModels(UUID studyUuid) {
         // load configured parameters persisted in the study server DB
         DynamicSimulationParametersInfos configuredParameters = getDynamicSimulationParameters(studyUuid);
         String mapping = configuredParameters.getMapping();
@@ -2589,6 +2589,10 @@ public class StudyService {
     public String exportFilter(UUID rootNetworkUuid, UUID filterUuid) {
         // will use root node network of the study
         return filterService.exportFilter(rootNetworkService.getNetworkUuid(rootNetworkUuid), filterUuid);
+    }
+
+    public String exportFilters(UUID rootNetworkUuid, List<UUID> filtersUuid) {
+        return filterService.exportFilters(rootNetworkService.getNetworkUuid(rootNetworkUuid), filtersUuid);
     }
 
     @Transactional
