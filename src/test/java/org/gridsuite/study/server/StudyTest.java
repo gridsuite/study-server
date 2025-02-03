@@ -23,6 +23,7 @@ import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
+import com.powsybl.network.store.model.VariantInfos;
 import lombok.SneakyThrows;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
@@ -130,7 +131,8 @@ class StudyTest {
     private static final String TEST_FILE_UCTE = "testCase.ucte";
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String TEST_FILE_IMPORT_ERRORS = "testCase_import_errors.xiidm";
-    private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00e";
+    private static final String CLONED_NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String IMPORTED_CASE_UUID_STRING = "11111111-0000-0000-0000-000000000000";
     private static final String CLONED_CASE_UUID_STRING = "22222222-1111-0000-0000-000000000000";
@@ -143,6 +145,7 @@ class StudyTest {
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final String USER_ID_HEADER = "userId";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
+    private static final UUID CLONED_NETWORK_UUID = UUID.fromString(CLONED_NETWORK_UUID_STRING);
     private static final UUID NOT_EXISTING_NETWORK_UUID = UUID.randomUUID();
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final UUID NOT_EXISTING_NETWORK_CASE_UUID = UUID.fromString(NOT_EXISTING_NETWORK_CASE_UUID_STRING);
@@ -356,9 +359,14 @@ class StudyTest {
         when(equipmentInfosService.getTombstonedEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("8"));
         when(equipmentInfosService.getTombstonedEquipmentInfosCount(NETWORK_UUID)).then((Answer<Long>) invocation -> Long.parseLong("4"));
 
-        when(networkStoreService.cloneNetwork(NETWORK_UUID, Collections.emptyList())).thenReturn(network);
+        when(networkStoreService.cloneNetwork(NETWORK_UUID, List.of(VariantManagerConstants.INITIAL_VARIANT_ID))).thenReturn(network);
         when(networkStoreService.getNetworkUuid(network)).thenReturn(NETWORK_UUID);
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
+        when(networkStoreService.getVariantsInfos(NETWORK_UUID))
+                .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0),
+                        new VariantInfos(VARIANT_ID, 1)));
+        when(networkStoreService.getVariantsInfos(CLONED_NETWORK_UUID))
+                .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
 
         doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
     }
@@ -1595,6 +1603,10 @@ class StudyTest {
         // duplicate the study
         StudyEntity duplicatedStudy = duplicateStudy(mockWebServer, study1Uuid);
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
+
+        // Verify that the network was cloned with only one variant
+        List<VariantInfos> networkVariants = networkService.getNetworkVariants(CLONED_NETWORK_UUID);
+        assertEquals(1, networkVariants.size(), "Network should be cloned with only one variant");
 
         //Test duplication from a non-existing source study
         mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", UUID.randomUUID())
