@@ -362,7 +362,7 @@ class StudyTest {
         when(networkStoreService.cloneNetwork(NETWORK_UUID, List.of(VariantManagerConstants.INITIAL_VARIANT_ID))).thenReturn(network);
         when(networkStoreService.getNetworkUuid(network)).thenReturn(NETWORK_UUID);
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
-        when(networkStoreService.getVariantsInfos(CLONED_NETWORK_UUID))
+        when(networkStoreService.getVariantsInfos(NETWORK_UUID))
                 .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0),
                         new VariantInfos(VARIANT_ID, 1)));
         when(networkStoreService.getVariantsInfos(CLONED_NETWORK_UUID))
