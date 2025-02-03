@@ -50,7 +50,7 @@ public class EquipmentInfos extends BasicEquipmentInfos {
     String type;
 
     @Field(type = FieldType.Keyword)
-    Set<String> equipmentSubType;
+    Set<String> equipmentSubTypes;
 
     @Field(type = FieldType.Nested, includeInParent = true)
     Set<VoltageLevelInfos> voltageLevels;

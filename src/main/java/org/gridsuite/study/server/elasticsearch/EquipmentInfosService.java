@@ -79,7 +79,7 @@ public class EquipmentInfosService {
     static final String EQUIPMENT_NAME = "equipmentName.fullascii";
     static final String EQUIPMENT_ID = "equipmentId.fullascii";
     static final String EQUIPMENT_TYPE = "equipmentType.keyword";
-    static final String EQUIPMENT_SUB_TYPE = "equipmentSubType.keyword";
+    static final String EQUIPMENT_SUB_TYPES = "equipmentSubTypes.keyword";
 
     private final EquipmentInfosRepository equipmentInfosRepository;
 
@@ -323,7 +323,7 @@ public class EquipmentInfosService {
         if (!StringUtils.isEmpty(equipmentType)) {
             boolQueryBuilder.filter(Queries.termQuery(EQUIPMENT_TYPE, equipmentType)._toQuery());
             if (!StringUtils.isEmpty(equipmentSubType)) {
-                boolQueryBuilder.filter(Queries.termQuery(EQUIPMENT_SUB_TYPE, equipmentSubType)._toQuery());
+                boolQueryBuilder.filter(Queries.termQuery(EQUIPMENT_SUB_TYPES, equipmentSubType)._toQuery());
             }
         } else {
             List<FunctionScore> functionScores = buildFunctionScores(fieldSelector, userInput);
