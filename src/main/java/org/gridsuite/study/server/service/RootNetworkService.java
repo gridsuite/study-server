@@ -27,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -157,7 +156,7 @@ public class RootNetworkService {
         rootNetworkEntities.forEach(rootNetworkEntityToDuplicate -> {
                 List<VariantInfos> networkVariants = networkService.getNetworkVariants(rootNetworkEntityToDuplicate.getNetworkUuid());
                 // Clone only the initial variant
-                List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(1).collect(Collectors.toList());
+                List<String> targetVariantIds = networkVariants.stream().findFirst().map(VariantInfos::getId).stream().toList();
                 Network clonedNetwork = networkService.cloneNetwork(rootNetworkEntityToDuplicate.getNetworkUuid(), targetVariantIds);
                 UUID clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
 

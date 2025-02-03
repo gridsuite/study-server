@@ -145,6 +145,7 @@ class StudyTest {
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final String USER_ID_HEADER = "userId";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
+    private static final UUID CLONED_NETWORK_UUID = UUID.fromString(CLONED_NETWORK_UUID_STRING);
     private static final UUID NOT_EXISTING_NETWORK_UUID = UUID.randomUUID();
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final UUID NOT_EXISTING_NETWORK_CASE_UUID = UUID.fromString(NOT_EXISTING_NETWORK_CASE_UUID_STRING);
@@ -361,10 +362,10 @@ class StudyTest {
         when(networkStoreService.cloneNetwork(NETWORK_UUID, List.of(VariantManagerConstants.INITIAL_VARIANT_ID))).thenReturn(network);
         when(networkStoreService.getNetworkUuid(network)).thenReturn(NETWORK_UUID);
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
-        when(networkStoreService.getVariantsInfos(UUID.fromString(NETWORK_UUID_STRING)))
+        when(networkStoreService.getVariantsInfos(CLONED_NETWORK_UUID))
                 .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0),
                         new VariantInfos(VARIANT_ID, 1)));
-        when(networkStoreService.getVariantsInfos(UUID.fromString(CLONED_NETWORK_UUID_STRING)))
+        when(networkStoreService.getVariantsInfos(CLONED_NETWORK_UUID))
                 .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
 
         doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
@@ -1598,7 +1599,7 @@ class StudyTest {
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
 
         // Verify that the network was cloned with only one variant
-        List<VariantInfos> networkVariants = networkService.getNetworkVariants(UUID.fromString(CLONED_NETWORK_UUID_STRING));
+        List<VariantInfos> networkVariants = networkService.getNetworkVariants(CLONED_NETWORK_UUID);
         assertEquals(1, networkVariants.size(), "Network should be cloned with only one variant");
 
         //Test duplication from a non-existing source study
