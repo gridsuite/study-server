@@ -14,7 +14,6 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
-import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
@@ -119,25 +118,12 @@ public class RootNetworkService {
 
     @Transactional
     public RootNetworkEntity createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
-        RootNetworkEntity rootNetworkEntity = saveWithOrder(studyEntity.getId(), rootNetworkInfos.toEntity());
+        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
         studyEntity.addRootNetwork(rootNetworkEntity);
 
         rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity);
 
         return rootNetworkEntity;
-    }
-
-    private RootNetworkEntity saveWithOrder(UUID studyUuid, RootNetworkEntity rootNetworkEntity) {
-        int rootNetworkCount = rootNetworkRepository.countAllByStudyId(studyUuid);
-        rootNetworkEntity.setRootNetworkOrder(rootNetworkCount);
-        return rootNetworkRepository.save(rootNetworkEntity);
-    }
-
-    public void recalculateRootNetworkOrder(UUID studyUuid) {
-        List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid);
-        for (int i = 0; i < rootNetworkEntities.size(); i++) {
-            rootNetworkEntities.get(i).setRootNetworkOrder(i);
-        }
     }
 
     public List<UUID> getAllNetworkUuids() {
@@ -156,17 +142,13 @@ public class RootNetworkService {
         return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
     }
 
-    public List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
-        return rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid);
-    }
-
     public List<RootNetworkInfos> getStudyRootNetworkInfosWithRootNetworkNodeInfos(UUID studyUuid) {
-        return rootNetworkRepository.findAllWithInfosByStudyIdOrderByRootNetworkOrder(studyUuid).stream().map(RootNetworkEntity::toDto).toList();
+        return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream().map(RootNetworkEntity::toDto).toList();
     }
 
     @Transactional
     public void duplicateStudyRootNetworks(StudyEntity newStudyEntity, UUID sourceStudyUuid) {
-        List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllWithInfosByStudyIdOrderByRootNetworkOrder(sourceStudyUuid);
+        List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllWithInfosByStudyId(sourceStudyUuid);
         rootNetworkEntities.forEach(rootNetworkEntityToDuplicate -> {
                 List<VariantInfos> networkVariants = networkService.getNetworkVariants(rootNetworkEntityToDuplicate.getNetworkUuid());
                 List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(2).collect(Collectors.toList());
@@ -251,16 +233,12 @@ public class RootNetworkService {
         return rootNetworkCreationRequestRepository.findById(rootNetworkInCreationUuid);
     }
 
-    public void deleteCreationRequest(RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity) {
-        rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity);
+    public List<RootNetworkCreationRequestEntity> getCreationRequests(UUID studyUuid) {
+        return rootNetworkCreationRequestRepository.findAllByStudyUuid(studyUuid);
     }
 
-    public List<BasicRootNetworkInfos> getRootNetworks(UUID studyUuid) {
-        return Stream
-            .concat(
-                rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid).stream().map(RootNetworkEntity::toBasicDto),
-                rootNetworkCreationRequestRepository.findAllByStudyUuid(studyUuid).stream().map(RootNetworkCreationRequestEntity::toBasicDto))
-            .toList();
+    public void deleteCreationRequest(RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity) {
+        rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity);
     }
 
     public void assertCanCreateRootNetwork(UUID studyUuid, String rootNetworkName) {

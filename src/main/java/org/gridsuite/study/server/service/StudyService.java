@@ -285,7 +285,7 @@ public class StudyService {
     @Transactional
     public void deleteRootNetworks(UUID studyUuid, List<UUID> rootNetworkUuids, String userId) {
         assertIsStudyExist(studyUuid);
-        List<RootNetworkEntity> allRootNetworkEntities = rootNetworkService.getStudyRootNetworks(studyUuid);
+        List<RootNetworkEntity> allRootNetworkEntities = self.getStudyRootNetworks(studyUuid);
         if (rootNetworkUuids.size() >= allRootNetworkEntities.size()) {
             throw new StudyException(ROOT_NETWORK_DELETE_FORBIDDEN);
         }
@@ -295,7 +295,6 @@ public class StudyService {
         notificationService.emitRootNetworksDeletionStarted(studyUuid, rootNetworkUuids);
 
         rootNetworkService.deleteRootNetworks(rootNetworkUuids.stream());
-        rootNetworkService.recalculateRootNetworkOrder(studyUuid);
 
         notificationService.emitRootNetworksUpdated(studyUuid);
     }
@@ -403,7 +402,7 @@ public class StudyService {
 
             StudyEntity duplicatedStudy = duplicateStudy(basicStudyInfos, sourceStudyUuid, userId);
 
-            rootNetworkService.getStudyRootNetworks(duplicatedStudy.getId()).forEach(rootNetworkEntity ->
+            self.getStudyRootNetworks(duplicatedStudy.getId()).forEach(rootNetworkEntity ->
                 reindexStudy(duplicatedStudy, rootNetworkEntity.getId())
             );
         } catch (Exception e) {
@@ -446,7 +445,7 @@ public class StudyService {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         DeleteStudyInfos deleteStudyInfos = null;
         if (studyCreationRequestEntity.isEmpty()) {
-            List<RootNetworkInfos> rootNetworkInfos = rootNetworkService.getStudyRootNetworkInfosWithRootNetworkNodeInfos(studyUuid);
+            List<RootNetworkInfos> rootNetworkInfos = self.getStudyRootNetworksInfos(studyUuid);
             // get all modification groups related to the study
             List<UUID> modificationGroupUuids = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream().map(NetworkModificationNodeInfoEntity::getModificationGroupUuid).toList();
             studyEntity.ifPresent(s -> {
@@ -799,7 +798,7 @@ public class StudyService {
     }
 
     public void assertNoBuildNoComputationForNode(UUID studyUuid, UUID nodeUuid) {
-        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
+        self.getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
             rootNetworkNodeInfoService.assertComputationNotRunning(nodeUuid, rootNetwork.getId())
         );
         rootNetworkNodeInfoService.assertNoRootNetworkNodeIsBuilding(studyUuid);
@@ -1355,7 +1354,7 @@ public class StudyService {
         try {
             List<Optional<NetworkModificationResult>> networkModificationResults = null;
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            List<RootNetworkEntity> studyRootNetworkEntities = rootNetworkService.getStudyRootNetworks(studyUuid);
+            List<RootNetworkEntity> studyRootNetworkEntities = self.getStudyRootNetworks(studyUuid);
 
             List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
                 .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid()))
@@ -1484,7 +1483,7 @@ public class StudyService {
             updateStatuses(studyUuid, nodeToMoveUuid, false, true, true);
             oldChildren.forEach(child -> updateStatuses(studyUuid, child.getIdNode(), false, true, true));
         } else {
-            rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
+            self.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
                 invalidateBuild(studyUuid, nodeToMoveUuid, rootNetworkEntity.getId(), false, true, true)
             );
         }
@@ -1514,7 +1513,7 @@ public class StudyService {
         }
         networkModificationTreeService.moveStudySubtree(parentNodeToMoveUuid, referenceNodeUuid);
 
-        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
+        self.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
             UUID rootNetworkUuid = rootNetworkEntity.getId();
             if (networkModificationTreeService.getNodeBuildStatus(parentNodeToMoveUuid, rootNetworkUuid).isBuilt()) {
                 updateStatuses(studyUuid, parentNodeToMoveUuid, false, true, true);
@@ -1578,7 +1577,7 @@ public class StudyService {
     }
 
     private void updateStatuses(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateBuild, boolean deleteVoltageInitResults) {
-        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
+        self.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
             UUID rootNetworkUuid = rootNetworkEntity.getId();
             if (invalidateBuild) {
                 invalidateBuild(studyUuid, nodeUuid, rootNetworkUuid, invalidateOnlyChildrenBuildStatus, false, deleteVoltageInitResults);
@@ -1712,7 +1711,7 @@ public class StudyService {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         boolean invalidateChildrenBuild = stashChildren || networkModificationTreeService.hasModifications(nodeId, false);
-        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
+        self.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
             invalidateBuild(studyUuid, nodeId, rootNetworkEntity.getId(), false, !invalidateChildrenBuild, true)
         );
         networkModificationTreeService.doStashNode(nodeId, stashChildren);
@@ -1791,7 +1790,7 @@ public class StudyService {
             checkStudyContainsNode(studyUuid, targetNodeUuid);
             UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
             NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(targetNodeUuid);
-            rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
+            self.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
                 UUID rootNetworkUuid = rootNetworkEntity.getId();
                 RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(targetNodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
                 UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
@@ -1822,7 +1821,7 @@ public class StudyService {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
-            List<RootNetworkEntity> studyRootNetworkEntities = rootNetworkService.getStudyRootNetworks(studyUuid);
+            List<RootNetworkEntity> studyRootNetworkEntities = self.getStudyRootNetworks(studyUuid);
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
 
             List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
@@ -2227,7 +2226,7 @@ public class StudyService {
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
 
-            List<RootNetworkEntity> studyRootNetworkEntities = rootNetworkService.getStudyRootNetworks(studyUuid);
+            List<RootNetworkEntity> studyRootNetworkEntities = self.getStudyRootNetworks(studyUuid);
             List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
                 .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid()))
                 .toList();
@@ -2486,6 +2485,30 @@ public class StudyService {
             notificationService.emitElementUpdated(study.getId(), userId);
         }
         return newNode;
+    }
+
+    @Transactional
+    public List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        studyEntity.getRootNetworks().size();
+        return studyEntity.getRootNetworks();
+    }
+
+    private List<RootNetworkInfos> getStudyRootNetworksInfos(UUID studyUuid) {
+        List<RootNetworkEntity> rootNetworkEntities = self.getStudyRootNetworks(studyUuid);
+        // using the Hibernate First-Level Cache or Persistence Context
+        // cf.https://vladmihalcea.com/spring-data-jpa-multiplebagfetchexception/
+        rootNetworkService.getStudyRootNetworkInfosWithRootNetworkNodeInfos(studyUuid);
+        return rootNetworkEntities.stream().map(RootNetworkEntity::toDto).toList();
+    }
+
+    @Transactional
+    public List<BasicRootNetworkInfos> getBasicRootNetworkInfos(UUID studyUuid) {
+        return Stream
+            .concat(
+                self.getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::toBasicDto),
+                rootNetworkService.getCreationRequests(studyUuid).stream().map(RootNetworkCreationRequestEntity::toBasicDto))
+            .toList();
     }
 
     //TODO: temporary method, once frontend had been implemented, each operation will need to target a specific rootNetwork UUID, here we manually target the first one

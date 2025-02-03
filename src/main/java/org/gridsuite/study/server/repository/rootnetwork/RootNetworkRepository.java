@@ -19,10 +19,8 @@ import java.util.UUID;
  */
 @Repository
 public interface RootNetworkRepository extends JpaRepository<RootNetworkEntity, UUID> {
-    List<RootNetworkEntity> findAllByStudyIdOrderByRootNetworkOrder(UUID studyUuid);
-
     @EntityGraph(attributePaths = {"rootNetworkNodeInfos"}, type = EntityGraph.EntityGraphType.LOAD)
-    List<RootNetworkEntity> findAllWithInfosByStudyIdOrderByRootNetworkOrder(UUID studyUuid);
+    List<RootNetworkEntity> findAllWithInfosByStudyId(UUID studyUuid);
 
     @EntityGraph(attributePaths = {"importParameters"}, type = EntityGraph.EntityGraphType.LOAD)
     Optional<RootNetworkEntity> findWithImportParametersById(UUID rootNetworkUuid);

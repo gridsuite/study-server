@@ -925,7 +925,7 @@ class StudyTest {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
         assertNotNull(studyEntity);
         UUID nonExistingCaseUuid = UUID.randomUUID();
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkEntity rootNetworkEntity = studyService.getStudyRootNetworks(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         rootNetworkEntity.setCaseUuid(nonExistingCaseUuid);
         rootNetworkRepository.save(rootNetworkEntity);
 
@@ -1750,7 +1750,7 @@ class StudyTest {
         }
         requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
 
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(duplicatedStudy.getId()).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkEntity rootNetworkEntity = studyService.getStudyRootNetworks(duplicatedStudy.getId()).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + rootNetworkEntity.getNetworkUuid() + "/reindex-all")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
@@ -1972,7 +1972,7 @@ class StudyTest {
     void testCutAndPasteNodeWithoutModification(final MockWebServer server) throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(server, userId, CASE_UUID);
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
@@ -1994,7 +1994,7 @@ class StudyTest {
     void testCutAndPasteNodeWithModification(final MockWebServer server) throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(server, userId, CASE_UUID);
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
@@ -2049,7 +2049,7 @@ class StudyTest {
     void testCutAndPasteSubtree(final MockWebServer server) throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(server, userId, CASE_UUID);
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);

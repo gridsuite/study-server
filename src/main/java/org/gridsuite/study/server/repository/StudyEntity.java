@@ -8,7 +8,6 @@ package org.gridsuite.study.server.repository;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -36,7 +35,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private UUID id;
 
     @OneToMany(mappedBy = "study", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<RootNetworkEntity> rootNetworks;
+    @OrderColumn(name = "index")
+    @Builder.Default
+    private List<RootNetworkEntity> rootNetworks = new ArrayList<>();
 
     /**
      * @deprecated to remove when the data is migrated into the loadflow-server
@@ -119,15 +120,10 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     //TODO temporary, for now we are only working with one rootNetwork
     @Transient
     public RootNetworkEntity getFirstRootNetwork() {
-        return rootNetworks.stream()
-            .filter(rootNetworkEntity -> rootNetworkEntity.getRootNetworkOrder() == 0)
-            .findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        return rootNetworks.get(0);
     }
 
     public void addRootNetwork(RootNetworkEntity rootNetworkEntity) {
-        if (rootNetworks == null) {
-            rootNetworks = new ArrayList<>();
-        }
         rootNetworkEntity.setStudy(this);
         rootNetworks.add(rootNetworkEntity);
     }

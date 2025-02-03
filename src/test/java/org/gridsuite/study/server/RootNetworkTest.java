@@ -133,6 +133,10 @@ class RootNetworkTest {
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
+    @Autowired
+    private RootNetworkRepository rootNetworkRepository;
+    @Autowired
+    private TestUtils testUtils;
 
     @SpyBean
     private StudyService studyService;
@@ -161,8 +165,6 @@ class RootNetworkTest {
     private StateEstimationService stateEstimationService;
     @MockBean
     private VoltageInitService voltageInitService;
-    @Autowired
-    private RootNetworkRepository rootNetworkRepository;
 
     @BeforeEach
     void setUp() {
@@ -392,7 +394,7 @@ class RootNetworkTest {
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
         NetworkModificationNode secondNode = networkModificationTreeService.createNode(studyEntity, firstNode.getId(), createModificationNodeInfo(NODE_2_NAME), InsertMode.AFTER, null);
-        UUID firstRootNetworkUuid = rootNetworkService.getStudyRootNetworks(studyEntity.getId()).get(0).getId();
+        UUID firstRootNetworkUuid = testUtils.getStudyFirstRootNetworkUuid(studyEntity.getId());
 
         // create a second root network - will create a root network link between this and each node
         RootNetworkEntity rootNetworkEntityToDelete = rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
@@ -425,7 +427,7 @@ class RootNetworkTest {
             .build());
 
         // before deletion, check we have 2 root networks for study
-        assertEquals(2, rootNetworkService.getStudyRootNetworks(studyEntity.getId()).size());
+        assertEquals(2, studyService.getStudyRootNetworks(studyEntity.getId()).size());
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
                 .contentType(APPLICATION_JSON)
@@ -434,7 +436,7 @@ class RootNetworkTest {
             .andExpect(status().isOk());
 
         // after deletion, check we have only 1 root network for study
-        List<RootNetworkEntity> rootNetworkEntityListAfterDeletion = rootNetworkService.getStudyRootNetworks(studyEntity.getId());
+        List<RootNetworkEntity> rootNetworkEntityListAfterDeletion = studyService.getStudyRootNetworks(studyEntity.getId());
         assertEquals(1, rootNetworkEntityListAfterDeletion.size());
         assertEquals(firstRootNetworkUuid, rootNetworkEntityListAfterDeletion.get(0).getId());
 
@@ -463,7 +465,7 @@ class RootNetworkTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
-        UUID firstRootNetworkUuid = rootNetworkService.getStudyRootNetworks(studyEntity.getId()).get(0).getId();
+        UUID firstRootNetworkUuid = studyService.getStudyRootNetworks(studyEntity.getId()).get(0).getId();
 
         // create a second root network - will create a root network link between this and each node
         RootNetworkEntity secondRootNetwork = rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
@@ -482,7 +484,7 @@ class RootNetworkTest {
                 .header("userId", USER_ID))
             .andExpect(status().isForbidden());
 
-        assertEquals(2, rootNetworkService.getStudyRootNetworks(studyEntity.getId()).size());
+        assertEquals(2, studyService.getStudyRootNetworks(studyEntity.getId()).size());
 
         // try to delete unknown root network
         mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
@@ -491,7 +493,7 @@ class RootNetworkTest {
                 .header("userId", USER_ID))
             .andExpect(status().isNotFound());
 
-        assertEquals(2, rootNetworkService.getStudyRootNetworks(studyEntity.getId()).size());
+        assertEquals(2, studyService.getStudyRootNetworks(studyEntity.getId()).size());
     }
 
     @Test
@@ -650,37 +652,29 @@ class RootNetworkTest {
         createDummyRootNetwork(studyEntity, "dummyRootNetwork2");
 
         // after creating 3 root networks, check rootNetworkOrder to assert they are correctly incremented
-        List<RootNetworkEntity> result = rootNetworkService.getStudyRootNetworks(studyEntity.getId());
+        List<RootNetworkEntity> result = studyService.getStudyRootNetworks(studyEntity.getId());
         assertEquals(3, result.size());
         // check rootNetworkOrdered is ordered by creation ordered
-        assertEquals(0, result.get(0).getRootNetworkOrder());
         assertEquals("rootNetworkName", result.get(0).getName());
-        assertEquals(1, result.get(1).getRootNetworkOrder());
         assertEquals("dummyRootNetwork1", result.get(1).getName());
-        assertEquals(2, result.get(2).getRootNetworkOrder());
         assertEquals("dummyRootNetwork2", result.get(2).getName());
 
         // delete the 2nd root network
         studyService.deleteRootNetworks(studyEntity.getId(), List.of(result.get(1).getId()), null);
 
         // check "dummyRootNetwork2" root network order have been updated correctly
-        List<RootNetworkEntity> resultAfterDeletion = rootNetworkService.getStudyRootNetworks(studyEntity.getId());
+        List<RootNetworkEntity> resultAfterDeletion = studyService.getStudyRootNetworks(studyEntity.getId());
         assertEquals(2, resultAfterDeletion.size());
-        assertEquals(0, resultAfterDeletion.get(0).getRootNetworkOrder());
         assertEquals("rootNetworkName", resultAfterDeletion.get(0).getName());
-        assertEquals(1, resultAfterDeletion.get(1).getRootNetworkOrder());
         assertEquals("dummyRootNetwork2", resultAfterDeletion.get(1).getName());
 
         createDummyRootNetwork(studyEntity, "dummyRootNetwork3");
 
         // check "dummyRootNetwork3" root network order have been created correctly
-        List<RootNetworkEntity> resultAfterCreation = rootNetworkService.getStudyRootNetworks(studyEntity.getId());
+        List<RootNetworkEntity> resultAfterCreation = studyService.getStudyRootNetworks(studyEntity.getId());
         assertEquals(3, resultAfterCreation.size());
-        assertEquals(0, resultAfterCreation.get(0).getRootNetworkOrder());
         assertEquals("rootNetworkName", resultAfterCreation.get(0).getName());
-        assertEquals(1, resultAfterCreation.get(1).getRootNetworkOrder());
         assertEquals("dummyRootNetwork2", resultAfterCreation.get(1).getName());
-        assertEquals(2, resultAfterCreation.get(2).getRootNetworkOrder());
         assertEquals("dummyRootNetwork3", resultAfterCreation.get(2).getName());
     }
 

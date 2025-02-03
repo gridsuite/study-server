@@ -7,7 +7,7 @@
 package org.gridsuite.study.server.repository;
 
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
+import org.gridsuite.study.server.service.StudyService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +35,7 @@ class RepositoriesTest {
     private StudyCreationRequestRepository studyCreationRequestRepository;
 
     @Autowired
-    private RootNetworkRepository rootNetworkRepository;
+    private StudyService studyService;
 
     @AfterEach
     void tearDown() {
@@ -141,7 +141,7 @@ class RepositoriesTest {
 
         StudyEntity newStudy = studyRepository.save(studyEntityToSave);
 
-        RootNetworkEntity newRootNetworkEntity = rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(newStudy.getId()).get(0);
+        RootNetworkEntity newRootNetworkEntity = studyService.getStudyRootNetworks(newStudy.getId()).get(0);
         Map<String, String> savedImportParameters = newRootNetworkEntity.getImportParameters();
         assertEquals(2, savedImportParameters.size());
         assertEquals("changedValue1, changedValue2", savedImportParameters.get("param1"), "param1");

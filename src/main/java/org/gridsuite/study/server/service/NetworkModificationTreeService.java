@@ -128,7 +128,7 @@ public class NetworkModificationTreeService {
         NetworkModificationNode newNode = createAndInsertNode(study, nodeId, nodeInfo, insertMode, userId);
 
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
-        rootNetworkNodeInfoService.createNodeLinks(Objects.requireNonNull(study.getId()), newNodeInfoEntity);
+        rootNetworkNodeInfoService.createNodeLinks(study, newNodeInfoEntity);
 
         return newNode;
     }

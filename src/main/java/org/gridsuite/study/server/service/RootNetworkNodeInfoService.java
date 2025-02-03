@@ -20,6 +20,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
@@ -99,9 +100,9 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    public void createNodeLinks(@NonNull UUID studyUuid, @NonNull NetworkModificationNodeInfoEntity modificationNodeInfoEntity) {
+    public void createNodeLinks(@NonNull StudyEntity studyEntity, @NonNull NetworkModificationNodeInfoEntity modificationNodeInfoEntity) {
         // For each root network create a link with the node
-        rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid).forEach(rootNetworkEntity -> {
+        studyEntity.getRootNetworks().forEach(rootNetworkEntity -> {
             RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity(modificationNodeInfoEntity.getId());
             addLink(modificationNodeInfoEntity, rootNetworkEntity, newRootNetworkNodeInfoEntity);
         });
