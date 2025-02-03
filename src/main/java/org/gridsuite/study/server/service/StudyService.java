@@ -2198,10 +2198,10 @@ public class StudyService {
 
     // --- Dynamic Simulation service methods END --- //
 
-    public String getNetworkElementsIds(UUID nodeUuid, UUID rootNetworkUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode, String equipmentType, List<Double> nominalVoltages) {
+    public String getNetworkElementsIds(UUID nodeUuid, UUID rootNetworkUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode, String equipmentType, String equipmentSubType, List<Double> nominalVoltages) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         return networkMapService.getElementsIds(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
-                substationsIds, equipmentType, nominalVoltages);
+                substationsIds, equipmentType, equipmentSubType, nominalVoltages);
     }
 
     @Transactional(readOnly = true)

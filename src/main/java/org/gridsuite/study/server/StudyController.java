@@ -483,9 +483,10 @@ public class StudyController {
             @RequestBody(required = false) List<String> substationsIds,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
             @Parameter(description = "equipment type") @RequestParam(name = "equipmentType") String equipmentType,
+            @Parameter(description = "equipment sub type") @RequestParam(name = "equipmentSubType", required = false) String equipmentSubType,
             @Parameter(description = "Nominal Voltages") @RequestParam(name = "nominalVoltages", required = false) List<Double> nominalVoltages) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsIds(nodeUuid, rootNetworkUuid, substationsIds, inUpstreamBuiltParentNode, equipmentType, nominalVoltages));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsIds(nodeUuid, rootNetworkUuid, substationsIds, inUpstreamBuiltParentNode, equipmentType, equipmentSubType, nominalVoltages));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements")
