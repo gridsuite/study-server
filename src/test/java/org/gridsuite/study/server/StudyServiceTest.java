@@ -19,6 +19,7 @@ import org.gridsuite.study.server.service.CaseService;
 import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkConversionService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.ReportService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -83,6 +84,9 @@ class StudyServiceTest {
     private NetworkConversionService networkConversionService;
 
     @Autowired
+    private ReportService reportService;
+
+    @Autowired
     private ObjectMapper mapper;
     private ObjectWriter objectWriter;
 
@@ -127,6 +131,8 @@ class StudyServiceTest {
 
         caseService.setCaseServerBaseUri(wireMockServer.baseUrl());
         networkConversionService.setNetworkConversionServerBaseUri(wireMockServer.baseUrl());
+        reportService.setReportServerBaseUri(wireMockServer.baseUrl());
+
     }
 
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
@@ -268,12 +274,13 @@ class StudyServiceTest {
         CountDownLatch countDownLatch = new CountDownLatch(1);
         UUID postNetworkStubId = wireMockUtils.stubImportNetwork(caseUuid.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", WireMockUtils.FIRST_VARIANT_ID, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockUtils.stubDisableCaseExpiration(caseUuid.toString());
+        UUID sendReportStubId = wireMockUtils.stubSendReport();
         when(loadFlowService.createDefaultLoadFlowParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
         when(shortCircuitService.createParameters(null)).thenReturn(SHORTCIRCUIT_PARAMETERS_UUID);
 
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
-                        .header("userId", userId)
-                        .param(CASE_FORMAT_PARAM, "UCTE"))
+                .header("userId", userId)
+                .param(CASE_FORMAT_PARAM, "UCTE"))
             .andExpect(status().isOk())
             .andReturn();
         String resultAsString = result.getResponse().getContentAsString();
@@ -288,6 +295,7 @@ class StudyServiceTest {
         wireMockUtils.verifyCaseExists(caseExistsStubId, caseUuid.toString());
         wireMockUtils.verifyImportNetwork(postNetworkStubId, caseUuid.toString(), WireMockUtils.FIRST_VARIANT_ID);
         wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, caseUuid.toString());
+        wireMockUtils.verifySendReport(sendReportStubId);
 
         return studyUuid;
     }
