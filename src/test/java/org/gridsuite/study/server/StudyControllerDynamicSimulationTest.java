@@ -95,7 +95,7 @@ class StudyControllerDynamicSimulationTest {
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/result";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_STATUS = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/status";
 
-    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/models";
+    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS = "{studyUuid}/dynamic-simulation/models";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS = "{studyUuid}/dynamic-simulation/mappings";
 
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events";
@@ -676,9 +676,6 @@ class StudyControllerDynamicSimulationTest {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
-        UUID rootNodeUuid = getRootNode(studyUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
-        UUID modificationNode1Uuid = modificationNode1.getId();
 
         // setup DynamicSimulationService mock with a given mapping
         Mockito.doAnswer(invocation -> MODELS).when(dynamicSimulationService).getModels(MAPPING_NAME_01);
@@ -699,7 +696,7 @@ class StudyControllerDynamicSimulationTest {
 
         MvcResult result;
         // --- call endpoint to be tested --- //
-        result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS, studyUuid, modificationNode1Uuid)
+        result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS, studyUuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk()).andReturn();
@@ -718,9 +715,6 @@ class StudyControllerDynamicSimulationTest {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
-        UUID rootNodeUuid = getRootNode(studyUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
-        UUID modificationNode1Uuid = modificationNode1.getId();
 
         // setup DynamicSimulationService mock with a given mapping
         Mockito.doAnswer(invocation -> null).when(dynamicSimulationService).getModels("");
@@ -740,7 +734,7 @@ class StudyControllerDynamicSimulationTest {
 
         // --- call endpoint to be tested --- //
         // must be no content status
-        studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS, studyUuid, modificationNode1Uuid)
+        studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS, studyUuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent()).andReturn();
