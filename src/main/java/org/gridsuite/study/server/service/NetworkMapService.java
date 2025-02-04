@@ -76,12 +76,15 @@ public class NetworkMapService {
         return restTemplate.postForObject(networkMapServerBaseUri + url, httpEntity, String.class);
     }
 
-    public String getElementInfos(UUID networkUuid, String variantId, String elementType, String infoType,
-                                  double dcPowerFactor, String elementId) {
+    public String getElementInfos(UUID networkUuid, String variantId, String elementType, String equipmentSubType,
+                                  String infoType, double dcPowerFactor, String elementId) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements/{elementId}";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        if (equipmentSubType != null) {
+            builder = builder.queryParam(QUERY_PARAM_EQUIPMENT_SUB_TYPE, equipmentSubType);
         }
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
