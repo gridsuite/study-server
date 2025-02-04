@@ -399,6 +399,15 @@ public class WireMockUtils {
         ).getId();
     }
 
+    public UUID stubSendReport() {
+        return wireMock.stubFor(WireMock.put(WireMock.urlPathMatching("/v1/reports/.*"))
+            .willReturn(WireMock.ok())).getId();
+    }
+
+    public void verifySendReport(UUID stubUuid) {
+        verifyPutRequest(stubUuid, "/v1/reports/.*", true, Map.of(), null);
+    }
+
     public void verifyCountriesGet(UUID stubUuid, String networkUuid) {
         verifyGetRequest(stubUuid, "/v1/networks/" + networkUuid + "/countries", Map.of());
     }
