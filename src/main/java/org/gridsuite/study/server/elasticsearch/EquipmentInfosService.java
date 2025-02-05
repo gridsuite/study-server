@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.client.elc.*;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
@@ -52,6 +53,8 @@ public class EquipmentInfosService {
     }
 
     private static final int PAGE_MAX_SIZE = 400;
+
+    public static final int SCROLL_PAGE_SIZE = 5000;
 
     private static final int COMPOSITE_AGGREGATION_BATCH_SIZE = 1000;
 
@@ -118,6 +121,10 @@ public class EquipmentInfosService {
 
     public List<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid) {
         return tombstonedEquipmentInfosRepository.findAllByNetworkUuid(networkUuid);
+    }
+
+    public Set<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid, @NonNull String variantId) {
+        return tombstonedEquipmentInfosRepository.findByNetworkUuidAndVariantId(networkUuid, variantId, Pageable.ofSize(SCROLL_PAGE_SIZE)).collect(Collectors.toSet());
     }
 
     public void deleteVariants(@NonNull UUID networkUuid, List<String> variantIds) {
@@ -298,10 +305,6 @@ public class EquipmentInfosService {
         return functionScores;
     }
 
-    private String buildTombstonedEquipmentSearchQuery(UUID networkUuid, String variantId) {
-        return String.format(NETWORK_UUID + ":(%s) AND " + VARIANT_ID + ":(%s)", networkUuid, variantId);
-    }
-
     private BoolQuery buildSearchEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId, String equipmentType) {
         // If search requires boolean logic or advanced text analysis, then use queryStringQuery.
         // Otherwise, use wildcardQuery for simple text search.
@@ -346,15 +349,14 @@ public class EquipmentInfosService {
     }
 
     private List<EquipmentInfos> cleanRemovedEquipments(UUID networkUuid, String variantId, List<EquipmentInfos> equipmentInfos) {
-        String queryTombstonedEquipments = buildTombstonedEquipmentSearchQuery(networkUuid, variantId);
-        Set<String> removedEquipmentIdsInVariant = searchTombstonedEquipments(queryTombstonedEquipments)
+        Set<String> tombstonedEquipmentIdsInVariant = findAllTombstonedEquipmentInfos(networkUuid, variantId)
                 .stream()
                 .map(TombstonedEquipmentInfos::getId)
                 .collect(Collectors.toSet());
 
         return equipmentInfos
                 .stream()
-                .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId()) ||
+                .filter(ei -> !tombstonedEquipmentIdsInVariant.contains(ei.getId()) ||
                         // If the equipment has been recreated after the creation of a deletion hypothesis
                         !ei.getVariantId().equals(VariantManagerConstants.INITIAL_VARIANT_ID))
                 .collect(Collectors.toList());
@@ -384,27 +386,5 @@ public class EquipmentInfosService {
                 .stream()
                 .map(SearchHit::getContent)
                 .collect(Collectors.toList()); //.collect(Collectors.toList()) instead of .toList() to update list before returning
-    }
-
-    public List<TombstonedEquipmentInfos> searchTombstonedEquipments(@NonNull final String query) {
-        int pageIndex = 0;
-        List<TombstonedEquipmentInfos> tombstonedEquipmentInfos = new ArrayList<>();
-        boolean hasMoreResults;
-        do {
-            NativeQuery nativeSearchQuery = new NativeQueryBuilder()
-                    .withQuery(QueryStringQuery.of(qs -> qs.query(query))._toQuery())
-                    .withPageable(PageRequest.of(pageIndex, PAGE_MAX_SIZE))
-                    .build();
-
-            List<TombstonedEquipmentInfos> currentTombstonedEquipmentInfos = elasticsearchOperations.search(nativeSearchQuery, TombstonedEquipmentInfos.class)
-                    .stream()
-                    .map(SearchHit::getContent)
-                    .toList();
-
-            tombstonedEquipmentInfos.addAll(currentTombstonedEquipmentInfos);
-            hasMoreResults = currentTombstonedEquipmentInfos.size() == PAGE_MAX_SIZE;
-            pageIndex++;
-        } while (hasMoreResults);
-        return tombstonedEquipmentInfos;
     }
 }
