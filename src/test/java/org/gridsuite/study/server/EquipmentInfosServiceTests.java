@@ -357,7 +357,7 @@ class EquipmentInfosServiceTests implements WithAssertions {
     }
 
     private void testNameFullAscii(String pat) {
-        assertEquals(1, studyService.searchEquipments(NODE_UUID, ROOTNETWORK_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, false).size());
+        assertEquals(1, studyService.searchEquipments(NODE_UUID, ROOTNETWORK_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, null, false).size());
     }
 
     private void testNameFullAsciis() {
@@ -443,7 +443,7 @@ class EquipmentInfosServiceTests implements WithAssertions {
         equipmentInfosService.addTombstonedEquipmentInfos(tombstonedEquipmentInfos);
         // following the creation of a hypothesis for previously deleted equipment creation
         equipmentInfosService.addEquipmentInfos(equipmentInfos);
-        List<EquipmentInfos> result = equipmentInfosService.searchEquipments(NETWORK_UUID, VARIANT_ID, "test", EquipmentInfosService.FieldSelector.NAME, "LOAD");
+        List<EquipmentInfos> result = equipmentInfosService.searchEquipments(NETWORK_UUID, VARIANT_ID, "test", EquipmentInfosService.FieldSelector.NAME, "LOAD", null);
         assertEquals(equipmentInfos, result.get(0));
     }
 }

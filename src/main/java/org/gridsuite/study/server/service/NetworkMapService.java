@@ -76,12 +76,15 @@ public class NetworkMapService {
         return restTemplate.postForObject(networkMapServerBaseUri + url, httpEntity, String.class);
     }
 
-    public String getElementInfos(UUID networkUuid, String variantId, String elementType, String infoType,
-                                  double dcPowerFactor, String elementId) {
+    public String getElementInfos(UUID networkUuid, String variantId, String elementType, String equipmentSubType,
+                                  String infoType, double dcPowerFactor, String elementId) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements/{elementId}";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        if (equipmentSubType != null) {
+            builder = builder.queryParam(QUERY_PARAM_EQUIPMENT_SUB_TYPE, equipmentSubType);
         }
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
@@ -145,7 +148,7 @@ public class NetworkMapService {
         }
     }
 
-    public String getElementsIds(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, List<Double> nominalVoltages) {
+    public String getElementsIds(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, String equipmentSubType, List<Double> nominalVoltages) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements-ids";
 
         UriComponentsBuilder builder = UriComponentsBuilder
@@ -156,6 +159,9 @@ public class NetworkMapService {
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
             builder = builder.queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, nominalVoltages);
+        }
+        if (equipmentSubType != null) {
+            builder = builder.queryParam(QUERY_PARAM_EQUIPMENT_SUB_TYPE, equipmentSubType);
         }
         String url = builder.buildAndExpand(networkUuid).toUriString();
         HttpHeaders headers = new HttpHeaders();
