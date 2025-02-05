@@ -7,9 +7,12 @@
 
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.powsybl.commons.report.ReportNodeDeserializer;
+import com.powsybl.commons.report.ReportNodeJsonModule;
 import com.powsybl.contingency.json.ContingencyJsonModule;
 import com.powsybl.loadflow.json.LoadFlowParametersJsonModule;
 import com.powsybl.loadflow.json.LoadFlowResultJsonModule;
@@ -61,6 +64,8 @@ public class RestTemplateConfig {
         objectMapper.registerModule(new ShortCircuitAnalysisJsonModule());
         objectMapper.registerModule(new SensitivityJsonModule());
         objectMapper.registerModule(new TimeSeriesJsonModule());
+        objectMapper.registerModule(new ReportNodeJsonModule());
+        objectMapper.setInjectableValues(new InjectableValues.Std().addValue(ReportNodeDeserializer.DICTIONARY_VALUE_ID, null));
         return objectMapper;
     }
 
