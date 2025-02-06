@@ -68,7 +68,8 @@ public class DynamicSecurityAnalysisService {
         dynamicSecurityAnalysisClient.deleteParameters(parametersUuid);
     }
 
-    public UUID runDynamicSecurityAnalysis(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID reportUuid, UUID dynamicSimulationResultUuid, UUID parametersUuid, String userId) {
+    public UUID runDynamicSecurityAnalysis(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
+        String variantId, UUID reportUuid, UUID dynamicSimulationResultUuid, UUID parametersUuid, String userId) {
 
         // create receiver for getting back the notification in rabbitmq
         String receiver;

@@ -35,7 +35,6 @@ import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -101,6 +100,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
     private static final UUID ROOT_NETWORK_UUID = UUID.randomUUID();
     private static final UUID NODE_NOT_RUN_UUID = UUID.randomUUID();
     private static final UUID RESULT_UUID = UUID.randomUUID();
+    private static final UUID PARAMETERS_UUID = UUID.randomUUID();
 
     private static final long TIMEOUT = 1000;
 
@@ -450,7 +450,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         assertThat(statusResult).isEqualTo(statusExpected);
     }
 
-    @Disabled("fix later")
+    // @Disabled("fix later")
     @Test
     void testSetAndGetDynamicSecurityAnalysisParameters() throws Exception {
         // create a node in the db
@@ -458,11 +458,18 @@ class StudyControllerDynamicSecurityAnalysisTest {
         UUID studyUuid = studyEntity.getId();
 
         // prepare request body
-        DynamicSecurityAnalysisParametersInfos defaultDynamicSecurityAnalysisParameters = DynamicSecurityAnalysisParametersInfos.builder()
+        DynamicSecurityAnalysisParametersInfos parameters = DynamicSecurityAnalysisParametersInfos.builder()
                 .provider("Dynawo")
                 .scenarioDuration(50.0)
                 .contingenciesStartTime(5.0)
                 .build();
+        String jsonParameters = objectMapper.writeValueAsString(parameters);
+
+        // setup DynamicSecurityAnalysisService mock
+        doAnswer(invocation -> PARAMETERS_UUID)
+                .when(spyDynamicSecurityAnalysisService).createParameters(any());
+        doAnswer(invocation -> jsonParameters)
+                .when(spyDynamicSecurityAnalysisService).getParameters(PARAMETERS_UUID);
 
         MvcResult result;
 
@@ -471,7 +478,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETERS, studyUuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(defaultDynamicSecurityAnalysisParameters)))
+                        .content(jsonParameters))
                     .andExpect(status().isOk()).andReturn();
 
         // --- check result --- //
@@ -485,12 +492,11 @@ class StudyControllerDynamicSecurityAnalysisTest {
                     .andExpect(status().isOk()).andReturn();
 
         String resultJson = result.getResponse().getContentAsString();
-        String expectedJson = objectMapper.writeValueAsString(defaultDynamicSecurityAnalysisParameters);
 
         // result parameters must be identical to persisted parameters
-        LOGGER.info("Parameters expected in Json = {}", expectedJson);
+        LOGGER.info("Parameters expected in Json = {}", jsonParameters);
         LOGGER.info("Parameters result in Json = {}", resultJson);
-        assertThat(objectMapper.readTree(resultJson)).isEqualTo(objectMapper.readTree(expectedJson));
+        assertThat(objectMapper.readTree(resultJson)).isEqualTo(objectMapper.readTree(jsonParameters));
 
     }
 
