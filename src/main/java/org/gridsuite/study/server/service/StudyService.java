@@ -2254,11 +2254,12 @@ public class StudyService {
     }
 
     @Transactional
-    public void setDynamicSecurityAnalysisParameters(UUID studyUuid, String dsaParameter, String userId) {
+    public boolean setDynamicSecurityAnalysisParameters(UUID studyUuid, String dsaParameter, String userId) {
         boolean userProfileIssue = createOrUpdateDynamicSecurityAnalysisParameters(studyUuid, dsaParameter, userId);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_SECURITY_ANALYSIS);
+        return userProfileIssue;
     }
 
     public boolean createOrUpdateDynamicSecurityAnalysisParameters(UUID studyUuid, String parameters, String userId) {

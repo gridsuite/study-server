@@ -1800,8 +1800,9 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) String dsaParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setDynamicSecurityAnalysisParameters(studyUuid, dsaParameter, userId);
-        return ResponseEntity.ok().build();
+        return studyService.setDynamicSecurityAnalysisParameters(studyUuid, dsaParameter, userId) ?
+                ResponseEntity.noContent().build() :
+                ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/dynamic-security-analysis/parameters")
