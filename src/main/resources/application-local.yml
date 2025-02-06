@@ -10,6 +10,12 @@ spring:
     ## to fill if authentication is needed
     # username:
     # password:
+  jpa:
+    properties:
+      hibernate:
+        show_sql: true
+        use_sql_comments: true
+        format_sql: true
 
 powsybl-ws:
   database:

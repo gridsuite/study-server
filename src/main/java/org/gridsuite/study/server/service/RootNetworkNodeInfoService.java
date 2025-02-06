@@ -346,6 +346,23 @@ public class RootNetworkNodeInfoService {
         changedNodes.add(nodeUuid);
     }
 
+    // will update RootNetworkNodeInfoEntity field "modificationToExclude" according to modificationUuids and activated
+    // if activated is false, it will add modificationUuids to modificationToExclude
+    // otherwise, it will remove them from modificationToExcludes
+    public void updateModificationToExclude(UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationUuids, boolean activated) {
+        Optional<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntityOpt = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid);
+        if (rootNetworkNodeInfoEntityOpt.isEmpty()) {
+            throw new StudyException(ROOT_NETWORK_NOT_FOUND);
+        }
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoEntityOpt.get();
+        if (activated) {
+            rootNetworkNodeInfoEntity.removeModificationsFromExclude(modificationUuids);
+        } else {
+            rootNetworkNodeInfoEntity.addModificationsToExclude(modificationUuids);
+        }
+
+    }
+
     @Transactional
     public void updateRootNetworkNode(UUID nodeUuid, UUID rootNetworkUuid, RootNetworkNodeInfo rootNetworkNodeInfo) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
