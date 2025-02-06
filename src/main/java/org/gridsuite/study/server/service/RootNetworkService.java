@@ -20,7 +20,6 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequ
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,7 +43,6 @@ public class RootNetworkService {
     private final CaseService caseService;
     private final ReportService reportService;
 
-    private final RootNetworkService self;
     private final RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository;
     private final StudyServerExecutionService studyServerExecutionService;
     private final EquipmentInfosService equipmentInfosService;
@@ -55,7 +53,6 @@ public class RootNetworkService {
                               RootNetworkNodeInfoService rootNetworkNodeInfoService,
                               NetworkService networkService,
                               CaseService caseService,
-                              @Lazy RootNetworkService self,
                               StudyServerExecutionService studyServerExecutionService,
                               ReportService reportService,
                               EquipmentInfosService equipmentInfosService,
@@ -65,7 +62,6 @@ public class RootNetworkService {
         this.networkService = networkService;
         this.caseService = caseService;
         this.reportService = reportService;
-        this.self = self;
         this.rootNetworkCreationRequestRepository = rootNetworkCreationRequestRepository;
         this.studyServerExecutionService = studyServerExecutionService;
         this.equipmentInfosService = equipmentInfosService;

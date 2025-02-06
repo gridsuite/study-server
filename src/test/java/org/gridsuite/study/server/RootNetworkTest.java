@@ -700,7 +700,6 @@ class RootNetworkTest {
 
     private void createDummyRootNetwork(StudyEntity studyEntity, RootNetworkInfos rootNetworkInfos) {
         studyEntity.addRootNetwork(rootNetworkInfos.toEntity());
-        //studyRepository.save(studyEntity);
     }
 
     private void createDummyRootNetwork(StudyEntity studyEntity, String name) {
