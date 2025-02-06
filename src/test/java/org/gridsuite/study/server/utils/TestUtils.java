@@ -48,13 +48,11 @@ public final class TestUtils {
         this.rootNetworkRepository = rootNetworkRepository;
     }
 
-    // TODO rename by getOneRootNetworkUuid
-    public UUID getStudyFirstRootNetworkUuid(UUID studyUuid) {
-        return getStudyFirstRootNetwork(studyUuid).getId();
+    public UUID getOneRootNetworkUuid(UUID studyUuid) {
+        return getOneRootNetwork(studyUuid).getId();
     }
 
-    // TODO rename by getOneRootNetwork
-    public RootNetworkEntity getStudyFirstRootNetwork(UUID studyUuid) {
+    public RootNetworkEntity getOneRootNetwork(UUID studyUuid) {
         return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).get(0);
     }
 

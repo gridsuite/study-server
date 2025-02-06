@@ -172,7 +172,7 @@ class ReportServiceTest {
     void testReport(final MockWebServer server) throws Exception {
         RootNode rootNode = createRoot();
         StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyEntity.getId());
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
         List<Report> expectedRootReports = List.of(getNodeReport(ROOT_NODE_REPORT_UUID, rootNode.getId().toString()));
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true&reportType=NETWORK_MODIFICATION", rootNode.getStudyId(), firstRootNetworkUuid, rootNode.getId()))
@@ -207,7 +207,7 @@ class ReportServiceTest {
     void testMultipleReport(final MockWebServer server) throws Exception {
         RootNode rootNode = createRoot();
         StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyEntity.getId());
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
         NetworkModificationNode node = studyService.createNode(studyEntity.getId(), rootNode.getId(), createModificationNodeInfo("Modification Node"), InsertMode.AFTER, null);
         NetworkModificationNode child1 = studyService.createNode(studyEntity.getId(), node.getId(), createModificationNodeInfo("Child 1"), InsertMode.AFTER, null);
         NetworkModificationNode child2 = studyService.createNode(studyEntity.getId(), node.getId(), createModificationNodeInfo("Child 2"), InsertMode.AFTER, null);

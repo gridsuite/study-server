@@ -405,7 +405,7 @@ class RootNetworkTest {
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
         NetworkModificationNode secondNode = networkModificationTreeService.createNode(studyEntity, firstNode.getId(), createModificationNodeInfo(NODE_2_NAME), InsertMode.AFTER, null);
-        UUID firstRootNetworkUuid = testUtils.getStudyFirstRootNetworkUuid(studyEntity.getId());
+        UUID firstRootNetworkUuid = testUtils.getOneRootNetworkUuid(studyEntity.getId());
 
         // updating one of the link (firstNode - rootNetworkEntityToDelete) with many data, needed to check all of them will be deleted when root network is deleted
         rootNetworkNodeInfoService.updateRootNetworkNode(firstNode.getId(), rootNetworkEntityToDeleteUuid, RootNetworkNodeInfo.builder()

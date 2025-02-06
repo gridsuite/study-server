@@ -137,7 +137,7 @@ public class RootNetworkService {
         return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
     }
 
-    public List<RootNetworkInfos> getStudyRootNetworkInfosWithRootNetworkNodeInfos(UUID studyUuid) {
+    public List<RootNetworkInfos> getRootNetworkInfosWithLinksInfos(UUID studyUuid) {
         return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream().map(RootNetworkEntity::toDto).toList();
     }
 

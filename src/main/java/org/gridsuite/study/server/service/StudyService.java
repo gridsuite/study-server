@@ -2499,7 +2499,7 @@ public class StudyService {
         List<RootNetworkEntity> rootNetworkEntities = getStudyRootNetworks(studyUuid);
         // using the Hibernate First-Level Cache or Persistence Context
         // cf.https://vladmihalcea.com/spring-data-jpa-multiplebagfetchexception/
-        rootNetworkService.getStudyRootNetworkInfosWithRootNetworkNodeInfos(studyUuid);
+        rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
         return rootNetworkEntities.stream().map(RootNetworkEntity::toDto).toList();
     }
 
