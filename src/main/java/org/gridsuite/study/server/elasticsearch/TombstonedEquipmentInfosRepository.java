@@ -7,13 +7,12 @@
 package org.gridsuite.study.server.elasticsearch;
 
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.lang.NonNull;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -21,7 +20,7 @@ import java.util.stream.Stream;
 public interface TombstonedEquipmentInfosRepository extends ElasticsearchRepository<TombstonedEquipmentInfos, String> {
     List<TombstonedEquipmentInfos> findAllByNetworkUuid(@NonNull UUID networkUuid);
 
-    Stream<TombstonedEquipmentInfos> findByNetworkUuidAndVariantId(@NonNull UUID networkUuid, @NonNull String variantId, Pageable pageable);
+    Set<TombstonedEquipmentInfos> findByIdInAndNetworkUuidAndVariantId(@NonNull List<String> equipmentIds, @NonNull UUID networkUuid, @NonNull String variantId);
 
     void deleteAllByNetworkUuid(@NonNull UUID networkUuid);
 

@@ -22,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.client.elc.*;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
@@ -53,8 +52,6 @@ public class EquipmentInfosService {
     }
 
     private static final int PAGE_MAX_SIZE = 400;
-
-    public static final int SCROLL_PAGE_SIZE = 5000;
 
     private static final int COMPOSITE_AGGREGATION_BATCH_SIZE = 1000;
 
@@ -123,8 +120,11 @@ public class EquipmentInfosService {
         return tombstonedEquipmentInfosRepository.findAllByNetworkUuid(networkUuid);
     }
 
-    public Set<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid, @NonNull String variantId) {
-        return tombstonedEquipmentInfosRepository.findByNetworkUuidAndVariantId(networkUuid, variantId, Pageable.ofSize(SCROLL_PAGE_SIZE)).collect(Collectors.toSet());
+    public Set<TombstonedEquipmentInfos> findTombstonedEquipmentInfosByIdIn(@NonNull UUID networkUuid, @NonNull String variantId, @NonNull List<String> equipmentIds) {
+        return tombstonedEquipmentInfosRepository.findByIdInAndNetworkUuidAndVariantId(
+                        equipmentIds,
+                        networkUuid,
+                        variantId);
     }
 
     public void deleteVariants(@NonNull UUID networkUuid, List<String> variantIds) {
@@ -349,7 +349,8 @@ public class EquipmentInfosService {
     }
 
     private List<EquipmentInfos> cleanRemovedEquipments(UUID networkUuid, String variantId, List<EquipmentInfos> equipmentInfos) {
-        Set<String> tombstonedEquipmentIdsInVariant = findAllTombstonedEquipmentInfos(networkUuid, variantId)
+        List<String> equipmentIds = equipmentInfos.stream().map(EquipmentInfos::getId).toList();
+        Set<String> tombstonedEquipmentIdsInVariant = findTombstonedEquipmentInfosByIdIn(networkUuid, variantId, equipmentIds)
                 .stream()
                 .map(TombstonedEquipmentInfos::getId)
                 .collect(Collectors.toSet());
