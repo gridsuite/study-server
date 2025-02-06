@@ -1493,14 +1493,14 @@ public class StudyController {
     }
 
     @GetMapping(value = "/dynamic-simulation-default-provider")
-    @Operation(summary = "get dynamic simulation default provider")
+    @Operation(summary = "Get dynamic simulation default provider")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The dynamic simulation default provider has been found"))
     public ResponseEntity<String> getDefaultDynamicSimulationProvider() {
         return ResponseEntity.ok().body(studyService.getDefaultDynamicSimulationProvider());
     }
 
     @GetMapping(value = "/dynamic-security-analysis-default-provider")
-    @Operation(summary = "get dynamic security analysis default provider")
+    @Operation(summary = "Get dynamic security analysis default provider")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The dynamic security analysis default provider has been found"))
     public ResponseEntity<String> getDefaultDynamicSecurityAnalysisProvider(@RequestHeader(HEADER_USER_ID) String userId) {
         return ResponseEntity.ok().body(studyService.getDefaultDynamicSecurityAnalysisProvider(userId));
@@ -1639,7 +1639,7 @@ public class StudyController {
     }
 
     @PostMapping(value = "/studies/{studyUuid}/dynamic-simulation/parameters")
-    @Operation(summary = "set dynamic simulation parameters on study, reset to default ones if empty body")
+    @Operation(summary = "Set dynamic simulation parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters are set")})
     public ResponseEntity<Void> setDynamicSimulationParameters(
             @PathVariable("studyUuid") UUID studyUuid,
@@ -1794,7 +1794,7 @@ public class StudyController {
     // --- Dynamic Security Analysis Endpoints BEGIN --- //
 
     @PostMapping(value = "/studies/{studyUuid}/dynamic-security-analysis/parameters")
-    @Operation(summary = "set dynamic security analysis parameters on study, reset to default one if empty body")
+    @Operation(summary = "Set dynamic security analysis parameters on study, reset to default one if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis parameters are set")})
     public ResponseEntity<Void> setDynamicSecurityAnalysisParameters(
             @PathVariable("studyUuid") UUID studyUuid,
