@@ -26,6 +26,7 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.voltageinit.parameters.EquipmentsSelectionType;
 import org.gridsuite.study.server.dto.voltageinit.parameters.FilterEquipments;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
@@ -119,10 +120,13 @@ class VoltageInitTest {
                     .highVoltageLimit(552.)
                     .filters(List.of(FilterEquipments.builder().filterId(UUID.fromString("6754396b-3791-4b80-9971-defbf5968fb7")).filterName("testfp").build()))
                     .build()))
-        .constantQGenerators(
+        .variableQGenerators(
             List.of(
                 FilterEquipments.builder().filterId(UUID.fromString("ff915f2f-578c-4d8c-a267-0135a4323462")).filterName("testf1").build())
         )
+        .generatorsSelectionType(EquipmentsSelectionType.ALL_EXCEPT)
+        .twoWindingsTransformersSelectionType(EquipmentsSelectionType.NONE_EXCEPT)
+        .shuntCompensatorsSelectionType(EquipmentsSelectionType.NONE_EXCEPT)
         .build();
 
     private static final VoltageInitParametersInfos VOLTAGE_INIT_PARAMETERS_INFOS_2 = VoltageInitParametersInfos.builder()
