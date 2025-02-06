@@ -23,6 +23,7 @@ import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
+import com.powsybl.network.store.model.VariantInfos;
 import lombok.SneakyThrows;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
@@ -129,7 +130,8 @@ class StudyTest {
     private static final String TEST_FILE_UCTE = "testCase.ucte";
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String TEST_FILE_IMPORT_ERRORS = "testCase_import_errors.xiidm";
-    private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00e";
+    private static final String CLONED_NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String IMPORTED_CASE_UUID_STRING = "11111111-0000-0000-0000-000000000000";
     private static final String CLONED_CASE_UUID_STRING = "22222222-1111-0000-0000-000000000000";
@@ -142,6 +144,7 @@ class StudyTest {
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final String USER_ID_HEADER = "userId";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
+    private static final UUID CLONED_NETWORK_UUID = UUID.fromString(CLONED_NETWORK_UUID_STRING);
     private static final UUID NOT_EXISTING_NETWORK_UUID = UUID.randomUUID();
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final UUID NOT_EXISTING_NETWORK_CASE_UUID = UUID.fromString(NOT_EXISTING_NETWORK_CASE_UUID_STRING);
@@ -355,9 +358,14 @@ class StudyTest {
         when(equipmentInfosService.getTombstonedEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("8"));
         when(equipmentInfosService.getTombstonedEquipmentInfosCount(NETWORK_UUID)).then((Answer<Long>) invocation -> Long.parseLong("4"));
 
-        when(networkStoreService.cloneNetwork(NETWORK_UUID, Collections.emptyList())).thenReturn(network);
+        when(networkStoreService.cloneNetwork(NETWORK_UUID, List.of(VariantManagerConstants.INITIAL_VARIANT_ID))).thenReturn(network);
         when(networkStoreService.getNetworkUuid(network)).thenReturn(NETWORK_UUID);
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
+        when(networkStoreService.getVariantsInfos(NETWORK_UUID))
+                .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0),
+                        new VariantInfos(VARIANT_ID, 1)));
+        when(networkStoreService.getVariantsInfos(CLONED_NETWORK_UUID))
+                .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
 
         doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
     }
@@ -495,8 +503,10 @@ class StudyTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(REPORT_LOGS));
                 } else if (path.matches("/v1/reports/.*/logs.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(REPORT_LOGS));
-                } else if (path.matches("/v1/reports/.*")) {
+                } else if (path.matches("/v1/reports/.*") && !"PUT".equals(request.getMethod())) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(REPORT_TEST));
+                } else if (path.matches("/v1/reports/.*") && "PUT".equals(request.getMethod())) {
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS, "XIIDM");
                     return new MockResponse(200);
@@ -1122,7 +1132,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        int nbRequest = 10;
+        int nbRequest = 11;
         if (parameterDuplicatedUuid != null && !parameterDuplicationSuccess) {
             nbRequest += 5;
         }
@@ -1132,6 +1142,7 @@ class StudyTest {
         if (!parameterDuplicationSuccess) {
             assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
         }
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", caseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + userId + "/profile")));
         if (parameterDuplicatedUuid != null) {
@@ -1155,11 +1166,12 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(10, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(11, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/exists", caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/disableExpiration", caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/default")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
 
         assertEquals(mapper.writeValueAsString(importParameters), requests.stream()
                 .filter(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*"))
@@ -1183,7 +1195,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(11, server);
+        var requests = TestUtils.getRequestsDone(12, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
         assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=%s", caseUuid, true)));
         // note : it's a new case UUID
@@ -1191,6 +1203,7 @@ class StudyTest {
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CLONED_CASE_UUID_STRING)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + userId + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         return studyUuid;
     }
@@ -1401,12 +1414,13 @@ class StudyTest {
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(10, server);
+        var requests = TestUtils.getRequestsDone(11, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains("/v1/parameters/default"));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/userId/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
@@ -1588,6 +1602,10 @@ class StudyTest {
         // duplicate the study
         StudyEntity duplicatedStudy = duplicateStudy(mockWebServer, study1Uuid);
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
+
+        // Verify that the network was cloned with only one variant
+        List<VariantInfos> networkVariants = networkService.getNetworkVariants(CLONED_NETWORK_UUID);
+        assertEquals(1, networkVariants.size(), "Network should be cloned with only one variant");
 
         //Test duplication from a non-existing source study
         mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", UUID.randomUUID())

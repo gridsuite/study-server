@@ -383,6 +383,9 @@ public class RootNetworkNodeInfoService {
         if (rootNetworkNodeInfo.getVoltageInitResultUuid() != null) {
             rootNetworkNodeInfoEntity.setVoltageInitResultUuid(rootNetworkNodeInfo.getVoltageInitResultUuid());
         }
+        if (rootNetworkNodeInfo.getModificationReports() != null) {
+            rootNetworkNodeInfoEntity.setModificationReports(rootNetworkNodeInfo.getModificationReports());
+        }
     }
 
     public Stream<CompletableFuture<Void>> getDeleteRootNetworkNodeInfosFutures(List<RootNetworkNodeInfo> rootNetworkNodeInfo) {
