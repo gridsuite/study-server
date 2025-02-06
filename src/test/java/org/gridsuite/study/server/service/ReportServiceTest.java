@@ -108,6 +108,9 @@ class ReportServiceTest {
     private RootNetworkService rootNetworkService;
     @Autowired
     private TestUtils studyTestUtils;
+    @Autowired
+    // TODO remove studyService (use the repositories to create a node)
+    private StudyService studyService;
 
     @BeforeEach
     void setup(final MockWebServer server) {
@@ -180,7 +183,7 @@ class ReportServiceTest {
         checkReports(reports, expectedRootReports);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
-        NetworkModificationNode node = networkModificationTreeService.createNode(studyEntity, rootNode.getId(), createModificationNodeInfo("Node1"), InsertMode.AFTER, null);
+        NetworkModificationNode node = studyService.createNode(studyEntity.getId(), rootNode.getId(), createModificationNodeInfo("Node1"), InsertMode.AFTER, null);
         output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);  // message for modification node creation
         List<Report> expectedNodeReports = List.of(getNodeReport(MODIFICATION_NODE_REPORT_UUID, node.getId().toString()));
 
@@ -205,9 +208,9 @@ class ReportServiceTest {
         RootNode rootNode = createRoot();
         StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
         UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyEntity.getId());
-        NetworkModificationNode node = networkModificationTreeService.createNode(studyEntity, rootNode.getId(), createModificationNodeInfo("Modification Node"), InsertMode.AFTER, null);
-        NetworkModificationNode child1 = networkModificationTreeService.createNode(studyEntity, node.getId(), createModificationNodeInfo("Child 1"), InsertMode.AFTER, null);
-        NetworkModificationNode child2 = networkModificationTreeService.createNode(studyEntity, node.getId(), createModificationNodeInfo("Child 2"), InsertMode.AFTER, null);
+        NetworkModificationNode node = studyService.createNode(studyEntity.getId(), rootNode.getId(), createModificationNodeInfo("Modification Node"), InsertMode.AFTER, null);
+        NetworkModificationNode child1 = studyService.createNode(studyEntity.getId(), node.getId(), createModificationNodeInfo("Child 1"), InsertMode.AFTER, null);
+        NetworkModificationNode child2 = studyService.createNode(studyEntity.getId(), node.getId(), createModificationNodeInfo("Child 2"), InsertMode.AFTER, null);
 
         // message for 3 modification nodes creation
         output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);

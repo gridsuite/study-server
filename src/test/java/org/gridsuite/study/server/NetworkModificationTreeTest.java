@@ -28,7 +28,6 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
-import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -178,7 +177,6 @@ class NetworkModificationTreeTest {
     private static final UUID MODIFICATION_GROUP_UUID_2 = UUID.randomUUID();
     private static final UUID MODIFICATION_GROUP_UUID_3 = UUID.randomUUID();
     private static final String MODIFICATION1_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
-    private static final String MODIFICATION2_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef111";
     private static final String MODIFICATION_GROUP_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef222";
     private static final String USER_ID_HEADER = "userId";
 
@@ -193,13 +191,11 @@ class NetworkModificationTreeTest {
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
-    private RootNetworkRepository rootNetworkRepository;
-    @Autowired
     private RootNetworkService rootNetworkService;
     @Autowired
-    private StudyService studyService;
-    @Autowired
     private TestUtils studyTestUtils;
+    @Autowired
+    private RootNetworkRepository rootNetworkRepository;
 
     @BeforeEach
     void setUp(final MockWebServer server) {
@@ -831,9 +827,9 @@ class NetworkModificationTreeTest {
         assertNotNull(networkModificationTreeService.getReportUuid(nodeUuid, rootNetworkUuid));
         assertFalse(networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid).isEmpty());
 
-        List<RootNetworkInfos> rootNetworkEntities = rootNetworkService.getStudyRootNetworkInfosWithRootNetworkNodeInfos(root.getStudyId());
-        assertEquals(1, rootNetworkEntities.size());
-        assertEquals(3, rootNetworkEntities.get(0).getRootNetworkNodeInfos().size());
+        assertEquals(1, rootNetworkRepository.findAll().size());
+        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findWithRootNetworkNodeInfosById(rootNetworkUuid).orElseThrow();
+        assertEquals(3, rootNetworkEntity.getRootNetworkNodeInfos().size());
     }
 
     @Test

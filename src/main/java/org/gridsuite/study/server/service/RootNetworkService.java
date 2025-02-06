@@ -116,7 +116,6 @@ public class RootNetworkService {
         rootNetworkEntity.setNetworkUuid(networkInfos.getNetworkUuid());
     }
 
-    @Transactional
     public RootNetworkEntity createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
         RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
         studyEntity.addRootNetwork(rootNetworkEntity);
@@ -160,7 +159,7 @@ public class RootNetworkService {
 
                 UUID clonedRootNodeReportUuid = reportService.duplicateReport(rootNetworkEntityToDuplicate.getReportUuid());
 
-                self.createRootNetwork(newStudyEntity,
+                createRootNetwork(newStudyEntity,
                     RootNetworkInfos.builder()
                         .id(UUID.randomUUID())
                         .name(rootNetworkEntityToDuplicate.getName())
@@ -189,16 +188,16 @@ public class RootNetworkService {
      * will also delete all remote resources linked to the entity
      * @param rootNetworkUuids
      */
-    public void deleteRootNetworks(Stream<UUID> rootNetworkUuids) {
+    public void deleteRootNetworks(StudyEntity studyEntity, Stream<UUID> rootNetworkUuids) {
         List<RootNetworkInfos> rootNetworksInfos = rootNetworkUuids.map(rootNetworkRepository::findWithRootNetworkNodeInfosById)
             .map(o -> o.orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)))
             .map(RootNetworkEntity::toDto)
             .toList();
 
-        deleteRootNetworks(rootNetworksInfos);
+        deleteRootNetworks(studyEntity, rootNetworksInfos);
     }
 
-    public void deleteRootNetworks(List<RootNetworkInfos> rootNetworksInfos) {
+    public void deleteRootNetworks(StudyEntity studyEntity, List<RootNetworkInfos> rootNetworksInfos) {
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
             getDeleteRootNetworkInfosFutures(rootNetworksInfos).toArray(CompletableFuture[]::new)
         );
@@ -211,7 +210,8 @@ public class RootNetworkService {
         } catch (Exception e) {
             throw new StudyException(DELETE_ROOT_NETWORK_FAILED, e.getMessage());
         }
-        rootNetworkRepository.deleteAllById(rootNetworksInfos.stream().map(RootNetworkInfos::getId).toList());
+
+        studyEntity.deleteRootNetworks(rootNetworksInfos.stream().map(RootNetworkInfos::getId).collect(Collectors.toSet()));
     }
 
     public Stream<CompletableFuture<Void>> getDeleteRootNetworkInfosFutures(List<RootNetworkInfos> rootNetworkInfos) {

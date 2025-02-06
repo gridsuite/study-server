@@ -18,8 +18,8 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
-import org.gridsuite.study.server.service.StudyService;
 import org.junit.platform.commons.util.StringUtils;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.stereotype.Service;
@@ -42,15 +42,20 @@ public final class TestUtils {
 
     private static final long TIMEOUT = 100;
 
-    private final StudyService studyService;
+    private final RootNetworkRepository rootNetworkRepository;
 
-    public TestUtils(StudyService studyService) {
-        this.studyService = studyService;
+    public TestUtils(RootNetworkRepository rootNetworkRepository) {
+        this.rootNetworkRepository = rootNetworkRepository;
     }
 
+    // TODO rename by getOneRootNetworkUuid
     public UUID getStudyFirstRootNetworkUuid(UUID studyUuid) {
-        List<RootNetworkEntity> rootNetworks = studyService.getStudyRootNetworks(studyUuid);
-        return rootNetworks.get(0).getId();
+        return getStudyFirstRootNetwork(studyUuid).getId();
+    }
+
+    // TODO rename by getOneRootNetwork
+    public RootNetworkEntity getStudyFirstRootNetwork(UUID studyUuid) {
+        return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).get(0);
     }
 
     public static Set<RequestWithBody> getRequestsWithBodyDone(int n, MockWebServer server) {

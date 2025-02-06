@@ -15,6 +15,7 @@ import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParamet
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -126,6 +127,10 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     public void addRootNetwork(RootNetworkEntity rootNetworkEntity) {
         rootNetworkEntity.setStudy(this);
         rootNetworks.add(rootNetworkEntity);
+    }
+
+    public void deleteRootNetworks(Set<UUID> uuids) {
+        rootNetworks.removeAll(rootNetworks.stream().filter(rn -> uuids.contains(rn.getId())).toList());
     }
 }
 
