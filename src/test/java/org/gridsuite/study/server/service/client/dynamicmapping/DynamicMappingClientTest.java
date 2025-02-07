@@ -16,7 +16,6 @@ import org.gridsuite.study.server.dto.dynamicmapping.ModelVariableDefinitionInfo
 import org.gridsuite.study.server.dto.dynamicmapping.VariablesSetInfos;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.service.client.dynamicmapping.impl.DynamicMappingClientImpl;
-import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,12 +28,15 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient.*;
+import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
+    public static final String MAPPINGS_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
+
     private static final String[] MAPPING_NAMES = {"mapping01", "mapping02"};
     private static final List<MappingInfos> MAPPINGS = Arrays.asList(new MappingInfos(MAPPING_NAMES[0]),
                                                         new MappingInfos(MAPPING_NAMES[1]));
@@ -79,8 +81,7 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
     void testGetAllMappings() throws Exception {
 
         // configure mock server response for test case getAllMappings - mappings
-        String getAllMappingsEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(getAllMappingsEndPointUrl + ".*"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(MAPPINGS_BASE_URL))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(MAPPINGS))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -103,8 +104,7 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetAllMappingsGivenNotFound() {
         // configure mock server response for test case not found getAllMappings - mappings
-        String getAllMappingsEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(getAllMappingsEndPointUrl + ".*"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(MAPPINGS_BASE_URL))
                 .willReturn(WireMock.notFound()
                 ));
         // call method to be tested
@@ -114,8 +114,7 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetAllMappingsGivenBadRequest() {
         // configure mock server response for test case bad request getAllMappings - mappings
-        String getAllMappingsEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(getAllMappingsEndPointUrl + ".*"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(MAPPINGS_BASE_URL))
                 .willReturn(WireMock.badRequest()
                 ));
         // call method to be tested
@@ -125,8 +124,7 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetModels() throws Exception {
         // configure mock server response for test case getModels - mappings/{mappingName}/models
-        String getModelsEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(getModelsEndPointUrl + MAPPING_NAMES[0] + DELIMITER + "models" + ".*"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(MAPPINGS_BASE_URL + DELIMITER + MAPPING_NAMES[0] + DELIMITER + "models"))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(MODELS))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -160,8 +158,7 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetModelsGivenNotFound() {
         // configure mock server response for test case getModels - mappings/{mappingName}/models
-        String getModelsEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(getModelsEndPointUrl + MAPPING_NAMES[0] + DELIMITER + "models" + ".*"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(MAPPINGS_BASE_URL + DELIMITER + MAPPING_NAMES[0] + DELIMITER + "models" + ".*"))
                 .willReturn(WireMock.notFound()
                 ));
         // call method to be tested
@@ -171,8 +168,7 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetModelsGivenBadRequest() {
         // configure mock server response for test case getModels - mappings/{mappingName}/models
-        String getModelsEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(getModelsEndPointUrl + MAPPING_NAMES[0] + DELIMITER + "models" + ".*"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(MAPPINGS_BASE_URL + DELIMITER + MAPPING_NAMES[0] + DELIMITER + "models"))
                 .willReturn(WireMock.badRequest()
                 ));
         // call method to be tested

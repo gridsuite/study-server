@@ -85,7 +85,6 @@ class StudyControllerDynamicSecurityAnalysisTest {
     private static final String STUDY_BASE_URL = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
     private static final String STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-security-analysis/run";
     private static final String STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETERS = "{studyUuid}/dynamic-security-analysis/parameters";
-    private static final String STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-security-analysis/result";
     private static final String STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_STATUS = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-security-analysis/status";
 
     private static final String HEADER_USER_ID_NAME = "userId";
@@ -280,7 +279,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // --- call endpoint to be tested --- //
         // run on root node => forbidden
-        studyClient.perform(post(UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT) + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN,
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN,
                 studyUuid, firstRootNetworkUuid, rootNodeUuid)
                 .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isForbidden());

@@ -329,7 +329,7 @@ class StudyControllerDynamicSimulationTest {
 
         // --- call endpoint to be tested --- //
         // run on root node => forbidden
-        studyClient.perform(post(UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT) + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
                 studyUuid, firstRootNetworkUuid, rootNodeUuid, MAPPING_NAME_01)
                 .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isForbidden());

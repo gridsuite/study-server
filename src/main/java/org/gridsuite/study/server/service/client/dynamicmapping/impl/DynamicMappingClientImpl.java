@@ -70,7 +70,7 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
 
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{mappingName}/models");
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/{mappingName}/models");
 
         var uriComponent = uriComponentsBuilder.buildAndExpand(mapping);
 
