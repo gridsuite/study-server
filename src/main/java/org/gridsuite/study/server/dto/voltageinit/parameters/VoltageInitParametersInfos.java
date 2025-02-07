@@ -27,11 +27,17 @@ public class VoltageInitParametersInfos {
 
     List<VoltageLimitInfos> voltageLimitsDefault;
 
-    List<FilterEquipments> constantQGenerators;
+    List<FilterEquipments> variableQGenerators;
+
+    EquipmentsSelectionType generatorsSelectionType;
 
     List<FilterEquipments> variableTwoWindingsTransformers;
 
+    EquipmentsSelectionType twoWindingsTransformersSelectionType;
+
     List<FilterEquipments> variableShuntCompensators;
+
+    EquipmentsSelectionType shuntCompensatorsSelectionType;
 
     double reactiveSlacksThreshold;
 
