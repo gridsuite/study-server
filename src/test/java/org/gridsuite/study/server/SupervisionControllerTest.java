@@ -139,7 +139,7 @@ class SupervisionControllerTest {
 
     private StudyEntity initStudy() throws Exception {
         StudyEntity study = insertDummyStudy(NETWORK_UUID, CASE_UUID, "");
-        UUID rootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(STUDY_UUID);
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
 
         when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(NETWORK_UUID);
         assertIndexationStatus(STUDY_UUID, StudyIndexationStatus.INDEXED.name());
@@ -163,7 +163,7 @@ class SupervisionControllerTest {
     }
 
     private void assertIndexationStatus(UUID studyUuid, String status) throws Exception {
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status", studyUuid, firstRootNetworkUuid))
             .andExpectAll(status().isOk(),
                         content().string(status));

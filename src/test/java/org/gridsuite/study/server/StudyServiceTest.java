@@ -144,7 +144,7 @@ class StudyServiceTest {
         importParameters.put("param2", "changedValue");
         String userId = "userId";
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         mockMvc.perform(head("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
@@ -157,7 +157,7 @@ class StudyServiceTest {
         importParameters.put("param2", "changedValue");
         String userId = "userId";
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenThrow(new PowsyblException("Network '" + NETWORK_UUID + "' not found"));
         mockMvc.perform(head("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
                 .header(USER_ID_HEADER, userId))
@@ -172,7 +172,7 @@ class StudyServiceTest {
         String userId = "userId";
 
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
@@ -202,7 +202,7 @@ class StudyServiceTest {
         Map<String, Object> importParameters = new HashMap<>();
         String userId = "userId";
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(CASE_UUID.toString(), false);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
                 .header(USER_ID_HEADER, userId))
@@ -215,7 +215,7 @@ class StudyServiceTest {
         String userId = "userId";
         Map<String, Object> importParameters = new HashMap<>();
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         Map<String, Object> newImportParameters = new HashMap<>();
         importParameters.put("param1", "changedValue1, changedValue2");
@@ -251,7 +251,7 @@ class StudyServiceTest {
         String userId = "userId";
         Map<String, Object> importParameters = new HashMap<>();
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         Map<String, Object> newImportParameters = new HashMap<>();
         importParameters.put("param1", "changedValue1, changedValue2");
