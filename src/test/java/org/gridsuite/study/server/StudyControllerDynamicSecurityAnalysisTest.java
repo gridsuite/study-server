@@ -20,7 +20,6 @@ import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNo
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.LoadFlowService;
@@ -207,7 +206,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         UUID newNodeId = UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE)));
         modificationNode.setId(newNodeId);
         assertThat(mess.getHeaders()).containsEntry(NotificationService.HEADER_INSERT_MODE, InsertMode.CHILD.name());
-        rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
+        rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyTestUtils.getOneRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
         return modificationNode;
     }
 
@@ -216,20 +215,18 @@ class StudyControllerDynamicSecurityAnalysisTest {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyId(studyUuid).stream().findFirst()
-            .orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
 
         when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         when(mockDynamicSimulationService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
 
-        // setup DynamicSecurityAnalysisService mock
+        // setup DynamicSecurityAnalysisService spy
         doAnswer(invocation -> RESULT_UUID)
             .when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(
-                any(), eq(modificationNode1Uuid), eq(rootNetworkEntity.getId()), eq(NETWORK_UUID), eq(VARIANT_ID),
+                any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID),
                 any(), any(), any(), any());
 
         // --- call endpoint to be tested --- //
@@ -246,12 +243,12 @@ class StudyControllerDynamicSecurityAnalysisTest {
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
         // resultUuid must be present in database at this moment
-        UUID actualResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, rootNetworkEntity.getId(), ComputationType.DYNAMIC_SECURITY_ANALYSIS);
+        UUID actualResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_SECURITY_ANALYSIS);
         LOGGER.info("Actual result uuid in the database = {}", actualResultUuid);
         assertThat(actualResultUuid).isEqualTo(RESULT_UUID);
 
         // mock the notification from dynamic-simulation server in case of failed
-        String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid, rootNetworkEntity.getId())),
+        String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid, firstRootNetworkUuid)),
                 StandardCharsets.UTF_8);
         input.send(MessageBuilder.withPayload("")
                 .setHeader("resultUuid", RESULT_UUID.toString())
@@ -266,7 +263,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_FAILED);
         // resultUuid must be empty in database at this moment
-        assertThat(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, rootNetworkEntity.getId(), ComputationType.DYNAMIC_SECURITY_ANALYSIS)).isNull();
+        assertThat(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_SECURITY_ANALYSIS)).isNull();
     }
 
     @Test
@@ -274,7 +271,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         // create a root node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
 
         // --- call endpoint to be tested --- //
@@ -290,17 +287,17 @@ class StudyControllerDynamicSecurityAnalysisTest {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyId(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
 
         when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         when(mockDynamicSimulationService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
 
         // setup DynamicSecurityAnalysisService mock
-        doAnswer(invocation -> RESULT_UUID).when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(any(), eq(modificationNode1Uuid), eq(rootNetworkEntity.getId()), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any());
+        doAnswer(invocation -> RESULT_UUID).when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(any(),
+            eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any());
 
         MvcResult result;
         // --- call endpoint to be tested --- //
@@ -317,12 +314,12 @@ class StudyControllerDynamicSecurityAnalysisTest {
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
         // resultUuid must be present in database at this moment
-        UUID actualResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, rootNetworkEntity.getId(), ComputationType.DYNAMIC_SECURITY_ANALYSIS);
+        UUID actualResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_SECURITY_ANALYSIS);
         LOGGER.info("Actual result uuid in the database = {}", actualResultUuid);
         assertThat(actualResultUuid).isEqualTo(RESULT_UUID);
 
         // mock the notification from dynamic-simulation server in case of having the result
-        String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid, rootNetworkEntity.getId())),
+        String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid, firstRootNetworkUuid)),
                 StandardCharsets.UTF_8);
         input.send(MessageBuilder.withPayload("")
                 .setHeader("resultUuid", RESULT_UUID.toString())
@@ -367,17 +364,17 @@ class StudyControllerDynamicSecurityAnalysisTest {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyId(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
 
         when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         when(mockDynamicSimulationService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
 
         // setup DynamicSecurityAnalysisService mock
-        doAnswer(invocation -> RESULT_UUID).when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(any(), eq(modificationNode1Uuid), eq(rootNetworkEntity.getId()), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any());
+        doAnswer(invocation -> RESULT_UUID).when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(any(),
+            eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any());
 
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
@@ -393,12 +390,12 @@ class StudyControllerDynamicSecurityAnalysisTest {
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
         // resultUuid must be present in database at this moment
-        UUID actualResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, rootNetworkEntity.getId(), ComputationType.DYNAMIC_SECURITY_ANALYSIS);
+        UUID actualResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_SECURITY_ANALYSIS);
         LOGGER.info("Actual result uuid in the database = {}", actualResultUuid);
         assertThat(actualResultUuid).isEqualTo(RESULT_UUID);
 
         // mock the notification from dynamic-simulation server in case of stop
-        String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid, rootNetworkEntity.getId())),
+        String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid, firstRootNetworkUuid)),
                 StandardCharsets.UTF_8);
         input.send(MessageBuilder.withPayload("")
                 .setHeader("resultUuid", RESULT_UUID.toString())

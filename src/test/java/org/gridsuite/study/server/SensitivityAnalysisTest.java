@@ -394,7 +394,7 @@ class SensitivityAnalysisTest {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
@@ -487,7 +487,7 @@ class SensitivityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID notFoundSensitivityUuid = UUID.randomUUID();
         UUID studyUuid = studyEntity.getId();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, firstRootNetworkUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
                 .andExpect(status().isNoContent()).andReturn();
 
@@ -521,7 +521,7 @@ class SensitivityAnalysisTest {
     void testResetUuidResultWhenSAFailed() throws Exception {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyEntity.getId());
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId(), null);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), firstRootNetworkUuid));
@@ -552,7 +552,7 @@ class SensitivityAnalysisTest {
     void testSensitivityAnalysisFailedForNotification(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_2_STRING), CASE_2_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
@@ -581,7 +581,7 @@ class SensitivityAnalysisTest {
          */
         studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_3_STRING), CASE_3_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyUuid2 = studyEntity.getId();
-        UUID firstRootNetworkUuid2 = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid2);
+        UUID firstRootNetworkUuid2 = studyTestUtils.getOneRootNetworkUuid(studyUuid2);
         UUID rootNodeUuid2 = getRootNodeUuid(studyUuid2);
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyUuid2, rootNodeUuid2, UUID.randomUUID(), VARIANT_ID, "node 2");
         UUID modificationNode1Uuid2 = modificationNode2.getId();
@@ -630,7 +630,7 @@ class SensitivityAnalysisTest {
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).build());
 
         return modificationNode;
@@ -715,7 +715,7 @@ class SensitivityAnalysisTest {
     void testGetSensitivityAnalysisFactorsCount(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         MockHttpServletRequestBuilder requestBuilder = get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/factors-count", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid);
         IDS.getIds().forEach((key, list) -> requestBuilder.queryParam(String.format("ids[%s]", key), list.stream().map(UUID::toString).toArray(String[]::new)));
