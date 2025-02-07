@@ -95,7 +95,6 @@ import java.util.stream.Stream;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.StudyException.Type.ROOT_NETWORK_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.DEFAULT_ERROR_MESSAGE;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
@@ -704,7 +703,7 @@ class StudyTest {
         MvcResult mvcResult;
         String resultAsString;
         UUID studyUuid = createStudy(mockWebServer, "userId", CASE_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeId = getRootNodeUuid(studyUuid);
 
         mvcResult = mockMvc
@@ -761,7 +760,7 @@ class StudyTest {
 
         //insert a study
         UUID studyUuid = createStudy(server, "userId", CASE_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         // check the study
         result = mockMvc.perform(get("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
@@ -842,7 +841,7 @@ class StudyTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, "XIIDM"))
             .andExpect(status().isInternalServerError());
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode1.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(studyNameUserIdUuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode1.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid),
             RootNetworkNodeInfo.builder().nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
@@ -935,7 +934,7 @@ class StudyTest {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
         assertNotNull(studyEntity);
         UUID nonExistingCaseUuid = UUID.randomUUID();
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyId(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkEntity rootNetworkEntity = studyTestUtils.getOneRootNetwork(studyUuid);
         rootNetworkEntity.setCaseUuid(nonExistingCaseUuid);
         rootNetworkRepository.save(rootNetworkEntity);
 
@@ -994,7 +993,7 @@ class StudyTest {
     @Test
     void testLogsReport(final MockWebServer server) throws Exception {
         UUID studyUuid = createStudy(server, "userId", CASE_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?reportType=NETWORK_MODIFICATION", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
@@ -1010,7 +1009,7 @@ class StudyTest {
     void testGetNodeReportLogs(final MockWebServer server) throws Exception {
         UUID studyUuid = createStudy(server, "userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/logs", studyUuid, firstRootNetworkUuid, rootNodeUuid, REPORT_ID).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn();
@@ -1034,7 +1033,7 @@ class StudyTest {
     void testGetParentNodesReportLogs(final MockWebServer server) throws Exception {
         String userId = "userId";
         UUID studyUuid = createStudy(server, userId, CASE_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         AbstractNode modificationNode = rootNode.getChildren().get(0);
@@ -1110,7 +1109,7 @@ class StudyTest {
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).nodeBuildStatus(NodeBuildStatus.from(buildStatus)).build());
 
         return modificationNode;
@@ -1588,7 +1587,7 @@ class StudyTest {
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkUuid, node2.getId(), NETWORK_UUID)));
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyTestUtils.getOneRootNetworkUuid(study1Uuid),
             RootNetworkNodeInfo.builder()
                 .securityAnalysisResultUuid(UUID.randomUUID())
                 .sensitivityAnalysisResultUuid(UUID.randomUUID())
@@ -1617,7 +1616,7 @@ class StudyTest {
     @Test
     void testDuplicateStudyWithParametersUuid(final MockWebServer mockWebServer) throws Exception {
         UUID study1Uuid = createStudy(mockWebServer, "userId", CASE_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
         StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
         studyEntity.setLoadFlowParametersUuid(UUID.randomUUID());
         studyEntity.setSecurityAnalysisParametersUuid(UUID.randomUUID());
@@ -1631,7 +1630,7 @@ class StudyTest {
     @Test
     void testDuplicateStudyWithoutParametersUuid(final MockWebServer mockWebServer) throws Exception {
         UUID study1Uuid = createStudy(mockWebServer, "userId", CASE_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
         StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
         studyEntity.setLoadFlowParametersUuid(null);
         studyEntity.setSecurityAnalysisParametersUuid(null);
@@ -1768,7 +1767,7 @@ class StudyTest {
         }
         requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
 
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findAllByStudyId(duplicatedStudy.getId()).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkEntity rootNetworkEntity = studyTestUtils.getOneRootNetwork(duplicatedStudy.getId());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + rootNetworkEntity.getNetworkUuid() + "/reindex-all")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
@@ -1797,7 +1796,7 @@ class StudyTest {
     void testCutAndPasteNode(final MockWebServer mockWebServer) throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(mockWebServer, "userId", CASE_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
@@ -1844,7 +1843,7 @@ class StudyTest {
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyTestUtils.getOneRootNetworkUuid(study1Uuid),
             RootNetworkNodeInfo.builder()
                 .loadFlowResultUuid(UUID.randomUUID())
                 .securityAnalysisResultUuid(UUID.randomUUID())
@@ -1990,7 +1989,7 @@ class StudyTest {
     void testCutAndPasteNodeWithoutModification(final MockWebServer server) throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(server, userId, CASE_UUID);
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
@@ -2012,7 +2011,7 @@ class StudyTest {
     void testCutAndPasteNodeWithModification(final MockWebServer server) throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(server, userId, CASE_UUID);
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
@@ -2067,7 +2066,7 @@ class StudyTest {
     void testCutAndPasteSubtree(final MockWebServer server) throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(server, userId, CASE_UUID);
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyId(study1Uuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
@@ -2133,7 +2132,7 @@ class StudyTest {
     void testDuplicateNode(final MockWebServer mockWebServer) throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(mockWebServer, userId, CASE_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
@@ -2173,7 +2172,7 @@ class StudyTest {
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyTestUtils.getOneRootNetworkUuid(study1Uuid),
             RootNetworkNodeInfo.builder()
                 .loadFlowResultUuid(UUID.randomUUID())
                 .securityAnalysisResultUuid(UUID.randomUUID())
@@ -2240,7 +2239,7 @@ class StudyTest {
                 .andExpect(status().isForbidden());
 
         // Test Built status when duplicating an empty node
-        UUID rootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId(), rootNetworkUuid).getGlobalBuildStatus());
         duplicateNode(study1Uuid, study1Uuid, emptyNode, node3.getId(), InsertMode.BEFORE, userId);
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId(), rootNetworkUuid).getGlobalBuildStatus());
@@ -2250,7 +2249,7 @@ class StudyTest {
     void testDuplicateSubtree(final MockWebServer server) throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(server, userId, CASE_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
@@ -2397,7 +2396,7 @@ class StudyTest {
     void testDuplicateNodeBetweenStudies(final MockWebServer mockWebServer) throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(mockWebServer, userId, CASE_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
@@ -2629,7 +2628,7 @@ class StudyTest {
             .andExpectAll(status().isNotFound());
 
         UUID notExistingNetworkStudyUuid = createStudy(server, "userId", NOT_EXISTING_NETWORK_CASE_UUID);
-        UUID notExistingNetworkRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(notExistingNetworkStudyUuid);
+        UUID notExistingNetworkRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(notExistingNetworkStudyUuid);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", notExistingNetworkStudyUuid, notExistingNetworkRootNetworkUuid))
             .andExpect(status().isInternalServerError());
@@ -2646,7 +2645,7 @@ class StudyTest {
         assertEquals(1, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/indexed-equipments")).count());
 
         UUID study1Uuid = createStudy(server, "userId", CASE_UUID);
-        UUID study1RootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
+        UUID study1RootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status", study1Uuid, study1RootNetworkUuid))
             .andExpectAll(status().isOk(),
