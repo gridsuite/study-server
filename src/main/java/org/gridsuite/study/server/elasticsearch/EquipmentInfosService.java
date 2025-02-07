@@ -120,6 +120,13 @@ public class EquipmentInfosService {
         return tombstonedEquipmentInfosRepository.findAllByNetworkUuid(networkUuid);
     }
 
+    public Set<TombstonedEquipmentInfos> findTombstonedEquipmentInfosByIdIn(@NonNull UUID networkUuid, @NonNull String variantId, @NonNull List<String> equipmentIds) {
+        return tombstonedEquipmentInfosRepository.findByIdInAndNetworkUuidAndVariantId(
+                        equipmentIds,
+                        networkUuid,
+                        variantId);
+    }
+
     public void deleteVariants(@NonNull UUID networkUuid, List<String> variantIds) {
         variantIds.forEach(variantId -> {
             equipmentInfosRepository.deleteAllByNetworkUuidAndVariantId(networkUuid, variantId);
@@ -298,10 +305,6 @@ public class EquipmentInfosService {
         return functionScores;
     }
 
-    private String buildTombstonedEquipmentSearchQuery(UUID networkUuid, String variantId) {
-        return String.format(NETWORK_UUID + ":(%s) AND " + VARIANT_ID + ":(%s)", networkUuid, variantId);
-    }
-
     private BoolQuery buildSearchEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId, String equipmentType) {
         // If search requires boolean logic or advanced text analysis, then use queryStringQuery.
         // Otherwise, use wildcardQuery for simple text search.
@@ -346,15 +349,15 @@ public class EquipmentInfosService {
     }
 
     private List<EquipmentInfos> cleanRemovedEquipments(UUID networkUuid, String variantId, List<EquipmentInfos> equipmentInfos) {
-        String queryTombstonedEquipments = buildTombstonedEquipmentSearchQuery(networkUuid, variantId);
-        Set<String> removedEquipmentIdsInVariant = searchTombstonedEquipments(queryTombstonedEquipments)
+        List<String> equipmentIds = equipmentInfos.stream().map(EquipmentInfos::getId).toList();
+        Set<String> tombstonedEquipmentIdsInVariant = findTombstonedEquipmentInfosByIdIn(networkUuid, variantId, equipmentIds)
                 .stream()
                 .map(TombstonedEquipmentInfos::getId)
                 .collect(Collectors.toSet());
 
         return equipmentInfos
                 .stream()
-                .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId()) ||
+                .filter(ei -> !tombstonedEquipmentIdsInVariant.contains(ei.getId()) ||
                         // If the equipment has been recreated after the creation of a deletion hypothesis
                         !ei.getVariantId().equals(VariantManagerConstants.INITIAL_VARIANT_ID))
                 .collect(Collectors.toList());
@@ -384,17 +387,5 @@ public class EquipmentInfosService {
                 .stream()
                 .map(SearchHit::getContent)
                 .collect(Collectors.toList()); //.collect(Collectors.toList()) instead of .toList() to update list before returning
-    }
-
-    public List<TombstonedEquipmentInfos> searchTombstonedEquipments(@NonNull final String query) {
-        NativeQuery nativeSearchQuery = new NativeQueryBuilder()
-                .withQuery(QueryStringQuery.of(qs -> qs.query(query))._toQuery())
-                .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
-                .build();
-
-        return elasticsearchOperations.search(nativeSearchQuery, TombstonedEquipmentInfos.class)
-                .stream()
-                .map(SearchHit::getContent)
-                .toList();
     }
 }
