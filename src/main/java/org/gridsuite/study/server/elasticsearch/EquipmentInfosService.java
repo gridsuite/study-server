@@ -120,7 +120,7 @@ public class EquipmentInfosService {
         return tombstonedEquipmentInfosRepository.findAllByNetworkUuid(networkUuid);
     }
 
-    public Set<TombstonedEquipmentInfos> findTombstonedEquipmentInfosByIdIn(@NonNull UUID networkUuid, @NonNull String variantId, @NonNull List<String> equipmentIds) {
+    private Set<TombstonedEquipmentInfos> findTombstonedEquipmentInfosByIdIn(@NonNull UUID networkUuid, @NonNull String variantId, @NonNull List<String> equipmentIds) {
         return tombstonedEquipmentInfosRepository.findByIdInAndNetworkUuidAndVariantId(
                         equipmentIds,
                         networkUuid,
