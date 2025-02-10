@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service.dynamicsecurityanalysis;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
@@ -85,19 +86,13 @@ public class DynamicSecurityAnalysisService {
     }
 
     public DynamicSecurityAnalysisStatus getStatus(UUID resultUuid) {
-        if (resultUuid == null) {
-            return null;
-        }
-        return dynamicSecurityAnalysisClient.getStatus(resultUuid);
+        return resultUuid == null ? null : dynamicSecurityAnalysisClient.getStatus(resultUuid);
     }
 
     public void invalidateStatus(List<UUID> resultUuids) {
-
-        if (resultUuids.isEmpty()) {
-            return;
+        if (CollectionUtils.isNotEmpty(resultUuids)) {
+            dynamicSecurityAnalysisClient.invalidateStatus(resultUuids);
         }
-
-        dynamicSecurityAnalysisClient.invalidateStatus(resultUuids);
     }
 
     public void deleteResult(UUID resultUuid) {
