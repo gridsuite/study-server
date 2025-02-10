@@ -16,6 +16,7 @@ import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParamet
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -36,7 +37,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private UUID id;
 
     @OneToMany(mappedBy = "study", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<RootNetworkEntity> rootNetworks;
+    @OrderColumn(name = "index")
+    @Builder.Default
+    private List<RootNetworkEntity> rootNetworks = new ArrayList<>();
 
     /**
      * @deprecated to remove when the data is migrated into the loadflow-server
@@ -125,11 +128,12 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     }
 
     public void addRootNetwork(RootNetworkEntity rootNetworkEntity) {
-        if (rootNetworks == null) {
-            rootNetworks = new ArrayList<>();
-        }
         rootNetworkEntity.setStudy(this);
         rootNetworks.add(rootNetworkEntity);
+    }
+
+    public void deleteRootNetworks(Set<UUID> uuids) {
+        rootNetworks.removeAll(rootNetworks.stream().filter(rn -> uuids.contains(rn.getId())).toList());
     }
 }
 

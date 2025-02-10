@@ -141,7 +141,7 @@ class RepositoriesTest {
 
         StudyEntity newStudy = studyRepository.save(studyEntityToSave);
 
-        RootNetworkEntity newRootNetworkEntity = rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(newStudy.getId()).get(0);
+        RootNetworkEntity newRootNetworkEntity = rootNetworkRepository.findAllWithInfosByStudyId(newStudy.getId()).get(0);
         Map<String, String> savedImportParameters = newRootNetworkEntity.getImportParameters();
         assertEquals(2, savedImportParameters.size());
         assertEquals("changedValue1, changedValue2", savedImportParameters.get("param1"), "param1");

@@ -182,7 +182,7 @@ public class StudyController {
     @Operation(summary = "Get root networks for study")
     @ApiResponse(responseCode = "200", description = "List of root networks")
     public ResponseEntity<List<BasicRootNetworkInfos>> getRootNetworks(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(rootNetworkService.getRootNetworks(studyUuid));
+        return ResponseEntity.ok().body(studyService.getBasicRootNetworkInfos(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks")
@@ -1147,7 +1147,7 @@ public class StudyController {
                                                                        @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesAggregatedReportSeverities(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesAggregatedReportSeverities(nodeUuid, rootNetworkUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -1609,14 +1609,13 @@ public class StudyController {
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/models")
+    @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/models")
     @Operation(summary = "Get models of dynamic simulation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All models of dynamic simulation"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation models"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation models has not been found")})
-    public ResponseEntity<List<ModelInfos>> getDynamicSimulationModels(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid, nodeUuid);
+    public ResponseEntity<List<ModelInfos>> getDynamicSimulationModels(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid) {
+        List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid);
         return models != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(models) :
                 ResponseEntity.noContent().build();
     }

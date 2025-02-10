@@ -101,7 +101,7 @@ public class NetworkService {
         return networkStoreService.getNetworkUuid(network);
     }
 
-    List<VariantInfos> getNetworkVariants(UUID networkUuid) {
+    public List<VariantInfos> getNetworkVariants(UUID networkUuid) {
         return networkStoreService.getVariantsInfos(networkUuid).stream().sorted(Comparator.comparing(VariantInfos::getNum)).collect(Collectors.toList());
     }
 

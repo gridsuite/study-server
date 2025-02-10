@@ -28,7 +28,6 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
-import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -178,7 +177,6 @@ class NetworkModificationTreeTest {
     private static final UUID MODIFICATION_GROUP_UUID_2 = UUID.randomUUID();
     private static final UUID MODIFICATION_GROUP_UUID_3 = UUID.randomUUID();
     private static final String MODIFICATION1_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
-    private static final String MODIFICATION2_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef111";
     private static final String MODIFICATION_GROUP_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef222";
     private static final String USER_ID_HEADER = "userId";
 
@@ -193,13 +191,11 @@ class NetworkModificationTreeTest {
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
-    private RootNetworkRepository rootNetworkRepository;
-    @Autowired
     private RootNetworkService rootNetworkService;
     @Autowired
-    private StudyService studyService;
-    @Autowired
     private TestUtils studyTestUtils;
+    @Autowired
+    private RootNetworkRepository rootNetworkRepository;
 
     @BeforeEach
     void setUp(final MockWebServer server) {
@@ -376,7 +372,7 @@ class NetworkModificationTreeTest {
     void testNodeCreation() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(root.getStudyId());
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(root.getStudyId());
         // Check build status initialized to NOT_BUILT if null
         final NetworkModificationNode node1 = buildNetworkModificationNode("not_built", "not built node", MODIFICATION_GROUP_UUID_2, VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
         createNode(root.getStudyId(), root, node1, userId);
@@ -406,7 +402,7 @@ class NetworkModificationTreeTest {
         String userId = "userId";
         RootNode root = createRoot();
         UUID studyId = root.getStudyId();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(studyId);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyId);
         // Check build status initialized to NOT_BUILT if null
         final NetworkModificationNode node1 = buildNetworkModificationNode("not_built", "not built node", MODIFICATION_GROUP_UUID_2, VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
 
@@ -553,7 +549,7 @@ class NetworkModificationTreeTest {
     @Test
     void testNodeModificationInfos() throws Exception {
         UUID rootStudyId = createNodeTree();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(rootStudyId);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(rootStudyId);
         RootNode root = getRootNode(rootStudyId, firstRootNetworkUuid);
         UUID rootId = root.getId();
 
@@ -613,7 +609,7 @@ class NetworkModificationTreeTest {
         final NetworkModificationNode node4 = buildNetworkModificationNode("hypo 2", "potamus", MODIFICATION_GROUP_UUID_3, VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
         createNode(root.getStudyId(), root, node1, userId);
         createNode(root.getStudyId(), root, node2, userId);
-        UUID firstRootNetwork = studyTestUtils.getStudyFirstRootNetworkUuid(root.getStudyId());
+        UUID firstRootNetwork = studyTestUtils.getOneRootNetworkUuid(root.getStudyId());
         root = getRootNode(root.getStudyId(), firstRootNetwork);
 
         List<AbstractNode> children = root.getChildren();
@@ -823,7 +819,7 @@ class NetworkModificationTreeTest {
         var grandChildren = getRootNode(root.getStudyId()).getChildren().get(0).getChildren().stream().map(AbstractNode::getId).collect(Collectors.toSet());
         assertEquals(originalChildren, grandChildren);
 
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(root.getStudyId()).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(root.getStudyId());
         assertEquals(VARIANT_ID, networkModificationTreeService.getVariantId(node1.getId(), rootNetworkUuid));
 
         UUID nodeUuid = node2.getId();
@@ -831,16 +827,16 @@ class NetworkModificationTreeTest {
         assertNotNull(networkModificationTreeService.getReportUuid(nodeUuid, rootNetworkUuid));
         assertFalse(networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid).isEmpty());
 
-        List<RootNetworkInfos> rootNetworkEntities = rootNetworkService.getStudyRootNetworkInfosWithRootNetworkNodeInfos(root.getStudyId());
-        assertEquals(1, rootNetworkEntities.size());
-        assertEquals(3, rootNetworkEntities.get(0).getRootNetworkNodeInfos().size());
+        assertEquals(1, rootNetworkRepository.findAll().size());
+        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.findWithRootNetworkNodeInfosById(rootNetworkUuid).orElseThrow();
+        assertEquals(3, rootNetworkEntity.getRootNetworkNodeInfos().size());
     }
 
     @Test
     void testNodeUpdate() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(root.getStudyId());
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(root.getStudyId());
         final NetworkModificationNode node1 = buildNetworkModificationNode("hypo", "potamus", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
         createNode(root.getStudyId(), root, node1, userId);
         node1.setName("grunt");
@@ -1010,7 +1006,7 @@ class NetworkModificationTreeTest {
         createNode(root.getStudyId(), node3, node10, userId);
         createNode(root.getStudyId(), node10, node9, userId);
 
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(root.getStudyId()).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(root.getStudyId());
         assertEquals(node7.getId(), networkModificationTreeService.doGetLastParentNodeBuiltUuid(node7.getId(), rootNetworkUuid));
         assertEquals(node7.getId(), networkModificationTreeService.doGetLastParentNodeBuiltUuid(node9.getId(), rootNetworkUuid));
         assertEquals(node7.getId(), networkModificationTreeService.doGetLastParentNodeBuiltUuid(node3.getId(), rootNetworkUuid));
@@ -1037,7 +1033,7 @@ class NetworkModificationTreeTest {
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(newNode.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(newNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder()
                 .variantId(newNode.getVariantId())
                 .nodeBuildStatus(newNode.getNodeBuildStatus())
@@ -1081,7 +1077,7 @@ class NetworkModificationTreeTest {
 
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(newNode.getId(), studyTestUtils.getStudyFirstRootNetworkUuid(studyUuid),
+        rootNetworkNodeInfoService.updateRootNetworkNode(newNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).nodeBuildStatus(newNode.getNodeBuildStatus()).build());
     }
 
@@ -1218,7 +1214,7 @@ class NetworkModificationTreeTest {
     void testGetNetworkModificationsToRestoreByNode() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(root.getStudyId());
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(root.getStudyId());
         NetworkModificationNode node = buildNetworkModificationNode("modification node 1", "", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
@@ -1257,7 +1253,7 @@ class NetworkModificationTreeTest {
     void testGetNetworkModificationsToStashByNode() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(root.getStudyId());
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(root.getStudyId());
         NetworkModificationNode node = buildNetworkModificationNode("modification node 1", "", UUID.randomUUID(), VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
@@ -1298,7 +1294,7 @@ class NetworkModificationTreeTest {
         Pair<UUID, NetworkModificationNode> result = createTreeForBuildStatus();
         UUID leafNodeId = result.getSecond().getId();
         UUID studyUuid = result.getFirst();
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         networkModificationTreeService.updateNodeBuildStatus(leafNodeId, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT_WITH_WARNING));
         assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getNodeBuildStatus(leafNodeId, rootNetworkUuid).getGlobalBuildStatus());
@@ -1334,7 +1330,7 @@ class NetworkModificationTreeTest {
         Pair<UUID, NetworkModificationNode> result = createTreeForBuildStatus();
         UUID leafNodeId = result.getSecond().getId();
         UUID studyUuid = result.getFirst();
-        UUID rootNetworkUuid = rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND)).getId();
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         // take the closest built parent severity
         networkModificationTreeService.updateNodeBuildStatus(leafNodeId, rootNetworkUuid, NodeBuildStatus.from(NetworkModificationResult.ApplicationStatus.ALL_OK, NetworkModificationResult.ApplicationStatus.WITH_WARNINGS));

@@ -14,14 +14,12 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
-import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,7 +43,6 @@ public class RootNetworkService {
     private final CaseService caseService;
     private final ReportService reportService;
 
-    private final RootNetworkService self;
     private final RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository;
     private final StudyServerExecutionService studyServerExecutionService;
     private final EquipmentInfosService equipmentInfosService;
@@ -56,7 +53,6 @@ public class RootNetworkService {
                               RootNetworkNodeInfoService rootNetworkNodeInfoService,
                               NetworkService networkService,
                               CaseService caseService,
-                              @Lazy RootNetworkService self,
                               StudyServerExecutionService studyServerExecutionService,
                               ReportService reportService,
                               EquipmentInfosService equipmentInfosService,
@@ -66,7 +62,6 @@ public class RootNetworkService {
         this.networkService = networkService;
         this.caseService = caseService;
         this.reportService = reportService;
-        this.self = self;
         this.rootNetworkCreationRequestRepository = rootNetworkCreationRequestRepository;
         this.studyServerExecutionService = studyServerExecutionService;
         this.equipmentInfosService = equipmentInfosService;
@@ -117,7 +112,6 @@ public class RootNetworkService {
         rootNetworkEntity.setNetworkUuid(networkInfos.getNetworkUuid());
     }
 
-    @Transactional
     public RootNetworkEntity createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
         RootNetworkEntity rootNetworkEntity = saveWithOrder(studyEntity.getId(), rootNetworkInfos.toEntity());
         studyEntity.addRootNetwork(rootNetworkEntity);
@@ -156,11 +150,7 @@ public class RootNetworkService {
         return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
     }
 
-    public List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
-        return rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid);
-    }
-
-    public List<RootNetworkInfos> getStudyRootNetworkInfosWithRootNetworkNodeInfos(UUID studyUuid) {
+    public List<RootNetworkInfos> getRootNetworkInfosWithLinksInfos(UUID studyUuid) {
         return rootNetworkRepository.findAllWithInfosByStudyIdOrderByRootNetworkOrder(studyUuid).stream().map(RootNetworkEntity::toDto).toList();
     }
 
@@ -169,7 +159,8 @@ public class RootNetworkService {
         List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllWithInfosByStudyIdOrderByRootNetworkOrder(sourceStudyUuid);
         rootNetworkEntities.forEach(rootNetworkEntityToDuplicate -> {
                 List<VariantInfos> networkVariants = networkService.getNetworkVariants(rootNetworkEntityToDuplicate.getNetworkUuid());
-                List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(2).collect(Collectors.toList());
+                // Clone only the initial variant
+                List<String> targetVariantIds = networkVariants.stream().findFirst().map(VariantInfos::getId).stream().toList();
                 Network clonedNetwork = networkService.cloneNetwork(rootNetworkEntityToDuplicate.getNetworkUuid(), targetVariantIds);
                 UUID clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
 
@@ -178,7 +169,7 @@ public class RootNetworkService {
 
                 UUID clonedRootNodeReportUuid = reportService.duplicateReport(rootNetworkEntityToDuplicate.getReportUuid());
 
-                self.createRootNetwork(newStudyEntity,
+                createRootNetwork(newStudyEntity,
                     RootNetworkInfos.builder()
                         .id(UUID.randomUUID())
                         .name(rootNetworkEntityToDuplicate.getName())
@@ -207,16 +198,16 @@ public class RootNetworkService {
      * will also delete all remote resources linked to the entity
      * @param rootNetworkUuids
      */
-    public void deleteRootNetworks(Stream<UUID> rootNetworkUuids) {
+    public void deleteRootNetworks(StudyEntity studyEntity, Stream<UUID> rootNetworkUuids) {
         List<RootNetworkInfos> rootNetworksInfos = rootNetworkUuids.map(rootNetworkRepository::findWithRootNetworkNodeInfosById)
             .map(o -> o.orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)))
             .map(RootNetworkEntity::toDto)
             .toList();
 
-        deleteRootNetworks(rootNetworksInfos);
+        deleteRootNetworks(studyEntity, rootNetworksInfos);
     }
 
-    public void deleteRootNetworks(List<RootNetworkInfos> rootNetworksInfos) {
+    public void deleteRootNetworks(StudyEntity studyEntity, List<RootNetworkInfos> rootNetworksInfos) {
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
             getDeleteRootNetworkInfosFutures(rootNetworksInfos).toArray(CompletableFuture[]::new)
         );
@@ -229,7 +220,8 @@ public class RootNetworkService {
         } catch (Exception e) {
             throw new StudyException(DELETE_ROOT_NETWORK_FAILED, e.getMessage());
         }
-        rootNetworkRepository.deleteAllById(rootNetworksInfos.stream().map(RootNetworkInfos::getId).toList());
+
+        studyEntity.deleteRootNetworks(rootNetworksInfos.stream().map(RootNetworkInfos::getId).collect(Collectors.toSet()));
     }
 
     public Stream<CompletableFuture<Void>> getDeleteRootNetworkInfosFutures(List<RootNetworkInfos> rootNetworkInfos) {
@@ -251,16 +243,12 @@ public class RootNetworkService {
         return rootNetworkCreationRequestRepository.findById(rootNetworkInCreationUuid);
     }
 
-    public void deleteCreationRequest(RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity) {
-        rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity);
+    public List<RootNetworkCreationRequestEntity> getCreationRequests(UUID studyUuid) {
+        return rootNetworkCreationRequestRepository.findAllByStudyUuid(studyUuid);
     }
 
-    public List<BasicRootNetworkInfos> getRootNetworks(UUID studyUuid) {
-        return Stream
-            .concat(
-                rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid).stream().map(RootNetworkEntity::toBasicDto),
-                rootNetworkCreationRequestRepository.findAllByStudyUuid(studyUuid).stream().map(RootNetworkCreationRequestEntity::toBasicDto))
-            .toList();
+    public void deleteCreationRequest(RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity) {
+        rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity);
     }
 
     public void assertCanCreateRootNetwork(UUID studyUuid, String rootNetworkName) {

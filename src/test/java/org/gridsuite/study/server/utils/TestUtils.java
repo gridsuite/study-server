@@ -48,8 +48,12 @@ public final class TestUtils {
         this.rootNetworkRepository = rootNetworkRepository;
     }
 
-    public UUID getStudyFirstRootNetworkUuid(UUID studyUuid) {
-        return rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid).get(0).getId();
+    public UUID getOneRootNetworkUuid(UUID studyUuid) {
+        return getOneRootNetwork(studyUuid).getId();
+    }
+
+    public RootNetworkEntity getOneRootNetwork(UUID studyUuid) {
+        return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).get(0);
     }
 
     public static Set<RequestWithBody> getRequestsWithBodyDone(int n, MockWebServer server) {

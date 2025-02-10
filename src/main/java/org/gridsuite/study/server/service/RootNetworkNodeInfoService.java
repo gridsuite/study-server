@@ -20,10 +20,10 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
@@ -49,7 +49,6 @@ import static org.gridsuite.study.server.dto.ComputationType.*;
  */
 @Service
 public class RootNetworkNodeInfoService {
-    private final RootNetworkRepository rootNetworkRepository;
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
     private final StudyServerExecutionService studyServerExecutionService;
@@ -63,8 +62,7 @@ public class RootNetworkNodeInfoService {
     private final StateEstimationService stateEstimationService;
     private final ReportService reportService;
 
-    public RootNetworkNodeInfoService(RootNetworkRepository rootNetworkRepository,
-                                      RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
+    public RootNetworkNodeInfoService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                                       NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                                       StudyServerExecutionService studyServerExecutionService,
                                       LoadFlowService loadFlowService,
@@ -76,7 +74,6 @@ public class RootNetworkNodeInfoService {
                                       DynamicSimulationService dynamicSimulationService,
                                       StateEstimationService stateEstimationService,
                                       ReportService reportService) {
-        this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.studyServerExecutionService = studyServerExecutionService;
@@ -99,9 +96,9 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    public void createNodeLinks(@NonNull UUID studyUuid, @NonNull NetworkModificationNodeInfoEntity modificationNodeInfoEntity) {
+    public void createNodeLinks(@NonNull StudyEntity studyEntity, @NonNull NetworkModificationNodeInfoEntity modificationNodeInfoEntity) {
         // For each root network create a link with the node
-        rootNetworkRepository.findAllByStudyIdOrderByRootNetworkOrder(studyUuid).forEach(rootNetworkEntity -> {
+        studyEntity.getRootNetworks().forEach(rootNetworkEntity -> {
             RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity(modificationNodeInfoEntity.getId());
             addLink(modificationNodeInfoEntity, rootNetworkEntity, newRootNetworkNodeInfoEntity);
         });
@@ -381,6 +378,9 @@ public class RootNetworkNodeInfoService {
         }
         if (rootNetworkNodeInfo.getVoltageInitResultUuid() != null) {
             rootNetworkNodeInfoEntity.setVoltageInitResultUuid(rootNetworkNodeInfo.getVoltageInitResultUuid());
+        }
+        if (rootNetworkNodeInfo.getModificationReports() != null) {
+            rootNetworkNodeInfoEntity.setModificationReports(rootNetworkNodeInfo.getModificationReports());
         }
     }
 
