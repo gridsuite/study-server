@@ -2067,6 +2067,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(rootNetworkUuid, filterUuid));
     }
 
+    // temporary - used by grid-explore only to prevent filter conversion from dysfunctioning since it does not have access to root networks yet
     @GetMapping(value = "/studies/{studyUuid}/filters/{filterUuid}/elements")
     @Operation(summary = "Evaluate a filter on root node and first root network of study to get matched elements")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched elements")})
