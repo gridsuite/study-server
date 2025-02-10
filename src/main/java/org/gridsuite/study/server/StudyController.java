@@ -2057,6 +2057,16 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFilter(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, filter));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/filters/{filterUuid}/elements")
+    @Operation(summary = "Evaluate a filter on root node to get matched elements")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched elements")})
+    public ResponseEntity<String> exportFilter(
+        @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+        @Parameter(description = "Filter uuid to be applied") @PathVariable("filterUuid") UUID filterUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(rootNetworkUuid, filterUuid));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/filters/{filterUuid}/elements")
     @Operation(summary = "Evaluate a filter on root node and first root network to get matched elements")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched elements")})
