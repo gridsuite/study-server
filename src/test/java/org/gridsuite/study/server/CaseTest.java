@@ -104,7 +104,7 @@ class CaseTest {
     void getCaseName() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, CASE_NAME);
         UUID study1Uuid = studyEntity.getId();
-        UUID firstRootNetworkUuid = studyTestUtils.getStudyFirstRootNetworkUuid(study1Uuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/case/name", study1Uuid, firstRootNetworkUuid)).andExpectAll(
                 status().isOk(),
