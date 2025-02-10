@@ -45,7 +45,7 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
     public List<MappingInfos> getAllMappings() {
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
 
-        var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
+        var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + DELIMITER);
 
         // call dynamic-mapping REST API
         try {
