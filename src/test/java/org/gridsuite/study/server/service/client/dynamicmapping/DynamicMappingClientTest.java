@@ -114,7 +114,7 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetAllMappingsGivenBadRequest() {
         // configure mock server response for test case bad request getAllMappings - mappings/
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(MAPPINGS_BASE_URL + DELIMITER ))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(MAPPINGS_BASE_URL + DELIMITER))
                 .willReturn(WireMock.badRequest()
                 ));
         // call method to be tested
