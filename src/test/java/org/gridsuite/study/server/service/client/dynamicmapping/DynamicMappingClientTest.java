@@ -80,8 +80,8 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetAllMappings() throws Exception {
 
-        // configure mock server response for test case getAllMappings - mappings
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(MAPPINGS_BASE_URL))
+        // configure mock server response for test case getAllMappings - mappings/
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(MAPPINGS_BASE_URL + DELIMITER))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(MAPPINGS))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -113,8 +113,8 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
 
     @Test
     void testGetAllMappingsGivenBadRequest() {
-        // configure mock server response for test case bad request getAllMappings - mappings
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(MAPPINGS_BASE_URL))
+        // configure mock server response for test case bad request getAllMappings - mappings/
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(MAPPINGS_BASE_URL + DELIMITER ))
                 .willReturn(WireMock.badRequest()
                 ));
         // call method to be tested
