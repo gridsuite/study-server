@@ -45,7 +45,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         super(remoteServicesProperties.getServiceUri("dynamic-security-analysis-server"), restTemplate);
     }
 
-    private String getParametersWithUuidBaseUrl(UUID parametersUuid) {
+    private String getParametersWithUuidUrl(UUID parametersUuid) {
         String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
 
         return UriComponentsBuilder
@@ -115,7 +115,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
     }
 
     public String getParameters(@NonNull UUID parametersUuid) {
-        String url = getParametersWithUuidBaseUrl(parametersUuid);
+        String url = getParametersWithUuidUrl(parametersUuid);
 
         // call dynamic-security-analysis REST API
         try {
@@ -150,7 +150,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
     }
 
     public void updateParameters(@NonNull UUID parametersUuid, @NonNull String parametersInfos) {
-        String url = getParametersWithUuidBaseUrl(parametersUuid);
+        String url = getParametersWithUuidUrl(parametersUuid);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -183,7 +183,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
     }
 
     public void deleteParameters(@NonNull UUID parametersUuid) {
-        String url = getParametersWithUuidBaseUrl(parametersUuid);
+        String url = getParametersWithUuidUrl(parametersUuid);
 
         // call dynamic-security-analysis REST API
         getRestTemplate().delete(url);
