@@ -133,6 +133,8 @@ public class NetworkModificationTreeService {
 
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
         rootNetworkNodeInfoService.createNodeLinks(study, newNodeInfoEntity);
+<<<<<<< Updated upstream
+=======
 
         return newNode;
     }
@@ -143,6 +145,7 @@ public class NetworkModificationTreeService {
 
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
         rootNetworkNodeInfoService.duplicateNodeLinks(study, newNodeInfoEntity, originNodeUuid, originToDuplicateModificationUuidMap);
+>>>>>>> Stashed changes
 
         return newNode;
     }

@@ -28,12 +28,12 @@ public class BuildInfos {
     private List<UUID> modificationGroupUuids = new ArrayList<>();
 
     // map with modification groups as key, modification to excludes as value
-    private Map<UUID, List<UUID>> modificationUuidsToExcludeMap = new HashMap<>();
+    private Map<UUID, Set<UUID>> modificationUuidsToExcludeMap = new HashMap<>();
 
     private List<ReportInfos> reportsInfos = new ArrayList<>();
 
-    public void insertModificationInfos(UUID modificationGroupUuid, List<UUID> modificationUuidsToExclude, ReportInfos reportInfos) {
-        if (modificationUuidsToExclude != null && modificationUuidsToExclude.size() > 0) {
+    public void insertModificationInfos(UUID modificationGroupUuid, Set<UUID> modificationUuidsToExclude, ReportInfos reportInfos) {
+        if (modificationUuidsToExclude != null && !modificationUuidsToExclude.isEmpty()) {
             modificationUuidsToExcludeMap.put(modificationGroupUuid, modificationUuidsToExclude);
         }
         modificationGroupUuids.add(0, modificationGroupUuid);

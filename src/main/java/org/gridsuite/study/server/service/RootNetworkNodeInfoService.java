@@ -104,11 +104,35 @@ public class RootNetworkNodeInfoService {
         });
     }
 
+    public void duplicateNodeLinks(@NonNull StudyEntity studyEntity, @NonNull NetworkModificationNodeInfoEntity destinationNodeInfoEntity, UUID originNodeUuid, Map<UUID, UUID> originToDuplicateModificationUuidMap) {
+        // For each root network create a link with the node
+        studyEntity.getRootNetworks().forEach(rootNetworkEntity -> {
+            // TODO what to do if absent ?
+            // when duplicating a rootNetworkNodeInfoEntity, we need to keep modificationsToExclude
+            Optional<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntityToDuplicate = getRootNetworkNodeInfo(originNodeUuid, rootNetworkEntity.getId());
+            if (rootNetworkNodeInfoEntityToDuplicate.isPresent()) {
+                // use correspondence map to use duplicate modification uuids
+                // TODO manage nullish value if no mapping ?
+                RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity(
+                    destinationNodeInfoEntity.getId(),
+                    rootNetworkNodeInfoEntityToDuplicate.get().getModificationsToExclude().stream().map(originToDuplicateModificationUuidMap::get).collect(Collectors.toSet())
+                );
+                addLink(destinationNodeInfoEntity, rootNetworkEntity, newRootNetworkNodeInfoEntity);
+            }
+
+        });
+    }
+
     private static RootNetworkNodeInfoEntity createDefaultEntity(UUID nodeUuid) {
+        return createDefaultEntity(nodeUuid, new HashSet<>());
+    }
+
+    private static RootNetworkNodeInfoEntity createDefaultEntity(UUID nodeUuid, Set<UUID> modificationsToExclude) {
         return RootNetworkNodeInfoEntity.builder()
             .nodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT))
             .variantId(UUID.randomUUID().toString())
             .modificationReports(new HashMap<>(Map.of(nodeUuid, UUID.randomUUID())))
+            .modificationsToExclude(modificationsToExclude)
             .build();
     }
 
@@ -439,6 +463,31 @@ public class RootNetworkNodeInfoService {
             rootNetworkNodeInfo.getComputationReports().values().stream())
             .flatMap(Function.identity())
             .toList();
+    }
+
+    public void updateExcludedModifications(List<RootNetworkEntity> rootNetworkEntities, UUID nodeUuid, Map<UUID, UUID> originToDuplicateModificationUuidMap) {
+        // get all root network node info entities linked to "rootNetworkEntities" and "nodeUuid"
+        // TODO : what to do if isAbsent ?
+        Stream<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkEntities.stream().map(rootNetworkEntity ->
+            rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkEntity.getId())
+        ).filter(Optional::isPresent).map(Optional::get);
+
+        // for each root network node info entity, iterate through each modificationsToExclude
+        // for each modification to exclude, check if it is contained in "modificationUuidsMapping"
+        // - if it is found, we add its corresponding uuid to the list "modificationsToExclude"
+        // - otherwise, nothing happens
+        rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfoEntity -> {
+            Set<UUID> initialModificationsToExclude = rootNetworkNodeInfoEntity.getModificationsToExclude();
+            Set<UUID> newModificationsToExclude = new HashSet<>();
+            initialModificationsToExclude.forEach(modificationToExclude -> {
+                UUID duplicateModificationUuid = originToDuplicateModificationUuidMap.get(modificationToExclude);
+                if (duplicateModificationUuid != null) {
+                    newModificationsToExclude.add(duplicateModificationUuid);
+                }
+            });
+            // since it's a set, no need to check if newModificationsToExclude are already in "modificationToExclude"
+            rootNetworkNodeInfoEntity.addModificationsToExclude(newModificationsToExclude);
+        });
     }
 
     public void assertComputationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
