@@ -16,6 +16,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
@@ -112,6 +113,8 @@ public class ModificationToExcludeTest {
     private VoltageInitService voltageInitService;
     @MockBean
     private NetworkService networkService;
+    @Autowired
+    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
     @Test
     public void testDuplicateNodeWithModificationsToExclude() throws Exception {
@@ -205,6 +208,51 @@ public class ModificationToExcludeTest {
                 .collect(Collectors.toSet())
         );
         assertEquals(expectedExcludedModification2, upToDateRootNetworkNodeInfoEntity2.getModificationsToExclude());
+    }
+
+    @Test
+    public void testDuplicateStudyTreeWithModificationsToExclude() throws Exception {
+        // PREPARE TEST : 2 root network with 3 nodes (rootNode, node1, node2)
+        // This test adds some modifications to exclude in several nodes and root network, duplicate node1 subtree, then check exclusions have been accuratly duplicated
+        // create study with two root networks
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        createDummyRootNetwork(studyEntity, "secondRootNetwork");
+        studyRepository.save(studyEntity);
+        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getBasicRootNetworkInfos(studyEntity.getId());
+
+        // create root node and a network modification node - it will create a RootNetworkNodeInfoEntity for each root network
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+        NetworkModificationNode secondNode = networkModificationTreeService.createNode(studyEntity, firstNode.getId(), createModificationNodeInfo(NODE_2_NAME), InsertMode.AFTER, null);
+
+        // root network 0, first node, set some excluded modifications
+        RootNetworkNodeInfoEntity rootNetwork0NodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        rootNetwork0NodeInfo1Entity.setModificationsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_1);
+        rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo1Entity);
+
+        // root network 1, second node, set some excluded modifications
+        RootNetworkNodeInfoEntity rootNetwork1NodeInfo2Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(secondNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        rootNetwork1NodeInfo2Entity.setModificationsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_2);
+        rootNetworkNodeInfoRepository.save(rootNetwork1NodeInfo2Entity);
+
+        // mock duplicateModificationsGroup to return a mapping between origin modification uuid and their duplicate uuid
+        Mockito.doReturn(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP).when(networkModificationService).duplicateModificationsGroup(any(), any());
+
+        // RUN study tree duplication
+        studyService.duplicateStudySubtree(studyEntity.getId(), studyEntity.getId(), firstNode.getId(), rootNode.getIdNode(), null);
+
+        // ASSERT duplications are correct
+        // get RootNetworkNodeInfoEntity of duplicate nodes
+        UUID firstNodeDuplicateUuid = networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyEntity.getId(), NODE_1_NAME + " (1)").get(0).getId();
+        UUID secondNodeDuplicateUuid = networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyEntity.getId(), NODE_2_NAME + " (1)").get(0).getId();
+
+        // get RootNetworkNodeInfoEntity of duplicate node
+        RootNetworkNodeInfoEntity duplicateRootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeDuplicateUuid, rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity duplicateRootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNodeDuplicateUuid, rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+
+        // assert those values are actually defined from ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP
+        assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()), duplicateRootNetworkNodeInfoEntity1.getModificationsToExclude());
+        assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_2.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()), duplicateRootNetworkNodeInfoEntity2.getModificationsToExclude());
     }
 
     private Set<UUID> getSetIntersection(Set<UUID> set1, Set<UUID> set2) {

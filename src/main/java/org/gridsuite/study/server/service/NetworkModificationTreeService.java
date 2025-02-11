@@ -59,7 +59,6 @@ public class NetworkModificationTreeService {
     private final RootNodeInfoRepository rootNodeInfoRepository;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final RootNetworkService rootNetworkService;
-    private final RootNetworkRepository rootNetworkRepository;
     private final ReportService reportService;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
@@ -81,7 +80,6 @@ public class NetworkModificationTreeService {
         this.rootNodeInfoRepository = rootNodeInfoRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.rootNetworkService = rootNetworkService;
-        this.rootNetworkRepository = rootNetworkRepository;
         this.reportService = reportService;
     }
 
@@ -415,7 +413,7 @@ public class NetworkModificationTreeService {
             model.setName(getSuffixedNodeName(study.getId(), model.getName()));
 
             Map<UUID, UUID> originToDuplicateModificationUuidMap = networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId);
-            nextParentId = self.duplicateNode(study, nodeParentId, model, nodeToDuplicate.getId(), InsertMode.CHILD, originToDuplicateModificationUuidMap).getId();
+            nextParentId = duplicateNode(study, nodeParentId, model, nodeToDuplicate.getId(), InsertMode.CHILD, originToDuplicateModificationUuidMap).getId();
         } else {
             // when cloning studyTree, we don't clone root node
             // if cloning the whole study, the root node is previously created

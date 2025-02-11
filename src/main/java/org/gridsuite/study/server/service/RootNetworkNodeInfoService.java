@@ -107,7 +107,7 @@ public class RootNetworkNodeInfoService {
     public void duplicateNodeLinks(@NonNull StudyEntity studyEntity, @NonNull NetworkModificationNodeInfoEntity destinationNodeInfoEntity, UUID originNodeUuid, Map<UUID, UUID> originToDuplicateModificationUuidMap) {
         // For each root network create a link with the node
         studyEntity.getRootNetworks().forEach(rootNetworkEntity -> {
-            // TODO what to do if absent ?
+            // TODO what to do if absent ? -> maybe it means it's been duplicated from another study -> create with default value
             // when duplicating a rootNetworkNodeInfoEntity, we need to keep modificationsToExclude
             Optional<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntityToDuplicate = getRootNetworkNodeInfo(originNodeUuid, rootNetworkEntity.getId());
             if (rootNetworkNodeInfoEntityToDuplicate.isPresent()) {
