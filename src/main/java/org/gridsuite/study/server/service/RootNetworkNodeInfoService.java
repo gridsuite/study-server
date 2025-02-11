@@ -118,6 +118,13 @@ public class RootNetworkNodeInfoService {
                     rootNetworkNodeInfoEntityToDuplicate.get().getModificationsToExclude().stream().map(originToDuplicateModificationUuidMap::get).collect(Collectors.toSet())
                 );
                 addLink(destinationNodeInfoEntity, rootNetworkEntity, newRootNetworkNodeInfoEntity);
+            } else {
+                // use correspondence map to use duplicate modification uuids
+                // TODO not clean, but make duplicate from another study work for now
+                RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity(
+                    destinationNodeInfoEntity.getId()
+                );
+                addLink(destinationNodeInfoEntity, rootNetworkEntity, newRootNetworkNodeInfoEntity);
             }
 
         });

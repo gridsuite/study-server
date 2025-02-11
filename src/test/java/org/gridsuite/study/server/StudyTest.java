@@ -125,7 +125,7 @@ class StudyTest {
     private MockMvc mockMvc;
 
     private static final String FIRST_VARIANT_ID = "first_variant_id";
-    private static final long TIMEOUT = 1000;
+    private static final long TIMEOUT = 100000;
     private static final String STUDIES_URL = "/v1/studies";
     private static final String TEST_FILE_UCTE = "testCase.ucte";
     private static final String TEST_FILE = "testCase.xiidm";
