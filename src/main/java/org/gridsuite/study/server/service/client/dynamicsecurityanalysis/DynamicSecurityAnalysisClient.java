@@ -132,7 +132,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
 
         String url = UriComponentsBuilder
-                .fromHttpUrl(parametersBaseUrl + "/{uuid}")
+                .fromHttpUrl(parametersBaseUrl)
                 .buildAndExpand()
                 .toUriString();
 
@@ -250,16 +250,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
                 .toUriString();
 
         // call dynamic-security-analysis REST API
-        DynamicSecurityAnalysisStatus status;
-        try {
-            status = getRestTemplate().getForObject(url, DynamicSecurityAnalysisStatus.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_NOT_FOUND);
-            }
-            throw e;
-        }
-        return status;
+        return getRestTemplate().getForObject(url, DynamicSecurityAnalysisStatus.class);
     }
 
     public void invalidateStatus(@NonNull List<UUID> resultUuids) {
