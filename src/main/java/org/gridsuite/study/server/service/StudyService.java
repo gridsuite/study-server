@@ -2477,6 +2477,61 @@ public class StudyService {
     }
 
     @Transactional
+    public String getStateEstimationParameters(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return stateEstimationService.getStateEstimationParameters(stateEstimationService.getStateEstimationParametersUuidOrElseCreateDefaults(studyEntity));
+    }
+
+    @Transactional
+    public boolean setStateEstimationParametersValues(UUID studyUuid, String parameters, String userId) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        boolean userProfileIssue = createOrUpdateStateEstimationParameters(studyEntity, parameters, userId);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitComputationParamsChanged(studyUuid, STATE_ESTIMATION);
+        return userProfileIssue;
+    }
+
+    public boolean createOrUpdateStateEstimationParameters(StudyEntity studyEntity, String parameters, String userId) {
+        boolean userProfileIssue = false;
+        UUID existingStateEstimationParametersUuid = studyEntity.getStateEstimationParametersUuid();
+
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId).orElse(null) : null;
+        if (parameters == null && userProfileInfos != null && userProfileInfos.getStateEstimationParameterId() != null) {
+            // reset case, with existing profile, having default state estimation params
+            try {
+                UUID stateEstimationParametersFromProfileUuid = stateEstimationService.duplicateStateEstimationParameters(userProfileInfos.getStateEstimationParameterId());
+                studyEntity.setStateEstimationParametersUuid(stateEstimationParametersFromProfileUuid);
+                removeStateEstimationParameters(existingStateEstimationParametersUuid);
+                return userProfileIssue;
+            } catch (Exception e) {
+                userProfileIssue = true;
+                LOGGER.error(String.format("Could not duplicate state estimation parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getStateEstimationParameterId(), userId, userProfileInfos.getName()), e);
+                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
+            }
+        }
+
+        if (existingStateEstimationParametersUuid == null) {
+            existingStateEstimationParametersUuid = stateEstimationService.createStateEstimationParameters(parameters);
+            studyEntity.setStateEstimationParametersUuid(existingStateEstimationParametersUuid);
+        } else {
+            stateEstimationService.updateStateEstimationParameters(existingStateEstimationParametersUuid, parameters);
+        }
+        return userProfileIssue;
+    }
+
+    private void removeStateEstimationParameters(@Nullable UUID stateEstimationParametersUuid) {
+        if (stateEstimationParametersUuid != null) {
+            try {
+                stateEstimationService.deleteStateEstimationParameters(stateEstimationParametersUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove state estimation parameters with uuid:" + stateEstimationParametersUuid, e);
+            }
+        }
+    }
+
+    @Transactional
     public NetworkModificationNode createNode(UUID studyUuid, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         NetworkModificationNode newNode = networkModificationTreeService.createNode(study, nodeId, nodeInfo, insertMode, userId);

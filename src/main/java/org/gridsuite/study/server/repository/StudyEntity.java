@@ -96,6 +96,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "sensitivityAnalysisParametersUuid")
     private UUID sensitivityAnalysisParametersUuid;
 
+    @Column(name = "stateEstimationParametersUuid")
+    private UUID stateEstimationParametersUuid;
+
     @Column(name = "networkVisualizationParametersUuid")
     private UUID networkVisualizationParametersUuid;
 
