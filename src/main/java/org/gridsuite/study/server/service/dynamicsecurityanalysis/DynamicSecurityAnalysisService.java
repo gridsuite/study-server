@@ -17,7 +17,6 @@ import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAna
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -25,9 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SECURITY_ANALYSIS_RUNNING;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -100,11 +97,7 @@ public class DynamicSecurityAnalysisService {
     }
 
     public void deleteResults() {
-        try {
-            dynamicSecurityAnalysisClient.deleteResults();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
-        }
+        dynamicSecurityAnalysisClient.deleteResults();
     }
 
     public Integer getResultsCount() {
