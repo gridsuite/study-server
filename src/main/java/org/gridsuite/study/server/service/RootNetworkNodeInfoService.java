@@ -104,29 +104,16 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    public void duplicateNodeLinks(@NonNull StudyEntity studyEntity, @NonNull NetworkModificationNodeInfoEntity destinationNodeInfoEntity, UUID originNodeUuid, Map<UUID, UUID> originToDuplicateModificationUuidMap) {
+    public void duplicateNodeLinks(List<RootNetworkNodeInfoEntity> sourceNodeLinks, @NonNull NetworkModificationNodeInfoEntity destinationNodeInfoEntity, Map<UUID, UUID> originToDuplicateModificationUuidMap, Map<RootNetworkEntity, RootNetworkEntity> originToDuplicateRootNetworkMap) {
         // For each root network create a link with the node
-        studyEntity.getRootNetworks().forEach(rootNetworkEntity -> {
-            // TODO what to do if absent ? -> maybe it means it's been duplicated from another study -> create with default value
+        sourceNodeLinks.forEach(nodeLink -> {
             // when duplicating a rootNetworkNodeInfoEntity, we need to keep modificationsToExclude
-            Optional<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntityToDuplicate = getRootNetworkNodeInfo(originNodeUuid, rootNetworkEntity.getId());
-            if (rootNetworkNodeInfoEntityToDuplicate.isPresent()) {
-                // use correspondence map to use duplicate modification uuids
-                // TODO manage nullish value if no mapping ?
-                RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity(
-                    destinationNodeInfoEntity.getId(),
-                    rootNetworkNodeInfoEntityToDuplicate.get().getModificationsToExclude().stream().map(originToDuplicateModificationUuidMap::get).collect(Collectors.toSet())
-                );
-                addLink(destinationNodeInfoEntity, rootNetworkEntity, newRootNetworkNodeInfoEntity);
-            } else {
-                // use correspondence map to use duplicate modification uuids
-                // TODO not clean, but make duplicate from another study work for now
-                RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity(
-                    destinationNodeInfoEntity.getId()
-                );
-                addLink(destinationNodeInfoEntity, rootNetworkEntity, newRootNetworkNodeInfoEntity);
-            }
-
+            // use correspondence map to use duplicate modification uuids
+            RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity(
+                destinationNodeInfoEntity.getId(),
+                nodeLink.getModificationsToExclude().stream().map(originToDuplicateModificationUuidMap::get).collect(Collectors.toSet())
+            );
+            addLink(destinationNodeInfoEntity, originToDuplicateRootNetworkMap.get(nodeLink.getRootNetwork()), newRootNetworkNodeInfoEntity);
         });
     }
 
@@ -224,7 +211,7 @@ public class RootNetworkNodeInfoService {
 
     public void invalidateRootNetworkNodeInfoProper(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
                                                     List<UUID> changedNodes, boolean deleteVoltageInitResults) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         // No need to invalidate a node with a status different of "BUILT"
         if (rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
             fillInvalidateNodeInfos(nodeUuid, rootNetworUuid, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, deleteVoltageInitResults);

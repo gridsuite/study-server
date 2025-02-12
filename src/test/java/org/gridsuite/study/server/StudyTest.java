@@ -125,7 +125,7 @@ class StudyTest {
     private MockMvc mockMvc;
 
     private static final String FIRST_VARIANT_ID = "first_variant_id";
-    private static final long TIMEOUT = 100000;
+    private static final long TIMEOUT = 1000;
     private static final String STUDIES_URL = "/v1/studies";
     private static final String TEST_FILE_UCTE = "testCase.ucte";
     private static final String TEST_FILE = "testCase.xiidm";
@@ -1683,7 +1683,7 @@ class StudyTest {
     }
 
     private StudyEntity duplicateStudy(final MockWebServer server, UUID studyUuid) throws Exception {
-        UUID stubUuid = wireMockUtils.stubDuplicateModificationGroup();
+        UUID stubUuid = wireMockUtils.stubDuplicateModificationGroup(mapper.writeValueAsString(Map.of()));
         String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
@@ -2318,7 +2318,7 @@ class StudyTest {
 
         // duplicate the node1 after node4
         List<UUID> allNodesBeforeDuplication = networkModificationTreeService.getAllNodes(study1Uuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
-        UUID stubDuplicateUuid = wireMockUtils.stubDuplicateModificationGroup();
+        UUID stubDuplicateUuid = wireMockUtils.stubDuplicateModificationGroup(mapper.writeValueAsString(Map.of()));
 
         mockMvc.perform(post(STUDIES_URL +
                                 "/{study1Uuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}&sourceStudyUuid={sourceStudyUuid}",
@@ -2542,7 +2542,7 @@ class StudyTest {
         List<UUID> allNodesBeforeDuplication = networkModificationTreeService.getAllNodes(targetStudyUuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
         UUID stubGetCountUuid = wireMockUtils.stubNetworkModificationCountGet(nodeToCopy.getModificationGroupUuid().toString(),
             EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? 0 : 1);
-        UUID stubDuplicateUuid = wireMockUtils.stubDuplicateModificationGroup();
+        UUID stubDuplicateUuid = wireMockUtils.stubDuplicateModificationGroup(mapper.writeValueAsString(Map.of()));
         if (sourceStudyUuid.equals(targetStudyUuid)) {
             //if source and target are the same no need to pass sourceStudy param
             mockMvc.perform(post(STUDIES_URL +

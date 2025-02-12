@@ -504,7 +504,7 @@ class NetworkModificationTest {
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(modificationNode5.getId(), rootNetworkUuid);
         assertNull(buildInfos.getOriginVariantId());  // previous built node is root node
         assertEquals("variant_5", buildInfos.getDestinationVariantId());
-        assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4, modificationGroupUuid5), buildInfos.getModificationUuidsToExcludeMap());
+        assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4, modificationGroupUuid5), buildInfos.getModificationGroupUuids());
 
         // Mark the node 3 status as built
         RootNetworkNodeInfoEntity rootNetworkNodeInfo3Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode3.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
@@ -515,7 +515,7 @@ class NetworkModificationTest {
         assertEquals("variant_3", buildInfos.getOriginVariantId()); // variant to clone is variant associated to node
                                                                     // modificationNode3
         assertEquals("variant_4", buildInfos.getDestinationVariantId());
-        assertEquals(List.of(modificationGroupUuid4), buildInfos.getModificationUuidsToExcludeMap());
+        assertEquals(List.of(modificationGroupUuid4), buildInfos.getModificationGroupUuids());
 
         // Mark the node 2 status as not built
         RootNetworkNodeInfoEntity rootNetworkNodeInfo2Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode2.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
