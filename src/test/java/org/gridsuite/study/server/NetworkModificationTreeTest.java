@@ -1038,6 +1038,7 @@ class NetworkModificationTreeTest {
                 .variantId(newNode.getVariantId())
                 .nodeBuildStatus(newNode.getNodeBuildStatus())
                 .dynamicSimulationResultUuid(newNode.getDynamicSimulationResultUuid())
+                .dynamicSecurityAnalysisResultUuid(newNode.getDynamicSimulationResultUuid())
                 .loadFlowResultUuid(newNode.getLoadFlowResultUuid())
                 .securityAnalysisResultUuid(newNode.getSecurityAnalysisResultUuid())
                 .sensitivityAnalysisResultUuid(newNode.getSensitivityAnalysisResultUuid())
@@ -1246,6 +1247,7 @@ class NetworkModificationTreeTest {
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION));
     }
 
@@ -1273,6 +1275,7 @@ class NetworkModificationTreeTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));

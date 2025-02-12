@@ -218,6 +218,8 @@ public class RootNetworkNodeInfoService {
             rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(null);
             rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(null);
             rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(null);
+            rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(null);
+            rootNetworkNodeInfoEntity.setDynamicSecurityAnalysisResultUuid(null);
             if (deleteVoltageInitResults) {
                 rootNetworkNodeInfoEntity.setVoltageInitResultUuid(null);
             }
