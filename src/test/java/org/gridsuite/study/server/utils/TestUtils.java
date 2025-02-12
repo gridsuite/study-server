@@ -145,7 +145,7 @@ public final class TestUtils {
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, UUID reportUuid) {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
-            .shortCircuitParametersUuid(UUID.randomUUID())
+//            .shortCircuitParametersUuid(UUID.randomUUID())
             .build();
         studyEntity.addRootNetwork(RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId("netId").networkUuid(networkUuid).reportUuid(reportUuid).build());
 

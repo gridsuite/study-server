@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,10 +34,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -333,12 +331,12 @@ public class NetworkModificationService {
                 }).getBody();
     }
 
-    public List<Optional<NetworkModificationResult>> duplicateOrInsertModifications(UUID groupUuid, ModificationsActionType action,
+    public NetworkModificationsResult duplicateOrInsertModifications(UUID groupUuid, ModificationsActionType action,
                                                                                     Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
         return handleModifications(groupUuid, null, action, modificationContextInfos);
     }
 
-    private List<Optional<NetworkModificationResult>> handleModifications(UUID groupUuid, UUID originGroupUuid, ModificationsActionType action,
+    private NetworkModificationsResult handleModifications(UUID groupUuid, UUID originGroupUuid, ModificationsActionType action,
                                                                          Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam(QUERY_PARAM_ACTION, action.name());
@@ -355,11 +353,11 @@ public class NetworkModificationService {
             getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
             HttpMethod.PUT,
             httpEntity,
-            new ParameterizedTypeReference<List<Optional<NetworkModificationResult>>>() {
-            }).getBody();
+            NetworkModificationsResult.class
+        ).getBody();
     }
 
-    public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid) {
+    public Map<UUID, UUID> duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
         var path = UriComponentsBuilder.fromPath("groups")
@@ -372,13 +370,13 @@ public class NetworkModificationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         try {
-            restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
+            return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.POST, new HttpEntity<>(headers), new ParameterizedTypeReference<Map<UUID, UUID>>() { }).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, STUDY_CREATION_FAILED);
         }
     }
 
-    public List<Optional<NetworkModificationResult>> duplicateModificationsFromGroup(UUID groupUuid, UUID originGroupUuid, Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
+    public NetworkModificationsResult duplicateModificationsFromGroup(UUID groupUuid, UUID originGroupUuid, Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
         return handleModifications(groupUuid, originGroupUuid, StudyConstants.ModificationsActionType.COPY, modificationContextInfos);
     }
 

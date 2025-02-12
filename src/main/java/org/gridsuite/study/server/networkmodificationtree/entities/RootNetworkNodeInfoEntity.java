@@ -13,8 +13,7 @@ import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
@@ -99,6 +98,9 @@ public class RootNetworkNodeInfoEntity {
     })
     private NodeBuildStatusEmbeddable nodeBuildStatus;
 
+    @ElementCollection
+    private Set<UUID> modificationsToExclude = new HashSet<>();
+
     public RootNetworkNodeInfo toDto() {
         return RootNetworkNodeInfo.builder()
             .id(id)
@@ -116,5 +118,13 @@ public class RootNetworkNodeInfoEntity {
             .shortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid)
             .variantId(variantId)
             .build();
+    }
+
+    public void addModificationsToExclude(Set<UUID> uuids) {
+        modificationsToExclude.addAll(uuids);
+    }
+
+    public void removeModificationsFromExclude(Set<UUID> uuids) {
+        modificationsToExclude.removeAll(uuids);
     }
 }
