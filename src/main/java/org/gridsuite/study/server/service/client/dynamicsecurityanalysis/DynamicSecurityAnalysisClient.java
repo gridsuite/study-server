@@ -116,6 +116,9 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         try {
             getRestTemplate().put(url, httpEntity);
         } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND);
+            }
             throw handleHttpError(e, UPDATE_DYNAMIC_SECURITY_ANALYSIS_PROVIDER_FAILED);
         }
     }
@@ -174,6 +177,9 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         try {
             getRestTemplate().put(url, httpEntity);
         } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND);
+            }
             throw handleHttpError(e, UPDATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED);
         }
     }
@@ -193,6 +199,9 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         try {
             return getRestTemplate().postForObject(url, null, UUID.class);
         } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND);
+            }
             throw handleHttpError(e, DUPLICATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED);
         }
     }
@@ -218,7 +227,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         try {
             return getRestTemplate().postForObject(url, null, UUID.class);
         } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED);
+            throw handleHttpError(e, CREATE_DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PARAMETERS_FAILED);
         }
     }
 
@@ -259,7 +268,12 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
         // call dynamic-security-analysis REST API
         HttpEntity<?> httpEntity = new HttpEntity<>(null, headers);
-        return getRestTemplate().postForObject(url, httpEntity, UUID.class);
+
+        try {
+            return getRestTemplate().postForObject(url, httpEntity, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, RUN_DYNAMIC_SECURITY_ANALYSIS_FAILED);
+        }
     }
 
     // --- Related result methods --- //
@@ -298,7 +312,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_NOT_FOUND);
             }
-            throw e;
+            throw handleHttpError(e, INVALIDATE_DYNAMIC_SECURITY_ANALYSIS_FAILED);
         }
     }
 
