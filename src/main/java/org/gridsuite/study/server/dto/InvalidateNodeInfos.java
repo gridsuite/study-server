@@ -9,6 +9,7 @@ package org.gridsuite.study.server.dto;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -38,7 +39,9 @@ public class InvalidateNodeInfos {
     private List<UUID> oneBusShortCircuitAnalysisResultUuids = new ArrayList<>();
 
     private List<UUID> voltageInitResultUuids = new ArrayList<>();
+
     private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
+    private List<UUID> dynamicSecurityAnalysisResultUuids = new ArrayList<>();
 
     private List<UUID> stateEstimationResultUuids = new ArrayList<>();
 
@@ -80,6 +83,10 @@ public class InvalidateNodeInfos {
 
     public void addDynamicSimulationResultUuid(UUID dynamicSimulationResultUuid) {
         dynamicSimulationResultUuids.add(dynamicSimulationResultUuid);
+    }
+
+    public void addDynamicSecurityAnalysisResultUuid(UUID dynamicSecurityAnalysisResultUuid) {
+        dynamicSecurityAnalysisResultUuids.add(dynamicSecurityAnalysisResultUuid);
     }
 
     public void addStateEstimationResultUuid(UUID stateEstimationResultUuid) {

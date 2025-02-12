@@ -20,7 +20,6 @@ import static org.gridsuite.study.server.StudyConstants.DYNAMIC_MAPPING_API_VERS
  */
 public interface DynamicMappingClient extends RestClient {
     String API_VERSION = DYNAMIC_MAPPING_API_VERSION;
-    String DELIMITER = "/";
     String DYNAMIC_MAPPING_END_POINT_MAPPING = "mappings";
 
     List<MappingInfos> getAllMappings();

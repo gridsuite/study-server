@@ -27,7 +27,6 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesMetadataRest;
 import org.gridsuite.study.server.service.client.timeseries.impl.TimeSeriesClientImpl;
-import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,12 +41,12 @@ import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.apache.commons.collections4.CollectionUtils.emptyIfNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient.API_VERSION;
 import static org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient.TIME_SERIES_END_POINT;
+import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -58,6 +57,8 @@ import static org.gridsuite.study.server.service.client.timeseries.TimeSeriesCli
 @ContextConfigurationWithTestChannel
 class TimeSeriesClientTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(TimeSeriesClientTest.class);
+
+    private static final String TIME_SERIES_BASE_URL = buildEndPointUrl("", API_VERSION, TIME_SERIES_END_POINT);
 
     private static final String TIME_SERIES_GROUP_UUID = "33333333-0000-0000-0000-000000000000";
     private static final String TIMELINE_GROUP_UUID = "44444444-0000-0000-0000-000000000000";
@@ -88,14 +89,13 @@ class TimeSeriesClientTest {
             @Override
             public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
                 String path = Objects.requireNonNull(recordedRequest.getPath());
-                String endPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, TIME_SERIES_END_POINT);
                 String method = recordedRequest.getMethod();
 
                 MockResponse response = new MockResponse(HttpStatus.NOT_FOUND.value());
                 List<String> pathSegments = ListUtils.emptyIfNull(recordedRequest.getRequestUrl().pathSegments());
 
                 // timeseries-group/{groupUuid}/xxx
-                if ("GET".equals(method) && path.matches(endPointUrl + ".*")) {
+                if ("GET".equals(method) && path.matches(TIME_SERIES_BASE_URL + "/.*")) {
                     String pathEnding = pathSegments.get(pathSegments.size() - 1);
                     if ("metadata".equals(pathEnding)) {  // timeseries-group/{groupUuid}/metadata
                         String groupUuid = pathSegments.stream().limit(pathSegments.size() - 1).reduce((first, second) -> second).orElse("");
@@ -119,7 +119,7 @@ class TimeSeriesClientTest {
                             timeseries = database.get(groupUuid); // get all timeseries of the same groupUuid
                         } else {
                             // get only precise time series names
-                            timeseries = database.get(groupUuid).stream().filter(series -> timeSeriesNames.contains(series.getMetadata().getName())).collect(Collectors.toList());
+                            timeseries = database.get(groupUuid).stream().filter(series -> timeSeriesNames.contains(series.getMetadata().getName())).toList();
                         }
                         if (CollectionUtils.isEmpty(timeseries)) {
                             return new MockResponse(HttpStatus.NO_CONTENT.value());
@@ -208,7 +208,7 @@ class TimeSeriesClientTest {
         LOGGER.info("Timeseries size = {}", timeSeries.size());
         assertThat(timeSeries).hasSize(1);
         // content must be the same
-        String expectedTimeSeriesJson = TimeSeries.toJson(database.get(TIME_SERIES_GROUP_UUID).stream().filter(series -> series.getMetadata().getName().equals(TIME_SERIES_NAME_1)).collect(Collectors.toList()));
+        String expectedTimeSeriesJson = TimeSeries.toJson(database.get(TIME_SERIES_GROUP_UUID).stream().filter(series -> series.getMetadata().getName().equals(TIME_SERIES_NAME_1)).toList());
         LOGGER.info("expectedTimeSeriesJson = {}", expectedTimeSeriesJson);
         String resultTimeSeriesJson = TimeSeries.toJson(timeSeries);
         LOGGER.info("resultTimeSeriesJson = {}", resultTimeSeriesJson);
@@ -224,7 +224,7 @@ class TimeSeriesClientTest {
         LOGGER.info("Timeline size = {}", timelines.size());
         assertThat(timelines).hasSize(1);
         // content must be the same
-        String expectedTimelinesJson = TimeSeries.toJson(database.get(TIMELINE_GROUP_UUID).stream().filter(series -> series.getMetadata().getName().equals(TIMELINE_NAME)).collect(Collectors.toList()));
+        String expectedTimelinesJson = TimeSeries.toJson(database.get(TIMELINE_GROUP_UUID).stream().filter(series -> series.getMetadata().getName().equals(TIMELINE_NAME)).toList());
         LOGGER.info("expectedTimelinesJson = {}", expectedTimelinesJson);
         String resultTimelinesJson = TimeSeries.toJson(timelines);
         LOGGER.info("resultTimelinesJson = {}", resultTimelinesJson);

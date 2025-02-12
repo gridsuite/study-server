@@ -87,6 +87,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
         ))
     private DynamicSimulationParametersEntity dynamicSimulationParameters;
 
+    @Column(name = "dynamicSecurityAnalysisParametersUuid")
+    private UUID dynamicSecurityAnalysisParametersUuid;
+
     @Column(name = "voltageInitParametersUuid")
     private UUID voltageInitParametersUuid;
 

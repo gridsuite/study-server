@@ -8,10 +8,9 @@ package org.gridsuite.study.server.dto;
 
 import lombok.Builder;
 import lombok.Getter;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 
 import java.util.UUID;
-
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -42,6 +41,8 @@ public class NodeModificationInfos {
     private UUID voltageInitUuid;
 
     private UUID dynamicSimulationUuid;
+
+    private UUID dynamicSecurityAnalysisUuid;
 
     private UUID stateEstimationUuid;
 

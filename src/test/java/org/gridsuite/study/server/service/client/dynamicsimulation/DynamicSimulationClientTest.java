@@ -15,7 +15,6 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.service.client.dynamicsimulation.impl.DynamicSimulationClientImpl;
-import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +29,7 @@ import java.util.UUID;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient.*;
+import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -37,6 +37,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
+    public static final String DYNAMIC_SIMUALTION_RUN_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
+    public static final String DYNAMIC_SIMULATION_RESULT_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
     private static final UUID NETWORK_UUID = UUID.randomUUID();
 
@@ -79,8 +81,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
         parameters.setMapping(MAPPING_NAME_01);
 
         // configure mock server response for test case run - networks/{networkUuid}/run?
-        String runEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
-        wireMockServer.stubFor(WireMock.post(WireMock.urlMatching(runEndPointUrl + NETWORK_UUID + DELIMITER + "run" + ".*"))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlMatching(DYNAMIC_SIMUALTION_RUN_BASE_URL + DELIMITER + NETWORK_UUID + DELIMITER + "run" + ".*"))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(RESULT_UUID))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -96,8 +97,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     void testGetTimeSeriesResult() throws Exception {
 
         // configure mock server response for test get timeseries result uuid - results/{resultUuid}/timeseries
-        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl + RESULT_UUID + DELIMITER + "timeseries"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_UUID + DELIMITER + "timeseries"))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(TIME_SERIES_UUID))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -112,8 +112,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetTimeSeriesResultGivenBadUuid() {
         // configure mock server response
-        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl + RESULT_NOT_FOUND_UUID + DELIMITER + "timeseries"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_NOT_FOUND_UUID + DELIMITER + "timeseries"))
                 .willReturn(WireMock.notFound()
                 ));
         assertThrows(StudyException.class, () -> dynamicSimulationClient.getTimeSeriesResult(RESULT_NOT_FOUND_UUID));
@@ -122,8 +121,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetTimelineResult() throws Exception {
         // configure mock server response for test get timeline result - uuid results/{resultUuid}/timeline
-        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl + RESULT_UUID + DELIMITER + "timeline"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_UUID + DELIMITER + "timeline"))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(TIMELINE_UUID))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -136,8 +134,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetTimelineResultGivenBadUuid() {
         // configure mock server response
-        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl + RESULT_NOT_FOUND_UUID + DELIMITER + "timeline"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_NOT_FOUND_UUID + DELIMITER + "timeline"))
                 .willReturn(WireMock.notFound()
                 ));
         assertThrows(StudyException.class, () -> dynamicSimulationClient.getTimelineResult(RESULT_NOT_FOUND_UUID));
@@ -147,8 +144,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     void testGetStatus() throws Exception {
 
         // configure mock server response for test get status result - results/{resultUuid}/status
-        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl + RESULT_UUID + DELIMITER + "status"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_UUID + DELIMITER + "status"))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(DynamicSimulationStatus.CONVERGED))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -161,8 +157,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetStatusGivenBadUuid() {
         // configure mock server response
-        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl + RESULT_NOT_FOUND_UUID + DELIMITER + "status"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_NOT_FOUND_UUID + DELIMITER + "status"))
                 .willReturn(WireMock.notFound()
                 ));
         assertThrows(StudyException.class, () -> dynamicSimulationClient.getStatus(RESULT_NOT_FOUND_UUID));
@@ -172,8 +167,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     void testInvalidateStatus() throws Exception {
 
         // configure mock server response for test get status result - results/{resultUuid}/invalidate-status
-        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-        wireMockServer.stubFor(WireMock.put(WireMock.urlMatching(resultEndPointUrl + "invalidate-status" + ".*"))
+        wireMockServer.stubFor(WireMock.put(WireMock.urlMatching(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + "invalidate-status" + ".*"))
                 .withQueryParam("resultUuid", equalTo(RESULT_UUID.toString()))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(List.of(RESULT_UUID)))
@@ -186,8 +180,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testInvalidateStatusGivenBadUuid() {
         // configure mock server response for test get status result - results/{resultUuid}/invalidate-status
-        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl + "invalidate-status" + ".*"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + "invalidate-status" + ".*"))
                 .withQueryParam("resultUuid", equalTo(RESULT_NOT_FOUND_UUID.toString()))
                 .willReturn(WireMock.notFound()
                 ));
@@ -196,9 +189,8 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
 
     @Test
     void testDeleteResult() {
-        // configure mock server response for test delete result - results/{resultUuid}
-        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-        wireMockServer.stubFor(WireMock.delete(WireMock.urlMatching(resultEndPointUrl + RESULT_UUID))
+        // configure mock server response for test delete result: "results/{resultUuid}"
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_UUID))
                 .willReturn(WireMock.ok()
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
@@ -209,16 +201,15 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testDeleteResults() throws Exception {
         // configure mock server response for test delete all results - results/
-        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-        wireMockServer.stubFor(WireMock.delete(WireMock.urlMatching(resultEndPointUrl))
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL))
             .willReturn(WireMock.ok()
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             ));
         dynamicSimulationClient.deleteResults();
 
         // configure mock server response for test result count - supervision/results-count
-        String resultCountEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultCountEndPointUrl))
+        String resultCountEndPointUrl = buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT);
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(resultCountEndPointUrl))
             .willReturn(WireMock.ok()
                 .withBody(objectMapper.writeValueAsString(0))
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)

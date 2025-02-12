@@ -7,15 +7,16 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +48,8 @@ public class SupervisionService {
 
     private final DynamicSimulationService dynamicSimulationService;
 
+    private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+
     private final SecurityAnalysisService securityAnalysisService;
 
     private final SensitivityAnalysisService sensitivityAnalysisService;
@@ -72,6 +75,7 @@ public class SupervisionService {
                               ReportService reportService,
                               LoadFlowService loadFlowService,
                               DynamicSimulationService dynamicSimulationService,
+                              DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                               SecurityAnalysisService securityAnalysisService,
                               SensitivityAnalysisService sensitivityAnalysisService,
                               NonEvacuatedEnergyService nonEvacuatedEnergyService,
@@ -86,6 +90,7 @@ public class SupervisionService {
         this.reportService = reportService;
         this.loadFlowService = loadFlowService;
         this.dynamicSimulationService = dynamicSimulationService;
+        this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.nonEvacuatedEnergyService = nonEvacuatedEnergyService;
@@ -101,6 +106,8 @@ public class SupervisionService {
             case LOAD_FLOW -> dryRun ? loadFlowService.getLoadFlowResultsCount() : deleteLoadflowResults();
             case DYNAMIC_SIMULATION ->
                     dryRun ? dynamicSimulationService.getResultsCount() : deleteDynamicSimulationResults();
+            case DYNAMIC_SECURITY_ANALYSIS ->
+                    dryRun ? dynamicSecurityAnalysisService.getResultsCount() : deleteDynamicSecurityAnalysisResults();
             case SECURITY_ANALYSIS ->
                     dryRun ? securityAnalysisService.getSecurityAnalysisResultsCount() : deleteSecurityAnalysisResults();
             case SENSITIVITY_ANALYSIS ->
@@ -173,9 +180,18 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicSimulationResultUuid(null));
-        //TODO Add logs deletion once they are added
         dynamicSimulationService.deleteResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SIMULATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        return rootNetworkNodeStatusEntities.size();
+    }
+
+    private Integer deleteDynamicSecurityAnalysisResults() {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicSecurityAnalysisResultUuidNotNull();
+        rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicSecurityAnalysisResultUuid(null));
+        dynamicSecurityAnalysisService.deleteResults();
+        LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SECURITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }
 

@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
+import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
@@ -27,13 +28,15 @@ import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimula
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
@@ -161,25 +164,18 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public DynamicSimulationStatus getStatus(UUID resultUuid) {
-        if (resultUuid == null) {
-            return null;
-        }
-        return dynamicSimulationClient.getStatus(resultUuid);
+        return resultUuid == null ? null : dynamicSimulationClient.getStatus(resultUuid);
     }
 
     @Override
     public void invalidateStatus(List<UUID> resultUuids) {
-
-        if (resultUuids.isEmpty()) {
-            return;
+        if (CollectionUtils.isNotEmpty(resultUuids)) {
+            dynamicSimulationClient.invalidateStatus(resultUuids);
         }
-
-        dynamicSimulationClient.invalidateStatus(resultUuids);
     }
 
     @Override
     public void deleteResult(UUID resultUuid) {
-        Objects.requireNonNull(resultUuid);
         dynamicSimulationClient.deleteResult(resultUuid);
     }
 
