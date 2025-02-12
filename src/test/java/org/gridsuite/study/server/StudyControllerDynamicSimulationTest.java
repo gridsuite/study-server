@@ -32,7 +32,6 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
@@ -91,6 +90,7 @@ class StudyControllerDynamicSimulationTest {
     private static final String STUDY_BASE_URL = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RUN = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/run";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_PARAMETERS = "{studyUuid}/dynamic-simulation/parameters";
+    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_PROVIDER = "{studyUuid}/dynamic-simulation/provider";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/result";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_STATUS = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/status";
 
@@ -168,9 +168,6 @@ class StudyControllerDynamicSimulationTest {
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
-
-    @Autowired
-    private RootNetworkRepository rootNetworkRepository;
 
     @SpyBean
     StudyService studyService;
@@ -649,7 +646,7 @@ class StudyControllerDynamicSimulationTest {
 
         // --- check result --- //
         // check notifications
-        checkNotificationsAfterInjectingDynamicSimulationParameters(studyUuid);
+        checkNotificationsAfterModifyingDynamicSimulationParameters(studyUuid);
 
         // get parameters
         result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_PARAMETERS, studyUuid)
@@ -665,6 +662,24 @@ class StudyControllerDynamicSimulationTest {
         LOGGER.info("Parameters result in Json = {}", resultJson);
         assertThat(objectMapper.readTree(resultJson)).isEqualTo(objectMapper.readTree(expectedJson));
 
+    }
+
+    @Test
+    void testSetDynamicSecurityAnalysisProvider() throws Exception {
+        // create a node in the db
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+
+        // --- call endpoint to be tested --- //
+        // set parameters
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_PROVIDER, studyUuid)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString("Dynawo")))
+                .andExpect(status().isOk());
+
+        // check notifications
+        checkNotificationsAfterModifyingDynamicSimulationParameters(studyUuid);
     }
 
     @Test
@@ -688,7 +703,7 @@ class StudyControllerDynamicSimulationTest {
                 .andExpect(status().isOk()).andReturn();
 
         // check notifications
-        checkNotificationsAfterInjectingDynamicSimulationParameters(studyUuid);
+        checkNotificationsAfterModifyingDynamicSimulationParameters(studyUuid);
 
         MvcResult result;
         // --- call endpoint to be tested --- //
@@ -726,7 +741,7 @@ class StudyControllerDynamicSimulationTest {
                 .andExpect(status().isOk()).andReturn();
 
         // check notifications
-        checkNotificationsAfterInjectingDynamicSimulationParameters(studyUuid);
+        checkNotificationsAfterModifyingDynamicSimulationParameters(studyUuid);
 
         // --- call endpoint to be tested --- //
         // must be no content status
@@ -737,7 +752,7 @@ class StudyControllerDynamicSimulationTest {
 
     }
 
-    private void checkNotificationsAfterInjectingDynamicSimulationParameters(UUID studyUuid) {
+    private void checkNotificationsAfterModifyingDynamicSimulationParameters(UUID studyUuid) {
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS and UPDATE_TYPE_COMPUTATION_PARAMETERS from channel : studyUpdateDestination
         Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertThat(studyUpdateMessage.getHeaders())

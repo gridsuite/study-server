@@ -21,7 +21,6 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
@@ -84,6 +83,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
     private static final String STUDY_BASE_URL = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
     private static final String STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-security-analysis/run";
     private static final String STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETERS = "{studyUuid}/dynamic-security-analysis/parameters";
+    private static final String STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_PROVIDER = "{studyUuid}/dynamic-security-analysis/provider";
     private static final String STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_STATUS = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-security-analysis/status";
 
     private static final String HEADER_USER_ID_NAME = "userId";
@@ -110,9 +110,6 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
-
-    @Autowired
-    private RootNetworkRepository rootNetworkRepository;
 
     @SpyBean
     StudyService spyStudyService;
@@ -479,7 +476,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // --- check result --- //
         // check notifications
-        checkNotificationsAfterInjectingDynamicSecurityAnalysisParameters(studyUuid);
+        checkNotificationsAfterModifyingDynamicSecurityAnalysisParameters(studyUuid);
 
         // get parameters
         result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETERS, studyUuid)
@@ -496,7 +493,29 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
     }
 
-    private void checkNotificationsAfterInjectingDynamicSecurityAnalysisParameters(UUID studyUuid) {
+    @Test
+    void testSetDynamicSecurityAnalysisProvider() throws Exception {
+        // create a node in the db
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+
+        // setup DynamicSecurityAnalysisService mock
+        doAnswer(invocation -> null)
+                .when(spyDynamicSecurityAnalysisService).updateProvider(any(), any());
+
+        // --- call endpoint to be tested --- //
+        // set parameters
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_PROVIDER, studyUuid)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString("Dynawo")))
+                .andExpect(status().isOk());
+
+        // check notifications
+        checkNotificationsAfterModifyingDynamicSecurityAnalysisParameters(studyUuid);
+    }
+
+    private void checkNotificationsAfterModifyingDynamicSecurityAnalysisParameters(UUID studyUuid) {
         // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS and UPDATE_TYPE_COMPUTATION_PARAMETERS from channel : studyUpdateDestination
         Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertThat(studyUpdateMessage.getHeaders())
