@@ -252,58 +252,28 @@ public class RootNetworkNodeInfoService {
                 invalidateNodeInfos.addReportUuid(value);
             }
         });
-
-        UUID loadFlowResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, LOAD_FLOW);
-        if (loadFlowResultUuid != null) {
-            invalidateNodeInfos.addLoadFlowResultUuid(loadFlowResultUuid);
-        }
-
-        UUID securityAnalysisResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, SECURITY_ANALYSIS);
-        if (securityAnalysisResultUuid != null) {
-            invalidateNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
-        }
-
-        UUID sensitivityAnalysisResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, SENSITIVITY_ANALYSIS);
-        if (sensitivityAnalysisResultUuid != null) {
-            invalidateNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
-        }
-
-        UUID nonEvacuatedEnergyResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, NON_EVACUATED_ENERGY_ANALYSIS);
-        if (nonEvacuatedEnergyResultUuid != null) {
-            invalidateNodeInfos.addNonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid);
-        }
-
-        UUID shortCircuitAnalysisResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, SHORT_CIRCUIT);
-        if (shortCircuitAnalysisResultUuid != null) {
-            invalidateNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
-        }
-
-        UUID oneBusShortCircuitAnalysisResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, SHORT_CIRCUIT_ONE_BUS);
-        if (oneBusShortCircuitAnalysisResultUuid != null) {
-            invalidateNodeInfos.addOneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid);
-        }
-
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, LOAD_FLOW))
+            .ifPresent(invalidateNodeInfos::addLoadFlowResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SECURITY_ANALYSIS))
+            .ifPresent(invalidateNodeInfos::addSecurityAnalysisResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SENSITIVITY_ANALYSIS))
+            .ifPresent(invalidateNodeInfos::addSensitivityAnalysisResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, NON_EVACUATED_ENERGY_ANALYSIS))
+            .ifPresent(invalidateNodeInfos::addNonEvacuatedEnergyResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SHORT_CIRCUIT))
+            .ifPresent(invalidateNodeInfos::addShortCircuitAnalysisResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SHORT_CIRCUIT_ONE_BUS))
+            .ifPresent(invalidateNodeInfos::addOneBusShortCircuitAnalysisResultUuid);
         if (deleteVoltageInitResults) {
-            UUID voltageInitResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, VOLTAGE_INITIALIZATION);
-            if (voltageInitResultUuid != null) {
-                invalidateNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
-            }
+            Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, VOLTAGE_INITIALIZATION))
+                .ifPresent(invalidateNodeInfos::addVoltageInitResultUuid);
         }
-
-        UUID dynamicSimulationResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, DYNAMIC_SIMULATION);
-        if (dynamicSimulationResultUuid != null) {
-            invalidateNodeInfos.addDynamicSimulationResultUuid(dynamicSimulationResultUuid);
-        }
-
-        UUID dynamicSecurityAnalysisResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, DYNAMIC_SECURITY_ANALYSIS);
-        if (dynamicSecurityAnalysisResultUuid != null) {
-            invalidateNodeInfos.addDynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid);
-        }
-
-        UUID stateEstimationResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, STATE_ESTIMATION);
-        if (stateEstimationResultUuid != null) {
-            invalidateNodeInfos.addStateEstimationResultUuid(stateEstimationResultUuid);
-        }
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, DYNAMIC_SIMULATION))
+            .ifPresent(invalidateNodeInfos::addDynamicSimulationResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, DYNAMIC_SECURITY_ANALYSIS))
+            .ifPresent(invalidateNodeInfos::addDynamicSecurityAnalysisResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, STATE_ESTIMATION))
+            .ifPresent(invalidateNodeInfos::addStateEstimationResultUuid);
     }
 
     public Optional<RootNetworkNodeInfoEntity> getRootNetworkNodeInfo(UUID nodeUuid, UUID rootNetworkUuid) {
