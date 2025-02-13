@@ -140,7 +140,7 @@ public class SupervisionService {
 
         AtomicReference<Long> nbIndexesToDelete = new AtomicReference<>(0L);
 
-        studyService.getBasicRootNetworkInfos(studyUuid).forEach(rootNetwork -> {
+        studyService.getExistingBasicRootNetworkInfos(studyUuid).forEach(rootNetwork -> {
             UUID networkUUID = rootNetworkService.getNetworkUuid(rootNetwork.rootNetworkUuid());
             nbIndexesToDelete.updateAndGet(v -> v + getStudyIndexedEquipmentsCount(networkUUID) + getStudyIndexedTombstonedEquipmentsCount(networkUUID));
             equipmentInfosService.deleteAllByNetworkUuid(networkUUID);
@@ -306,7 +306,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         //TODO: to parallelize ?
-        studyService.getBasicRootNetworkInfos(studyUuid).forEach(rootNetwork ->
+        studyService.getExistingBasicRootNetworkInfos(studyUuid).forEach(rootNetwork ->
             studyService.invalidateBuild(studyUuid, rootNodeUuid, rootNetwork.rootNetworkUuid(), false, false, true)
         );
 
