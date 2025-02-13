@@ -111,6 +111,8 @@ class NetworkModificationTest {
     private static final String VARIANT_ID_3 = "variant_3";
 
     private static final UUID LOADFLOW_RESULT_UUID = UUID.randomUUID();
+    private static final UUID DYNAMIC_SIMULATION_RESULT_UUID = UUID.randomUUID();
+    private static final UUID DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID = UUID.randomUUID();
     private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
 
@@ -2461,6 +2463,8 @@ class NetworkModificationTest {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
         rootNetworkNodeInfoEntity.setLoadFlowResultUuid(LOADFLOW_RESULT_UUID);
         rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
+        rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(DYNAMIC_SIMULATION_RESULT_UUID);
+        rootNetworkNodeInfoEntity.setDynamicSecurityAnalysisResultUuid(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID);
         rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
         rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID));
         rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(UUID.fromString(SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
@@ -2470,6 +2474,8 @@ class NetworkModificationTest {
         rootNetworkNodeInfoEntity.setComputationReports(Map.of(
             ComputationType.LOAD_FLOW.name(), UUID.randomUUID(),
             ComputationType.SECURITY_ANALYSIS.name(), UUID.randomUUID(),
+            ComputationType.DYNAMIC_SIMULATION.name(), UUID.randomUUID(),
+            ComputationType.DYNAMIC_SECURITY_ANALYSIS.name(), UUID.randomUUID(),
             ComputationType.SENSITIVITY_ANALYSIS.name(), UUID.randomUUID(),
             ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name(), UUID.randomUUID(),
             ComputationType.SHORT_CIRCUIT.name(), UUID.randomUUID(),
@@ -2504,11 +2510,21 @@ class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
 
         var requests = TestUtils.getRequestsDone(17, server); // 3 x 8 computations
-        List.of(LOADFLOW_RESULT_UUID, SECURITY_ANALYSIS_RESULT_UUID, SENSITIVITY_ANALYSIS_RESULT_UUID, SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID,
-                SHORTCIRCUIT_ANALYSIS_RESULT_UUID, ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID, VOLTAGE_INIT_RESULT_UUID, STATE_ESTIMATION_RESULT_UUID).forEach(uuid -> {
-                    assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid)));
-                    assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid + "/status")));
-                });
+        List.of(
+                LOADFLOW_RESULT_UUID,
+                SECURITY_ANALYSIS_RESULT_UUID,
+                DYNAMIC_SIMULATION_RESULT_UUID,
+                DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID,
+                SENSITIVITY_ANALYSIS_RESULT_UUID,
+                SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID,
+                SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
+                ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
+                VOLTAGE_INIT_RESULT_UUID,
+                STATE_ESTIMATION_RESULT_UUID
+        ).forEach(uuid -> {
+            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid)));
+            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid + "/status")));
+        });
         // requests for computation sub-report deletion
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports")));
     }
