@@ -119,7 +119,7 @@ class StateEstimationTest {
     private static final String ESTIM_RESULT_JSON_DESTINATION = "stateestimation.result";
     private static final String ESTIM_STOPPED_DESTINATION = "stateestimation.stopped";
     private static final String ESTIM_FAILED_DESTINATION = "stateestimation.run.dlx";
-    private static final String ESTIM_PARAMETERS_FILE = "estim-parameters.json";
+    private static final String ESTIM_PARAMETERS_FILE = "/estim-parameters.json";
 
     @Autowired
     private MockMvc mockMvc;
