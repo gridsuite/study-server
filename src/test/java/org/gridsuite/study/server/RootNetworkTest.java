@@ -26,6 +26,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequ
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -83,6 +84,7 @@ class RootNetworkTest {
     // root network node info 1
     private static final String VARIANT_ID = "variantId";
     private static final UUID DYNAMIC_SIMULATION_RESULT_UUID = UUID.randomUUID();
+    private static final UUID DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID = UUID.randomUUID();
     private static final UUID LOADFLOW_RESULT_UUID = UUID.randomUUID();
     private static final UUID SECURITY_ANALYSIS_RESULT_UUID = UUID.randomUUID();
     private static final UUID SHORT_CIRCUIT_ANALYSIS_RESULT_UUID = UUID.randomUUID();
@@ -151,6 +153,8 @@ class RootNetworkTest {
     private CaseService caseService;
     @MockBean
     private DynamicSimulationService dynamicSimulationService;
+    @MockBean
+    private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     @MockBean
     private SecurityAnalysisService securityAnalysisService;
     @MockBean
@@ -411,6 +415,7 @@ class RootNetworkTest {
         rootNetworkNodeInfoService.updateRootNetworkNode(firstNode.getId(), rootNetworkEntityToDeleteUuid, RootNetworkNodeInfo.builder()
                 .variantId(VARIANT_ID)
                 .dynamicSimulationResultUuid(DYNAMIC_SIMULATION_RESULT_UUID)
+                .dynamicSecurityAnalysisResultUuid(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID)
                 .loadFlowResultUuid(LOADFLOW_RESULT_UUID)
                 .securityAnalysisResultUuid(SECURITY_ANALYSIS_RESULT_UUID)
                 .shortCircuitAnalysisResultUuid(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
@@ -447,6 +452,7 @@ class RootNetworkTest {
         Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID2);
         Mockito.verify(caseService, Mockito.times(1)).deleteCase(CASE_UUID2);
         Mockito.verify(dynamicSimulationService, Mockito.times(1)).deleteResult(DYNAMIC_SIMULATION_RESULT_UUID);
+        Mockito.verify(dynamicSecurityAnalysisService, Mockito.times(1)).deleteResult(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID);
         Mockito.verify(loadFlowService, Mockito.times(1)).deleteLoadFlowResult(LOADFLOW_RESULT_UUID);
         Mockito.verify(securityAnalysisService, Mockito.times(1)).deleteSaResult(SECURITY_ANALYSIS_RESULT_UUID);
         Mockito.verify(shortCircuitService, Mockito.times(1)).deleteShortCircuitAnalysisResult(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);

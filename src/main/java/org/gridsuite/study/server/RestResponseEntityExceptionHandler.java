@@ -46,7 +46,11 @@ public class RestResponseEntityExceptionHandler {
                     LOADFLOW_PARAMETERS_NOT_FOUND,
                     SENSITIVITY_ANALYSIS_PARAMETERS_NOT_FOUND,
                     STATE_ESTIMATION_NOT_FOUND,
-                    STATE_ESTIMATION_PARAMETERS_NOT_FOUND
+                    STATE_ESTIMATION_PARAMETERS_NOT_FOUND,
+                    DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PROVIDER_NOT_FOUND,
+                    DYNAMIC_SECURITY_ANALYSIS_PROVIDER_NOT_FOUND,
+                    DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND,
+                    DYNAMIC_SECURITY_ANALYSIS_NOT_FOUND
                     -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getType());
             case CASE_NOT_FOUND -> ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(exception.getMessage());
             case STUDY_ALREADY_EXISTS -> ResponseEntity.status(HttpStatus.CONFLICT).body(type);
@@ -104,7 +108,17 @@ public class RestResponseEntityExceptionHandler {
                     UPDATE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED,
                     DELETE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED,
                     ROOT_NETWORK_CREATION_FAILED,
-                    UPDATE_STATE_ESTIMATION_PARAMETERS_FAILED
+                    UPDATE_STATE_ESTIMATION_PARAMETERS_FAILED,
+                    GET_DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PROVIDER_FAILED,
+                    GET_DYNAMIC_SECURITY_ANALYSIS_PROVIDER_FAILED,
+                    UPDATE_DYNAMIC_SECURITY_ANALYSIS_PROVIDER_FAILED,
+                    GET_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED,
+                    CREATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED,
+                    CREATE_DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PARAMETERS_FAILED,
+                    RUN_DYNAMIC_SECURITY_ANALYSIS_FAILED,
+                    INVALIDATE_DYNAMIC_SECURITY_ANALYSIS_FAILED,
+                    UPDATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED,
+                    DUPLICATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED
                     -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
             case SVG_NOT_FOUND,
                     NO_VOLTAGE_INIT_RESULTS_FOR_NODE,

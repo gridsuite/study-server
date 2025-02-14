@@ -30,6 +30,8 @@ import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -41,6 +43,8 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
+import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.*;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -80,6 +84,7 @@ import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.cre
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -111,6 +116,8 @@ class NetworkModificationTest {
     private static final String VARIANT_ID_3 = "variant_3";
 
     private static final UUID LOADFLOW_RESULT_UUID = UUID.randomUUID();
+    private static final UUID DYNAMIC_SIMULATION_RESULT_UUID = UUID.randomUUID();
+    private static final UUID DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID = UUID.randomUUID();
     private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
 
@@ -208,6 +215,12 @@ class NetworkModificationTest {
     private StudyRepository studyRepository;
 
     @SpyBean
+    private DynamicSimulationClient dynamicSimulationClient;
+
+    @SpyBean
+    DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
+
+    @SpyBean
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
     @Autowired
@@ -215,6 +228,9 @@ class NetworkModificationTest {
 
     @Autowired
     private TestUtils studyTestUtils;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     //output destinations
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
@@ -257,6 +273,9 @@ class NetworkModificationTest {
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
         voltageInitService.setVoltageInitServerBaseUri(baseUrl);
         stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
+
+        doReturn(baseUrl).when(dynamicSimulationClient).getBaseUri();
+        doReturn(baseUrl).when(dynamicSecurityAnalysisClient).getBaseUri();
 
         String baseUrlWireMock = wireMockServer.baseUrl();
         networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
@@ -306,6 +325,24 @@ class NetworkModificationTest {
                 } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
+                    }
+                    return new MockResponse(500);
+                } else if (("/v1/results/invalidate-status?resultUuid=" + DYNAMIC_SIMULATION_RESULT_UUID).equals(path)) {
+                    return new MockResponse(200);
+                } else if (("/v1/results/" + DYNAMIC_SIMULATION_RESULT_UUID + "/status").equals(path)) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(DynamicSimulationStatus.CONVERGED));
+                } else if (("/v1/results/" + DYNAMIC_SIMULATION_RESULT_UUID).equals(path)) {
+                    if (request.getMethod().equals("DELETE")) {
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(DynamicSimulationStatus.CONVERGED));
+                    }
+                    return new MockResponse(500);
+                } else if (("/v1/results/invalidate-status?resultUuid=" + DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
+                    return new MockResponse(200);
+                } else if (("/v1/results/" + DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(DynamicSecurityAnalysisStatus.SUCCEED));
+                } else if (("/v1/results/" + DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
+                    if (request.getMethod().equals("DELETE")) {
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(DynamicSecurityAnalysisStatus.SUCCEED));
                     }
                     return new MockResponse(500);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_RESULT_UUID).equals(path)) {
@@ -2461,6 +2498,8 @@ class NetworkModificationTest {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
         rootNetworkNodeInfoEntity.setLoadFlowResultUuid(LOADFLOW_RESULT_UUID);
         rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
+        rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(DYNAMIC_SIMULATION_RESULT_UUID);
+        rootNetworkNodeInfoEntity.setDynamicSecurityAnalysisResultUuid(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID);
         rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
         rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID));
         rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(UUID.fromString(SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
@@ -2470,6 +2509,8 @@ class NetworkModificationTest {
         rootNetworkNodeInfoEntity.setComputationReports(Map.of(
             ComputationType.LOAD_FLOW.name(), UUID.randomUUID(),
             ComputationType.SECURITY_ANALYSIS.name(), UUID.randomUUID(),
+            ComputationType.DYNAMIC_SIMULATION.name(), UUID.randomUUID(),
+            ComputationType.DYNAMIC_SECURITY_ANALYSIS.name(), UUID.randomUUID(),
             ComputationType.SENSITIVITY_ANALYSIS.name(), UUID.randomUUID(),
             ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name(), UUID.randomUUID(),
             ComputationType.SHORT_CIRCUIT.name(), UUID.randomUUID(),
@@ -2503,12 +2544,22 @@ class NetworkModificationTest {
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(bodyJson, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNode1Uuid, NETWORK_UUID)));
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
 
-        var requests = TestUtils.getRequestsDone(17, server); // 3 x 8 computations
-        List.of(LOADFLOW_RESULT_UUID, SECURITY_ANALYSIS_RESULT_UUID, SENSITIVITY_ANALYSIS_RESULT_UUID, SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID,
-                SHORTCIRCUIT_ANALYSIS_RESULT_UUID, ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID, VOLTAGE_INIT_RESULT_UUID, STATE_ESTIMATION_RESULT_UUID).forEach(uuid -> {
-                    assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid)));
-                    assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid + "/status")));
-                });
+        var requests = TestUtils.getRequestsDone(21, server); // 3 x 8 computations
+        List.of(
+                LOADFLOW_RESULT_UUID,
+                SECURITY_ANALYSIS_RESULT_UUID,
+                DYNAMIC_SIMULATION_RESULT_UUID,
+                DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID,
+                SENSITIVITY_ANALYSIS_RESULT_UUID,
+                SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID,
+                SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
+                ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
+                VOLTAGE_INIT_RESULT_UUID,
+                STATE_ESTIMATION_RESULT_UUID
+        ).forEach(uuid -> {
+            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid)));
+            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid + "/status")));
+        });
         // requests for computation sub-report deletion
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports")));
     }
@@ -2761,6 +2812,7 @@ class NetworkModificationTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
     }
 
