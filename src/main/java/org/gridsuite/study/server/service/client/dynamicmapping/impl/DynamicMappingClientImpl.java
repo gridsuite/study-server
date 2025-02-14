@@ -23,7 +23,6 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.text.MessageFormat;
 import java.util.List;
 
 import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_MAPPING_NOT_FOUND;
@@ -45,15 +44,13 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
     public List<MappingInfos> getAllMappings() {
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
 
-        var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
+        var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + DELIMITER);
 
         // call dynamic-mapping REST API
         try {
-            var responseEntity = getRestTemplate().exchange(uriBuilder.toUriString(), HttpMethod.GET, null, new ParameterizedTypeReference<List<MappingInfos>>() { });
-            if (logger.isDebugEnabled()) {
-                logger.debug(MessageFormat.format("dynamic-mapping REST API called succesfully {0}", uriBuilder.toUriString()));
-            }
-            return responseEntity.getBody();
+            return getRestTemplate().exchange(uriBuilder.toUriString(), HttpMethod.GET, null,
+                    new ParameterizedTypeReference<List<MappingInfos>>() { })
+                    .getBody();
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(DYNAMIC_MAPPING_NOT_FOUND);
@@ -70,17 +67,15 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
 
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{mappingName}/models");
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/{mappingName}/models");
 
         var uriComponent = uriComponentsBuilder.buildAndExpand(mapping);
 
         // call dynamic-mapping REST API
         try {
-            var responseEntity = getRestTemplate().exchange(uriComponent.toUriString(), HttpMethod.GET, null, new ParameterizedTypeReference<List<ModelInfos>>() { });
-            if (logger.isDebugEnabled()) {
-                logger.debug(MessageFormat.format("dynamic-mapping REST API called succesfully {0}", uriComponent.toUriString()));
-            }
-            return responseEntity.getBody();
+            return getRestTemplate().exchange(uriComponent.toUriString(), HttpMethod.GET, null,
+                    new ParameterizedTypeReference<List<ModelInfos>>() { })
+                    .getBody();
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(DYNAMIC_MAPPING_NOT_FOUND);
