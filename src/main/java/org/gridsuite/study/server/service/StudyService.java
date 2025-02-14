@@ -2503,13 +2503,22 @@ public class StudyService {
         return rootNetworkEntities.stream().map(RootNetworkEntity::toDto).toList();
     }
 
-    @Transactional
-    public List<BasicRootNetworkInfos> getBasicRootNetworkInfos(UUID studyUuid) {
+    @Transactional(readOnly = true)
+    public List<BasicRootNetworkInfos> getAllBasicRootNetworkInfos(UUID studyUuid) {
         return Stream
             .concat(
-                getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::toBasicDto),
+                getExistingRootNetworkInfos(studyUuid).stream(),
                 rootNetworkService.getCreationRequests(studyUuid).stream().map(RootNetworkCreationRequestEntity::toBasicDto))
             .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<BasicRootNetworkInfos> getExistingBasicRootNetworkInfos(UUID studyUuid) {
+        return getExistingRootNetworkInfos(studyUuid);
+    }
+
+    private List<BasicRootNetworkInfos> getExistingRootNetworkInfos(UUID studyUuid) {
+        return getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::toBasicDto).toList();
     }
 
     //TODO: temporary method, once frontend had been implemented, each operation will need to target a specific rootNetwork UUID, here we manually target the first one
