@@ -173,7 +173,7 @@ class StateEstimationTest {
         String estimErrorResultUuidStr = objectMapper.writeValueAsString(STATE_ESTIMATION_ERROR_RESULT_UUID);
         String estimResultJson = TestUtils.resourceToString("/estim-result.json");
 
-        String estimParametersJson = TestUtils.resourceToString("/estim-parameters.json");
+        String estimParametersJson = TestUtils.resourceToString(ESTIM_PARAMETERS_FILE);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -394,7 +394,7 @@ class StateEstimationTest {
 
     @Test
     void testStateEstimationParameters(final MockWebServer server) throws Exception {
-        String estimParametersJson = TestUtils.resourceToString("/estim-parameters.json");
+        String estimParametersJson = TestUtils.resourceToString(ESTIM_PARAMETERS_FILE);
 
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
         createOrUpdateParametersAndDoChecks(ids.studyId, estimParametersJson, "userId", HttpStatus.OK);

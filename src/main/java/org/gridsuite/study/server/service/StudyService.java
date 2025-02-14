@@ -2486,26 +2486,22 @@ public class StudyService {
     }
 
     @Transactional
-    public boolean setStateEstimationParametersValues(UUID studyUuid, String parameters, String userId) {
+    public void setStateEstimationParametersValues(UUID studyUuid, String parameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        boolean userProfileIssue = createOrUpdateStateEstimationParameters(studyEntity, parameters, userId);
+        createOrUpdateStateEstimationParameters(studyEntity, parameters);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, STATE_ESTIMATION);
-        return userProfileIssue;
     }
 
-    public boolean createOrUpdateStateEstimationParameters(StudyEntity studyEntity, String parameters, String userId) {
-        boolean userProfileIssue = false;
+    public void createOrUpdateStateEstimationParameters(StudyEntity studyEntity, String parameters) {
         UUID existingStateEstimationParametersUuid = studyEntity.getStateEstimationParametersUuid();
-
         if (existingStateEstimationParametersUuid == null) {
             existingStateEstimationParametersUuid = stateEstimationService.createStateEstimationParameters(parameters);
             studyEntity.setStateEstimationParametersUuid(existingStateEstimationParametersUuid);
         } else {
             stateEstimationService.updateStateEstimationParameters(existingStateEstimationParametersUuid, parameters);
         }
-        return userProfileIssue;
     }
 
     @Transactional

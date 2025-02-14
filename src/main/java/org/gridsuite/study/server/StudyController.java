@@ -2150,6 +2150,7 @@ public class StudyController {
         @PathVariable("studyUuid") UUID studyUuid,
         @RequestBody(required = false) String stateEstimationParametersValues,
         @RequestHeader(HEADER_USER_ID) String userId) {
-        return studyService.setStateEstimationParametersValues(studyUuid, stateEstimationParametersValues, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+        studyService.setStateEstimationParametersValues(studyUuid, stateEstimationParametersValues, userId);
+        return ResponseEntity.ok().build();
     }
 }
