@@ -29,7 +29,13 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NonEvacuatedEnergyService;
+import org.gridsuite.study.server.service.ReportService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.StateEstimationService;
+import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -46,6 +52,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
@@ -59,8 +67,14 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -89,6 +103,10 @@ class StateEstimationTest {
 
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
 
+    private static final String STATE_ESTIMATION_PARAMETERS_UUID_STRING = "0c4de6e2-3851-4858-a60e-edba3db2da46";
+    private static final UUID STATE_ESTIMATION_PARAMETERS_UUID = UUID.fromString(STATE_ESTIMATION_PARAMETERS_UUID_STRING);
+    private static final String WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING = "72c9d1ef-d8ab-4388-a6fe-855604c2dc10";
+
     private static final String ESTIM_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
 
     private static final String VARIANT_ID = "variant_1";
@@ -101,6 +119,7 @@ class StateEstimationTest {
     private static final String ESTIM_RESULT_JSON_DESTINATION = "stateestimation.result";
     private static final String ESTIM_STOPPED_DESTINATION = "stateestimation.stopped";
     private static final String ESTIM_FAILED_DESTINATION = "stateestimation.run.dlx";
+    private static final String ESTIM_PARAMETERS_FILE = "estim-parameters.json";
 
     @Autowired
     private MockMvc mockMvc;
@@ -154,12 +173,16 @@ class StateEstimationTest {
         String estimErrorResultUuidStr = objectMapper.writeValueAsString(STATE_ESTIMATION_ERROR_RESULT_UUID);
         String estimResultJson = TestUtils.resourceToString("/estim-result.json");
 
+        String estimParametersJson = TestUtils.resourceToString("/estim-parameters.json");
+
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
+                String method = Objects.requireNonNull(request.getMethod());
+
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID + "&receiver=.*")) {
                     // estim with success
                     input.send(MessageBuilder.withPayload("")
@@ -189,6 +212,21 @@ class StateEstimationTest {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/results")) {
                     return new MockResponse(200);
+                } else if (path.matches("/v1/parameters/" + WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING)) {
+                    return new MockResponse(404);
+                } else if (path.matches("/v1/parameters")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(STATE_ESTIMATION_ERROR_RESULT_UUID));
+                } else if (path.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID)) {
+                    if (method.equals("GET")) {
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimParametersJson);
+                    } else {
+                        //Method PUT
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(STATE_ESTIMATION_PARAMETERS_UUID));
+                    }
+                } else if (path.matches("/v1/parameters") && method.equals("POST")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(STATE_ESTIMATION_PARAMETERS_UUID));
+                } else if (path.matches("/v1/parameters/default") && method.equals("POST")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(STATE_ESTIMATION_PARAMETERS_UUID));
                 } else {
                     return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
                 }
@@ -212,12 +250,12 @@ class StateEstimationTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, updateTypeToCheck, null);
     }
 
-    private StudyNodeIds createStudyAndNode(String variantId, String nodeName) throws Exception {
+    private StudyNodeIds createStudyAndNode(String variantId, String nodeName, UUID stateEstimationParametersUuid) throws Exception {
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
         // create a study
         StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.fromString(NETWORK_UUID_STRING), "netId", CASE_LOADFLOW_UUID, "", "", null,
                 LOADFLOW_PARAMETERS_UUID, null, null, null,
-                defaultNonEvacuatedEnergyParametersEntity);
+                defaultNonEvacuatedEnergyParametersEntity, stateEstimationParametersUuid);
         studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         // with a node
@@ -288,7 +326,7 @@ class StateEstimationTest {
 
     @Test
     void testComputation(final MockWebServer server) throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
         runEstim(server, ids);
 
         // get estim result
@@ -306,7 +344,7 @@ class StateEstimationTest {
 
     @Test
     void testResultsDeletion(final MockWebServer server) throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
         runEstim(server, ids);
 
         // we have one Estim result
@@ -333,7 +371,7 @@ class StateEstimationTest {
 
     @Test
     void testStop(final MockWebServer server) throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
         runEstim(server, ids);
 
         // stop running estim
@@ -344,7 +382,7 @@ class StateEstimationTest {
 
     @Test
     void testFailure(final MockWebServer server) throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2");
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2", null);
 
         mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                         .header("userId", "userId"))
@@ -352,5 +390,65 @@ class StateEstimationTest {
         checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_FAILED);
         checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID_2 + "&receiver=.*")));
+    }
+
+    @Test
+    void testStateEstimationParameters(final MockWebServer server) throws Exception {
+        String estimParametersJson = TestUtils.resourceToString("/estim-parameters.json");
+
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
+        createOrUpdateParametersAndDoChecks(ids.studyId, estimParametersJson, "userId", HttpStatus.OK);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters")));
+
+        //insert a study
+        StudyNodeIds ids2 = createStudyAndNode(VARIANT_ID, "node 2", null);
+
+        //get initial state estim parameters
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/state-estimation/parameters", ids2.studyId)).andExpectAll(
+            status().isOk()).andReturn();
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/default")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
+
+        assertEquals(estimParametersJson, mvcResult.getResponse().getContentAsString());
+
+        createOrUpdateParametersAndDoChecks(ids2.studyId, estimParametersJson, "userId", HttpStatus.OK);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
+
+        //checking update is registered
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/state-estimation/parameters", ids2.studyId)).andExpectAll(
+            status().isOk()).andReturn();
+
+        assertEquals(estimParametersJson, mvcResult.getResponse().getContentAsString());
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
+
+        //update voltage init parameters
+        createOrUpdateParametersAndDoChecks(ids2.studyId, estimParametersJson, "userId", HttpStatus.OK);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
+
+        // insert a study with a wrong voltage init parameters uuid
+        StudyNodeIds ids3 = createStudyAndNode(VARIANT_ID, "node 3", UUID.fromString(WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING));
+
+        // get voltage init parameters
+        mockMvc.perform(get("/v1/studies/{studyUuid}/state-estimation/parameters", ids3.studyId)).andExpect(
+            status().isNotFound());
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
+    }
+
+    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/state-estimation/parameters", studyNameUserIdUuid)
+                    .header("userId", userId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(parameters))
+            .andExpect(status().is(status.value()));
+
+        Message<byte[]> stateEstimationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(studyNameUserIdUuid, stateEstimationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS, stateEstimationStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
     }
 }

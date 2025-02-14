@@ -36,7 +36,6 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.StudyConstants.PATH_PARAM_PARAMETERS;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyConstants.STATE_ESTIMATION_API_VERSION;
@@ -65,7 +64,6 @@ public class StateEstimationService {
     private String stateEstimationServerServerBaseUri;
 
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
-
 
     @Autowired
     public StateEstimationService(RemoteServicesProperties remoteServicesProperties,
@@ -98,12 +96,15 @@ public class StateEstimationService {
         return result;
     }
 
-    public UUID runStateEstimation(UUID networkUuid, String variantId, ReportInfos reportInfos, String receiver, String userId) {
+    public UUID runStateEstimation(UUID networkUuid, String variantId, UUID parametersUuid, ReportInfos reportInfos, String receiver, String userId) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam("reportUuid", reportInfos.reportUuid().toString())
                 .queryParam("reporterId", reportInfos.nodeUuid())
                 .queryParam("reportType", StudyService.ReportType.STATE_ESTIMATION.reportKey);
+        if (parametersUuid != null) {
+            uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
+        }
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -192,7 +193,6 @@ public class StateEstimationService {
     public UUID getStateEstimationParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
         if (studyEntity.getStateEstimationParametersUuid() == null) {
             studyEntity.setStateEstimationParametersUuid(createDefaultStateEstimationParameters());
-
         }
         return studyEntity.getStateEstimationParametersUuid();
     }
@@ -246,24 +246,6 @@ public class StateEstimationService {
         }
     }
 
-    public UUID duplicateStateEstimationParameters(UUID sourceParametersUuid) {
-        Objects.requireNonNull(sourceParametersUuid);
-
-        var path = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
-            .queryParam("duplicateFrom", sourceParametersUuid)
-            .buildAndExpand().toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
-
-        try {
-            return restTemplate.exchange(stateEstimationServerServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_STATE_ESTIMATION_PARAMETERS_FAILED);
-        }
-    }
-
     public String getStateEstimationParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
         String parameters;
@@ -281,14 +263,5 @@ public class StateEstimationService {
             throw handleHttpError(e, GET_STATE_ESTIMATION_PARAMETERS_FAILED);
         }
         return parameters;
-    }
-
-    public void deleteStateEstimationParameters(UUID uuid) {
-        Objects.requireNonNull(uuid);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + PARAMETERS_URI)
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(stateEstimationServerServerBaseUri + path);
     }
 }

@@ -45,7 +45,8 @@ public class RestResponseEntityExceptionHandler {
                     SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND,
                     LOADFLOW_PARAMETERS_NOT_FOUND,
                     SENSITIVITY_ANALYSIS_PARAMETERS_NOT_FOUND,
-                    STATE_ESTIMATION_NOT_FOUND
+                    STATE_ESTIMATION_NOT_FOUND,
+                    STATE_ESTIMATION_PARAMETERS_NOT_FOUND
                     -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getType());
             case CASE_NOT_FOUND -> ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(exception.getMessage());
             case STUDY_ALREADY_EXISTS -> ResponseEntity.status(HttpStatus.CONFLICT).body(type);
@@ -102,7 +103,8 @@ public class RestResponseEntityExceptionHandler {
                     CREATE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED,
                     UPDATE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED,
                     DELETE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED,
-                    ROOT_NETWORK_CREATION_FAILED
+                    ROOT_NETWORK_CREATION_FAILED,
+                    UPDATE_STATE_ESTIMATION_PARAMETERS_FAILED
                     -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
             case SVG_NOT_FOUND,
                     NO_VOLTAGE_INIT_RESULTS_FOR_NODE,
