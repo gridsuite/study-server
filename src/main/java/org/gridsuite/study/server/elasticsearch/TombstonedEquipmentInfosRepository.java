@@ -11,6 +11,7 @@ import org.springframework.data.elasticsearch.repository.ElasticsearchRepository
 import org.springframework.lang.NonNull;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -18,6 +19,8 @@ import java.util.UUID;
  */
 public interface TombstonedEquipmentInfosRepository extends ElasticsearchRepository<TombstonedEquipmentInfos, String> {
     List<TombstonedEquipmentInfos> findAllByNetworkUuid(@NonNull UUID networkUuid);
+
+    Set<TombstonedEquipmentInfos> findByIdInAndNetworkUuidAndVariantId(@NonNull List<String> equipmentIds, @NonNull UUID networkUuid, @NonNull String variantId);
 
     void deleteAllByNetworkUuid(@NonNull UUID networkUuid);
 

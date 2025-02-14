@@ -34,11 +34,6 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @Builder.Default
     protected List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos = new ArrayList<>();
 
-    //TODO temporary, for now we are only working with one root network by study
-    public RootNetworkNodeInfoEntity getFirstRootNetworkNodeInfosEntity() {
-        return rootNetworkNodeInfos.stream().findFirst().orElse(null);
-    }
-
     public void addRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         rootNetworkNodeInfoEntity.setNodeInfo(this);
         rootNetworkNodeInfos.add(rootNetworkNodeInfoEntity);

@@ -182,7 +182,7 @@ public class StudyController {
     @Operation(summary = "Get root networks for study")
     @ApiResponse(responseCode = "200", description = "List of root networks")
     public ResponseEntity<List<BasicRootNetworkInfos>> getRootNetworks(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(rootNetworkService.getRootNetworks(studyUuid));
+        return ResponseEntity.ok().body(studyService.getAllBasicRootNetworkInfos(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks")
@@ -222,8 +222,8 @@ public class StudyController {
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/root-networks")
-    @Operation(summary = "Create root network for study")
-    @ApiResponse(responseCode = "200", description = "Root network created")
+    @Operation(summary = "Delete root networks for study")
+    @ApiResponse(responseCode = "200", description = "Root network deleted")
     public ResponseEntity<Void> deleteRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                     @RequestBody List<UUID> rootNetworkUuids,
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
@@ -1147,7 +1147,7 @@ public class StudyController {
                                                                        @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesAggregatedReportSeverities(nodeUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesAggregatedReportSeverities(nodeUuid, rootNetworkUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -2065,6 +2065,16 @@ public class StudyController {
             @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "Filter uuid to be applied") @PathVariable("filterUuid") UUID filterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(rootNetworkUuid, filterUuid));
+    }
+
+    // temporary - used by grid-explore only to prevent filter conversion from dysfunctioning since it does not have access to root networks yet
+    @GetMapping(value = "/studies/{studyUuid}/filters/{filterUuid}/elements")
+    @Operation(summary = "Evaluate a filter on root node and first root network of study to get matched elements")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched elements")})
+    public ResponseEntity<String> exportFilterFromFirstRootNetwork(
+        @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "Filter uuid to be applied") @PathVariable("filterUuid") UUID filterUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(studyService.getStudyFirstRootNetworkUuid(studyUuid), filterUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/filters/elements")
