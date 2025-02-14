@@ -42,7 +42,7 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyConstants.STATE_ESTIMATION_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.CREATE_STATE_ESTIMATION_PARAMETERS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.DELETE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED;
+import static org.gridsuite.study.server.StudyException.Type.DELETE_STATE_ESTIMATION_PARAMETERS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.GET_STATE_ESTIMATION_PARAMETERS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.STATE_ESTIMATION_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.STATE_ESTIMATION_PARAMETERS_NOT_FOUND;
@@ -298,7 +298,7 @@ public class StateEstimationService {
         try {
             restTemplate.delete(stateEstimationServerServerBaseUri + path);
         } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED);
+            throw handleHttpError(e, DELETE_STATE_ESTIMATION_PARAMETERS_FAILED);
         }
 
     }
