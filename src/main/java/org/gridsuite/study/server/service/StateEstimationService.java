@@ -36,11 +36,13 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.StudyConstants.PATH_PARAM_PARAMETERS;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyConstants.STATE_ESTIMATION_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.CREATE_STATE_ESTIMATION_PARAMETERS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
+import static org.gridsuite.study.server.StudyException.Type.DELETE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.GET_STATE_ESTIMATION_PARAMETERS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.STATE_ESTIMATION_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.STATE_ESTIMATION_PARAMETERS_NOT_FOUND;
@@ -263,5 +265,41 @@ public class StateEstimationService {
             throw handleHttpError(e, GET_STATE_ESTIMATION_PARAMETERS_FAILED);
         }
         return parameters;
+    }
+
+    public UUID duplicateStateEstimationParameters(UUID sourceParametersUuid) {
+        Objects.requireNonNull(sourceParametersUuid);
+
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
+            .queryParam("duplicateFrom", sourceParametersUuid)
+            .buildAndExpand()
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
+
+        try {
+            return restTemplate.exchange(stateEstimationServerServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_STATE_ESTIMATION_PARAMETERS_FAILED);
+        }
+    }
+
+    public void deleteStateEstimationParameters(UUID uuid) {
+        Objects.requireNonNull(uuid);
+
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + PARAMETERS_URI)
+            .buildAndExpand(uuid)
+            .toUriString();
+
+        try {
+            restTemplate.delete(stateEstimationServerServerBaseUri + path);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, DELETE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED);
+        }
+
     }
 }

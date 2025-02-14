@@ -474,6 +474,9 @@ public class StudyService {
                 if (s.getNetworkVisualizationParametersUuid() != null) {
                     studyConfigService.deleteNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 }
+                if (s.getStateEstimationParametersUuid() != null) {
+                    stateEstimationService.deleteStateEstimationParameters(s.getStateEstimationParametersUuid());
+                }
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -523,7 +526,7 @@ public class StudyService {
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos, UUID loadFlowParametersUuid,
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
-                                              UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid,
+                                              UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid,
                                               Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
@@ -538,7 +541,7 @@ public class StudyService {
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
-                importParameters, importReportUuid);
+                stateEstimationParametersUuid, importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
         UUID studyFirstRootNetworkUuid = getStudyFirstRootNetworkUuid(studyUuid);
@@ -620,6 +623,12 @@ public class StudyService {
 
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
 
+        UUID copiedStateEstimationParametersUuid = null;
+        if (sourceStudyEntity.getStateEstimationParametersUuid() != null) {
+            copiedStateEstimationParametersUuid = stateEstimationService.duplicateStateEstimationParameters(sourceStudyEntity.getStateEstimationParametersUuid());
+        }
+
+
         return studyRepository.save(StudyEntity.builder()
             .id(newStudyId)
             .loadFlowParametersUuid(copiedLoadFlowParametersUuid)
@@ -632,6 +641,7 @@ public class StudyService {
             .sensitivityAnalysisParametersUuid(copiedSensitivityAnalysisParametersUuid)
             .networkVisualizationParametersUuid(copiedNetworkVisualizationParametersUuid)
             .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
+            .stateEstimationParametersUuid(copiedStateEstimationParametersUuid)
             .build());
     }
 
@@ -1203,7 +1213,7 @@ public class StudyService {
                                                     CaseInfos caseInfos, UUID loadFlowParametersUuid,
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
-                                                    UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid,
+                                                    UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid,
                                                     Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
@@ -1220,6 +1230,7 @@ public class StudyService {
                 .voltageInitParameters(new StudyVoltageInitParametersEntity())
                 .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
                 .dynamicSecurityAnalysisParametersUuid(dynamicSecurityAnalysisParametersUuid)
+                .stateEstimationParametersUuid(stateEstimationParametersUuid)
                 .build();
 
         var study = studyRepository.save(studyEntity);
