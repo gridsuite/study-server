@@ -44,7 +44,7 @@ public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeri
         Objects.requireNonNull(groupUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, TIME_SERIES_END_POINT);
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{uuid}");
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/{uuid}");
         if (!CollectionUtils.isEmpty(timeSeriesNames)) {
             uriComponentsBuilder.queryParam("timeSeriesNames", timeSeriesNames);
         }
@@ -66,7 +66,7 @@ public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeri
         Objects.requireNonNull(groupUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, TIME_SERIES_END_POINT);
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{uuid}/metadata");
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/{uuid}/metadata");
         var uriComponents = uriComponentsBuilder
                 .buildAndExpand(groupUuid);
 
