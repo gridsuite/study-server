@@ -32,7 +32,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
@@ -73,9 +76,6 @@ class StudyServiceDynamicSimulationTest {
     private static final UUID RESULT_UUID = UUID.randomUUID();
 
     @MockBean
-    private NetworkService networkService;
-
-    @MockBean
     private NetworkModificationTreeService networkModificationTreeService;
 
     @MockBean
@@ -83,9 +83,6 @@ class StudyServiceDynamicSimulationTest {
 
     @MockBean
     private DynamicSimulationService dynamicSimulationService;
-
-    @MockBean
-    private LoadFlowService loadFlowService;
 
     @Autowired
     private StudyService studyService;
