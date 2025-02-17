@@ -1,6 +1,5 @@
 package org.gridsuite.study.server.rootnetworks;
 
-import com.powsybl.network.store.client.NetworkStoreService;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
@@ -9,7 +8,6 @@ import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
-import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
@@ -21,12 +19,9 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;

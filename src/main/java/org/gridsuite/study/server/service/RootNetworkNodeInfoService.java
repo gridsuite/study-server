@@ -211,7 +211,7 @@ public class RootNetworkNodeInfoService {
 
     public void invalidateRootNetworkNodeInfoProper(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
                                                     List<UUID> changedNodes, boolean deleteVoltageInitResults) {
-         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         // No need to invalidate a node with a status different of "BUILT"
         if (rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
             fillInvalidateNodeInfos(nodeUuid, rootNetworUuid, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, deleteVoltageInitResults);
@@ -445,10 +445,10 @@ public class RootNetworkNodeInfoService {
 
     @Transactional
     public ModificationApplicationContext getNetworkModificationApplicationContext(UUID rootNetworkUuid, UUID nodeUuid, UUID networkUuid) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
         UUID reportUuid = rootNetworkNodeInfoEntity.getModificationReports().get(nodeUuid);
-        return new ModificationApplicationContext(networkUuid, variantId, reportUuid, nodeUuid);
+        return new ModificationApplicationContext(networkUuid, variantId, reportUuid, nodeUuid, rootNetworkNodeInfoEntity.getModificationsToExclude());
     }
 
     private List<UUID> getReportUuids(RootNetworkNodeInfo rootNetworkNodeInfo) {

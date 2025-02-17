@@ -1355,7 +1355,7 @@ public class StudyService {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            List<Optional<NetworkModificationResult>> networkModificationResults = null;
+            NetworkModificationsResult networkModificationResults = null;
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             List<RootNetworkEntity> studyRootNetworkEntities = getStudyRootNetworks(studyUuid);
 
@@ -1364,10 +1364,10 @@ public class StudyService {
                 .toList();
             networkModificationResults = networkModificationService.createModification(groupUuid, Pair.of(createModificationAttributes, modificationApplicationContexts));
 
-            if (networkModificationResults != null) {
+            if (networkModificationResults != null && networkModificationResults.modificationResults() != null) {
                 int index = 0;
                 // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
-                for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults) {
+                for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults.modificationResults()) {
                     if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
                         emitNetworkModificationImpacts(studyUuid, nodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
                     }

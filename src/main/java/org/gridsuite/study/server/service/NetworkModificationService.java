@@ -146,9 +146,9 @@ public class NetworkModificationService {
         }
     }
 
-    public List<Optional<NetworkModificationResult>> createModification(UUID groupUuid,
+    public NetworkModificationsResult createModification(UUID groupUuid,
                                                                         Pair<String, List<ModificationApplicationContext>> modificationContextInfos) {
-        List<Optional<NetworkModificationResult>> result;
+        NetworkModificationsResult result;
         Objects.requireNonNull(modificationContextInfos);
 
         var uriComponentsBuilder = UriComponentsBuilder
@@ -165,8 +165,7 @@ public class NetworkModificationService {
         try {
             HttpEntity<String> httpEntity = new HttpEntity<>(getModificationContextJsonString(objectMapper, modificationContextInfos), headers);
             result = restTemplate.exchange(path, HttpMethod.POST, httpEntity,
-                new ParameterizedTypeReference<List<Optional<NetworkModificationResult>>>() {
-                }).getBody();
+                NetworkModificationsResult.class).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, CREATE_NETWORK_MODIFICATION_FAILED);
         } catch (Exception e) {
