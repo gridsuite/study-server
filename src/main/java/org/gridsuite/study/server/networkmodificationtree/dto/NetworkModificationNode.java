@@ -12,6 +12,7 @@ import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -64,8 +65,8 @@ public class NetworkModificationNode extends AbstractNode {
         this.setDynamicSimulationResultUuid(rootNetworkNodeInfoEntity.getDynamicSimulationResultUuid());
         this.setStateEstimationResultUuid(rootNetworkNodeInfoEntity.getStateEstimationResultUuid());
         this.setNodeBuildStatus(rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto());
-        this.setComputationsReports(rootNetworkNodeInfoEntity.getComputationReports());
-        this.setModificationReports(rootNetworkNodeInfoEntity.getModificationReports());
+        this.setComputationsReports(new HashMap<>(rootNetworkNodeInfoEntity.getComputationReports()));
+        this.setModificationReports(new HashMap<>(rootNetworkNodeInfoEntity.getModificationReports()));
     }
 
     private Map<String, UUID> computationsReports;
