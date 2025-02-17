@@ -308,13 +308,13 @@ public class NonEvacuatedEnergyService {
 
         List<NonEvacuatedEnergyStageDefinition> stageDefinitionParam = entity.getStagesDefinition().stream().map(stageDefinitionEntity ->
             new NonEvacuatedEnergyStageDefinition(EquipmentsContainerEmbeddable.fromEmbeddableContainerEquipments(stageDefinitionEntity.getGenerators()),
-                stageDefinitionEntity.getEnergySource(), stageDefinitionEntity.getPMaxPercents())
+                stageDefinitionEntity.getEnergySource(), new ArrayList<>(stageDefinitionEntity.getPMaxPercents()))
         ).toList();
 
         List<NonEvacuatedEnergyStagesSelection> stagesSelectionParam = entity.getStagesSelection().stream().map(stagesSelectionEntity ->
             new NonEvacuatedEnergyStagesSelection(stagesSelectionEntity.getName(),
-                                                  stagesSelectionEntity.getStageDefinitionIndex(),
-                                                  stagesSelectionEntity.getPMaxPercentsIndex(),
+                                                  new ArrayList<>(stagesSelectionEntity.getStageDefinitionIndex()),
+                                                  new ArrayList<>(stagesSelectionEntity.getPMaxPercentsIndex()),
                                                   stagesSelectionEntity.isActivated())
         ).toList();
 
