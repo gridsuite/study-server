@@ -422,14 +422,14 @@ class StateEstimationTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
 
-        //update voltage init parameters
+        //update state estimation parameters
         createOrUpdateParametersAndDoChecks(ids2.studyId, estimParametersJson, "userId", HttpStatus.OK);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
 
-        // insert a study with a wrong voltage init parameters uuid
+        // insert a study with a wrong state estimation parameters uuid
         StudyNodeIds ids3 = createStudyAndNode(VARIANT_ID, "node 3", UUID.fromString(WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING));
 
-        // get voltage init parameters
+        // get state estimation parameters
         mockMvc.perform(get("/v1/studies/{studyUuid}/state-estimation/parameters", ids3.studyId)).andExpect(
             status().isNotFound());
 
