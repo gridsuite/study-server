@@ -49,7 +49,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         Objects.requireNonNull(networkUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{networkUuid}/run");
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/{networkUuid}/run");
         if (variantId != null && !variantId.isBlank()) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -79,7 +79,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         Objects.requireNonNull(resultUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
-        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}/timeseries")
+        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/{resultUuid}/timeseries")
                 .buildAndExpand(resultUuid);
 
         // call dynamic-simulation REST API
@@ -100,7 +100,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         Objects.requireNonNull(resultUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
-        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}/timeline")
+        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/{resultUuid}/timeline")
                 .buildAndExpand(resultUuid);
 
         // call dynamic-simulation REST API
@@ -121,7 +121,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         Objects.requireNonNull(resultUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
-        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}/status")
+        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/{resultUuid}/status")
                 .buildAndExpand(resultUuid);
 
         // call dynamic-simulation REST API
@@ -142,7 +142,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         Objects.requireNonNull(resultUuids);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "invalidate-status");
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/invalidate-status");
 
         uriComponentsBuilder.queryParam("resultUuid", resultUuids);
 
@@ -164,7 +164,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         Objects.requireNonNull(resultUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
-        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}")
+        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/{resultUuid}")
                 .buildAndExpand(resultUuid);
 
         // call dynamic-simulation REST API

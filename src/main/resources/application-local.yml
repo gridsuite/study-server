@@ -59,6 +59,9 @@ gridsuite:
       name: dynamic-simulation-server
       base-uri: http://localhost:5032
     -
+      name: dynamic-security-analysis-server
+      base-uri: http://localhost:5040
+    -
       name: timeseries-server
       base-uri: http://localhost:5037
     -

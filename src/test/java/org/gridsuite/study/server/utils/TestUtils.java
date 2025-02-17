@@ -13,6 +13,9 @@ import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
 import okio.Buffer;
+import org.assertj.core.api.ThrowableAssert;
+import org.assertj.core.api.ThrowableAssertAlternative;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -20,6 +23,7 @@ import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEner
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
+import org.gridsuite.study.server.utils.assertions.Assertions;
 import org.junit.platform.commons.util.StringUtils;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.stereotype.Service;
@@ -200,5 +204,12 @@ public final class TestUtils {
 
     public static void checkReports(List<Report> reports, List<Report> expectedReports) {
         reports.forEach(r -> assertThat(r, new MatcherReport(expectedReports.get(reports.indexOf(r)))));
+    }
+
+    public static void assertStudyException(ThrowableAssert.ThrowingCallable throwingCallable, StudyException.Type type, String message) {
+        ThrowableAssertAlternative<StudyException> throwableAssert = Assertions.assertThatExceptionOfType(StudyException.class)
+                .isThrownBy(throwingCallable);
+        throwableAssert.extracting("type").isEqualTo(type);
+        Optional.ofNullable(message).ifPresent(throwableAssert::withMessage);
     }
 }

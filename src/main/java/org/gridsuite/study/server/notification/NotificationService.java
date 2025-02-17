@@ -73,6 +73,9 @@ public class NotificationService {
     public static final String UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED = "dynamicSimulation_failed";
     public static final String UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT = "dynamicSimulationResult";
     public static final String UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS = "dynamicSimulation_status";
+    public static final String UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_FAILED = "dynamicSecurityAnalysis_failed";
+    public static final String UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_RESULT = "dynamicSecurityAnalysisResult";
+    public static final String UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS = "dynamicSecurityAnalysis_status";
     public static final String UPDATE_TYPE_VOLTAGE_INIT_RESULT = "voltageInitResult";
     public static final String UPDATE_TYPE_VOLTAGE_INIT_STATUS = "voltageInit_status";
     public static final String UPDATE_TYPE_VOLTAGE_INIT_FAILED = "voltageInit_failed";

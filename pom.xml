@@ -13,7 +13,7 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
-        <version>20</version>
+        <version>21</version>
         <relativePath/>
     </parent>
 
@@ -42,7 +42,7 @@
     </developers>
 
     <properties>
-        <gridsuite-dependencies.version>36.1.0</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>37.0.0</gridsuite-dependencies.version>
         <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
         <mockwebserver3.version>5.0.0-alpha.14</mockwebserver3.version>
         <apache.httpclient.version>5.3</apache.httpclient.version>
@@ -140,7 +140,6 @@
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-ws-commons</artifactId>
-            <version>1.18.0</version>
         </dependency>
         <dependency>
             <groupId>io.projectreactor</groupId>
