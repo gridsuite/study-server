@@ -27,11 +27,7 @@ import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
-import org.gridsuite.study.server.dto.voltageinit.parameters.EquipmentsSelectionType;
-import org.gridsuite.study.server.dto.voltageinit.parameters.FilterEquipments;
-import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
-import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
-import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageLimitInfos;
+import org.gridsuite.study.server.dto.voltageinit.parameters.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.AlertLevel;
@@ -695,6 +691,7 @@ class VoltageInitTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
     }
 

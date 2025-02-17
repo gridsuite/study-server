@@ -8,7 +8,9 @@
 package org.gridsuite.study.server.networkmodificationtree.entities;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -88,6 +90,9 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "dynamicSimulationResultUuid")
     private UUID dynamicSimulationResultUuid;
 
+    @Column(name = "dynamicSecurityAnalysisResultUuid")
+    private UUID dynamicSecurityAnalysisResultUuid;
+
     @Column(name = "stateEstimationResultUuid")
     private UUID stateEstimationResultUuid;
 
@@ -107,6 +112,7 @@ public class RootNetworkNodeInfoEntity {
             .computationReports(computationReports)
             .modificationReports(modificationReports)
             .dynamicSimulationResultUuid(dynamicSimulationResultUuid)
+            .dynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid)
             .loadFlowResultUuid(loadFlowResultUuid)
             .nodeBuildStatus(nodeBuildStatus.toDto())
             .nonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid)

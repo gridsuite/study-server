@@ -28,6 +28,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequ
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -85,6 +86,7 @@ class RootNetworkTest {
     // root network node info 1
     private static final String VARIANT_ID = "variantId";
     private static final UUID DYNAMIC_SIMULATION_RESULT_UUID = UUID.randomUUID();
+    private static final UUID DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID = UUID.randomUUID();
     private static final UUID LOADFLOW_RESULT_UUID = UUID.randomUUID();
     private static final UUID SECURITY_ANALYSIS_RESULT_UUID = UUID.randomUUID();
     private static final UUID SHORT_CIRCUIT_ANALYSIS_RESULT_UUID = UUID.randomUUID();
@@ -153,6 +155,8 @@ class RootNetworkTest {
     private CaseService caseService;
     @MockBean
     private DynamicSimulationService dynamicSimulationService;
+    @MockBean
+    private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     @MockBean
     private SecurityAnalysisService securityAnalysisService;
     @MockBean
@@ -413,6 +417,7 @@ class RootNetworkTest {
         rootNetworkNodeInfoService.updateRootNetworkNode(firstNode.getId(), rootNetworkEntityToDeleteUuid, RootNetworkNodeInfo.builder()
                 .variantId(VARIANT_ID)
                 .dynamicSimulationResultUuid(DYNAMIC_SIMULATION_RESULT_UUID)
+                .dynamicSecurityAnalysisResultUuid(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID)
                 .loadFlowResultUuid(LOADFLOW_RESULT_UUID)
                 .securityAnalysisResultUuid(SECURITY_ANALYSIS_RESULT_UUID)
                 .shortCircuitAnalysisResultUuid(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
@@ -430,7 +435,7 @@ class RootNetworkTest {
             .build());
 
         // before deletion, check we have 2 root networks for study
-        assertEquals(2, studyService.getBasicRootNetworkInfos(studyEntity.getId()).size());
+        assertEquals(2, studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).size());
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
                 .contentType(APPLICATION_JSON)
@@ -439,7 +444,7 @@ class RootNetworkTest {
             .andExpect(status().isOk());
 
         // after deletion, check we have only 1 root network for study
-        List<BasicRootNetworkInfos> rootNetworkListAfterDeletion = studyService.getBasicRootNetworkInfos(studyEntity.getId());
+        List<BasicRootNetworkInfos> rootNetworkListAfterDeletion = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
         assertEquals(1, rootNetworkListAfterDeletion.size());
         assertEquals(firstRootNetworkUuid, rootNetworkListAfterDeletion.get(0).rootNetworkUuid());
 
@@ -449,6 +454,7 @@ class RootNetworkTest {
         Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID2);
         Mockito.verify(caseService, Mockito.times(1)).deleteCase(CASE_UUID2);
         Mockito.verify(dynamicSimulationService, Mockito.times(1)).deleteResult(DYNAMIC_SIMULATION_RESULT_UUID);
+        Mockito.verify(dynamicSecurityAnalysisService, Mockito.times(1)).deleteResult(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID);
         Mockito.verify(loadFlowService, Mockito.times(1)).deleteLoadFlowResult(LOADFLOW_RESULT_UUID);
         Mockito.verify(securityAnalysisService, Mockito.times(1)).deleteSaResult(SECURITY_ANALYSIS_RESULT_UUID);
         Mockito.verify(shortCircuitService, Mockito.times(1)).deleteShortCircuitAnalysisResult(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
@@ -479,7 +485,7 @@ class RootNetworkTest {
         studyRepository.save(studyEntity);
 
         networkModificationTreeService.createRoot(studyEntity);
-        UUID firstRootNetworkUuid = studyService.getBasicRootNetworkInfos(studyEntity.getId()).get(0).rootNetworkUuid();
+        UUID firstRootNetworkUuid = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).get(0).rootNetworkUuid();
 
         // try to delete all root networks
         mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
@@ -488,7 +494,7 @@ class RootNetworkTest {
                 .header("userId", USER_ID))
             .andExpect(status().isForbidden());
 
-        assertEquals(2, studyService.getBasicRootNetworkInfos(studyEntity.getId()).size());
+        assertEquals(2, studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).size());
 
         // try to delete unknown root network
         mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
@@ -497,7 +503,7 @@ class RootNetworkTest {
                 .header("userId", USER_ID))
             .andExpect(status().isNotFound());
 
-        assertEquals(2, studyService.getBasicRootNetworkInfos(studyEntity.getId()).size());
+        assertEquals(2, studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).size());
     }
 
     @Test
@@ -654,7 +660,7 @@ class RootNetworkTest {
         studyRepository.save(studyEntity);
 
         // after creating 3 root networks, check rootNetworkOrder to assert they are correctly incremented
-        List<BasicRootNetworkInfos> result = studyService.getBasicRootNetworkInfos(studyEntity.getId());
+        List<BasicRootNetworkInfos> result = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
         assertEquals(3, result.size());
         // check rootNetworkOrdered is ordered by creation ordered
         assertEquals("rootNetworkName", result.get(0).name());
@@ -665,7 +671,7 @@ class RootNetworkTest {
         studyService.deleteRootNetworks(studyEntity.getId(), List.of(result.get(1).rootNetworkUuid()), null);
 
         // check "dummyRootNetwork2" root network order have been updated correctly
-        List<BasicRootNetworkInfos> resultAfterDeletion = studyService.getBasicRootNetworkInfos(studyEntity.getId());
+        List<BasicRootNetworkInfos> resultAfterDeletion = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
         assertEquals(2, resultAfterDeletion.size());
         assertEquals("rootNetworkName", resultAfterDeletion.get(0).name());
         assertEquals("dummyRootNetwork2", resultAfterDeletion.get(1).name());
@@ -682,7 +688,7 @@ class RootNetworkTest {
             .build());
 
         // check "dummyRootNetwork3" root network order have been created correctly
-        List<BasicRootNetworkInfos> resultAfterCreation = studyService.getBasicRootNetworkInfos(studyEntity.getId());
+        List<BasicRootNetworkInfos> resultAfterCreation = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
         assertEquals(3, resultAfterCreation.size());
         assertEquals("rootNetworkName", resultAfterCreation.get(0).name());
         assertEquals("dummyRootNetwork2", resultAfterCreation.get(1).name());

@@ -32,6 +32,8 @@ public class UserProfileInfos {
 
     private UUID shortcircuitParameterId;
 
+    private UUID dynamicSecurityAnalysisParameterId;
+
     private UUID voltageInitParameterId;
 
     Integer maxAllowedBuilds;

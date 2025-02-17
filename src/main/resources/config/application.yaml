@@ -6,7 +6,8 @@ spring:
   cloud:
     function:
       definition: "consumeSaResult;consumeSaStopped;consumeSaFailed;consumeSaCancelFailed;\
-      consumeDsResult;consumeDsStopped;consumeDsFailed;\
+      consumeDsResult;consumeDsStopped;consumeDsFailed;consumeDsCancelFailed;\
+      consumeDsaResult;consumeDsaStopped;consumeDsaFailed;consumeDsaCancelFailed;\
       consumeBuildResult;consumeBuildStopped;consumeBuildFailed;\
       consumeCaseImportSucceeded;consumeCaseImportFailed;\
       consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeSensitivityAnalysisCancelFailed;\
@@ -39,8 +40,23 @@ spring:
         consumeDsStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.stopped
           group: studyDsStoppedGroup
+        consumeDsCancelFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.cancelfailed
+          group: studyDsCancelFailedGroup
         consumeDsFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.run.dlx
+          group: dlq
+        consumeDsaResult-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}dsa.result
+          group: studyDsaResultGroup
+        consumeDsaStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}dsa.stopped
+          group: studyDsaStoppedGroup
+        consumeDsaCancelFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}dsa.cancelfailed
+          group: studyDsaCancelFailedGroup
+        consumeDsaFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}dsa.run.dlx
           group: dlq
         consumeBuildResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.result
@@ -178,6 +194,9 @@ gridsuite:
     -
       name: dynamic-simulation-server
       base-uri: http://dynamic-simulation-server/
+    -
+      name: dynamic-security-analysis-server
+      base-uri: http://dynamic-security-analysis-server/
     -
       name: timeseries-server
       base-uri: http://timeseries-server/
