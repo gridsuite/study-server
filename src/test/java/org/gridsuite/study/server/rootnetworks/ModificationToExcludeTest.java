@@ -106,7 +106,7 @@ public class ModificationToExcludeTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         createDummyRootNetwork(studyEntity, "secondRootNetwork");
         studyRepository.save(studyEntity);
-        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getBasicRootNetworkInfos(studyEntity.getId());
+        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
 
         // create root node and a network modification node - it will create a RootNetworkNodeInfoEntity for each root network
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
@@ -142,7 +142,7 @@ public class ModificationToExcludeTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         createDummyRootNetwork(studyEntity, "secondRootNetwork");
         studyRepository.save(studyEntity);
-        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getBasicRootNetworkInfos(studyEntity.getId());
+        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
 
         // create root node and a network modification node - it will create a RootNetworkNodeInfoEntity for each root network
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
@@ -161,7 +161,7 @@ public class ModificationToExcludeTest {
         StudyEntity studyEntity2 = TestUtils.createDummyStudy(NETWORK_UUID2, CASE_UUID2, CASE_NAME2, CASE_FORMAT2, REPORT_UUID2);
         createDummyRootNetwork(studyEntity2, "secondRootNetwork2");
         studyRepository.save(studyEntity2);
-        List<BasicRootNetworkInfos> rootNetworkBasicInfos2 = studyService.getBasicRootNetworkInfos(studyEntity2.getId());
+        List<BasicRootNetworkInfos> rootNetworkBasicInfos2 = studyService.getExistingBasicRootNetworkInfos(studyEntity2.getId());
 
         // create root node for this new study
         NodeEntity rootNode2 = networkModificationTreeService.createRoot(studyEntity2);
@@ -187,7 +187,7 @@ public class ModificationToExcludeTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         createDummyRootNetwork(studyEntity, "secondRootNetwork");
         studyRepository.save(studyEntity);
-        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getBasicRootNetworkInfos(studyEntity.getId());
+        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
 
         // create root node and a network modification node - it will create a RootNetworkNodeInfoEntity for each root network
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
@@ -247,7 +247,7 @@ public class ModificationToExcludeTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         createDummyRootNetwork(studyEntity, "secondRootNetwork");
         studyRepository.save(studyEntity);
-        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getBasicRootNetworkInfos(studyEntity.getId());
+        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
 
         // create root node and a network modification node - it will create a RootNetworkNodeInfoEntity for each root network
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
@@ -292,7 +292,7 @@ public class ModificationToExcludeTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         createDummyRootNetwork(studyEntity, "secondRootNetwork");
         studyRepository.save(studyEntity);
-        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getBasicRootNetworkInfos(studyEntity.getId());
+        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
 
         // create root node and a network modification node - it will create a RootNetworkNodeInfoEntity for each root network
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
@@ -319,7 +319,7 @@ public class ModificationToExcludeTest {
         while (studyCreationRequestRepository.findById(newStudyUuid).isPresent()) {
             Thread.sleep(1000);
         }
-        List<BasicRootNetworkInfos> newStudyRootNetworkBasicInfos = studyService.getBasicRootNetworkInfos(newStudyUuid);
+        List<BasicRootNetworkInfos> newStudyRootNetworkBasicInfos = studyService.getExistingBasicRootNetworkInfos(newStudyUuid);
 
         // ASSERT duplications are correct
         // get RootNetworkNodeInfoEntity of duplicate nodes
