@@ -1,5 +1,6 @@
 package org.gridsuite.study.server.rootnetworks;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
@@ -27,6 +28,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpStatus;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -35,6 +39,8 @@ import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeI
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @AutoConfigureMockMvc
 @SpringBootTest
@@ -85,11 +91,11 @@ public class ModificationToExcludeTest {
     @Autowired
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     @Autowired
-    private TestUtils testUtils;
-    @Autowired
     private StudyService studyService;
     @Autowired
     private StudyCreationRequestRepository studyCreationRequestRepository;
+    @Autowired
+    private MockMvc mockMvc;
 
     @MockBean
     NetworkModificationService networkModificationService;
@@ -99,6 +105,49 @@ public class ModificationToExcludeTest {
     private NetworkService networkService;
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Test
+    public void testExcludeModifications() throws Exception {
+        // create study with two root networks
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        createDummyRootNetwork(studyEntity, "secondRootNetwork");
+        studyRepository.save(studyEntity);
+        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
+
+        // create root node and a network modification node - it will create a RootNetworkNodeInfoEntity for each root network
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+
+        UUID invalidModificationUuid = UUID.randomUUID();
+        Mockito.doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND)).when(networkModificationService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(invalidModificationUuid));
+
+        // try to disable invalid modification - should return 404
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), firstNode.getId())
+            .param("uuids", invalidModificationUuid.toString())
+            .param("activated", Boolean.FALSE.toString())
+            .header("userId", "userId"))
+            .andExpect(status().isNotFound());
+
+        UUID validModificationUuid = UUID.randomUUID();
+        Mockito.doNothing().when(networkModificationService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(validModificationUuid));
+        // disable modification then check it's actually stored in database
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), firstNode.getId())
+                .param("uuids", validModificationUuid.toString())
+                .param("activated", Boolean.FALSE.toString())
+                .header("userId", "userId"))
+            .andExpect(status().isOk());
+        assertEquals(validModificationUuid, rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow().getModificationsToExclude().stream().findFirst().orElseThrow());
+
+        // enable modification then check it's not stored in database anymore
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), firstNode.getId())
+                .param("uuids", validModificationUuid.toString())
+                .param("activated", Boolean.TRUE.toString())
+                .header("userId", "userId"))
+            .andExpect(status().isOk());
+        assertEquals(0, rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow().getModificationsToExclude().size());
+    }
 
     @Test
     public void testDuplicateNodeWithModificationsToExclude() {

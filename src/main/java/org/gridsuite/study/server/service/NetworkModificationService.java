@@ -403,4 +403,13 @@ public class NetworkModificationService {
             throw handleHttpError(e, DELETE_NETWORK_MODIFICATION_FAILED);
         }
     }
+
+    public void verifyModifications(UUID groupUuid, Set<UUID> modificationUuids) {
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH + DELIMITER + "verify")
+            .queryParam("uuids", modificationUuids)
+            .buildAndExpand(groupUuid)
+            .toUriString();
+
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, Void.class);
+    }
 }
