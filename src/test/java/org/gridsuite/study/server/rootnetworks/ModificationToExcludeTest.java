@@ -4,15 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
-import org.gridsuite.study.server.dto.CaseInfos;
-import org.gridsuite.study.server.dto.NetworkInfos;
-import org.gridsuite.study.server.dto.RootNetworkInfos;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.repository.StudyCreationRequestEntity;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -46,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-public class ModificationToExcludeTest {
+class ModificationToExcludeTest {
     private static final String USER_ID = "userId";
 
     private static final UUID NETWORK_UUID = UUID.randomUUID();
@@ -109,7 +107,7 @@ public class ModificationToExcludeTest {
     private ObjectMapper objectMapper;
 
     @Test
-    public void testExcludeModifications() throws Exception {
+    void testExcludeModifications() throws Exception {
         // create study with two root networks
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         createDummyRootNetwork(studyEntity, "secondRootNetwork");
@@ -127,7 +125,7 @@ public class ModificationToExcludeTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), firstNode.getId())
             .param("uuids", invalidModificationUuid.toString())
             .param("activated", Boolean.FALSE.toString())
-            .header("userId", "userId"))
+            .header(USER_ID, USER_ID))
             .andExpect(status().isNotFound());
 
         UUID validModificationUuid = UUID.randomUUID();
@@ -136,7 +134,7 @@ public class ModificationToExcludeTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), firstNode.getId())
                 .param("uuids", validModificationUuid.toString())
                 .param("activated", Boolean.FALSE.toString())
-                .header("userId", "userId"))
+                .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
         assertEquals(validModificationUuid, rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow().getModificationsToExclude().stream().findFirst().orElseThrow());
 
@@ -144,13 +142,13 @@ public class ModificationToExcludeTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), firstNode.getId())
                 .param("uuids", validModificationUuid.toString())
                 .param("activated", Boolean.TRUE.toString())
-                .header("userId", "userId"))
+                .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
         assertEquals(0, rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow().getModificationsToExclude().size());
     }
 
     @Test
-    public void testDuplicateNodeWithModificationsToExclude() {
+    void testDuplicateNodeWithModificationsToExclude() {
         // create study with two root networks
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         createDummyRootNetwork(studyEntity, "secondRootNetwork");
@@ -186,7 +184,7 @@ public class ModificationToExcludeTest {
     }
 
     @Test
-    public void testDuplicateNodeBetweenStudiesWithModificationsToExclude() {
+    void testDuplicateNodeBetweenStudiesWithModificationsToExclude() {
         // create study with two root networks
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         createDummyRootNetwork(studyEntity, "secondRootNetwork");
@@ -231,7 +229,7 @@ public class ModificationToExcludeTest {
     }
 
     @Test
-    public void testDuplicateModificationWithModificationsToExclude() {
+    void testDuplicateModificationWithModificationsToExclude() {
         // create study with two root networks
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         createDummyRootNetwork(studyEntity, "secondRootNetwork");
@@ -256,7 +254,7 @@ public class ModificationToExcludeTest {
         Mockito.doReturn(new NetworkModificationsResult(modificationsToDuplicate.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).toList(), List.of())).when(networkModificationService).duplicateOrInsertModifications(any(), any(), any());
 
         // run duplication
-        studyService.duplicateOrInsertNetworkModifications(studyEntity.getId(), firstNode.getId(), modificationsToDuplicate, "userId", StudyConstants.ModificationsActionType.COPY);
+        studyService.duplicateOrInsertNetworkModifications(studyEntity.getId(), firstNode.getId(), modificationsToDuplicate, USER_ID, StudyConstants.ModificationsActionType.COPY);
 
         // get RootNetworkNodeInfoEntity of duplicate node
         RootNetworkNodeInfoEntity upToDateRootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
@@ -289,7 +287,7 @@ public class ModificationToExcludeTest {
     }
 
     @Test
-    public void testDuplicateStudyTreeWithModificationsToExclude() {
+    void testDuplicateStudyTreeWithModificationsToExclude() {
         // PREPARE TEST : 2 root network with 3 nodes (rootNode, node1, node2)
         // This test adds some modifications to exclude in several nodes and root network, duplicate node1 subtree, then check exclusions have been accuratly duplicated
         // create study with two root networks
@@ -334,7 +332,7 @@ public class ModificationToExcludeTest {
     }
 
     @Test
-    public void testDuplicateStudyWithModificationsToExclude() throws Exception {
+    void testDuplicateStudyWithModificationsToExclude() throws Exception {
         // PREPARE TEST : 2 root network with 3 nodes (rootNode, node1, node2)
         // This test adds some modifications to exclude in several nodes and root network, duplicate node1 subtree, then check exclusions have been accuratly duplicated
         // create study with two root networks
@@ -364,10 +362,10 @@ public class ModificationToExcludeTest {
         Mockito.doReturn(UUID.randomUUID()).when(networkService).getNetworkUuid(any());
 
         // RUN study tree duplication
-        UUID newStudyUuid = studyService.duplicateStudy(studyEntity.getId(), "userId");
-        while (studyCreationRequestRepository.findById(newStudyUuid).isPresent()) {
-            Thread.sleep(1000);
-        }
+        UUID newStudyUuid = UUID.randomUUID();
+        studyCreationRequestRepository.save(new StudyCreationRequestEntity(newStudyUuid));
+        studyService.duplicateStudyAsync(BasicStudyInfos.builder().id(newStudyUuid).build(), studyEntity.getId(), USER_ID);
+
         List<BasicRootNetworkInfos> newStudyRootNetworkBasicInfos = studyService.getExistingBasicRootNetworkInfos(newStudyUuid);
 
         // ASSERT duplications are correct

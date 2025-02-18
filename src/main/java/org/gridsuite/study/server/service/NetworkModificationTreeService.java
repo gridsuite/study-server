@@ -23,7 +23,6 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -68,7 +67,7 @@ public class NetworkModificationTreeService {
                                           NetworkModificationService networkModificationService,
                                           @Lazy NetworkModificationTreeService networkModificationTreeService,
                                           RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                                          RootNetworkService rootNetworkService, RootNetworkRepository rootNetworkRepository,
+                                          RootNetworkService rootNetworkService,
                                           ReportService reportService) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
