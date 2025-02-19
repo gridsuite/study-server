@@ -769,7 +769,7 @@ class StudyTest {
         resultAsString = result.getResponse().getContentAsString();
         StudyInfos infos = mapper.readValue(resultAsString, StudyInfos.class);
 
-        assertThat(infos, createMatcherStudyInfos(studyUuid, "UCTE"));
+        assertThat(infos, createMatcherStudyInfos(studyUuid));
 
         //insert a study with a non-existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}",
