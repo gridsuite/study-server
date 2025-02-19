@@ -1,6 +1,5 @@
 package org.gridsuite.study.server.rootnetworks;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
