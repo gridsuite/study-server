@@ -551,6 +551,31 @@ class RootNetworkTest {
     }
 
     @Test
+    public void testRootNetworkExists() throws Exception {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+
+        // create a second root network for the study
+        UUID rootNetworkUuid = UUID.randomUUID();
+        createDummyRootNetwork(studyEntity, RootNetworkInfos.builder()
+                .name(CASE_NAME2)
+                .caseInfos(new CaseInfos(CASE_UUID2, CASE_NAME2, CASE_FORMAT2))
+                .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
+                .reportUuid(REPORT_UUID2)
+                .id(rootNetworkUuid)
+                .build());
+        studyRepository.save(studyEntity);
+
+        //root network exists
+        mockMvc.perform(head("/v1/studies/{studyUuid}/root-networks?name={rootNetworkName}", studyEntity.getId(), CASE_NAME2))
+                .andExpect(status().isOk());
+
+        //root network doesn't exist
+        mockMvc.perform(head("/v1/studies/{studyUuid}/root-networks?name={rootNetworkName}", studyEntity.getId(), "NonExistentRootNetwork"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
     void testUpdateRootNetworkConsumer() throws Exception {
         // create study with first root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
