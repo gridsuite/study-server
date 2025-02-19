@@ -1872,6 +1872,8 @@ public class StudyService {
                 .toList();
 
             NetworkModificationsResult networkModificationsResult = networkModificationService.moveModifications(originGroupUuid, targetGroupUuid, beforeUuid, Pair.of(modificationUuidList, modificationApplicationContexts), buildTargetNode);
+            rootNetworkNodeInfoService.moveExcludedModificationBetweenNodes(originNodeUuid, targetNodeUuid, networkModificationsResult.modificationUuids());
+
             if (!targetNodeBelongsToSourceNodeSubTree) {
                 // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
                 int index = 0;

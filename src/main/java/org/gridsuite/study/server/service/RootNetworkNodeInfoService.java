@@ -369,7 +369,18 @@ public class RootNetworkNodeInfoService {
         } else {
             rootNetworkNodeInfoEntity.addModificationsToExclude(modificationUuids);
         }
+    }
 
+    public void moveExcludedModificationBetweenNodes(UUID originNodeUuid, UUID targetNodeUuid, List<UUID> modifications) {
+        List<RootNetworkNodeInfoEntity> originRootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByNodeInfoId(originNodeUuid);
+        originRootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfoEntity -> {
+            Optional<RootNetworkNodeInfoEntity> targetRootNetworkNodeInfoEntityOpt = getRootNetworkNodeInfo(targetNodeUuid, rootNetworkNodeInfoEntity.getRootNetwork().getId());
+            if (targetRootNetworkNodeInfoEntityOpt.isPresent()) {
+                Set<UUID> modificationsToMove = modifications.stream().filter(m -> rootNetworkNodeInfoEntity.getModificationsToExclude().contains(m)).collect(Collectors.toSet());
+                rootNetworkNodeInfoEntity.removeModificationsFromExclude(modificationsToMove);
+                targetRootNetworkNodeInfoEntityOpt.get().addModificationsToExclude(modificationsToMove);
+            }
+        });
     }
 
     @Transactional
