@@ -1863,7 +1863,8 @@ public class StudyService {
         }
         try {
             checkStudyContainsNode(studyUuid, targetNodeUuid);
-            List<RootNetworkEntity> studyRootNetworkEntities = getStudyRootNetworks(studyUuid);
+            StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+            List<RootNetworkEntity> studyRootNetworkEntities = studyEntity.getRootNetworks();
             UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
             UUID targetGroupUuid = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
 
@@ -1876,31 +1877,10 @@ public class StudyService {
 
             if (!targetNodeBelongsToSourceNodeSubTree) {
                 // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
-                int index = 0;
-                // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
-                if (networkModificationsResult != null) {
-                    for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationsResult.modificationResults()) {
-                        if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
-                            emitNetworkModificationImpacts(studyUuid, targetNodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
-                        }
-                        index++;
-
-                    }
-                }
-                updateStatuses(studyUuid, targetNodeUuid, buildTargetNode, true, true);
+                emitNetworkModificationImpactsForAllRootNetworks(networkModificationsResult.modificationResults(), studyEntity, targetNodeUuid, buildTargetNode);
             }
             if (moveBetweenNodes) {
-                int index = 0;
-                // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
-                if (networkModificationsResult != null) {
-                    for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationsResult.modificationResults()) {
-                        if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
-                            emitNetworkModificationImpacts(studyUuid, originNodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
-                        }
-                        index++;
-                    }
-                }
-                updateStatuses(studyUuid, originNodeUuid, false, true, true);
+                emitNetworkModificationImpactsForAllRootNetworks(networkModificationsResult.modificationResults(), studyEntity, originNodeUuid, false);
             }
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
@@ -1909,6 +1889,20 @@ public class StudyService {
             }
         }
         notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    private void emitNetworkModificationImpactsForAllRootNetworks(List<Optional<NetworkModificationResult>> modificationResults, StudyEntity studyEntity, UUID impactedNode, boolean invalidateOnlyChildrenBuildStatus) {
+        int index = 0;
+        List<RootNetworkEntity> rootNetworkEntities = studyEntity.getRootNetworks();
+        // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
+        for (Optional<NetworkModificationResult> modificationResultOpt : modificationResults) {
+            if (modificationResultOpt.isPresent() && rootNetworkEntities.get(index) != null) {
+                emitNetworkModificationImpacts(studyEntity.getId(), impactedNode, rootNetworkEntities.get(index).getId(), modificationResultOpt.get());
+            }
+            index++;
+
+        }
+        updateStatuses(studyEntity.getId(), impactedNode, invalidateOnlyChildrenBuildStatus, true, true);
     }
 
     @Transactional
