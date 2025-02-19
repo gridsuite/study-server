@@ -20,7 +20,6 @@ public class MatcherCreatedStudyBasicInfos<T extends CreatedStudyBasicInfos> ext
                                                                                                             String caseFormat) {
         return new MatcherCreatedStudyBasicInfos<>(CreatedStudyBasicInfos.builder()
                 .id(studyUuid)
-                .caseFormat(caseFormat)
                 .build());
     }
 
@@ -34,7 +33,6 @@ public class MatcherCreatedStudyBasicInfos<T extends CreatedStudyBasicInfos> ext
 
     @Override
     public boolean matchesSafely(T s) {
-        return super.matchesSafely(s)
-                && reference.getCaseFormat().equals(s.getCaseFormat());
+        return super.matchesSafely(s);
     }
 }

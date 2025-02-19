@@ -65,10 +65,10 @@ class StudyInfosServiceTests {
 
     @Test
     void searchStudyInfos() {
-        CreatedStudyBasicInfos studyInfos11 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").caseFormat("XIIDM").build();
-        CreatedStudyBasicInfos studyInfos12 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").build();
-        CreatedStudyBasicInfos studyInfos21 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-22222222221")).userId("userId2").caseFormat("XIIDM").build();
-        CreatedStudyBasicInfos studyInfos22 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-22222222222")).userId("userId2").caseFormat("UCTE").build();
+        CreatedStudyBasicInfos studyInfos11 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").build();
+        CreatedStudyBasicInfos studyInfos12 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").build();
+        CreatedStudyBasicInfos studyInfos21 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-22222222221")).userId("userId2").build();
+        CreatedStudyBasicInfos studyInfos22 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-22222222222")).userId("userId2").build();
 
         studyInfosService.add(studyInfos11);
         studyInfosService.add(studyInfos12);

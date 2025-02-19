@@ -223,10 +223,8 @@ public class StudyService {
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid, UUID rootNetworkUuid) {
-        String caseFormat = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getCaseFormat();
         return CreatedStudyBasicInfos.builder()
                 .id(studyUuid)
-                .caseFormat(caseFormat)
                 .build();
     }
 
@@ -239,7 +237,6 @@ public class StudyService {
     private CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity, UUID rootNetworkUuid) {
         return CreatedStudyBasicInfos.builder()
                 .id(entity.getId())
-                .caseFormat(rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getCaseFormat())
                 .build();
     }
 
