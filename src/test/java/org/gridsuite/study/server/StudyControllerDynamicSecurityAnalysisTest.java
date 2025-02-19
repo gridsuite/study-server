@@ -32,7 +32,6 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -147,11 +146,6 @@ class StudyControllerDynamicSecurityAnalysisTest {
     private static final String DSA_RESULT_DESTINATION = "dsa.result";
     private static final String DSA_STOPPED_DESTINATION = "dsa.stopped";
     private static final String DSA_FAILED_DESTINATION = "dsa.run.dlx";
-
-    @BeforeEach
-    public void setup() {
-        Mockito.doReturn(ROOT_NETWORK_UUID).when(spyStudyService).getStudyFirstRootNetworkUuid(STUDY_UUID);
-    }
 
     @AfterEach
     void tearDown() {
