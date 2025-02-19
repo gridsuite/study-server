@@ -973,7 +973,9 @@ public class StudyService {
         updateProvider(studyUuid, userId, studyEntity -> {
             studyEntity.setDynamicSimulationProvider(provider != null ? provider : defaultDynamicSimulationProvider);
             invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
+            invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
             notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_SIMULATION);
         });
     }
