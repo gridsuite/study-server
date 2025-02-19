@@ -91,6 +91,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+ */
 @ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
@@ -2048,7 +2051,7 @@ class NetworkModificationTest {
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("MOVE"))
                 .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(Optional.empty()))
+                        .withBody(mapper.writeValueAsString(new NetworkModificationsResult(Arrays.asList(modification1, modification2), List.of(Optional.empty()))))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
         // switch the 2 modifications order (modification1 is set at the end, after modification2)
@@ -2234,7 +2237,7 @@ class NetworkModificationTest {
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("MOVE"))
                 .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(Optional.empty()))
+                        .withBody(mapper.writeValueAsString(new NetworkModificationsResult(Arrays.asList(modification1, modification2), List.of(Optional.empty()))))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
         // move 2 modifications within node 1
