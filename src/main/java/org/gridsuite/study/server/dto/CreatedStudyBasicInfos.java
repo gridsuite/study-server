@@ -20,7 +20,6 @@ import org.springframework.data.elasticsearch.annotations.Document;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @SuperBuilder
-@AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @EqualsAndHashCode(callSuper = true)
@@ -29,5 +28,4 @@ import org.springframework.data.elasticsearch.annotations.Document;
 @Document(indexName = ESConfig.STUDY_INDEX_NAME)
 @TypeAlias(value = "StudyInfos")
 public class CreatedStudyBasicInfos extends BasicStudyInfos {
-    String caseFormat;
 }
