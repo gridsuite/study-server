@@ -23,6 +23,8 @@ public class LoadFlowParametersInfos {
 
     private String provider;
 
+    private Float limitReduction;
+
     private LoadFlowParameters commonParameters;
 
     private Map<String, Map<String, String>> specificParametersPerProvider;

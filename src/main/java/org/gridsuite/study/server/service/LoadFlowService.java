@@ -55,7 +55,7 @@ public class LoadFlowService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID parametersUuid, UUID reportUuid, String userId, Float limitReduction) {
+    public UUID runLoadFlow(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID parametersUuid, UUID reportUuid, String userId) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
@@ -74,9 +74,6 @@ public class LoadFlowService extends AbstractComputationService {
         }
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        if (limitReduction != null) {
-            uriComponentsBuilder.queryParam("limitReduction", limitReduction);
         }
         var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
 
