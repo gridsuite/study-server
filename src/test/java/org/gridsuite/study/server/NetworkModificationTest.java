@@ -2276,7 +2276,6 @@ class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyUuid, userId);
         checkElementUpdatedMessageSent(studyUuid, userId);
 
-
         expectedBody = Pair.of(List.of(modification1, modification2), List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
         expectedBodyStr = mapper.writeValueAsString(expectedBody);
         url = "/v1/groups/" + node2.getModificationGroupUuid();
