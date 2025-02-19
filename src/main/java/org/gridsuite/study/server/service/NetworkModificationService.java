@@ -284,18 +284,6 @@ public class NetworkModificationService {
         restTemplate.put(getNetworkModificationServerURI(false) + path, null);
     }
 
-    private HttpEntity<String> getModificationsUuidBody(List<UUID> modificationUuidList) {
-        HttpEntity<String> httpEntity;
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            httpEntity = new HttpEntity<>(objectMapper.writeValueAsString(modificationUuidList), headers);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
-        return httpEntity;
-    }
-
     public NetworkModificationsResult moveModifications(UUID originGroupUuid, UUID targetGroupUuid, UUID beforeUuid, Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos, boolean buildTargetNode) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam(QUERY_PARAM_ACTION, ModificationsActionType.MOVE.name())
