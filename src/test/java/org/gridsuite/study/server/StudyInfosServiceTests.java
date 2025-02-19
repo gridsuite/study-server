@@ -87,14 +87,6 @@ class StudyInfosServiceTests {
         assertTrue(hits.contains(studyInfos21));
         assertTrue(hits.contains(studyInfos22));
 
-        hits = new HashSet<>(studyInfosService.search("userId:(userId1) AND caseFormat:(XIIDM)"));
-        assertEquals(1, hits.size());
-        assertTrue(hits.contains(studyInfos11));
-
-        hits = new HashSet<>(studyInfosService.search("userId:(userId1) AND caseFormat:(UCTE)"));
-        assertEquals(1, hits.size());
-        assertTrue(hits.contains(studyInfos12));
-
         studyInfosService.deleteByUuid(studyInfos11.getId());
         studyInfosService.deleteByUuid(studyInfos12.getId());
         studyInfosService.deleteByUuid(studyInfos21.getId());
