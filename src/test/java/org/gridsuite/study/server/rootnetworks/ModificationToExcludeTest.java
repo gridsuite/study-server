@@ -94,6 +94,8 @@ class ModificationToExcludeTest {
     private StudyCreationRequestRepository studyCreationRequestRepository;
     @Autowired
     private MockMvc mockMvc;
+    @Autowired
+    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
     @MockBean
     NetworkModificationService networkModificationService;
@@ -101,9 +103,7 @@ class ModificationToExcludeTest {
     private CaseService caseService;
     @MockBean
     private NetworkService networkService;
-    @Autowired
-    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
-    @Autowired
+    @MockBean
     private UserAdminService userAdminService;
 
     @Test
@@ -437,7 +437,7 @@ class ModificationToExcludeTest {
         rootNetwork0NodeInfo2Entity.setModificationsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_2);
         rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo2Entity);
 
-        Mockito.doReturn(3).when(userAdminService).getUserMaxAllowedBuilds("userId");
+        Mockito.doReturn(Optional.of(3)).when(userAdminService).getUserMaxAllowedBuilds("userId");
         studyService.buildNode(studyEntity.getId(), secondNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), "userId");
 
         ArgumentCaptor<BuildInfos> buildInfosCaptor = ArgumentCaptor.forClass(BuildInfos.class);
