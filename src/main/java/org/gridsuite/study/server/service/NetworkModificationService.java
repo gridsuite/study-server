@@ -303,31 +303,24 @@ public class NetworkModificationService {
         return httpEntity;
     }
 
-    public Optional<NetworkModificationResult> moveModifications(UUID originGroupUuid, List<UUID> modificationUuidList, UUID beforeUuid, UUID networkUuid, NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, boolean buildTargetNode) {
-        Objects.requireNonNull(networkUuid);
+    public NetworkModificationsResult moveModifications(UUID originGroupUuid, UUID targetGroupUuid, UUID beforeUuid, Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos, boolean buildTargetNode) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam(QUERY_PARAM_ACTION, ModificationsActionType.MOVE.name())
-            .queryParam(NETWORK_UUID, networkUuid)
-            .queryParam(REPORTER_ID, networkModificationNodeInfoEntity.getId())
             .queryParam("originGroupUuid", originGroupUuid)
             .queryParam("build", buildTargetNode);
-
-        if (rootNetworkNodeInfoEntity != null) {
-            path.queryParam(VARIANT_ID, rootNetworkNodeInfoEntity.getVariantId())
-                .queryParam(REPORT_UUID, rootNetworkNodeInfoEntity.getModificationReports().get(networkModificationNodeInfoEntity.getId()));
-        }
         if (beforeUuid != null) {
             path.queryParam("before", beforeUuid);
         }
 
-        HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Pair<List<UUID>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
 
         return restTemplate.exchange(
-                getNetworkModificationServerURI(false) + path.buildAndExpand(networkModificationNodeInfoEntity.getModificationGroupUuid()).toUriString(),
+                getNetworkModificationServerURI(false) + path.buildAndExpand(targetGroupUuid).toUriString(),
                 HttpMethod.PUT,
                 httpEntity,
-                new ParameterizedTypeReference<Optional<NetworkModificationResult>>() {
-                }).getBody();
+                NetworkModificationsResult.class).getBody();
     }
 
     public NetworkModificationsResult duplicateOrInsertModifications(UUID groupUuid, ModificationsActionType action,

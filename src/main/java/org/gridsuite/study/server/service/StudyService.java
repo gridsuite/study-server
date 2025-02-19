@@ -1862,24 +1862,43 @@ public class StudyService {
         }
         try {
             checkStudyContainsNode(studyUuid, targetNodeUuid);
+            List<RootNetworkEntity> studyRootNetworkEntities = getStudyRootNetworks(studyUuid);
             UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
-            NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(targetNodeUuid);
-            getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
-                UUID rootNetworkUuid = rootNetworkEntity.getId();
-                RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(targetNodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
-                UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-                Optional<NetworkModificationResult> networkModificationResult = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, networkModificationNodeInfoEntity, rootNetworkNodeInfoEntity, buildTargetNode);
-                if (!targetNodeBelongsToSourceNodeSubTree) {
-                    // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
-                    networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, targetNodeUuid, rootNetworkUuid, modificationResult));
-                    updateStatuses(studyUuid, targetNodeUuid, buildTargetNode, true, true);
+            UUID targetGroupUuid = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
+
+            List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
+                .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
+                .toList();
+
+            NetworkModificationsResult networkModificationsResult = networkModificationService.moveModifications(originGroupUuid, targetGroupUuid, beforeUuid, Pair.of(modificationUuidList, modificationApplicationContexts), buildTargetNode);
+            if (!targetNodeBelongsToSourceNodeSubTree) {
+                // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
+                int index = 0;
+                // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
+                if (networkModificationsResult != null) {
+                    for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationsResult.modificationResults()) {
+                        if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
+                            emitNetworkModificationImpacts(studyUuid, targetNodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
+                        }
+                        index++;
+
+                    }
                 }
-                if (moveBetweenNodes) {
-                    // invalidate the whole subtree including the source node
-                    networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, originNodeUuid, rootNetworkUuid, modificationResult));
-                    updateStatuses(studyUuid, originNodeUuid, false, true, true);
+                updateStatuses(studyUuid, targetNodeUuid, buildTargetNode, true, true);
+            }
+            if (moveBetweenNodes) {
+                int index = 0;
+                // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
+                if (networkModificationsResult != null) {
+                    for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationsResult.modificationResults()) {
+                        if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
+                            emitNetworkModificationImpacts(studyUuid, originNodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
+                        }
+                        index++;
+                    }
                 }
-            });
+                updateStatuses(studyUuid, originNodeUuid, false, true, true);
+            }
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
             if (moveBetweenNodes) {
