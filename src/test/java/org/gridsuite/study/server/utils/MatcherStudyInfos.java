@@ -19,7 +19,6 @@ public class MatcherStudyInfos extends MatcherCreatedStudyBasicInfos<StudyInfos>
     public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid, String caseFormat) {
         return new MatcherStudyInfos(StudyInfos.builder()
                 .id(studyUuid)
-                .caseFormat(caseFormat)
                 .build());
     }
 
