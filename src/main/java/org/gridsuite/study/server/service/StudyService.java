@@ -412,7 +412,9 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public CreatedStudyBasicInfos getStudyInfos(UUID studyUuid) {
-        return toStudyInfos(studyUuid);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid)
+                .orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return toStudyInfos(studyEntity.getId());
     }
 
     public List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
