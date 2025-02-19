@@ -33,10 +33,10 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -380,6 +380,40 @@ class ModificationToExcludeTest {
         // assert those values are actually defined from ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP
         assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()), duplicateRootNetworkNodeInfoEntity1.getModificationsToExclude());
         assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_2.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()), duplicateRootNetworkNodeInfoEntity2.getModificationsToExclude());
+    }
+
+    @Test
+    void testDeleteExcludedModification() {
+        // create study with one root networks
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
+
+        // create root node and a network modification node - it will create a RootNetworkNodeInfoEntity
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+
+        // add some modifications to exclude
+        RootNetworkNodeInfoEntity rootNetwork0NodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        rootNetwork0NodeInfo1Entity.setModificationsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_1);
+        rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo1Entity);
+
+        // if modification deletion fails, they should not be removed from excluded ones
+        Mockito.doThrow(new RuntimeException()).when(networkModificationService).deleteModifications(any(), any());
+        UUID modificationToRemove = MODIFICATIONS_TO_EXCLUDE_RN_1.stream().findFirst().orElseThrow();
+        assertThrows(RuntimeException.class, () -> studyService.deleteNetworkModifications(studyEntity.getId(), firstNode.getId(), List.of(modificationToRemove), USER_ID));
+
+        Set<UUID> excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND)).getModificationsToExclude();
+        Set<UUID> expectedExcludedModifications = MODIFICATIONS_TO_EXCLUDE_RN_1;
+        assertThat(expectedExcludedModifications).usingRecursiveComparison().isEqualTo(excludedModifications);
+
+        // if it returned OK, then they should be removed
+        Mockito.doNothing().when(networkModificationService).deleteModifications(any(), any());
+        studyService.deleteNetworkModifications(studyEntity.getId(), firstNode.getId(), List.of(modificationToRemove), USER_ID);
+
+        excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND)).getModificationsToExclude();
+        expectedExcludedModifications = MODIFICATIONS_TO_EXCLUDE_RN_1.stream().filter(uuid -> uuid != modificationToRemove).collect(Collectors.toSet());
+        assertThat(expectedExcludedModifications).usingRecursiveComparison().isEqualTo(excludedModifications);
     }
 
     private Set<UUID> getSetIntersection(Set<UUID> set1, Set<UUID> set2) {
