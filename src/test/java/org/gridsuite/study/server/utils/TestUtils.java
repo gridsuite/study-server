@@ -134,13 +134,15 @@ public final class TestUtils {
                                                UUID shortCircuitParametersUuid,
                                                UUID securityAnalysisParametersUuid,
                                                UUID sensitivityParametersUuid,
-                                               NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity) {
+                                               NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity,
+                                               UUID stateEstimationParametersUuid) {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
                 .loadFlowParametersUuid(loadFlowParametersUuid)
                 .shortCircuitParametersUuid(shortCircuitParametersUuid)
                 .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
                 .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
                 .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
+                .stateEstimationParametersUuid(stateEstimationParametersUuid)
                 .build();
         RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build();
         studyEntity.addRootNetwork(rootNetworkEntity);
