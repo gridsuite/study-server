@@ -2594,6 +2594,11 @@ public class StudyService {
         return filterService.exportFilter(rootNetworkService.getNetworkUuid(rootNetworkUuid), filterUuid);
     }
 
+    public String exportFilterFromFirstRootNetwork(UUID studyUuid, UUID filterUuid) {
+        UUID studyFirstRootNetworkUuid = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getFirstRootNetwork().getId();
+        return filterService.exportFilter(studyFirstRootNetworkUuid, filterUuid);
+    }
+
     public String exportFilters(UUID rootNetworkUuid, List<UUID> filtersUuid) {
         return filterService.exportFilters(rootNetworkService.getNetworkUuid(rootNetworkUuid), filtersUuid);
     }
