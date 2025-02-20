@@ -2595,7 +2595,8 @@ public class StudyService {
     }
 
     public String exportFilterFromFirstRootNetwork(UUID studyUuid, UUID filterUuid) {
-        UUID studyFirstRootNetworkUuid = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getFirstRootNetwork().getId();
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID studyFirstRootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         return filterService.exportFilter(studyFirstRootNetworkUuid, filterUuid);
     }
 
@@ -2676,10 +2677,5 @@ public class StudyService {
 
     private List<BasicRootNetworkInfos> getExistingRootNetworkInfos(UUID studyUuid) {
         return getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::toBasicDto).toList();
-    }
-
-    //TODO: temporary method, once frontend had been implemented, each operation will need to target a specific rootNetwork UUID, here we manually target the first one
-    public UUID getStudyFirstRootNetworkUuid(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getFirstRootNetwork().getId();
     }
 }
