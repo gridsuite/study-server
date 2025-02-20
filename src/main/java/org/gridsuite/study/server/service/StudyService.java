@@ -535,7 +535,7 @@ public class StudyService {
         Objects.requireNonNull(caseInfos.getCaseUuid());
         Objects.requireNonNull(importParameters);
 
-        StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(studyUuid, networkInfos,
+        StudyEntity studyEntity = saveStudyThenCreateBasicTree(studyUuid, networkInfos,
                 caseInfos, loadFlowParametersUuid,
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
@@ -1207,8 +1207,7 @@ public class StudyService {
         return updateStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), indexationStatus);
     }
 
-    @Transactional
-    public StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
+    private StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
                                                     CaseInfos caseInfos, UUID loadFlowParametersUuid,
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
