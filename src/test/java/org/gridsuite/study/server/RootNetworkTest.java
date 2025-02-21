@@ -403,6 +403,7 @@ class RootNetworkTest {
             .caseInfos(new CaseInfos(CASE_UUID2, CASE_NAME2, CASE_FORMAT2))
             .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
             .reportUuid(REPORT_UUID2)
+            .tag("dum")
             .build());
         studyRepository.save(studyEntity);
 
@@ -479,6 +480,7 @@ class RootNetworkTest {
             .caseInfos(new CaseInfos(CASE_UUID2, CASE_NAME2, CASE_FORMAT2))
             .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
             .reportUuid(REPORT_UUID2)
+            .tag("dum")
             .build());
         studyRepository.save(studyEntity);
 
@@ -611,12 +613,13 @@ class RootNetworkTest {
             .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
             .reportUuid(REPORT_UUID2)
             .id(rootNetworkUuid)
+            .tag("dum")
             .build());
         studyRepository.save(studyEntity);
 
         // create a request of root network creation
         UUID requestUuid = UUID.randomUUID();
-        rootNetworkCreationRequestRepository.save(new RootNetworkCreationRequestEntity(requestUuid, "rootNetworkName2", studyEntity.getId(), USER_ID));
+        rootNetworkCreationRequestRepository.save(new RootNetworkCreationRequestEntity(requestUuid, "rootNetworkName2", studyEntity.getId(), USER_ID, "R_01"));
 
         String response = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks", studyEntity.getId()))
             .andExpect(status().isOk())
@@ -676,13 +679,14 @@ class RootNetworkTest {
 
         // create new root network
         UUID rootNetworkUuid = UUID.randomUUID();
-        rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, "dummyRootNetwork3", USER_ID);
+        rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, "dummyRootNetwork3", "RN_3", USER_ID);
         studyService.createRootNetwork(studyEntity.getId(), RootNetworkInfos.builder()
             .name(CASE_NAME2)
             .caseInfos(new CaseInfos(CASE_UUID2, CASE_NAME2, CASE_FORMAT2))
             .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
             .reportUuid(REPORT_UUID2)
             .id(rootNetworkUuid)
+            .tag("dum")
             .build());
 
         // check "dummyRootNetwork3" root network order have been created correctly
@@ -715,6 +719,7 @@ class RootNetworkTest {
             .caseInfos(new CaseInfos(UUID.randomUUID(), "caseName", "caseFormat"))
             .networkInfos(new NetworkInfos(UUID.randomUUID(), UUID.randomUUID().toString()))
             .reportUuid(UUID.randomUUID())
+            .tag("dum")
             .build().toEntity();
         studyEntity.addRootNetwork(rootNetworkEntity);
     }

@@ -191,11 +191,12 @@ public class StudyController {
     @ApiResponse(responseCode = "200", description = "Root network created")
     public ResponseEntity<RootNetworkCreationRequestInfos> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                                               @RequestParam(value = "name") String name,
+                                                                              @RequestParam(value = "tag") String tag,
                                                                               @RequestParam(value = CASE_UUID) UUID caseUuid,
                                                                               @RequestParam(value = CASE_FORMAT) String caseFormat,
                                                                               @RequestBody(required = false) Map<String, Object> importParameters,
                                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, name, caseUuid, caseFormat, importParameters, userId));
+        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, name, tag, caseUuid, caseFormat, importParameters, userId));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
@@ -2198,5 +2199,16 @@ public class StudyController {
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         rootNetworkNodeInfoService.stopStateEstimation(studyUuid, nodeUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
+    }
+
+    @RequestMapping(method = RequestMethod.HEAD, value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
+    @Operation(summary = "Check if a root network with this tag already exists in the given study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The tag exists"),
+        @ApiResponse(responseCode = "204", description = "The tag doesn't exist")})
+    public ResponseEntity<Void> rootNetworkTagExists(@PathVariable("studyUuid") UUID studyUuid,
+                                                @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                @RequestParam("tag") String rootNetworkTag) {
+        HttpStatus status = rootNetworkService.isRootNetworkTagExistsInStudy(studyUuid, rootNetworkTag) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
     }
 }
