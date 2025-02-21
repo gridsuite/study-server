@@ -268,7 +268,7 @@ class FilterServiceTest {
     }
 
     @Test
-    public void exportFilterFromFirstRootNetwork() throws Exception {
+    void exportFilterFromFirstRootNetwork() throws Exception {
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyUuid = studyEntity.getId();
