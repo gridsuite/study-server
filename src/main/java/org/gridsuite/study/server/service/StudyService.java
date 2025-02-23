@@ -474,6 +474,9 @@ public class StudyService {
                 if (s.getNetworkVisualizationParametersUuid() != null) {
                     studyConfigService.deleteNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 }
+                if (s.getSpreadsheetConfigCollectionUuid() != null) {
+                    studyConfigService.deleteSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
+                }
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -524,7 +527,7 @@ public class StudyService {
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                               UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid,
-                                              Map<String, String> importParameters, UUID importReportUuid) {
+                                              UUID spreadsheetConfigCollectionUuid, Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -538,7 +541,7 @@ public class StudyService {
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
-                importParameters, importReportUuid);
+                spreadsheetConfigCollectionUuid, importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
         UUID studyFirstRootNetworkUuid = getStudyFirstRootNetworkUuid(studyUuid);
@@ -618,6 +621,11 @@ public class StudyService {
             copiedNetworkVisualizationParametersUuid = studyConfigService.duplicateNetworkVisualizationParameters(sourceStudyEntity.getNetworkVisualizationParametersUuid());
         }
 
+        UUID copiedSpreadsheetConfigCollectionUuid = null;
+        if (sourceStudyEntity.getSpreadsheetConfigCollectionUuid() != null) {
+            copiedSpreadsheetConfigCollectionUuid = studyConfigService.duplicateSpreadsheetConfigCollection(sourceStudyEntity.getSpreadsheetConfigCollectionUuid());
+        }
+
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
 
         return studyRepository.save(StudyEntity.builder()
@@ -631,6 +639,7 @@ public class StudyService {
             .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
             .sensitivityAnalysisParametersUuid(copiedSensitivityAnalysisParametersUuid)
             .networkVisualizationParametersUuid(copiedNetworkVisualizationParametersUuid)
+            .spreadsheetConfigCollectionUuid(copiedSpreadsheetConfigCollectionUuid)
             .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
             .build());
     }
@@ -1206,7 +1215,7 @@ public class StudyService {
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                                     UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid,
-                                                    Map<String, String> importParameters, UUID importReportUuid) {
+                                                    UUID spreadsheetConfigCollectionUuid, Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -1222,6 +1231,7 @@ public class StudyService {
                 .voltageInitParameters(new StudyVoltageInitParametersEntity())
                 .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
                 .dynamicSecurityAnalysisParametersUuid(dynamicSecurityAnalysisParametersUuid)
+                .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
                 .build();
 
         var study = studyRepository.save(studyEntity);
@@ -2103,6 +2113,11 @@ public class StudyService {
                 Optional.ofNullable(studyEntity.getVoltageInitParametersUuid()).map(voltageInitService::getVoltageInitParameters).orElse(null),
                 Optional.ofNullable(studyEntity.getVoltageInitParameters()).map(StudyVoltageInitParametersEntity::shouldApplyModifications).orElse(true)
         );
+    }
+
+    public String getSpreadsheetConfigCollection(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return studyConfigService.getSpreadsheetConfigCollection(studyConfigService.getSpreadsheetConfigCollectionUuidOrElseCreateDefaults(studyEntity));
     }
 
     public boolean shouldApplyModifications(UUID studyUuid) {

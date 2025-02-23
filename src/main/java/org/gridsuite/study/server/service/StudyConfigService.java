@@ -10,6 +10,8 @@ import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -35,8 +37,13 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 @Service
 public class StudyConfigService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyConfigService.class);
+
     private static final String NETWORK_VISU_PARAMETERS_URI = "/network-visualizations-params";
     private static final String NETWORK_VISU_PARAMETERS_WITH_ID_URI = NETWORK_VISU_PARAMETERS_URI + "/{uuid}";
+
+    private static final String SPREADSHEET_CONFIG_COLLECTION_URI = "/spreadsheet-config-collections";
+    private static final String SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI = SPREADSHEET_CONFIG_COLLECTION_URI + "/{uuid}";
 
     private final RestTemplate restTemplate;
 
@@ -137,5 +144,80 @@ public class StudyConfigService {
             throw handleHttpError(e, CREATE_NETWORK_VISUALIZATION_PARAMETERS_FAILED);
         }
         return parametersUuid;
+    }
+
+    // Spreadsheet Config Collection
+    public void updateSpreadsheetConfigCollection(UUID uuid, String spreadsheetConfigCollection) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI);
+        String path = uriBuilder.buildAndExpand(uuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(spreadsheetConfigCollection, headers);
+        try {
+            restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_NETWORK_VISUALIZATION_PARAMETERS_FAILED);
+        }
+    }
+
+    public UUID duplicateSpreadsheetConfigCollection(UUID sourceUuid) {
+        Objects.requireNonNull(sourceUuid);
+        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI + "/duplicate")
+                .queryParam("duplicateFrom", sourceUuid)
+                .buildAndExpand().toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
+        try {
+            return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_NETWORK_VISUALIZATION_PARAMETERS_FAILED);
+        }
+    }
+
+    public String getSpreadsheetConfigCollection(UUID uuid) {
+        Objects.requireNonNull(uuid);
+        String spreadsheetConfigCollection;
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI)
+                .buildAndExpand(uuid).toUriString();
+        try {
+            spreadsheetConfigCollection = restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(NETWORK_VISUALIZATION_PARAMETERS_NOT_FOUND);
+            }
+            throw handleHttpError(e, GET_NETWORK_VISUALIZATION_PARAMETERS_FAILED);
+        }
+        return spreadsheetConfigCollection;
+    }
+
+    public UUID getSpreadsheetConfigCollectionUuidOrElseCreateDefaults(StudyEntity studyEntity) {
+        if (studyEntity.getSpreadsheetConfigCollectionUuid() == null) {
+            studyEntity.setSpreadsheetConfigCollectionUuid(createDefaultSpreadsheetConfigCollection());
+        }
+        return studyEntity.getSpreadsheetConfigCollectionUuid();
+    }
+
+    public void deleteSpreadsheetConfigCollection(UUID uuid) {
+        Objects.requireNonNull(uuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI)
+            .buildAndExpand(uuid)
+            .toUriString();
+        restTemplate.delete(studyConfigServerBaseUri + path);
+    }
+
+    public UUID createDefaultSpreadsheetConfigCollection() {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI + "/default")
+                .buildAndExpand()
+                .toUriString();
+        UUID uuid;
+        try {
+            uuid = restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            LOGGER.error("Error while creating spreadsheet default config collection", e);
+            return null;
+        }
+        return uuid;
     }
 }

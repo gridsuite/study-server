@@ -262,11 +262,12 @@ public class ConsumerService {
         UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters();
         UUID voltageInitParametersUuid = createDefaultVoltageInitParameters(userId, userProfileInfos);
         UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
+        UUID spreadsheetConfigCollectionUuid = studyConfigService.createDefaultSpreadsheetConfigCollection();
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, spreadsheetConfigCollectionUuid,
             importParameters, importReportUuid);
     }
 
