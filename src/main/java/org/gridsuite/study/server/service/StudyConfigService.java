@@ -162,7 +162,7 @@ public class StudyConfigService {
 
     public UUID duplicateSpreadsheetConfigCollection(UUID sourceUuid) {
         Objects.requireNonNull(sourceUuid);
-        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI + "/duplicate")
+        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI)
                 .queryParam("duplicateFrom", sourceUuid)
                 .buildAndExpand().toUriString();
         HttpHeaders headers = new HttpHeaders();
