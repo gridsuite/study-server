@@ -37,4 +37,6 @@ public class UserProfileInfos {
     private UUID voltageInitParameterId;
 
     Integer maxAllowedBuilds;
+
+    private UUID spreadsheetConfigCollectionId;
 }
