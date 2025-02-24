@@ -18,7 +18,10 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -85,6 +88,9 @@ class StudyServiceDynamicSimulationTest {
     private StudyService studyService;
 
     @Autowired
+    private StudyRepository studyRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @SpyBean
@@ -111,7 +117,7 @@ class StudyServiceDynamicSimulationTest {
     @Test
     void testRunDynamicSimulation() {
         // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(eq(""), eq(NODE_UUID), eq(ROOTNETWORK_UUID), any(), any(), any(), any(), any())).willReturn(RESULT_UUID);
+        given(dynamicSimulationService.runDynamicSimulation(any(), eq(NODE_UUID), eq(ROOTNETWORK_UUID), any(), any(), any(), any(), any())).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
         given(rootNetworkNodeInfoService.getLoadFlowStatus(NODE_UUID, ROOTNETWORK_UUID)).willReturn(LoadFlowStatus.CONVERGED.name());
 
@@ -122,7 +128,9 @@ class StudyServiceDynamicSimulationTest {
         parameters.setMapping(MAPPING_NAME_01);
 
         // call method to be tested
-        UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, ROOTNETWORK_UUID, parameters, "testUserId");
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, UUID.randomUUID(), "caseName", "", UUID.randomUUID());
+        studyRepository.save(studyEntity);
+        UUID resultUuid = studyService.runDynamicSimulation(studyEntity.getId(), NODE_UUID, ROOTNETWORK_UUID, parameters, "testUserId");
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);

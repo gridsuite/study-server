@@ -27,6 +27,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -101,7 +103,7 @@ public class ReportService {
             uriBuilder.queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
         }
         if (!StringUtil.isBlank(messageFilter)) {
-            uriBuilder.queryParam(QUERY_PARAM_MESSAGE_FILTER, messageFilter);
+            uriBuilder.queryParam(QUERY_PARAM_MESSAGE_FILTER, URLEncoder.encode(messageFilter, StandardCharsets.UTF_8));
         }
         var path = uriBuilder.buildAndExpand(id).toUriString();
         HttpHeaders headers = new HttpHeaders();
