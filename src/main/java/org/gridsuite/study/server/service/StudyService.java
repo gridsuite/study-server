@@ -2125,6 +2125,7 @@ public class StudyService {
         );
     }
 
+    @Transactional
     public String getSpreadsheetConfigCollection(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return studyConfigService.getSpreadsheetConfigCollection(studyConfigService.getSpreadsheetConfigCollectionUuidOrElseCreateDefaults(studyEntity));
