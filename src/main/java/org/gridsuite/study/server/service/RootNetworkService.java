@@ -36,6 +36,7 @@ import static org.gridsuite.study.server.StudyException.Type.*;
 @Service
 public class RootNetworkService {
     private static final int MAXIMUM_ROOT_NETWORK_BY_STUDY = 3;
+    private static final int MAXIMUM_TAG_LENGTH = 4;
 
     private final RootNetworkRepository rootNetworkRepository;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
@@ -99,6 +100,7 @@ public class RootNetworkService {
 
         rootNetworkEntity.setImportParameters(rootNetworkInfos.getImportParameters());
         rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
+        rootNetworkEntity.setTag(rootNetworkInfos.getTag());
     }
 
     private void updateCaseInfos(@NonNull RootNetworkEntity rootNetworkEntity, @NonNull CaseInfos caseInfos) {
@@ -164,14 +166,15 @@ public class RootNetworkService {
                         .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getCaseName(), rootNetworkEntityToDuplicate.getCaseFormat()))
                         .networkInfos(new NetworkInfos(clonedNetworkUuid, rootNetworkEntityToDuplicate.getNetworkId()))
                         .reportUuid(clonedRootNodeReportUuid)
+                        .tag(rootNetworkEntityToDuplicate.getTag())
                         .build()
                 );
             }
         );
     }
 
-    public RootNetworkCreationRequestEntity insertCreationRequest(UUID rootNetworkInCreationUuid, StudyEntity studyEntity, String rootNetworkName, String userId) {
-        return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).name(rootNetworkName).studyUuid(studyEntity.getId()).userId(userId).build());
+    public RootNetworkCreationRequestEntity insertCreationRequest(UUID rootNetworkInCreationUuid, StudyEntity studyEntity, String rootNetworkName, String rootNetworkTag, String userId) {
+        return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).name(rootNetworkName).tag(rootNetworkTag).studyUuid(studyEntity.getId()).userId(userId).build());
     }
 
     public void assertIsRootNetworkInStudy(UUID studyUuid, UUID rootNetworkUuid) {
@@ -238,9 +241,11 @@ public class RootNetworkService {
         rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity);
     }
 
-    public void assertCanCreateRootNetwork(UUID studyUuid, String rootNetworkName) {
+    public void assertCanCreateRootNetwork(UUID studyUuid, String rootNetworkName, String rootNetworkTag) {
         assertMaximumByStudyIsNotReached(studyUuid);
         assertNameNotExistInStudy(studyUuid, rootNetworkName);
+        assertTagSize(rootNetworkTag);
+        assertTagNotExistInStudy(studyUuid, rootNetworkTag);
     }
 
     private void assertMaximumByStudyIsNotReached(UUID studyUuid) {
@@ -258,5 +263,22 @@ public class RootNetworkService {
     public boolean isRootNetworkNameExistsInStudy(UUID studyUuid, String rootNetworkName) {
         return rootNetworkRepository.findByNameAndStudyId(rootNetworkName, studyUuid).isPresent() ||
             rootNetworkCreationRequestRepository.findByNameAndStudyUuid(rootNetworkName, studyUuid).isPresent();
+    }
+
+    private void assertTagSize(String tag) {
+        if (tag.length() > MAXIMUM_TAG_LENGTH) {
+            throw new StudyException(MAXIMUM_TAG_LENGTH_EXCEEDED, "Tag maximum length exceeded. Should be <= " + MAXIMUM_TAG_LENGTH);
+        }
+    }
+
+    private void assertTagNotExistInStudy(UUID studyUuid, String tag) {
+        if (isRootNetworkTagExistsInStudy(studyUuid, tag)) {
+            throw new StudyException(NOT_ALLOWED, "Tag already exists in study");
+        }
+    }
+
+    public boolean isRootNetworkTagExistsInStudy(UUID studyUuid, String rootNetworkTag) {
+        return rootNetworkRepository.findByTagAndStudyId(rootNetworkTag, studyUuid).isPresent() ||
+            rootNetworkCreationRequestRepository.findByTagAndStudyUuid(rootNetworkTag, studyUuid).isPresent();
     }
 }

@@ -18,4 +18,6 @@ public interface RootNetworkCreationRequestRepository extends JpaRepository<Root
     int countAllByStudyUuid(UUID studyUuid);
 
     Optional<RootNetworkCreationRequestRepository> findByNameAndStudyUuid(String name, UUID studyUuid);
+
+    Optional<RootNetworkCreationRequestRepository> findByTagAndStudyUuid(String tag, UUID studyUuid);
 }

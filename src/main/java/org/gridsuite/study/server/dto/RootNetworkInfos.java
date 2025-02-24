@@ -28,6 +28,8 @@ public class RootNetworkInfos {
 
     private Map<String, String> importParameters;
 
+    private String tag;
+
     public RootNetworkEntity toEntity() {
         RootNetworkEntity.RootNetworkEntityBuilder rootNetworkEntityBuilder = RootNetworkEntity.builder()
             .id(id)
@@ -38,7 +40,8 @@ public class RootNetworkInfos {
             .caseName(caseInfos.getCaseName())
             .caseFormat(caseInfos.getCaseFormat())
             .reportUuid(reportUuid)
-            .importParameters(importParameters);
+            .importParameters(importParameters)
+            .tag(tag);
 
         if (rootNetworkNodeInfos != null) {
             rootNetworkEntityBuilder.rootNetworkNodeInfos(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::toEntity).toList());

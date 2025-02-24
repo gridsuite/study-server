@@ -73,6 +73,9 @@ public class RootNetworkEntity {
         foreignKey = @ForeignKey(name = "rootNetworkEntity_importParameters_fk1"))
     private Map<String, String> importParameters;
 
+    @Column(name = "tag", nullable = false)
+    private String tag;
+
     public void addRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         rootNetworkNodeInfoEntity.setRootNetwork(this);
         rootNetworkNodeInfos.add(rootNetworkNodeInfoEntity);
@@ -86,6 +89,7 @@ public class RootNetworkEntity {
             .importParameters(this.importParameters)
             .caseInfos(new CaseInfos(this.caseUuid, this.caseName, this.caseFormat))
             .reportUuid(this.reportUuid)
+            .tag(tag)
             .build();
 
         rootNetworkInfosBuilder.rootNetworkNodeInfos(this.rootNetworkNodeInfos.stream().map(RootNetworkNodeInfoEntity::toDto).collect(Collectors.toList()));
@@ -94,6 +98,6 @@ public class RootNetworkEntity {
     }
 
     public BasicRootNetworkInfos toBasicDto() {
-        return new BasicRootNetworkInfos(getId(), getName(), false);
+        return new BasicRootNetworkInfos(getId(), getName(), getTag(), false);
     }
 }

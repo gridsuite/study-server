@@ -138,7 +138,8 @@ public class StudyException extends RuntimeException {
         ROOT_NETWORK_NOT_FOUND,
         ROOT_NETWORK_DELETE_FORBIDDEN,
         ROOT_NETWORK_CREATION_FAILED,
-        MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED
+        MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED,
+        MAXIMUM_TAG_LENGTH_EXCEEDED
     }
 
     private final Type type;
