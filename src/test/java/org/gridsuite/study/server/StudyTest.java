@@ -1150,7 +1150,7 @@ class StudyTest {
             assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
         }
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
-        assertTrue(requests.contains(String.format("/v1/spreadsheet-config-collections/default")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/default")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", caseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + userId + "/profile")));
         if (parameterDuplicatedUuid != null) {

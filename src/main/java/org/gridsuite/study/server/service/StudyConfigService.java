@@ -147,19 +147,6 @@ public class StudyConfigService {
     }
 
     // Spreadsheet Config Collection
-    public void updateSpreadsheetConfigCollection(UUID uuid, String spreadsheetConfigCollection) {
-        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI);
-        String path = uriBuilder.buildAndExpand(uuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(spreadsheetConfigCollection, headers);
-        try {
-            restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, UPDATE_NETWORK_VISUALIZATION_PARAMETERS_FAILED);
-        }
-    }
-
     public UUID duplicateSpreadsheetConfigCollection(UUID sourceUuid) {
         Objects.requireNonNull(sourceUuid);
         var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI)
@@ -171,7 +158,7 @@ public class StudyConfigService {
         try {
             return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
         } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_NETWORK_VISUALIZATION_PARAMETERS_FAILED);
+            throw handleHttpError(e, DUPLICATE_SPREADSHEET_CONFIG_COLLECTION_FAILED);
         }
     }
 
@@ -184,9 +171,9 @@ public class StudyConfigService {
             spreadsheetConfigCollection = restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(NETWORK_VISUALIZATION_PARAMETERS_NOT_FOUND);
+                throw new StudyException(SPREADSHEET_CONFIG_COLLECTION_NOT_FOUND);
             }
-            throw handleHttpError(e, GET_NETWORK_VISUALIZATION_PARAMETERS_FAILED);
+            throw handleHttpError(e, GET_SPREADSHEET_CONFIG_COLLECTION_FAILED);
         }
         return spreadsheetConfigCollection;
     }
