@@ -190,11 +190,11 @@ public class WireMockUtils {
         ).getId();
     }
 
-    public UUID stubDuplicateModificationGroup() {
+    public UUID stubDuplicateModificationGroup(String responseBody) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION_GROUPS))
             .withQueryParam("duplicateFrom", WireMock.matching(".*"))
             .withQueryParam("groupUuid", WireMock.matching(".*"))
-            .willReturn(WireMock.ok())
+            .willReturn(WireMock.ok().withBody(responseBody).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
         ).getId();
     }
 
