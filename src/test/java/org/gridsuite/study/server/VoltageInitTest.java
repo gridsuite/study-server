@@ -72,6 +72,7 @@ import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZAT
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.service.VoltageInitResultConsumer.HEADER_REACTIVE_SLACKS_OVER_THRESHOLD;
 import static org.gridsuite.study.server.service.VoltageInitResultConsumer.HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE;
+import static org.gridsuite.study.server.service.VoltageInitResultConsumer.HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -274,6 +275,7 @@ class VoltageInitTest {
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE)
                             .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
+                            .setHeader(HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE, Boolean.TRUE)
                             .build(), voltageInitResultDestination);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitResultUuidStr2);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)) {
@@ -282,6 +284,7 @@ class VoltageInitTest {
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE)
                             .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
+                            .setHeader(HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE, Boolean.TRUE)
                             .build(), voltageInitResultDestination);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitResultUuidStr);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
@@ -528,6 +531,7 @@ class VoltageInitTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
 
         checkReactiveSlacksAlertMessagesReceived(studyNameUserIdUuid, 10.);
+        checkVoltageLevelLimitsOutOfRangeAlertMessagesReceived(studyNameUserIdUuid);
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
 
@@ -618,6 +622,7 @@ class VoltageInitTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
 
         checkReactiveSlacksAlertMessagesReceived(studyNameUserIdUuid, 10.);
+        checkVoltageLevelLimitsOutOfRangeAlertMessagesReceived(studyNameUserIdUuid);
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
 
@@ -651,6 +656,7 @@ class VoltageInitTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
         checkReactiveSlacksAlertMessagesReceived(studyNameUserIdUuid, 10.);
+        checkVoltageLevelLimitsOutOfRangeAlertMessagesReceived(studyNameUserIdUuid);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
@@ -977,5 +983,16 @@ class VoltageInitTest {
         assertEquals(AlertLevel.WARNING, alert.alertLevel());
         assertEquals("REACTIVE_SLACKS_OVER_THRESHOLD", alert.messageId());
         assertEquals(Map.of("threshold", thresholdValue.toString()), alert.attributes());
+    }
+
+    private void checkVoltageLevelLimitsOutOfRangeAlertMessagesReceived(UUID studyUuid) throws Exception {
+        Message<byte[]> voltageInitMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, voltageInitMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(STUDY_ALERT, voltageInitMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertNotNull(voltageInitMessage.getPayload());
+        StudyAlert alert = objectMapper.readValue(new String(voltageInitMessage.getPayload()), StudyAlert.class);
+        assertEquals(AlertLevel.WARNING, alert.alertLevel());
+        assertEquals("VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE", alert.messageId());
+        assertNull(alert.attributes());
     }
 }
