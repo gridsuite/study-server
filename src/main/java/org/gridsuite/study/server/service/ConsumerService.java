@@ -211,6 +211,7 @@ public class ConsumerService {
                 Long startTime = receiver.getStartTime();
                 UUID importReportUuid = receiver.getReportUuid();
                 UUID rootNetworkUuid = receiver.getRootNetworkUuid();
+          //      UUID rootNetworkName = receiver.getRootNetworkName();
                 CaseImportAction caseImportAction = receiver.getCaseImportAction();
 
                 CaseInfos caseInfos = new CaseInfos(caseUuid, caseName, caseFormat);
