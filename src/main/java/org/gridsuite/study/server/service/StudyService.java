@@ -476,6 +476,9 @@ public class StudyService {
                 if (s.getNetworkVisualizationParametersUuid() != null) {
                     studyConfigService.deleteNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 }
+                if (s.getStateEstimationParametersUuid() != null) {
+                    stateEstimationService.deleteStateEstimationParameters(s.getStateEstimationParametersUuid());
+                }
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -525,7 +528,7 @@ public class StudyService {
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos, UUID loadFlowParametersUuid,
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
-                                              UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid,
+                                              UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid,
                                               Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
@@ -540,7 +543,7 @@ public class StudyService {
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
-                importParameters, importReportUuid);
+                stateEstimationParametersUuid, importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
         UUID studyFirstRootNetworkUuid = getStudyFirstRootNetworkUuid(studyUuid);
@@ -622,6 +625,11 @@ public class StudyService {
 
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
 
+        UUID copiedStateEstimationParametersUuid = null;
+        if (sourceStudyEntity.getStateEstimationParametersUuid() != null) {
+            copiedStateEstimationParametersUuid = stateEstimationService.duplicateStateEstimationParameters(sourceStudyEntity.getStateEstimationParametersUuid());
+        }
+
         return studyRepository.save(StudyEntity.builder()
             .id(newStudyId)
             .loadFlowParametersUuid(copiedLoadFlowParametersUuid)
@@ -634,6 +642,7 @@ public class StudyService {
             .sensitivityAnalysisParametersUuid(copiedSensitivityAnalysisParametersUuid)
             .networkVisualizationParametersUuid(copiedNetworkVisualizationParametersUuid)
             .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
+            .stateEstimationParametersUuid(copiedStateEstimationParametersUuid)
             .build());
     }
 
@@ -1211,7 +1220,7 @@ public class StudyService {
                                                     CaseInfos caseInfos, UUID loadFlowParametersUuid,
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
-                                                    UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid,
+                                                    UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid,
                                                     Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
@@ -1228,6 +1237,7 @@ public class StudyService {
                 .voltageInitParameters(new StudyVoltageInitParametersEntity())
                 .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
                 .dynamicSecurityAnalysisParametersUuid(dynamicSecurityAnalysisParametersUuid)
+                .stateEstimationParametersUuid(stateEstimationParametersUuid)
                 .build();
 
         var study = studyRepository.save(studyEntity);
@@ -2636,6 +2646,7 @@ public class StudyService {
 
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        UUID parametersUuid = studyRepository.findById(studyUuid).orElseThrow().getStateEstimationParametersUuid();
         UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(STATE_ESTIMATION.name(), UUID.randomUUID());
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION, reportUuid);
         String receiver;
@@ -2650,10 +2661,35 @@ public class StudyService {
             stateEstimationService.deleteStateEstimationResult(prevResultUuid);
         }
 
-        UUID result = stateEstimationService.runStateEstimation(networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), receiver, userId);
+        UUID result = stateEstimationService.runStateEstimation(networkUuid, variantId, parametersUuid, new ReportInfos(reportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, STATE_ESTIMATION);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
         return result;
+    }
+
+    @Transactional
+    public String getStateEstimationParameters(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return stateEstimationService.getStateEstimationParameters(stateEstimationService.getStateEstimationParametersUuidOrElseCreateDefaults(studyEntity));
+    }
+
+    @Transactional
+    public void setStateEstimationParametersValues(UUID studyUuid, String parameters, String userId) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        createOrUpdateStateEstimationParameters(studyEntity, parameters);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitComputationParamsChanged(studyUuid, STATE_ESTIMATION);
+    }
+
+    public void createOrUpdateStateEstimationParameters(StudyEntity studyEntity, String parameters) {
+        UUID existingStateEstimationParametersUuid = studyEntity.getStateEstimationParametersUuid();
+        if (existingStateEstimationParametersUuid == null) {
+            existingStateEstimationParametersUuid = stateEstimationService.createStateEstimationParameters(parameters);
+            studyEntity.setStateEstimationParametersUuid(existingStateEstimationParametersUuid);
+        } else {
+            stateEstimationService.updateStateEstimationParameters(existingStateEstimationParametersUuid, parameters);
+        }
     }
 
     @Transactional

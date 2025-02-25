@@ -831,7 +831,7 @@ class ShortCircuitTest implements WithAssertions {
         NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null,
                 UUID.randomUUID(), shortCircuitParametersUuid, null, null,
-                defaultNonEvacuatedEnergyParametersEntity);
+                defaultNonEvacuatedEnergyParametersEntity, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;
