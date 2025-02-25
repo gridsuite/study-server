@@ -1,0 +1,112 @@
+{
+  "spreadsheetConfigs": [
+    {
+      "name": "Substations",
+      "sheetType": "SUBSTATION",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "TEXT",
+          "precision": null,
+          "formula": "id",
+          "dependencies": null,
+          "id": "id"
+        },
+        {
+          "name": "Name",
+          "type": "TEXT",
+          "precision": null,
+          "formula": "name",
+          "dependencies": null,
+          "id": "name"
+        },
+        {
+          "name": "Country",
+          "type": "ENUM",
+          "precision": null,
+          "formula": "country",
+          "dependencies": null,
+          "id": "country"
+        }
+      ]
+    },
+    {
+      "name": "Voltage Levels",
+      "sheetType": "VOLTAGE_LEVEL",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "TEXT",
+          "precision": null,
+          "formula": "id",
+          "dependencies": null,
+          "id": "id"
+        },
+        {
+          "name": "Name",
+          "type": "TEXT",
+          "precision": null,
+          "formula": "name",
+          "dependencies": null,
+          "id": "name"
+        },
+        {
+          "name": "Substation ID",
+          "type": "TEXT",
+          "precision": null,
+          "formula": "substationId",
+          "dependencies": null,
+          "id": "substationId"
+        },
+        {
+          "name": "Country",
+          "type": "ENUM",
+          "precision": null,
+          "formula": "country",
+          "dependencies": null,
+          "id": "country"
+        },
+        {
+          "name": "Nominal V",
+          "type": "NUMBER",
+          "precision": 0,
+          "formula": "nominalV",
+          "dependencies": null,
+          "id": "nominalV"
+        },
+        {
+          "name": "Low voltage limit (kV)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "lowVoltageLimit",
+          "dependencies": null,
+          "id": "lowVoltageLimit"
+        },
+        {
+          "name": "High voltage limit (kV)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "highVoltageLimit",
+          "dependencies": null,
+          "id": "highVoltageLimit"
+        },
+        {
+          "name": "ISC min (kA)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "identifiableShortCircuit.ipMin",
+          "dependencies": null,
+          "id": "identifiableShortCircuit.ipMin"
+        },
+        {
+          "name": "ISC max (kA)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "identifiableShortCircuit.ipMax",
+          "dependencies": null,
+          "id": "identifiableShortCircuit.ipMax"
+        }
+      ]
+    }
+  ]
+}
