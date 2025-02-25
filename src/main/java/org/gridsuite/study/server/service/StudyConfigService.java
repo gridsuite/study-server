@@ -202,8 +202,7 @@ public class StudyConfigService {
         try {
             uuid = restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
         } catch (HttpStatusCodeException e) {
-            LOGGER.error("Error while creating spreadsheet default config collection", e);
-            return null;
+            throw handleHttpError(e, CREATE_SPREADSHEET_CONFIG_COLLECTION_FAILED);
         }
         return uuid;
     }
