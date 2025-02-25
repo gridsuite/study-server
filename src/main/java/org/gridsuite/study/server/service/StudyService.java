@@ -1817,8 +1817,8 @@ public class StudyService {
     }
 
     @Transactional
-    public void reindexStudy(UUID studyUuid, UUID rootNetworkUuid) {
-        reindexStudy(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), rootNetworkUuid);
+    public void reindexStudy(UUID studyUuid, UUID rootNetworkUuids) {
+        reindexStudy(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), rootNetworkUuids);
     }
 
     @Transactional
