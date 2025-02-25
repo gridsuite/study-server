@@ -16,10 +16,9 @@ import org.gridsuite.study.server.dto.StudyInfos;
  */
 public class MatcherStudyInfos extends MatcherCreatedStudyBasicInfos<StudyInfos> {
 
-    public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid, String caseFormat) {
+    public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid) {
         return new MatcherStudyInfos(StudyInfos.builder()
                 .id(studyUuid)
-                .caseFormat(caseFormat)
                 .build());
     }
 
