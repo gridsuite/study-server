@@ -823,7 +823,7 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyUuid}/spreadsheet-config-collection")
     @Operation(summary = "Get study spreadsheet config collection")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The spreadsheet config collection")})
     public ResponseEntity<String> getSpreadsheetConfigCollection(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getSpreadsheetConfigCollection(studyUuid));
