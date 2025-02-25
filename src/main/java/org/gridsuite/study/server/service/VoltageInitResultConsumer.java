@@ -34,6 +34,7 @@ public class VoltageInitResultConsumer {
 
     public static final String HEADER_REACTIVE_SLACKS_OVER_THRESHOLD = "REACTIVE_SLACKS_OVER_THRESHOLD";
     public static final String HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE = "reactiveSlacksThreshold";
+    public static final String HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE = "VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE";
 
     public VoltageInitResultConsumer(StudyService studyService,
                                      ConsumerService consumerService,
@@ -54,12 +55,23 @@ public class VoltageInitResultConsumer {
         });
     }
 
+    private void checkVoltageLevelLimitsOutOfNominalVoltageRange(Message<String> msg, UUID studyUuid) {
+        consumerService.getNodeReceiver(msg).ifPresent(nodeReceiver -> {
+            Boolean alert = msg.getHeaders().get(HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE, Boolean.class);
+            if (Boolean.TRUE.equals(alert)) {
+                String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
+                notificationService.emitStudyAlert(studyUuid, nodeReceiver.getNodeUuid(), nodeReceiver.getRootNetworkUuid(), userId, new StudyAlert(AlertLevel.WARNING, HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE, null));
+            }
+        });
+    }
+
     @Bean
     public Consumer<Message<String>> consumeVoltageInitResult() {
         return message -> {
             consumerService.consumeCalculationResult(message, VOLTAGE_INITIALIZATION);
             consumerService.getStudyUuid(message).ifPresent(studyUuid -> {
                 checkReactiveSlacksOverThreshold(message, studyUuid);
+                checkVoltageLevelLimitsOutOfNominalVoltageRange(message, studyUuid);
                 if (studyService.shouldApplyModifications(studyUuid)) {
                     consumerService.getNodeReceiver(message).ifPresent(nodeReceiver -> {
                         String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
