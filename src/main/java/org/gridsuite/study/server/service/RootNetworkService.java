@@ -84,6 +84,10 @@ public class RootNetworkService {
         updateNetworkInfos(rootNetworkEntity, networkInfos);
     }
 
+    public void updateRootNetworkInfos(UUID rootNetworkUuid, @NonNull String name) {
+        RootNetworkEntity rootNetworkEntity = getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        rootNetworkEntity.setName(name);
+      }
     public void updateNetwork(@NonNull RootNetworkInfos rootNetworkInfos) {
         RootNetworkEntity rootNetworkEntity = getRootNetwork(rootNetworkInfos.getId()).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         UUID oldCaseUuid = rootNetworkEntity.getCaseUuid();
@@ -96,7 +100,6 @@ public class RootNetworkService {
     private void updateNetwork(RootNetworkEntity rootNetworkEntity, RootNetworkInfos rootNetworkInfos) {
         updateCaseInfos(rootNetworkEntity, rootNetworkInfos.getCaseInfos());
         updateNetworkInfos(rootNetworkEntity, rootNetworkInfos.getNetworkInfos());
-
         rootNetworkEntity.setImportParameters(rootNetworkInfos.getImportParameters());
         rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
     }

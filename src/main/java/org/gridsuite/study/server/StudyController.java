@@ -204,11 +204,12 @@ public class StudyController {
     public ResponseEntity<Void> updateRootNetworkCase(@PathVariable("studyUuid") UUID studyUuid,
                                                       @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                       @RequestParam(value = CASE_UUID) UUID caseUuid,
+                                                      @RequestParam(value = "name") String name,
                                                       @RequestParam(value = CASE_FORMAT) String caseFormat,
                                                       @RequestBody(required = false) Map<String, Object> importParameters,
                                                       @RequestHeader(HEADER_USER_ID) String userId) {
         caseService.assertCaseExists(caseUuid);
-        studyService.updateNetworkRequest(studyUuid, rootNetworkUuid, caseUuid, caseFormat, importParameters, userId);
+        studyService.updateNetworkRequest(studyUuid, rootNetworkUuid,name, caseUuid, caseFormat, importParameters, userId);
         return ResponseEntity.ok().build();
     }
 
