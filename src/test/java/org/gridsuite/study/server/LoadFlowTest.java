@@ -411,7 +411,7 @@ class LoadFlowTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         //run a loadflow
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run?limitReduction=0.7", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .header("userId", "userId"))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -419,7 +419,7 @@ class LoadFlowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&limitReduction=0.7")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
         // get computing status
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
@@ -464,7 +464,7 @@ class LoadFlowTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         //run a loadflow
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run?limitReduction=0.7", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .header("userId", "userId"))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -472,7 +472,7 @@ class LoadFlowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&limitReduction=0.7")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
         // invalidate status
         mockMvc.perform(put("/v1/studies/{studyUuid}/loadflow/invalidate-status", studyNameUserIdUuid)
@@ -534,8 +534,8 @@ class LoadFlowTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), LOADFLOW_FAILED_DESTINATION);
             return resultUuid;
-        }).when(studyService).runLoadFlow(any(), any(), any(), any(), any());
-        studyService.runLoadFlow(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "", null);
+        }).when(studyService).runLoadFlow(any(), any(), any(), any());
+        studyService.runLoadFlow(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "");
 
         // Test reset uuid result in the database
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, LOAD_FLOW));

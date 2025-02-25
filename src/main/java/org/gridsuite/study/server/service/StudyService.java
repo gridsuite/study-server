@@ -243,6 +243,7 @@ public class StudyService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public List<CreatedStudyBasicInfos> getStudies() {
         return studyRepository.findAll().stream()
                 .map(studyEntity -> {
@@ -256,6 +257,7 @@ public class StudyService {
         return equipmentInfosService.getOrphanEquipmentInfosNetworkUuids(rootNetworkService.getAllNetworkUuids());
     }
 
+    @Transactional(readOnly = true)
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
         return studyRepository.findAllById(uuids).stream().map(studyEntity -> {
             //TODO: for now, gridexplore uses caseFormat as metadata. Now studies can have several different caseFormat, what should we do ?
@@ -422,8 +424,8 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public CreatedStudyBasicInfos getStudyInfos(UUID studyUuid, UUID rootNetworkUuid) {
-        return toStudyInfos(studyUuid, rootNetworkUuid);
+    public CreatedStudyBasicInfos getStudyInfos(UUID studyUuid) {
+        return toStudyInfos(studyUuid, getStudyFirstRootNetworkUuid(studyUuid));
     }
 
     public List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
@@ -536,7 +538,7 @@ public class StudyService {
         Objects.requireNonNull(caseInfos.getCaseUuid());
         Objects.requireNonNull(importParameters);
 
-        StudyEntity studyEntity = self.saveStudyThenCreateBasicTree(studyUuid, networkInfos,
+        StudyEntity studyEntity = saveStudyThenCreateBasicTree(studyUuid, networkInfos,
                 caseInfos, loadFlowParametersUuid,
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
@@ -751,7 +753,7 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, Float limitReduction) {
+    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         if (prevResultUuid != null) {
@@ -763,7 +765,7 @@ public class StudyService {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW, lfReportUuid);
-        UUID result = loadflowService.runLoadFlow(nodeUuid, rootNetworkUuid, networkUuid, variantId, lfParametersUuid, lfReportUuid, userId, limitReduction);
+        UUID result = loadflowService.runLoadFlow(nodeUuid, rootNetworkUuid, networkUuid, variantId, lfParametersUuid, lfReportUuid, userId);
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, LOAD_FLOW);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
@@ -885,12 +887,15 @@ public class StudyService {
         }
     }
 
+    @Transactional(readOnly = true)
     public NonEvacuatedEnergyParametersInfos getNonEvacuatedEnergyParametersInfos(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(studyEntity -> studyEntity.getNonEvacuatedEnergyParameters() != null ?
-                        NonEvacuatedEnergyService.fromEntity(studyEntity.getNonEvacuatedEnergyParameters()) :
-                        NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos())
-                .orElse(null);
+        return getNonEvacuatedEnergyParametersInfos(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
+    }
+
+    private NonEvacuatedEnergyParametersInfos getNonEvacuatedEnergyParametersInfos(StudyEntity studyEntity) {
+        return studyEntity.getNonEvacuatedEnergyParameters() != null ?
+            NonEvacuatedEnergyService.fromEntity(studyEntity.getNonEvacuatedEnergyParameters()) :
+            NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos();
     }
 
     @Transactional
@@ -972,9 +977,11 @@ public class StudyService {
     }
 
     public String getDynamicSimulationProvider(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(StudyEntity::getDynamicSimulationProvider)
-                .orElse("");
+        return getDynamicSimulationProvider(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
+    }
+
+    private String getDynamicSimulationProvider(StudyEntity studyEntity) {
+        return studyEntity.getDynamicSimulationProvider();
     }
 
     @Transactional
@@ -982,7 +989,9 @@ public class StudyService {
         updateProvider(studyUuid, userId, studyEntity -> {
             studyEntity.setDynamicSimulationProvider(provider != null ? provider : defaultDynamicSimulationProvider);
             invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
+            invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
             notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_SIMULATION);
         });
     }
@@ -1207,8 +1216,7 @@ public class StudyService {
         return updateStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), indexationStatus);
     }
 
-    @Transactional
-    public StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
+    private StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
                                                     CaseInfos caseInfos, UUID loadFlowParametersUuid,
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
@@ -1433,6 +1441,7 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
+    @Transactional
     public void updateNetworkModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
@@ -1918,6 +1927,7 @@ public class StudyService {
         return reportService.getReportAggregatedSeverities(reportId);
     }
 
+    @Transactional(readOnly = true)
     public Set<String> getParentNodesAggregatedReportSeverities(UUID nodeUuid, UUID rootNetworkUuid) {
         List<UUID> nodeIds = nodesTree(nodeUuid);
         Set<String> severities = new HashSet<>();
@@ -2052,6 +2062,7 @@ public class StudyService {
         return result;
     }
 
+    @Transactional
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Optional<String> busId, String userId) {
         ComputationType computationType = busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS;
         UUID shortCircuitResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, computationType);
@@ -2070,6 +2081,7 @@ public class StudyService {
         return result;
     }
 
+    @Transactional
     public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
         if (prevResultUuid != null) {
@@ -2128,9 +2140,10 @@ public class StudyService {
 
     }
 
+    @Transactional(readOnly = true)
     public List<ModelInfos> getDynamicSimulationModels(UUID studyUuid) {
         // load configured parameters persisted in the study server DB
-        DynamicSimulationParametersInfos configuredParameters = getDynamicSimulationParameters(studyUuid);
+        DynamicSimulationParametersInfos configuredParameters = getDynamicSimulationParameters(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
         String mapping = configuredParameters.getMapping();
 
         // get model from mapping
@@ -2140,15 +2153,23 @@ public class StudyService {
     @Transactional
     public void setDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersInfos dsParameter, String userId) {
         updateDynamicSimulationParameters(studyUuid, DynamicSimulationService.toEntity(dsParameter != null ? dsParameter : DynamicSimulationService.getDefaultDynamicSimulationParameters(), objectMapper));
+
+        // Dynamic security analysis depend on dynamic simulation => must invalidate
+        invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
+
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_SIMULATION);
-
     }
 
+    @Transactional(readOnly = true)
     public DynamicSimulationParametersInfos getDynamicSimulationParameters(UUID studyUuid) {
-        return studyRepository.findById(studyUuid)
-                .map(studyEntity -> studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters())
-                .orElse(null);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return getDynamicSimulationParameters(studyEntity);
+    }
+
+    private DynamicSimulationParametersInfos getDynamicSimulationParameters(StudyEntity studyEntity) {
+        return studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
     }
 
     @Transactional(readOnly = true)
@@ -2208,6 +2229,8 @@ public class StudyService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+
         // pre-condition check
         String lfStatus = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
         if (!LoadFlowStatus.CONVERGED.name().equals(lfStatus)) {
@@ -2221,7 +2244,7 @@ public class StudyService {
         }
 
         // load configured parameters persisted in the study server DB
-        DynamicSimulationParametersInfos configuredParameters = getDynamicSimulationParameters(studyUuid);
+        DynamicSimulationParametersInfos configuredParameters = getDynamicSimulationParameters(studyEntity);
 
         // load configured events persisted in the study server DB
         List<EventInfos> events = dynamicSimulationEventService.getEventsByNodeId(nodeUuid);
@@ -2243,7 +2266,7 @@ public class StudyService {
         // launch dynamic simulation
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID dynamicSimulationResultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyUuid), nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, mergeParameters, userId);
+        UUID dynamicSimulationResultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyEntity), nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, mergeParameters, userId);
 
         // update result uuid and notification
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicSimulationResultUuid, DYNAMIC_SIMULATION);
@@ -2515,6 +2538,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
     }
 
+    @Transactional
     public UUID runNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
@@ -2531,7 +2555,7 @@ public class StudyService {
         UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(NON_EVACUATED_ENERGY_ANALYSIS.name(), UUID.randomUUID());
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS, reportUuid);
 
-        NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos = getNonEvacuatedEnergyParametersInfos(studyUuid);
+        NonEvacuatedEnergyParametersInfos nonEvacuatedEnergyParametersInfos = getNonEvacuatedEnergyParametersInfos(studyEntity);
         SensitivityAnalysisParameters sensitivityAnalysisParameters = SensitivityAnalysisParameters.load();
         sensitivityAnalysisParameters.setFlowFlowSensitivityValueThreshold(nonEvacuatedEnergyParametersInfos.getGeneratorsCappings().getSensitivityThreshold());
 

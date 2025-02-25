@@ -167,7 +167,7 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "The study information"),
         @ApiResponse(responseCode = "404", description = "The study doesn't exist")})
     public ResponseEntity<CreatedStudyBasicInfos> getStudy(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyInfos(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyInfos(studyUuid));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}")
@@ -632,10 +632,9 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "The limit reduction") @RequestParam(name = "limitReduction", required = false) Float limitReduction,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, userId, limitReduction);
+        studyService.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
