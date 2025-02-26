@@ -222,11 +222,9 @@ public class StudyService {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
 
-    private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid, UUID rootNetworkUuid) {
-        String caseFormat = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getCaseFormat();
+    private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
         return CreatedStudyBasicInfos.builder()
                 .id(studyUuid)
-                .caseFormat(caseFormat)
                 .build();
     }
 
@@ -236,20 +234,16 @@ public class StudyService {
                 .build();
     }
 
-    private CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity, UUID rootNetworkUuid) {
+    private CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity) {
         return CreatedStudyBasicInfos.builder()
                 .id(entity.getId())
-                .caseFormat(rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getCaseFormat())
                 .build();
     }
 
     @Transactional(readOnly = true)
     public List<CreatedStudyBasicInfos> getStudies() {
         return studyRepository.findAll().stream()
-                .map(studyEntity -> {
-                    UUID rootNetworkUuid = getStudyFirstRootNetworkUuid(studyEntity.getId());
-                    return toCreatedStudyBasicInfos(studyEntity, rootNetworkUuid);
-                })
+                .map(this::toCreatedStudyBasicInfos)
                 .collect(Collectors.toList());
     }
 
@@ -259,11 +253,7 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
-        return studyRepository.findAllById(uuids).stream().map(studyEntity -> {
-            //TODO: for now, gridexplore uses caseFormat as metadata. Now studies can have several different caseFormat, what should we do ?
-            UUID rootNetworkUuid = getStudyFirstRootNetworkUuid(studyEntity.getId());
-            return toCreatedStudyBasicInfos(studyEntity, rootNetworkUuid);
-        }).toList();
+        return studyRepository.findAllById(uuids).stream().map(this::toCreatedStudyBasicInfos).toList();
 
     }
 
@@ -425,7 +415,9 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public CreatedStudyBasicInfos getStudyInfos(UUID studyUuid) {
-        return toStudyInfos(studyUuid, getStudyFirstRootNetworkUuid(studyUuid));
+        Objects.requireNonNull(studyUuid);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return toStudyInfos(studyEntity.getId());
     }
 
     public List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
@@ -546,8 +538,7 @@ public class StudyService {
                 stateEstimationParametersUuid, importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
-        UUID studyFirstRootNetworkUuid = getStudyFirstRootNetworkUuid(studyUuid);
-        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity, studyFirstRootNetworkUuid);
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudiesChanged(studyUuid, userId);
@@ -562,7 +553,7 @@ public class StudyService {
 
         rootNetworkService.updateNetwork(rootNetworkEntity, networkInfos);
 
-        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity, rootNetworkEntity.getId());
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudyNetworkRecreationDone(studyEntity.getId(), userId);
@@ -580,8 +571,7 @@ public class StudyService {
         networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudyUuid, null);
         rootNetworkService.duplicateStudyRootNetworks(newStudyEntity, sourceStudyUuid);
 
-        UUID sourceStudyFirstRootNetworkUuid = getStudyFirstRootNetworkUuid(newStudyEntity.getId());
-        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(newStudyEntity, sourceStudyFirstRootNetworkUuid);
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(newStudyEntity);
         studyInfosService.add(createdStudyBasicInfos);
         notificationService.emitStudiesChanged(studyInfos.getId(), userId);
 
@@ -1798,7 +1788,7 @@ public class StudyService {
     }
 
     private void reindexStudy(StudyEntity study, UUID rootNetworkUuid) {
-        CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study, rootNetworkUuid);
+        CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study);
         // reindex study in elasticsearch
         studyInfosService.recreateStudyInfos(studyInfos);
 
@@ -2635,7 +2625,8 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public String exportFilterFromFirstRootNetwork(UUID studyUuid, UUID filterUuid) {
-        return filterService.exportFilter(rootNetworkService.getNetworkUuid(getStudyFirstRootNetworkUuid(studyUuid)), filterUuid);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return filterService.exportFilter(studyEntity.getFirstRootNetwork().getId(), filterUuid);
     }
 
     @Transactional(readOnly = true)
@@ -2742,10 +2733,5 @@ public class StudyService {
 
     private List<BasicRootNetworkInfos> getExistingRootNetworkInfos(UUID studyUuid) {
         return getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::toBasicDto).toList();
-    }
-
-    //TODO: temporary method, once frontend had been implemented, each operation will need to target a specific rootNetwork UUID, here we manually target the first one
-    public UUID getStudyFirstRootNetworkUuid(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getFirstRootNetwork().getId();
     }
 }
