@@ -100,7 +100,6 @@ public class RootNetworkService {
 
         rootNetworkEntity.setImportParameters(rootNetworkInfos.getImportParameters());
         rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
-        rootNetworkEntity.setTag(rootNetworkInfos.getTag());
     }
 
     private void updateCaseInfos(@NonNull RootNetworkEntity rootNetworkEntity, @NonNull CaseInfos caseInfos) {
