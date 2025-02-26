@@ -31,6 +31,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -40,6 +41,7 @@ import static org.gridsuite.study.server.StudyConstants.PATH_PARAM_PARAMETERS;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyConstants.STATE_ESTIMATION_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.VOLTAGE_INIT_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.CREATE_STATE_ESTIMATION_PARAMETERS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.DELETE_STATE_ESTIMATION_PARAMETERS_FAILED;
@@ -301,5 +303,15 @@ public class StateEstimationService {
             throw handleHttpError(e, DELETE_STATE_ESTIMATION_PARAMETERS_FAILED);
         }
 
+    }
+
+    public void invalidateStateEstimationStatus(List<UUID> uuids) {
+        if (!uuids.isEmpty()) {
+            String path = UriComponentsBuilder
+                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/invalidate-status")
+                .queryParam(RESULT_UUID, uuids).build().toUriString();
+
+            restTemplate.put(stateEstimationServerServerBaseUri + path, Void.class);
+        }
     }
 }

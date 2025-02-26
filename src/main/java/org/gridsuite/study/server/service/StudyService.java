@@ -1206,6 +1206,10 @@ public class StudyService {
         voltageInitService.invalidateVoltageInitStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, VOLTAGE_INITIALIZATION));
     }
 
+    public void invalidateStateEstimationStatusOnAllNodes(UUID studyUuid) {
+        stateEstimationService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
+    }
+
     private StudyEntity updateStudyIndexationStatus(StudyEntity studyEntity, StudyIndexationStatus indexationStatus) {
         studyEntity.setIndexationStatus(indexationStatus);
         notificationService.emitStudyIndexationStatusChanged(studyEntity.getId(), indexationStatus);
@@ -2690,6 +2694,7 @@ public class StudyService {
         } else {
             stateEstimationService.updateStateEstimationParameters(existingStateEstimationParametersUuid, parameters);
         }
+        invalidateStateEstimationStatusOnAllNodes(studyEntity.getId());
     }
 
     @Transactional
