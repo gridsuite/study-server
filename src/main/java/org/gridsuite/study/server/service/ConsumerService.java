@@ -72,6 +72,7 @@ public class ConsumerService {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final VoltageInitService voltageInitService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private final StateEstimationService stateEstimationService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -87,7 +88,8 @@ public class ConsumerService {
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
-                           DynamicSecurityAnalysisService dynamicSecurityAnalysisService) {
+                           DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
+                           StateEstimationService stateEstimationService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -102,6 +104,7 @@ public class ConsumerService {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.voltageInitService = voltageInitService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
+        this.stateEstimationService = stateEstimationService;
     }
 
     @Bean
@@ -263,11 +266,12 @@ public class ConsumerService {
         UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters();
         UUID voltageInitParametersUuid = createDefaultVoltageInitParameters(userId, userProfileInfos);
         UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
+        UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid,
             importParameters, importReportUuid);
     }
 
@@ -405,6 +409,15 @@ public class ConsumerService {
             return dynamicSecurityAnalysisService.createDefaultParameters();
         } catch (final Exception e) {
             LOGGER.error("Error while creating default parameters for dynamic security analysis", e);
+            return null;
+        }
+    }
+
+    private UUID createDefaultStateEstimationParameters() {
+        try {
+            return stateEstimationService.createDefaultStateEstimationParameters();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating state estimation default parameters", e);
             return null;
         }
     }
