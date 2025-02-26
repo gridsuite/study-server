@@ -2210,6 +2210,7 @@ public class StudyController {
                                                 @RequestParam("tag") String rootNetworkTag) {
         HttpStatus status = rootNetworkService.isRootNetworkTagExistsInStudy(studyUuid, rootNetworkTag) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
+    }
 
     @GetMapping(value = "/studies/{studyUuid}/state-estimation/parameters")
     @Operation(summary = "Get state estimation parameters on study")
