@@ -2624,7 +2624,7 @@ public class StudyService {
 
     @Transactional
     public String exportFilterFromFirstRootNetwork(UUID studyUuid, UUID filterUuid) {
-        StudyEntity studyEntity = studyRepository.findWithRootNetworksById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        StudyEntity studyEntity = studyRepository.getReferenceById(studyUuid);
         return filterService.exportFilter(studyEntity.getFirstRootNetwork().getId(), filterUuid);
     }
 
