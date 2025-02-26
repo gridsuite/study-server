@@ -248,9 +248,10 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyIndexationStatusChanged(UUID studyUuid, StudyIndexationStatus status) {
+    public void emitStudyIndexationStatusChanged(UUID studyUuid, UUID rootNetworkUuid, StudyIndexationStatus status) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_ROOT_NETWORK, rootNetworkUuid)
                 .setHeader(HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_INDEXATION_STATUS)
                 .setHeader(HEADER_INDEXATION_STATUS, status.name())
                 .build());

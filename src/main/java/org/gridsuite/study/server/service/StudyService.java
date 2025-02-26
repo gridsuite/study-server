@@ -41,6 +41,7 @@ import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
@@ -84,6 +85,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
+    private final RootNetworkRepository rootNetworkRepository;
 
     NotificationService notificationService;
 
@@ -150,41 +152,41 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        @Value("${non-evacuated-energy.default-provider}") String defaultNonEvacuatedEnergyProvider,
-        @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
-        StudyRepository studyRepository,
-        StudyCreationRequestRepository studyCreationRequestRepository,
-        NetworkService networkStoreService,
-        NetworkModificationService networkModificationService,
-        ReportService reportService,
-        UserAdminService userAdminService,
-        StudyInfosService studyInfosService,
-        EquipmentInfosService equipmentInfosService,
-        NetworkModificationTreeService networkModificationTreeService,
-        ObjectMapper objectMapper,
-        StudyServerExecutionService studyServerExecutionService,
-        NotificationService notificationService,
-        LoadFlowService loadflowService,
-        ShortCircuitService shortCircuitService,
-        SingleLineDiagramService singleLineDiagramService,
-        NetworkConversionService networkConversionService,
-        GeoDataService geoDataService,
-        NetworkMapService networkMapService,
-        SecurityAnalysisService securityAnalysisService,
-        ActionsService actionsService,
-        CaseService caseService,
-        SensitivityAnalysisService sensitivityAnalysisService,
-        NonEvacuatedEnergyService nonEvacuatedEnergyService,
-        DynamicSimulationService dynamicSimulationService,
-        DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-        VoltageInitService voltageInitService,
-        DynamicSimulationEventService dynamicSimulationEventService,
-        StudyConfigService studyConfigService,
-        FilterService filterService,
-        StateEstimationService stateEstimationService,
-        @Lazy StudyService studyService,
-        RootNetworkService rootNetworkService,
-        RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+            @Value("${non-evacuated-energy.default-provider}") String defaultNonEvacuatedEnergyProvider,
+            @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
+            StudyRepository studyRepository,
+            StudyCreationRequestRepository studyCreationRequestRepository,
+            NetworkService networkStoreService,
+            NetworkModificationService networkModificationService,
+            ReportService reportService,
+            UserAdminService userAdminService,
+            StudyInfosService studyInfosService,
+            EquipmentInfosService equipmentInfosService,
+            NetworkModificationTreeService networkModificationTreeService,
+            ObjectMapper objectMapper,
+            StudyServerExecutionService studyServerExecutionService,
+            NotificationService notificationService,
+            LoadFlowService loadflowService,
+            ShortCircuitService shortCircuitService,
+            SingleLineDiagramService singleLineDiagramService,
+            NetworkConversionService networkConversionService,
+            GeoDataService geoDataService,
+            NetworkMapService networkMapService,
+            SecurityAnalysisService securityAnalysisService,
+            ActionsService actionsService,
+            CaseService caseService,
+            SensitivityAnalysisService sensitivityAnalysisService,
+            NonEvacuatedEnergyService nonEvacuatedEnergyService,
+            DynamicSimulationService dynamicSimulationService,
+            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
+            VoltageInitService voltageInitService,
+            DynamicSimulationEventService dynamicSimulationEventService,
+            StudyConfigService studyConfigService,
+            FilterService filterService,
+            StateEstimationService stateEstimationService,
+            @Lazy StudyService studyService,
+            RootNetworkService rootNetworkService,
+            RootNetworkNodeInfoService rootNetworkNodeInfoService, RootNetworkRepository rootNetworkRepository) {
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
@@ -220,6 +222,7 @@ public class StudyService {
         this.self = studyService;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.rootNetworkRepository = rootNetworkRepository;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid, UUID rootNetworkUuid) {
@@ -1197,14 +1200,14 @@ public class StudyService {
         voltageInitService.invalidateVoltageInitStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, VOLTAGE_INITIALIZATION));
     }
 
-    private StudyEntity updateStudyIndexationStatus(StudyEntity studyEntity, StudyIndexationStatus indexationStatus) {
-        studyEntity.setIndexationStatus(indexationStatus);
-        notificationService.emitStudyIndexationStatusChanged(studyEntity.getId(), indexationStatus);
+    private StudyEntity updateStudyIndexationStatus(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, StudyIndexationStatus indexationStatus) {
+        rootNetworkEntity.setIndexationStatus(indexationStatus);
+        notificationService.emitStudyIndexationStatusChanged(studyEntity.getId(), rootNetworkEntity.getId(), indexationStatus);
         return studyEntity;
     }
 
-    public StudyEntity updateStudyIndexationStatus(UUID studyUuid, StudyIndexationStatus indexationStatus) {
-        return updateStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), indexationStatus);
+    public StudyEntity updateStudyIndexationStatus(UUID studyUuid,UUID rootNetworkUuid, StudyIndexationStatus indexationStatus) {
+        return updateStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)),rootNetworkRepository.findById(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)), indexationStatus);
     }
 
     private StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
@@ -1224,7 +1227,7 @@ public class StudyService {
                 .voltageInitParametersUuid(voltageInitParametersUuid)
                 .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
                 .sensitivityAnalysisParametersUuid(sensitivityAnalysisParametersUuid)
-                .indexationStatus(StudyIndexationStatus.INDEXED)
+                //.indexationStatus(StudyIndexationStatus.INDEXED)
                 .voltageInitParameters(new StudyVoltageInitParametersEntity())
                 .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
                 .dynamicSecurityAnalysisParametersUuid(dynamicSecurityAnalysisParametersUuid)
@@ -1791,15 +1794,17 @@ public class StudyService {
         CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study, rootNetworkUuid);
         // reindex study in elasticsearch
         studyInfosService.recreateStudyInfos(studyInfos);
+        RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
 
         // Reset indexation status
-        updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXING_ONGOING);
+        updateStudyIndexationStatus(study,rootNetwork, StudyIndexationStatus.INDEXING_ONGOING);
         try {
             networkConversionService.reindexStudyNetworkEquipments(rootNetworkService.getNetworkUuid(rootNetworkUuid));
-            updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXED);
+
+            updateStudyIndexationStatus(study, rootNetwork,StudyIndexationStatus.INDEXED);
         } catch (Exception e) {
             // Allow to retry indexation
-            updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
+            updateStudyIndexationStatus(study,rootNetwork, StudyIndexationStatus.NOT_INDEXED);
             throw e;
         }
         invalidateBuild(study.getId(), networkModificationTreeService.getStudyRootNodeUuid(study.getId()), rootNetworkUuid, false, false, true);
@@ -1814,11 +1819,12 @@ public class StudyService {
     @Transactional
     public StudyIndexationStatus getStudyIndexationStatus(UUID studyUuid, UUID rootNetworkUuid) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        if (study.getIndexationStatus() == StudyIndexationStatus.INDEXED
+        RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        if (rootNetwork.getIndexationStatus() == StudyIndexationStatus.INDEXED
                 && !networkConversionService.checkStudyIndexationStatus(rootNetworkService.getNetworkUuid(rootNetworkUuid))) {
-            updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
+            updateStudyIndexationStatus(study, rootNetwork, StudyIndexationStatus.NOT_INDEXED);
         }
-        return study.getIndexationStatus();
+        return rootNetwork.getIndexationStatus();
     }
 
     @Transactional
