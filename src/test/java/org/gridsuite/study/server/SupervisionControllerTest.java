@@ -22,10 +22,12 @@ import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.NetworkConversionService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NetworkService;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,7 +71,7 @@ class SupervisionControllerTest {
     private static final UUID STUDY_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
 
-    @MockBean
+    @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
 
     @MockBean
@@ -86,9 +88,6 @@ class SupervisionControllerTest {
 
     @SpyBean
     private RootNetworkService rootNetworkService;
-
-    @Autowired
-    private StudyService studyService;
 
     @Autowired
     private RestClient restClient;
@@ -125,15 +124,13 @@ class SupervisionControllerTest {
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
         network.getIdentifiables().forEach(idable -> equipmentInfosService.addEquipmentInfos(toEquipmentInfos(idable)));
 
-        //TODO: removing it still works, check if it's normal
-//        when(networkModificationTreeService.getVariantId(NODE_UUID, any())).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
-        when(networkModificationTreeService.getStudyTree(STUDY_UUID, null)).thenReturn(RootNode.builder().studyId(STUDY_UUID).id(NODE_UUID).build());
         when(networkConversionService.checkStudyIndexationStatus(NETWORK_UUID)).thenReturn(true);
     }
 
     @AfterEach
     void tearDown() {
         equipmentInfosService.deleteAllByNetworkUuid(NETWORK_UUID);
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
     }
 

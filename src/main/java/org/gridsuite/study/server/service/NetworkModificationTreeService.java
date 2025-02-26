@@ -419,6 +419,7 @@ public class NetworkModificationTreeService {
     public void createBasicTree(StudyEntity studyEntity) {
         // create 2 nodes : root node, modification node N1
         NodeEntity rootNodeEntity = self.createRoot(studyEntity);
+        UUID firstRootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         NetworkModificationNode modificationNode = NetworkModificationNode
             .builder()
             .name("N1")
@@ -426,11 +427,11 @@ public class NetworkModificationTreeService {
 
         NetworkModificationNode networkModificationNode = createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
         ReportNode reportNode = ReportNode.newRootReportNode().withMessageTemplate(modificationNode.getId().toString(), modificationNode.getId().toString()).build();
-        reportService.sendReport(getModificationReportUuid(networkModificationNode.getId(), studyEntity.getFirstRootNetwork().getId(), networkModificationNode.getId()), reportNode);
+        reportService.sendReport(getModificationReportUuid(networkModificationNode.getId(), firstRootNetworkUuid, networkModificationNode.getId()), reportNode);
 
-        BuildInfos buildInfos = getBuildInfos(modificationNode.getId(), studyEntity.getFirstRootNetwork().getId());
+        BuildInfos buildInfos = getBuildInfos(modificationNode.getId(), firstRootNetworkUuid);
         Map<UUID, UUID> nodeUuidToReportUuid = buildInfos.getReportsInfos().stream().collect(Collectors.toMap(ReportInfos::nodeUuid, ReportInfos::reportUuid));
-        rootNetworkNodeInfoService.updateRootNetworkNode(networkModificationNode.getId(), studyEntity.getFirstRootNetwork().getId(),
+        rootNetworkNodeInfoService.updateRootNetworkNode(networkModificationNode.getId(), firstRootNetworkUuid,
             RootNetworkNodeInfo.builder().variantId(FIRST_VARIANT_ID).nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).modificationReports(nodeUuidToReportUuid).build());
     }
 

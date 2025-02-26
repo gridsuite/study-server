@@ -32,7 +32,6 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -148,11 +147,6 @@ class StudyControllerDynamicSecurityAnalysisTest {
     private static final String DSA_STOPPED_DESTINATION = "dsa.stopped";
     private static final String DSA_FAILED_DESTINATION = "dsa.run.dlx";
 
-    @BeforeEach
-    public void setup() {
-        Mockito.doReturn(ROOT_NETWORK_UUID).when(spyStudyService).getStudyFirstRootNetworkUuid(STUDY_UUID);
-    }
-
     @AfterEach
     void tearDown() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
@@ -171,7 +165,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", UUID.randomUUID(), UUID.randomUUID(), null, null, null, null);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", UUID.randomUUID(), UUID.randomUUID(), null, null, null, null, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;

@@ -2141,7 +2141,7 @@ public class StudyController {
     public ResponseEntity<String> exportFilterFromFirstRootNetwork(
         @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "Filter uuid to be applied") @PathVariable("filterUuid") UUID filterUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(studyService.getStudyFirstRootNetworkUuid(studyUuid), filterUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilterFromFirstRootNetwork(studyUuid, filterUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/filters/elements")
@@ -2198,6 +2198,26 @@ public class StudyController {
                                                      @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         rootNetworkNodeInfoService.stopStateEstimation(studyUuid, nodeUuid, rootNetworkUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/state-estimation/parameters")
+    @Operation(summary = "Get state estimation parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation parameters")})
+    public ResponseEntity<String> getStateEstimationParametersValues(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getStateEstimationParameters(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/state-estimation/parameters")
+    @Operation(summary = "set state estimation parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation parameters are set"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> setStateEstimationParametersValues(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody(required = false) String stateEstimationParametersValues,
+        @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setStateEstimationParametersValues(studyUuid, stateEstimationParametersValues, userId);
         return ResponseEntity.ok().build();
     }
 }
