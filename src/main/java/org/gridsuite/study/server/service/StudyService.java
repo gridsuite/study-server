@@ -334,6 +334,7 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public void updateNetworkRequest(UUID studyUuid, UUID rootNetworkUuid, String rootNetworkName, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
+        rootNetworkService.assertCanModifyRootNetwork(studyUuid, rootNetworkName);
         UUID importReportUuid = UUID.randomUUID();
         UUID clonedCaseUuid = caseService.duplicateCase(caseUuid, true);
         persistNetwork(clonedCaseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
