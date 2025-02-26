@@ -2638,16 +2638,23 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
     }
 
+    @Transactional(readOnly = true)
     public String evaluateFilter(UUID nodeUuid, UUID rootNetworkUuid, boolean inUpstreamBuiltParentNode, String filter) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         return filterService.evaluateFilter(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid), filter);
     }
 
+    @Transactional(readOnly = true)
     public String exportFilter(UUID rootNetworkUuid, UUID filterUuid) {
-        // will use root node network of the study
         return filterService.exportFilter(rootNetworkService.getNetworkUuid(rootNetworkUuid), filterUuid);
     }
 
+    @Transactional(readOnly = true)
+    public String exportFilterFromFirstRootNetwork(UUID studyUuid, UUID filterUuid) {
+        return filterService.exportFilter(rootNetworkService.getNetworkUuid(getStudyFirstRootNetworkUuid(studyUuid)), filterUuid);
+    }
+
+    @Transactional(readOnly = true)
     public String exportFilters(UUID rootNetworkUuid, List<UUID> filtersUuid) {
         return filterService.exportFilters(rootNetworkService.getNetworkUuid(rootNetworkUuid), filtersUuid);
     }
