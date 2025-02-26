@@ -312,11 +312,11 @@ class RootNetworkTest {
 
     @Test
     void testCreateRootNeworkWithExistingTag() throws Exception {
-        // create study with first root network - first root network will have the name "rootNetworkName"
+        // create study with first root network - first root network will have the tag "dum"
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
 
-        // execute request to create root network with name "rootNetworkName" - should fail since this name already exists within the same study
+        // execute request to create root network with tag "dum" - should fail since this tag already exists within the same study
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkName", "dum")
@@ -360,6 +360,7 @@ class RootNetworkTest {
         assertEquals(CASE_NAME2, rootNetworkEntity.getCaseName());
         assertEquals(CASE_UUID2, rootNetworkEntity.getCaseUuid());
         assertEquals(REPORT_UUID2, rootNetworkEntity.getReportUuid());
+        assertEquals("rn2", rootNetworkEntity.getTag());
         assertEquals(importParameters, rootNetworkService.getImportParameters(newRootNetworkUuid));
 
         // corresponding rootNetworkCreationRequestRepository should be emptied when root network creation is done
