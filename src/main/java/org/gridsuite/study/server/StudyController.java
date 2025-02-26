@@ -167,7 +167,7 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "The study information"),
         @ApiResponse(responseCode = "404", description = "The study doesn't exist")})
     public ResponseEntity<CreatedStudyBasicInfos> getStudy(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyInfos(studyUuid, studyService.getStudyFirstRootNetworkUuid(studyUuid)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyInfos(studyUuid));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}")
@@ -2210,5 +2210,24 @@ public class StudyController {
                                                 @RequestParam("tag") String rootNetworkTag) {
         HttpStatus status = rootNetworkService.isRootNetworkTagExistsInStudy(studyUuid, rootNetworkTag) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
+
+    @GetMapping(value = "/studies/{studyUuid}/state-estimation/parameters")
+    @Operation(summary = "Get state estimation parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation parameters")})
+    public ResponseEntity<String> getStateEstimationParametersValues(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getStateEstimationParameters(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/state-estimation/parameters")
+    @Operation(summary = "set state estimation parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation parameters are set"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> setStateEstimationParametersValues(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody(required = false) String stateEstimationParametersValues,
+        @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setStateEstimationParametersValues(studyUuid, stateEstimationParametersValues, userId);
+        return ResponseEntity.ok().build();
     }
 }
