@@ -890,7 +890,7 @@ class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(8, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(9, server);
         assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + CASE_UUID)));
@@ -898,6 +898,7 @@ class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getLoadFlowParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSecurityAnalysisParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSensitivityAnalysisParametersUuid())));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getStateEstimationParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-visualizations-params/" + studyEntity.getNetworkVisualizationParametersUuid())));
     }
 
@@ -909,6 +910,7 @@ class StudyTest {
         studyEntity.setSecurityAnalysisParametersUuid(null);
         studyEntity.setVoltageInitParametersUuid(null);
         studyEntity.setSensitivityAnalysisParametersUuid(null);
+        studyEntity.setStateEstimationParametersUuid(null);
         studyRepository.save(studyEntity);
 
         doAnswer(invocation -> {
@@ -946,10 +948,10 @@ class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(7, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(8, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + nonExistingCaseUuid)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/.*"))); // x 3
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/.*"))); // x 4
     }
 
     @Test
@@ -1133,7 +1135,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        int nbRequest = 11;
+        int nbRequest = 12;
         if (parameterDuplicatedUuid != null && !parameterDuplicationSuccess) {
             nbRequest += 5;
         }
@@ -1167,7 +1169,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(11, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(12, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/exists", caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/disableExpiration", caseUuid))));
@@ -1196,7 +1198,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(12, server);
+        var requests = TestUtils.getRequestsDone(13, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
         assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=%s", caseUuid, true)));
         // note : it's a new case UUID
@@ -1415,7 +1417,7 @@ class StudyTest {
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(11, server);
+        var requests = TestUtils.getRequestsDone(12, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", NEW_STUDY_CASE_UUID)));
@@ -1625,6 +1627,7 @@ class StudyTest {
         studyEntity.setSecurityAnalysisParametersUuid(UUID.randomUUID());
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID());
         studyEntity.setSensitivityAnalysisParametersUuid(UUID.randomUUID());
+        studyEntity.setStateEstimationParametersUuid(UUID.randomUUID());
         studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
         testDuplicateStudy(mockWebServer, study1Uuid, firstRootNetworkUuid);
@@ -1639,6 +1642,7 @@ class StudyTest {
         studyEntity.setSecurityAnalysisParametersUuid(null);
         studyEntity.setVoltageInitParametersUuid(null);
         studyEntity.setSensitivityAnalysisParametersUuid(null);
+        studyEntity.setStateEstimationParametersUuid(null);
         studyEntity.setNetworkVisualizationParametersUuid(null);
         studyRepository.save(studyEntity);
         testDuplicateStudy(mockWebServer, study1Uuid, firstRootNetworkUuid);
@@ -1768,6 +1772,12 @@ class StudyTest {
             assertNotNull(duplicatedStudy.getShortCircuitParametersUuid());
             numberOfRequests++;
         }
+        if (sourceStudy.getStateEstimationParametersUuid() == null) {
+            assertNull(duplicatedStudy.getStateEstimationParametersUuid());
+        } else {
+            assertNotNull(duplicatedStudy.getStateEstimationParametersUuid());
+            numberOfRequests++;
+        }
         requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
 
         RootNetworkEntity rootNetworkEntity = studyTestUtils.getOneRootNetwork(duplicatedStudy.getId());
@@ -1790,6 +1800,9 @@ class StudyTest {
         }
         if (sourceStudy.getNetworkVisualizationParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/network-visualizations-params\\?duplicateFrom=" + sourceStudy.getNetworkVisualizationParametersUuid())).count());
+        }
+        if (sourceStudy.getStateEstimationParametersUuid() != null) {
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getStateEstimationParametersUuid())).count());
         }
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*/duplicate")).count());
         return duplicatedStudy;

@@ -36,5 +36,7 @@ public class UserProfileInfos {
 
     private UUID voltageInitParameterId;
 
+    private UUID stateEstimationParameterId;
+
     Integer maxAllowedBuilds;
 }
