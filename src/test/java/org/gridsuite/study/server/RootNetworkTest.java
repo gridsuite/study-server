@@ -510,29 +510,32 @@ class RootNetworkTest {
         final UUID rootNetworkUuid = UUID.randomUUID();
         final UUID caseUuid = UUID.randomUUID();
         final String caseFormat = "newCaseFormat";
+        final String newRootNetworkName = "newRootNetworkName";
         Map<String, Object> importParameters = new HashMap<>();
         importParameters.put("param1", "newValue1");
         importParameters.put("param2", "newValue2");
 
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
-            .willReturn(WireMock.ok())).getId();
+                .willReturn(WireMock.ok())).getId();
+        Mockito.doReturn(DUPLICATE_CASE_UUID).when(caseService).duplicateCase(caseUuid, true);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}",
-            studyUuid, rootNetworkUuid)
-            .contentType(APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(importParameters))
-            .param("caseUuid", caseUuid.toString())
-            .param("caseFormat", caseFormat)
-            .header("userId", USER_ID)
+                studyUuid, rootNetworkUuid)
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(importParameters))
+                .param("caseUuid", caseUuid.toString())
+                .param("caseFormat", caseFormat)
+                .param("name", newRootNetworkName)
+                .header("userId", USER_ID)
         ).andExpect(status().isOk());
 
         wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
-            false,
-            Map.of(
-                "caseUuid", WireMock.equalTo(caseUuid.toString()),
-                "caseFormat", WireMock.equalTo(caseFormat)
-            ),
-            objectMapper.writeValueAsString(importParameters)
+                false,
+                Map.of(
+                        "caseUuid", WireMock.equalTo(DUPLICATE_CASE_UUID.toString()),
+                        "caseFormat", WireMock.equalTo(caseFormat)
+                ),
+                objectMapper.writeValueAsString(importParameters)
         );
     }
 

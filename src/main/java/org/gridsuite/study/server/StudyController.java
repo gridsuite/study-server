@@ -209,7 +209,7 @@ public class StudyController {
                                                       @RequestBody(required = false) Map<String, Object> importParameters,
                                                       @RequestHeader(HEADER_USER_ID) String userId) {
         caseService.assertCaseExists(caseUuid);
-        studyService.updateNetworkRequest(studyUuid, rootNetworkUuid,name, caseUuid, caseFormat, importParameters, userId);
+        studyService.updateNetworkRequest(studyUuid, rootNetworkUuid, name, caseUuid, caseFormat, importParameters, userId);
         return ResponseEntity.ok().build();
     }
 

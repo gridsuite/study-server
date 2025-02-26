@@ -87,7 +87,8 @@ public class RootNetworkService {
     public void updateRootNetworkInfos(UUID rootNetworkUuid, @NonNull String name) {
         RootNetworkEntity rootNetworkEntity = getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         rootNetworkEntity.setName(name);
-      }
+    }
+
     public void updateNetwork(@NonNull RootNetworkInfos rootNetworkInfos) {
         RootNetworkEntity rootNetworkEntity = getRootNetwork(rootNetworkInfos.getId()).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         UUID oldCaseUuid = rootNetworkEntity.getCaseUuid();
