@@ -332,6 +332,7 @@ public class StudyService {
         Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntityOpt = rootNetworkService.getCreationRequest(rootNetworkInfos.getId());
         if (rootNetworkCreationRequestEntityOpt.isPresent()) {
             rootNetworkInfos.setName(rootNetworkCreationRequestEntityOpt.get().getName());
+            rootNetworkInfos.setTag(rootNetworkCreationRequestEntityOpt.get().getTag());
             rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
             rootNetworkService.deleteCreationRequest(rootNetworkCreationRequestEntityOpt.get());
         } else {
