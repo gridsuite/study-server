@@ -151,9 +151,8 @@ public class SupervisionService {
             UUID networkUUID = rootNetworkService.getNetworkUuid(rootNetwork.rootNetworkUuid());
             nbIndexesToDelete.updateAndGet(v -> v + getStudyIndexedEquipmentsCount(networkUUID) + getStudyIndexedTombstonedEquipmentsCount(networkUUID));
             equipmentInfosService.deleteAllByNetworkUuid(networkUUID);
+            studyService.updateStudyIndexationStatus(studyUuid,rootNetwork.rootNetworkUuid(), StudyIndexationStatus.NOT_INDEXED);
         });
-
-        studyService.updateStudyIndexationStatus(studyUuid, StudyIndexationStatus.NOT_INDEXED);
 
         LOGGER.trace("Indexed equipments deletion for study \"{}\": {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return nbIndexesToDelete.get();
