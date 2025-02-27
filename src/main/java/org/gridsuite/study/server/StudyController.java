@@ -821,6 +821,14 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getVoltageInitParameters(studyUuid));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/spreadsheet-config-collection")
+    @Operation(summary = "Get study spreadsheet config collection")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The spreadsheet config collection")})
+    public ResponseEntity<String> getSpreadsheetConfigCollection(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getSpreadsheetConfigCollection(studyUuid));
+    }
+
     @GetMapping(value = "/export-network-formats")
     @Operation(summary = "get the available export format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The available export format")})
