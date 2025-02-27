@@ -46,8 +46,8 @@ class StudyInfosServiceTests {
 
     @Test
     void testAddDeleteStudyInfos() {
-        MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher1 = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_UUID_1, "UCTE");
-        MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher2 = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_UUID_2, "UCTE");
+        MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher1 = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_UUID_1);
+        MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher2 = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_UUID_2);
         assertThat(studyInfosService.add(matcher1.getReference()), matcher1);
         assertThat(studyInfosService.add(matcher2.getReference()), matcher2);
         assertEquals(2, Iterables.size(studyInfosService.findAll()));
@@ -65,10 +65,10 @@ class StudyInfosServiceTests {
 
     @Test
     void searchStudyInfos() {
-        CreatedStudyBasicInfos studyInfos11 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").caseFormat("XIIDM").build();
-        CreatedStudyBasicInfos studyInfos12 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").build();
-        CreatedStudyBasicInfos studyInfos21 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-22222222221")).userId("userId2").caseFormat("XIIDM").build();
-        CreatedStudyBasicInfos studyInfos22 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-22222222222")).userId("userId2").caseFormat("UCTE").build();
+        CreatedStudyBasicInfos studyInfos11 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").build();
+        CreatedStudyBasicInfos studyInfos12 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").build();
+        CreatedStudyBasicInfos studyInfos21 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-22222222221")).userId("userId2").build();
+        CreatedStudyBasicInfos studyInfos22 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-22222222222")).userId("userId2").build();
 
         studyInfosService.add(studyInfos11);
         studyInfosService.add(studyInfos12);
@@ -86,14 +86,6 @@ class StudyInfosServiceTests {
         assertEquals(2, hits.size());
         assertTrue(hits.contains(studyInfos21));
         assertTrue(hits.contains(studyInfos22));
-
-        hits = new HashSet<>(studyInfosService.search("userId:(userId1) AND caseFormat:(XIIDM)"));
-        assertEquals(1, hits.size());
-        assertTrue(hits.contains(studyInfos11));
-
-        hits = new HashSet<>(studyInfosService.search("userId:(userId1) AND caseFormat:(UCTE)"));
-        assertEquals(1, hits.size());
-        assertTrue(hits.contains(studyInfos12));
 
         studyInfosService.deleteByUuid(studyInfos11.getId());
         studyInfosService.deleteByUuid(studyInfos12.getId());

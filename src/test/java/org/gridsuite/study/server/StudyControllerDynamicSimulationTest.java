@@ -43,7 +43,6 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -202,11 +201,6 @@ class StudyControllerDynamicSimulationTest {
     private static final String DS_RESULT_DESTINATION = "ds.result";
     private static final String DS_STOPPED_DESTINATION = "ds.stopped";
     private static final String DS_FAILED_DESTINATION = "ds.run.dlx";
-
-    @BeforeEach
-    public void setup() {
-        Mockito.doReturn(ROOT_NETWORK_UUID).when(studyService).getStudyFirstRootNetworkUuid(STUDY_UUID);
-    }
 
     @AfterEach
     void tearDown() {

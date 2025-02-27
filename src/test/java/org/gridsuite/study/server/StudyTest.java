@@ -47,7 +47,6 @@ import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -186,28 +185,32 @@ class StudyTest {
     private static final String PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING = "709f0282-8034-48b5-b66c-7ef9f3f36c4f";
     private static final String PROFILE_SHORTCIRCUIT_INVALID_PARAMETERS_UUID_STRING = "d09f5112-8e34-41b5-b45e-7ef9f3f36c4f";
     private static final String PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING = "409f5782-8114-48b5-b66e-7ff9f3f36c4f";
+    private static final String PROFILE_SPREADSHEET_CONFIG_COLLECTION_INVALID_UUID_STRING = "473ff5ce-4378-8dd2-9d07-ce73c5ef11d9";
 
-    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"loadFlowParameterId\":\"" +
+    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"name\":\"Profile with broken params\",\"loadFlowParameterId\":\"" +
         PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING +
         "\",\"securityAnalysisParameterId\":\"" + PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING +
         "\",\"sensitivityAnalysisParameterId\":\"" + PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING +
         "\",\"shortcircuitParameterId\":\"" + PROFILE_SHORTCIRCUIT_INVALID_PARAMETERS_UUID_STRING +
         "\",\"voltageInitParameterId\":\"" + PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING +
-        "\",\"allParametersLinksValid\":false}";
+        "\",\"spreadsheetConfigCollectionId\":\"" + PROFILE_SPREADSHEET_CONFIG_COLLECTION_INVALID_UUID_STRING +
+        "\",\"allLinksValid\":false}";
 
     private static final String PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING = "1cec4a7b-ab7e-4d78-9dd7-ce73c5ef11d9";
     private static final String PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING = "2cec4a7b-ab7e-4d78-9dd2-ce73c5ef11d9";
     private static final String PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING = "9cec4a7b-a87e-4d78-9da7-ce73c5ef11d9";
     private static final String PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING = "5cec4a2b-affe-4d78-91d7-ce73c5ef11d9";
     private static final String PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING = "9cec4a7b-ab74-5d78-9d07-ce73c5ef11d9";
+    private static final String PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING = "2c865123-4378-8dd2-9d07-ce73c5ef11d9";
 
-    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" +
+    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" +
         PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING +
         "\",\"securityAnalysisParameterId\":\"" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING +
         "\",\"sensitivityAnalysisParameterId\":\"" + PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING +
         "\",\"shortcircuitParameterId\":\"" + PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING +
         "\",\"voltageInitParameterId\":\"" + PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING +
-        "\",\"allParametersLinksValid\":true}";
+        "\",\"spreadsheetConfigCollectionId\":\"" + PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING +
+        "\",\"allLinksValid\":true}";
 
     private static final String PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
     private static final String DUPLICATED_LOADFLOW_PARAMS_JSON = "\"" + PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
@@ -226,6 +229,9 @@ class StudyTest {
 
     private static final String NETWORK_VISUALIZATION_DUPLICATED_PARAMETERS_UUID_STRING = "407a4bec-6f1a-400f-98f0-e5bcf37d4fcf";
     private static final String DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON = "\"" + NETWORK_VISUALIZATION_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
+
+    private static final String SPREADSHEET_CONFIG_COLLECTION_UUID_STRING = "f4ce25e1-59a7-401d-abb1-04425fe24587";
+    private static final String DUPLICATED_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON = "\"" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "\"";
 
     private static final String DEFAULT_PROVIDER = "defaultProvider";
 
@@ -284,9 +290,6 @@ class StudyTest {
     private StudyInfosService studyInfosService;
 
     @Autowired
-    private StudyService studyService;
-
-    @Autowired
     private ObjectMapper mapper;
 
     private ObjectWriter objectWriter;
@@ -322,8 +325,7 @@ class StudyTest {
     private boolean indexed = false;
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
-    @Autowired
-    private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
@@ -344,8 +346,8 @@ class StudyTest {
         linesInfos = network.getLineStream().map(StudyTest::toEquipmentInfos).collect(Collectors.toList());
 
         studiesInfos = List.of(
-                CreatedStudyBasicInfos.builder().id(UUID.fromString(DUPLICATED_STUDY_UUID)).userId("userId1").caseFormat("XIIDM").build(),
-                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").build()
+                CreatedStudyBasicInfos.builder().id(UUID.fromString(DUPLICATED_STUDY_UUID)).userId("userId1").build(),
+                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").build()
         );
 
         when(studyInfosService.search(String.format("userId:%s", "userId")))
@@ -552,6 +554,16 @@ class StudyTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_INVALID_PARAMS_JSON);
                 } else if (path.matches("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_VALID_PARAMS_JSON);
+                } else if (path.matches("/v1/spreadsheet-config-collections/default") && !POST.equals(request.getMethod())) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), DUPLICATED_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
+                } else if (path.matches("/v1/spreadsheet-config-collections/.*") && DELETE.equals(request.getMethod())) {
+                    return new MockResponse(200);
+                } else if (path.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=" + PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING)) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), DUPLICATED_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
+                } else if (path.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=" + PROFILE_SPREADSHEET_CONFIG_COLLECTION_INVALID_UUID_STRING)) {
+                    return new MockResponse(404); // config duplication request KO
+                } else if (path.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=.*")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 }
 
                 switch (path) {
@@ -769,7 +781,7 @@ class StudyTest {
         resultAsString = result.getResponse().getContentAsString();
         StudyInfos infos = mapper.readValue(resultAsString, StudyInfos.class);
 
-        assertThat(infos, createMatcherStudyInfos(studyUuid, "UCTE"));
+        assertThat(infos, createMatcherStudyInfos(studyUuid));
 
         //insert a study with a non-existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}",
@@ -786,7 +798,7 @@ class StudyTest {
         resultAsString = result.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
-        assertThat(createdStudyBasicInfosList.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));
+        assertThat(createdStudyBasicInfosList.get(0), createMatcherCreatedStudyBasicInfos(studyUuid));
 
         //insert the same study but with another user (should work)
         //even with the same name should work
@@ -798,7 +810,7 @@ class StudyTest {
         createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertThat(createdStudyBasicInfosList.get(1),
-            createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));
+            createMatcherCreatedStudyBasicInfos(studyUuid));
 
         UUID randomUuid = UUID.randomUUID();
         //get a non-existing study -> 404 not found
@@ -879,6 +891,7 @@ class StudyTest {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID()); // does not have default params
         studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
+        studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
 
         UUID stubUuid = wireMockUtils.stubNetworkModificationDeleteGroup();
@@ -889,7 +902,7 @@ class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(9, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(10, server);
         assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + CASE_UUID)));
@@ -899,6 +912,7 @@ class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSensitivityAnalysisParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getStateEstimationParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-visualizations-params/" + studyEntity.getNetworkVisualizationParametersUuid())));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/spreadsheet-config-collections/" + studyEntity.getSpreadsheetConfigCollectionUuid())));
     }
 
     @Test
@@ -910,6 +924,7 @@ class StudyTest {
         studyEntity.setVoltageInitParametersUuid(null);
         studyEntity.setSensitivityAnalysisParametersUuid(null);
         studyEntity.setStateEstimationParametersUuid(null);
+        studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
 
         doAnswer(invocation -> {
@@ -922,8 +937,9 @@ class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(2, server);
-        assertTrue(requests.stream().allMatch(r -> r.getPath().matches("/v1/reports")));
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/spreadsheet-config-collections/" + studyEntity.getSpreadsheetConfigCollectionUuid())));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
@@ -973,9 +989,9 @@ class StudyTest {
         if (!createdStudyBasicInfosList.get(0).getId().equals(oldStudyUuid)) {
             Collections.reverse(createdStudyBasicInfosList);
         }
-        assertTrue(createMatcherCreatedStudyBasicInfos(oldStudyUuid, "UCTE")
+        assertTrue(createMatcherCreatedStudyBasicInfos(oldStudyUuid)
                 .matchesSafely(createdStudyBasicInfosList.get(0)));
-        assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE")
+        assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid)
                 .matchesSafely(createdStudyBasicInfosList.get(1)));
     }
 
@@ -1134,9 +1150,9 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        int nbRequest = 12;
+        int nbRequest = 13;
         if (parameterDuplicatedUuid != null && !parameterDuplicationSuccess) {
-            nbRequest += 5;
+            nbRequest += 6;
         }
         var requests = TestUtils.getRequestsDone(nbRequest, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
@@ -1145,10 +1161,14 @@ class StudyTest {
             assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
         }
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+        if (!parameterDuplicationSuccess) {
+            assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/default")));
+        }
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", caseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + userId + "/profile")));
         if (parameterDuplicatedUuid != null) {
-            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + parameterDuplicatedUuid))); // post duplicate
+            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + parameterDuplicatedUuid) ||
+                                                             r.equals("/v1/spreadsheet-config-collections?duplicateFrom=" + parameterDuplicatedUuid))); // post duplicate
         }
 
         return studyUuid;
@@ -1168,11 +1188,12 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(12, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(13, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/exists", caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/disableExpiration", caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/default")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/spreadsheet-config-collections/default")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
 
         assertEquals(mapper.writeValueAsString(importParameters), requests.stream()
@@ -1197,13 +1218,14 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(13, server);
+        var requests = TestUtils.getRequestsDone(14, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
         assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=%s", caseUuid, true)));
         // note : it's a new case UUID
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CLONED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CLONED_CASE_UUID_STRING)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/spreadsheet-config-collections/default")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + userId + "/profile")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
@@ -1416,11 +1438,12 @@ class StudyTest {
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(12, server);
+        var requests = TestUtils.getRequestsDone(13, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains("/v1/parameters/default"));
+        assertTrue(requests.contains("/v1/spreadsheet-config-collections/default"));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/userId/profile")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
@@ -1540,6 +1563,16 @@ class StudyTest {
     }
 
     @Test
+    void testCreateStudyWithDefaultSpreadsheetConfigCollectionUserHasInvalidParamsInProfile(final MockWebServer mockWebServer) throws Exception {
+        createStudy(mockWebServer, INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, PROFILE_SPREADSHEET_CONFIG_COLLECTION_INVALID_UUID_STRING, false);
+    }
+
+    @Test
+    void testCreateStudyWithDefaultSpreadsheetConfigCollectionUserHasValidParamsInProfile(final MockWebServer mockWebServer) throws Exception {
+        createStudy(mockWebServer, VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING, true);
+    }
+
+    @Test
     void testCreateStudyWithDefaultVoltageInitUserHasInvalidParamsInProfile(final MockWebServer mockWebServer) throws Exception {
         createStudy(mockWebServer, INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING, false);
     }
@@ -1628,6 +1661,7 @@ class StudyTest {
         studyEntity.setSensitivityAnalysisParametersUuid(UUID.randomUUID());
         studyEntity.setStateEstimationParametersUuid(UUID.randomUUID());
         studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
+        studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
         testDuplicateStudy(mockWebServer, study1Uuid, firstRootNetworkUuid);
     }
@@ -1643,6 +1677,7 @@ class StudyTest {
         studyEntity.setSensitivityAnalysisParametersUuid(null);
         studyEntity.setStateEstimationParametersUuid(null);
         studyEntity.setNetworkVisualizationParametersUuid(null);
+        studyEntity.setSpreadsheetConfigCollectionUuid(null);
         studyRepository.save(studyEntity);
         testDuplicateStudy(mockWebServer, study1Uuid, firstRootNetworkUuid);
     }
@@ -1683,6 +1718,9 @@ class StudyTest {
             numberOfRequests++;
         }
         if (studyEntity.getShortCircuitParametersUuid() != null) {
+            numberOfRequests++;
+        }
+        if (studyEntity.getSpreadsheetConfigCollectionUuid() != null) {
             numberOfRequests++;
         }
         TestUtils.getRequestsWithBodyDone(numberOfRequests, mockWebServer);
@@ -1777,6 +1815,12 @@ class StudyTest {
             assertNotNull(duplicatedStudy.getStateEstimationParametersUuid());
             numberOfRequests++;
         }
+        if (sourceStudy.getSpreadsheetConfigCollectionUuid() == null) {
+            assertNull(duplicatedStudy.getSpreadsheetConfigCollectionUuid());
+        } else {
+            assertNotNull(duplicatedStudy.getSpreadsheetConfigCollectionUuid());
+            numberOfRequests++;
+        }
         requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
 
         RootNetworkEntity rootNetworkEntity = studyTestUtils.getOneRootNetwork(duplicatedStudy.getId());
@@ -1802,6 +1846,9 @@ class StudyTest {
         }
         if (sourceStudy.getStateEstimationParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getStateEstimationParametersUuid())).count());
+        }
+        if (sourceStudy.getSpreadsheetConfigCollectionUuid() != null) {
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/spreadsheet-config-collections\\?duplicateFrom=" + sourceStudy.getSpreadsheetConfigCollectionUuid())).count());
         }
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*/duplicate")).count());
         return duplicatedStudy;
