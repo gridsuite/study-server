@@ -222,11 +222,9 @@ public class StudyService {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
 
-    private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid, UUID rootNetworkUuid) {
-        String caseFormat = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getCaseFormat();
+    private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
         return CreatedStudyBasicInfos.builder()
                 .id(studyUuid)
-                .caseFormat(caseFormat)
                 .build();
     }
 
@@ -236,20 +234,16 @@ public class StudyService {
                 .build();
     }
 
-    private CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity, UUID rootNetworkUuid) {
+    private CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity) {
         return CreatedStudyBasicInfos.builder()
                 .id(entity.getId())
-                .caseFormat(rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getCaseFormat())
                 .build();
     }
 
     @Transactional(readOnly = true)
     public List<CreatedStudyBasicInfos> getStudies() {
         return studyRepository.findAll().stream()
-                .map(studyEntity -> {
-                    UUID rootNetworkUuid = getStudyFirstRootNetworkUuid(studyEntity.getId());
-                    return toCreatedStudyBasicInfos(studyEntity, rootNetworkUuid);
-                })
+                .map(this::toCreatedStudyBasicInfos)
                 .collect(Collectors.toList());
     }
 
@@ -259,11 +253,7 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
-        return studyRepository.findAllById(uuids).stream().map(studyEntity -> {
-            //TODO: for now, gridexplore uses caseFormat as metadata. Now studies can have several different caseFormat, what should we do ?
-            UUID rootNetworkUuid = getStudyFirstRootNetworkUuid(studyEntity.getId());
-            return toCreatedStudyBasicInfos(studyEntity, rootNetworkUuid);
-        }).toList();
+        return studyRepository.findAllById(uuids).stream().map(this::toCreatedStudyBasicInfos).toList();
 
     }
 
@@ -425,7 +415,9 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public CreatedStudyBasicInfos getStudyInfos(UUID studyUuid) {
-        return toStudyInfos(studyUuid, getStudyFirstRootNetworkUuid(studyUuid));
+        Objects.requireNonNull(studyUuid);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return toStudyInfos(studyEntity.getId());
     }
 
     public List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
@@ -479,6 +471,9 @@ public class StudyService {
                 if (s.getStateEstimationParametersUuid() != null) {
                     stateEstimationService.deleteStateEstimationParameters(s.getStateEstimationParametersUuid());
                 }
+                if (s.getSpreadsheetConfigCollectionUuid() != null) {
+                    studyConfigService.deleteSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
+                }
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -529,7 +524,7 @@ public class StudyService {
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                               UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid,
-                                              Map<String, String> importParameters, UUID importReportUuid) {
+                                              UUID spreadsheetConfigCollectionUuid, Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -543,11 +538,10 @@ public class StudyService {
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
-                stateEstimationParametersUuid, importParameters, importReportUuid);
+                stateEstimationParametersUuid, spreadsheetConfigCollectionUuid, importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
-        UUID studyFirstRootNetworkUuid = getStudyFirstRootNetworkUuid(studyUuid);
-        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity, studyFirstRootNetworkUuid);
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudiesChanged(studyUuid, userId);
@@ -562,7 +556,7 @@ public class StudyService {
 
         rootNetworkService.updateNetwork(rootNetworkEntity, networkInfos);
 
-        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity, rootNetworkEntity.getId());
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudyNetworkRecreationDone(studyEntity.getId(), userId);
@@ -580,8 +574,7 @@ public class StudyService {
         networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudyUuid, null);
         rootNetworkService.duplicateStudyRootNetworks(newStudyEntity, sourceStudyUuid);
 
-        UUID sourceStudyFirstRootNetworkUuid = getStudyFirstRootNetworkUuid(newStudyEntity.getId());
-        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(newStudyEntity, sourceStudyFirstRootNetworkUuid);
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(newStudyEntity);
         studyInfosService.add(createdStudyBasicInfos);
         notificationService.emitStudiesChanged(studyInfos.getId(), userId);
 
@@ -623,6 +616,11 @@ public class StudyService {
             copiedNetworkVisualizationParametersUuid = studyConfigService.duplicateNetworkVisualizationParameters(sourceStudyEntity.getNetworkVisualizationParametersUuid());
         }
 
+        UUID copiedSpreadsheetConfigCollectionUuid = null;
+        if (sourceStudyEntity.getSpreadsheetConfigCollectionUuid() != null) {
+            copiedSpreadsheetConfigCollectionUuid = studyConfigService.duplicateSpreadsheetConfigCollection(sourceStudyEntity.getSpreadsheetConfigCollectionUuid());
+        }
+
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
 
         UUID copiedStateEstimationParametersUuid = null;
@@ -641,6 +639,7 @@ public class StudyService {
             .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
             .sensitivityAnalysisParametersUuid(copiedSensitivityAnalysisParametersUuid)
             .networkVisualizationParametersUuid(copiedNetworkVisualizationParametersUuid)
+            .spreadsheetConfigCollectionUuid(copiedSpreadsheetConfigCollectionUuid)
             .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
             .stateEstimationParametersUuid(copiedStateEstimationParametersUuid)
             .build());
@@ -1225,7 +1224,7 @@ public class StudyService {
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                                     UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid,
-                                                    Map<String, String> importParameters, UUID importReportUuid) {
+                                                    UUID spreadsheetConfigCollectionUuid, Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -1242,6 +1241,7 @@ public class StudyService {
                 .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
                 .dynamicSecurityAnalysisParametersUuid(dynamicSecurityAnalysisParametersUuid)
                 .stateEstimationParametersUuid(stateEstimationParametersUuid)
+                .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
                 .build();
 
         var study = studyRepository.save(studyEntity);
@@ -1802,7 +1802,7 @@ public class StudyService {
     }
 
     private void reindexStudy(StudyEntity study, UUID rootNetworkUuid) {
-        CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study, rootNetworkUuid);
+        CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study);
         // reindex study in elasticsearch
         studyInfosService.recreateStudyInfos(studyInfos);
 
@@ -2127,6 +2127,12 @@ public class StudyService {
                 Optional.ofNullable(studyEntity.getVoltageInitParametersUuid()).map(voltageInitService::getVoltageInitParameters).orElse(null),
                 Optional.ofNullable(studyEntity.getVoltageInitParameters()).map(StudyVoltageInitParametersEntity::shouldApplyModifications).orElse(true)
         );
+    }
+
+    @Transactional
+    public String getSpreadsheetConfigCollection(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return studyConfigService.getSpreadsheetConfigCollection(studyConfigService.getSpreadsheetConfigCollectionUuidOrElseCreateDefaults(studyEntity));
     }
 
     public boolean shouldApplyModifications(UUID studyUuid) {
@@ -2626,16 +2632,24 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
     }
 
+    @Transactional(readOnly = true)
     public String evaluateFilter(UUID nodeUuid, UUID rootNetworkUuid, boolean inUpstreamBuiltParentNode, String filter) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         return filterService.evaluateFilter(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid), filter);
     }
 
+    @Transactional(readOnly = true)
     public String exportFilter(UUID rootNetworkUuid, UUID filterUuid) {
-        // will use root node network of the study
         return filterService.exportFilter(rootNetworkService.getNetworkUuid(rootNetworkUuid), filterUuid);
     }
 
+    @Transactional(readOnly = true)
+    public String exportFilterFromFirstRootNetwork(UUID studyUuid, UUID filterUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return filterService.exportFilter(studyEntity.getFirstRootNetwork().getId(), filterUuid);
+    }
+
+    @Transactional(readOnly = true)
     public String exportFilters(UUID rootNetworkUuid, List<UUID> filtersUuid) {
         return filterService.exportFilters(rootNetworkService.getNetworkUuid(rootNetworkUuid), filtersUuid);
     }
@@ -2740,10 +2754,5 @@ public class StudyService {
 
     private List<BasicRootNetworkInfos> getExistingRootNetworkInfos(UUID studyUuid) {
         return getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::toBasicDto).toList();
-    }
-
-    //TODO: temporary method, once frontend had been implemented, each operation will need to target a specific rootNetwork UUID, here we manually target the first one
-    public UUID getStudyFirstRootNetworkUuid(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)).getFirstRootNetwork().getId();
     }
 }
