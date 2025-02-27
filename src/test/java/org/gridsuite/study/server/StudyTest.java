@@ -342,8 +342,8 @@ class StudyTest {
         linesInfos = network.getLineStream().map(StudyTest::toEquipmentInfos).collect(Collectors.toList());
 
         studiesInfos = List.of(
-                CreatedStudyBasicInfos.builder().id(UUID.fromString(DUPLICATED_STUDY_UUID)).userId("userId1").caseFormat("XIIDM").build(),
-                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").build()
+                CreatedStudyBasicInfos.builder().id(UUID.fromString(DUPLICATED_STUDY_UUID)).userId("userId1").build(),
+                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").build()
         );
 
         when(studyInfosService.search(String.format("userId:%s", "userId")))
@@ -773,7 +773,7 @@ class StudyTest {
         resultAsString = result.getResponse().getContentAsString();
         StudyInfos infos = mapper.readValue(resultAsString, StudyInfos.class);
 
-        assertThat(infos, createMatcherStudyInfos(studyUuid, "UCTE"));
+        assertThat(infos, createMatcherStudyInfos(studyUuid));
 
         //insert a study with a non-existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}",
@@ -790,7 +790,7 @@ class StudyTest {
         resultAsString = result.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
-        assertThat(createdStudyBasicInfosList.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));
+        assertThat(createdStudyBasicInfosList.get(0), createMatcherCreatedStudyBasicInfos(studyUuid));
 
         //insert the same study but with another user (should work)
         //even with the same name should work
@@ -802,7 +802,7 @@ class StudyTest {
         createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         assertThat(createdStudyBasicInfosList.get(1),
-            createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));
+            createMatcherCreatedStudyBasicInfos(studyUuid));
 
         UUID randomUuid = UUID.randomUUID();
         //get a non-existing study -> 404 not found
@@ -980,9 +980,9 @@ class StudyTest {
         if (!createdStudyBasicInfosList.get(0).getId().equals(oldStudyUuid)) {
             Collections.reverse(createdStudyBasicInfosList);
         }
-        assertTrue(createMatcherCreatedStudyBasicInfos(oldStudyUuid, "UCTE")
+        assertTrue(createMatcherCreatedStudyBasicInfos(oldStudyUuid)
                 .matchesSafely(createdStudyBasicInfosList.get(0)));
-        assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE")
+        assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid)
                 .matchesSafely(createdStudyBasicInfosList.get(1)));
     }
 

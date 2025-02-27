@@ -127,8 +127,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
         ))
     private StudyVoltageInitParametersEntity voltageInitParameters;
 
-    //TODO temporary, for now we are only working with one rootNetwork
-    @Transient
     public RootNetworkEntity getFirstRootNetwork() {
         return rootNetworks.get(0);
     }
