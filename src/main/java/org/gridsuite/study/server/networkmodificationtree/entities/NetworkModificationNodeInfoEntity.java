@@ -10,6 +10,7 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,5 +38,16 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     public void addRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         rootNetworkNodeInfoEntity.setNodeInfo(this);
         rootNetworkNodeInfos.add(rootNetworkNodeInfoEntity);
+    }
+
+    public NetworkModificationNode toDto() {
+        return NetworkModificationNode.builder()
+            .modificationGroupUuid(modificationGroupUuid)
+            .id(this.getId())
+            .name(this.getName())
+            .description(this.getDescription())
+            .columnPosition(this.getColumnPosition())
+            .readOnly(this.getReadOnly())
+            .build();
     }
 }

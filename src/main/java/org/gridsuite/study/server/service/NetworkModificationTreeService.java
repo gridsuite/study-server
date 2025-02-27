@@ -12,9 +12,6 @@ import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
-import org.gridsuite.study.server.networkmodificationtree.NetworkModificationNodeInfoRepositoryProxy;
-import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -23,7 +20,6 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -46,8 +42,6 @@ public class NetworkModificationTreeService {
 
     public static final String FIRST_VARIANT_ID = "first_variant_id";
 
-    private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
-
     private final NodeRepository nodesRepository;
 
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
@@ -59,7 +53,6 @@ public class NetworkModificationTreeService {
     private final RootNodeInfoRepository rootNodeInfoRepository;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final RootNetworkService rootNetworkService;
-    private final RootNetworkRepository rootNetworkRepository;
     private final ReportService reportService;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
@@ -69,19 +62,16 @@ public class NetworkModificationTreeService {
                                           NetworkModificationService networkModificationService,
                                           @Lazy NetworkModificationTreeService networkModificationTreeService,
                                           RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                                          RootNetworkService rootNetworkService, RootNetworkRepository rootNetworkRepository,
+                                          RootNetworkService rootNetworkService,
                                           ReportService reportService) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
         this.notificationService = notificationService;
-        repositories.put(NodeType.ROOT, new RootNodeInfoRepositoryProxy(rootNodeInfoRepository));
-        repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
         this.self = networkModificationTreeService;
         this.rootNodeInfoRepository = rootNodeInfoRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.rootNetworkService = rootNetworkService;
-        this.rootNetworkRepository = rootNetworkRepository;
         this.reportService = reportService;
     }
 
@@ -303,7 +293,11 @@ public class NetworkModificationTreeService {
                     .forEach(child -> deleteNodes(child.getIdNode(), true, false, removedNodes, deleteNodeInfos));
             }
             removedNodes.add(id);
-            repositories.get(nodeToDelete.getType()).deleteByNodeId(id);
+            if (nodeToDelete.getType() == NodeType.ROOT) {
+                rootNodeInfoRepository.deleteById(id);
+            } else {
+                networkModificationNodeInfoRepository.deleteById(id);
+            }
             nodesRepository.delete(nodeToDelete);
         });
     }
@@ -316,10 +310,18 @@ public class NetworkModificationTreeService {
     public void doDeleteTree(UUID studyId) {
         try {
             List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
-            repositories.forEach((key, repository) ->
-                repository.deleteAll(
-                    nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()))
-            );
+            Map<NodeType, List<NodeEntity>> nodeUuidsByType = nodes.stream().collect(Collectors.groupingBy(NodeEntity::getType));
+            // remove root node infos entities
+            List<NodeEntity> rootNodesToDelete = nodeUuidsByType.get(NodeType.ROOT);
+            if (rootNodesToDelete != null) {
+                rootNodeInfoRepository.deleteByIdNodeIn(rootNodesToDelete.stream().map(NodeEntity::getIdNode).collect(Collectors.toList()));
+            }
+            // remove network modification node infos entities
+            List<NodeEntity> networkModificationNodesToDelete = nodeUuidsByType.get(NodeType.NETWORK_MODIFICATION);
+            if (networkModificationNodesToDelete != null) {
+                networkModificationNodeInfoRepository.deleteByIdNodeIn(networkModificationNodesToDelete.stream().map(NodeEntity::getIdNode).toList());
+            }
+            // remove node entities
             nodesRepository.deleteAll(nodes);
         } catch (EntityNotFoundException ignored) {
             // nothing to do
@@ -369,8 +371,8 @@ public class NetworkModificationTreeService {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
 
         List<AbstractNode> allNodeInfos = new ArrayList<>();
-        repositories.forEach((key, repository) -> allNodeInfos.addAll(repository.getAll(
-            nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()))));
+        allNodeInfos.addAll(rootNodeInfoRepository.findAllByNodeStudyId(studyId).stream().map(RootNodeInfoEntity::toDto).toList());
+        allNodeInfos.addAll(networkModificationNodeInfoRepository.findAllByNodeStudyId(studyId).stream().map(NetworkModificationNodeInfoEntity::toDto).toList());
         if (rootNetworkUuid != null) {
             completeNodeInfos(allNodeInfos, rootNetworkUuid);
         }
@@ -487,11 +489,16 @@ public class NetworkModificationTreeService {
     }
 
     private NodeEntity getNodeEntity(UUID nodeId) {
-        return nodesRepository.findById(nodeId).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        return nodesRepository.findById(nodeId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
     }
 
     private AbstractNode getSimpleNode(UUID nodeId) {
-        return nodesRepository.findById(nodeId).map(n -> repositories.get(n.getType()).getNode(nodeId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        NodeEntity nodeEntity = nodesRepository.findById(nodeId).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        if (nodeEntity.getType() == NodeType.ROOT) {
+            return rootNodeInfoRepository.findById(nodeId).map(RootNodeInfoEntity::toDto).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        } else {
+            return networkModificationNodeInfoRepository.findById(nodeId).map(NetworkModificationNodeInfoEntity::toDto).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        }
     }
 
     @Transactional
@@ -599,9 +606,16 @@ public class NetworkModificationTreeService {
     }
 
     public List<Pair<AbstractNode, Integer>> getStashedNodes(UUID studyUuid) {
+        // get ordered list of stashed NodeEntity
         List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndStashedAndParentNodeIdNodeOrderByStashDateDesc(studyUuid, true, null);
+        // get all their NetworkModificationInfos - order is not guarantied when using findAllById, we save them in a map to use them in the next operation
+        Map<UUID, NetworkModificationNode> networkModificationNodeInfos = networkModificationNodeInfoRepository.findAllById(nodes.stream().map(NodeEntity::getIdNode).toList())
+            .stream().map(NetworkModificationNodeInfoEntity::toDto)
+            .collect(Collectors.toMap(NetworkModificationNode::getId, Function.identity()));
+
         List<Pair<AbstractNode, Integer>> result = new ArrayList<>();
-        repositories.get(NodeType.NETWORK_MODIFICATION).getAllInOrder(nodes.stream().map(NodeEntity::getIdNode).toList())
+        // use ordered list with map to compute result
+        nodes.stream().map(node -> networkModificationNodeInfos.get(node.getIdNode()))
             .forEach(abstractNode -> {
                 ArrayList<UUID> children = new ArrayList<>();
                 doGetChildren(abstractNode.getId(), children);
@@ -682,7 +696,7 @@ public class NetworkModificationTreeService {
     }
 
     private void getBuildInfos(NodeEntity nodeEntity, UUID rootNetworkUuid, BuildInfos buildInfos, UUID nodeToBuildUuid) {
-        AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
+        AbstractNode node = getSimpleNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
             RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeEntity.getIdNode(), rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
@@ -842,7 +856,12 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public Optional<Boolean> isReadOnly(UUID nodeUuid) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).isReadOnly(nodeUuid));
+        NodeEntity nodeEntity = getNodeEntity(nodeUuid);
+        if (nodeEntity.getType() == NodeType.ROOT) {
+            return rootNodeInfoRepository.findById(nodeUuid).map(RootNodeInfoEntity::getReadOnly);
+        } else {
+            return networkModificationNodeInfoRepository.findById(nodeUuid).map(NetworkModificationNodeInfoEntity::getReadOnly);
+        }
     }
 
     @Transactional(readOnly = true)
