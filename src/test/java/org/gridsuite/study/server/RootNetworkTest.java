@@ -313,6 +313,11 @@ class RootNetworkTest {
                 .header("userId", USER_ID)
                 .header("content-type", "application/json"))
             .andExpect(status().isForbidden());
+
+        // test name non existence
+        mockMvc.perform(head("/v1/studies/{studyUuid}/root-networks?name={rootNetworkName}", studyEntity.getId(), "rootNetworkNameNotExist")
+                .header("userId", USER_ID))
+            .andExpect(status().isNoContent());
     }
 
     @Test
@@ -339,6 +344,11 @@ class RootNetworkTest {
             .header("userId", USER_ID)
             .header("content-type", "application/json"))
             .andExpect(status().isForbidden());
+
+        // test tag non existence
+        mockMvc.perform(head("/v1/studies/{studyUuid}/root-networks?tag={rootNetworkTag}", studyEntity.getId(), "xxxx")
+                .header("userId", USER_ID))
+            .andExpect(status().isNoContent());
     }
 
     @Test
