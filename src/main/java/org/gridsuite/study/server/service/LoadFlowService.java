@@ -21,6 +21,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -92,10 +93,14 @@ public class LoadFlowService extends AbstractComputationService {
         restTemplate.delete(loadFlowServerBaseUri + path);
     }
 
-    public void deleteLoadFlowResults() {
+    public void deleteLoadFlowResults(List<UUID> resultsUuids) {
         try {
-            String path = UriComponentsBuilder
-                    .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results").toUriString();
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder
+                    .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results");
+            if (!CollectionUtils.isEmpty(resultsUuids)) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
+            }
+            String path = uriComponentsBuilder.build().toUriString();
             restTemplate.delete(loadFlowServerBaseUri + path, Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);

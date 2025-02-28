@@ -23,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -247,10 +248,13 @@ public class ShortCircuitService extends AbstractComputationService {
         restTemplate.delete(shortCircuitServerBaseUri + path);
     }
 
-    public void deleteShortCircuitAnalysisResults() {
+    public void deleteShortCircuitAnalysisResults(List<UUID> resultsUuids) {
         try {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results")
-                .toUriString();
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results");
+            if (!CollectionUtils.isEmpty(resultsUuids)) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
+            }
+            String path = uriComponentsBuilder.build().toUriString();
             restTemplate.delete(shortCircuitServerBaseUri + path);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);

@@ -22,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -29,6 +30,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -226,9 +228,13 @@ public class SecurityAnalysisService extends AbstractComputationService {
         restTemplate.delete(securityAnalysisServerBaseUri + path);
     }
 
-    public void deleteSecurityAnalysisResults() {
+    public void deleteSecurityAnalysisResults(List<UUID> resultsUuids) {
         try {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results").toUriString();
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results");
+            if (!CollectionUtils.isEmpty(resultsUuids)) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
+            }
+            String path = uriComponentsBuilder.build().toUriString();
             restTemplate.delete(securityAnalysisServerBaseUri + path);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
