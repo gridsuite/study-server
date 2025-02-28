@@ -301,6 +301,11 @@ class RootNetworkTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
 
+        // test name existence
+        mockMvc.perform(head("/v1/studies/{studyUuid}/root-networks?name={rootNetworkName}", studyEntity.getId(), "rootNetworkName")
+                .header("userId", USER_ID))
+            .andExpect(status().isOk());
+
         // execute request to create root network with name "rootNetworkName" - should fail since this name already exists within the same study
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
@@ -311,17 +316,28 @@ class RootNetworkTest {
     }
 
     @Test
-    void testCreateRootNeworkWithExistingTag() throws Exception {
+    void testCreateRootNeworkWithForbiddenTag() throws Exception {
         // create study with first root network - first root network will have the tag "dum"
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
 
+        // test tag existence
+        mockMvc.perform(head("/v1/studies/{studyUuid}/root-networks?tag={rootNetworkTag}", studyEntity.getId(), "dum")
+                .header("userId", USER_ID))
+            .andExpect(status().isOk());
+
         // execute request to create root network with tag "dum" - should fail since this tag already exists within the same study
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkName", "dum")
+        String tag = "dum"; // dummy Study default tag
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkNewName", tag)
                 .header("userId", USER_ID)
                 .header("content-type", "application/json"))
+            .andExpect(status().isForbidden());
+        tag = "thisisatagName"; // forbidden size tag
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkNewName", tag)
+            .header("userId", USER_ID)
+            .header("content-type", "application/json"))
             .andExpect(status().isForbidden());
     }
 
