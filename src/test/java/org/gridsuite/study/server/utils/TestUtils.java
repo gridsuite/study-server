@@ -133,7 +133,7 @@ public final class TestUtils {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
                 .spreadsheetConfigCollectionUuid(spreadsheetCollectionUuid)
                 .build();
-        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).build();
+        RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").tag("dum").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).build();
         studyEntity.addRootNetwork(rootNetworkEntity);
         return studyEntity;
     }
