@@ -31,6 +31,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -301,5 +302,15 @@ public class StateEstimationService {
             throw handleHttpError(e, DELETE_STATE_ESTIMATION_PARAMETERS_FAILED);
         }
 
+    }
+
+    public void invalidateStateEstimationStatus(List<UUID> uuids) {
+        if (!uuids.isEmpty()) {
+            String path = UriComponentsBuilder
+                .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/invalidate-status")
+                .queryParam(RESULT_UUID, uuids).build().toUriString();
+
+            restTemplate.put(stateEstimationServerServerBaseUri + path, Void.class);
+        }
     }
 }
