@@ -334,9 +334,10 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public void updateNetworkRequest(UUID studyUuid, UUID rootNetworkUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
+    public void updateNetworkRequest(UUID studyUuid, UUID rootNetworkUuid, String rootNetworkName, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
         UUID importReportUuid = UUID.randomUUID();
-        persistNetwork(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+        UUID clonedCaseUuid = caseService.duplicateCase(caseUuid, true);
+        persistNetwork(clonedCaseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
     }
 
     @Transactional
@@ -346,6 +347,7 @@ public class StudyService {
 
         // Invalidate nodes of the updated root network
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        notificationService.emitRootNetworkModified(studyUuid, rootNetworkUuid);
         invalidateBuild(studyUuid, rootNodeUuid, rootNetworkUuid, false, false, true);
     }
 
