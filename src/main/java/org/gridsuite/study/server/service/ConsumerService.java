@@ -267,11 +267,12 @@ public class ConsumerService {
         UUID voltageInitParametersUuid = createDefaultVoltageInitParameters(userId, userProfileInfos);
         UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
         UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
+        UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, spreadsheetConfigCollectionUuid,
             importParameters, importReportUuid);
     }
 
@@ -418,6 +419,26 @@ public class ConsumerService {
             return stateEstimationService.createDefaultStateEstimationParameters();
         } catch (final Exception e) {
             LOGGER.error("Error while creating state estimation default parameters", e);
+            return null;
+        }
+    }
+
+    private UUID createDefaultSpreadsheetConfigCollection(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
+            // try to access/duplicate the user profile spreadsheet config collection
+            try {
+                return studyConfigService.duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate spreadsheet config collection with id '%s' from user/profile '%s/%s'. Using default spreadsheet config collection",
+                    userProfileInfos.getSpreadsheetConfigCollectionId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad spreadsheet config collection in profile => use default values
+        try {
+            return studyConfigService.createDefaultSpreadsheetConfigCollection();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default spreadsheet config collection", e);
             return null;
         }
     }

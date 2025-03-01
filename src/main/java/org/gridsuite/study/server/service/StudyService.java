@@ -299,13 +299,13 @@ public class StudyService {
     }
 
     @Transactional
-    public RootNetworkCreationRequestInfos createRootNetworkRequest(UUID studyUuid, String rootNetworkName, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
-        rootNetworkService.assertCanCreateRootNetwork(studyUuid, rootNetworkName);
+    public RootNetworkCreationRequestInfos createRootNetworkRequest(UUID studyUuid, String rootNetworkName, String rootNetworkTag, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
+        rootNetworkService.assertCanCreateRootNetwork(studyUuid, rootNetworkName, rootNetworkTag);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
         UUID importReportUuid = UUID.randomUUID();
         UUID rootNetworkUuid = UUID.randomUUID();
-        RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, rootNetworkName, userId);
+        RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, rootNetworkName, rootNetworkTag, userId);
         UUID clonedCaseUuid = caseService.duplicateCase(caseUuid, true);
         try {
             networkConversionService.persistNetwork(clonedCaseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
@@ -324,6 +324,7 @@ public class StudyService {
         Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntityOpt = rootNetworkService.getCreationRequest(rootNetworkInfos.getId());
         if (rootNetworkCreationRequestEntityOpt.isPresent()) {
             rootNetworkInfos.setName(rootNetworkCreationRequestEntityOpt.get().getName());
+            rootNetworkInfos.setTag(rootNetworkCreationRequestEntityOpt.get().getTag());
             rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
             rootNetworkService.deleteCreationRequest(rootNetworkCreationRequestEntityOpt.get());
         } else {
@@ -473,6 +474,9 @@ public class StudyService {
                 if (s.getStateEstimationParametersUuid() != null) {
                     stateEstimationService.deleteStateEstimationParameters(s.getStateEstimationParametersUuid());
                 }
+                if (s.getSpreadsheetConfigCollectionUuid() != null) {
+                    studyConfigService.deleteSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
+                }
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -523,7 +527,7 @@ public class StudyService {
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                               UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid,
-                                              Map<String, String> importParameters, UUID importReportUuid) {
+                                              UUID spreadsheetConfigCollectionUuid, Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -537,7 +541,7 @@ public class StudyService {
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
-                stateEstimationParametersUuid, importParameters, importReportUuid);
+                stateEstimationParametersUuid, spreadsheetConfigCollectionUuid, importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
@@ -615,6 +619,11 @@ public class StudyService {
             copiedNetworkVisualizationParametersUuid = studyConfigService.duplicateNetworkVisualizationParameters(sourceStudyEntity.getNetworkVisualizationParametersUuid());
         }
 
+        UUID copiedSpreadsheetConfigCollectionUuid = null;
+        if (sourceStudyEntity.getSpreadsheetConfigCollectionUuid() != null) {
+            copiedSpreadsheetConfigCollectionUuid = studyConfigService.duplicateSpreadsheetConfigCollection(sourceStudyEntity.getSpreadsheetConfigCollectionUuid());
+        }
+
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
 
         UUID copiedStateEstimationParametersUuid = null;
@@ -633,6 +642,7 @@ public class StudyService {
             .voltageInitParametersUuid(copiedVoltageInitParametersUuid)
             .sensitivityAnalysisParametersUuid(copiedSensitivityAnalysisParametersUuid)
             .networkVisualizationParametersUuid(copiedNetworkVisualizationParametersUuid)
+            .spreadsheetConfigCollectionUuid(copiedSpreadsheetConfigCollectionUuid)
             .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
             .stateEstimationParametersUuid(copiedStateEstimationParametersUuid)
             .build());
@@ -1198,6 +1208,10 @@ public class StudyService {
         voltageInitService.invalidateVoltageInitStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, VOLTAGE_INITIALIZATION));
     }
 
+    public void invalidateStateEstimationStatusOnAllNodes(UUID studyUuid) {
+        stateEstimationService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
+    }
+
     private StudyEntity updateStudyIndexationStatus(StudyEntity studyEntity, StudyIndexationStatus indexationStatus) {
         studyEntity.setIndexationStatus(indexationStatus);
         notificationService.emitStudyIndexationStatusChanged(studyEntity.getId(), indexationStatus);
@@ -1213,7 +1227,7 @@ public class StudyService {
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                                     UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid,
-                                                    Map<String, String> importParameters, UUID importReportUuid) {
+                                                    UUID spreadsheetConfigCollectionUuid, Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -1230,10 +1244,11 @@ public class StudyService {
                 .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
                 .dynamicSecurityAnalysisParametersUuid(dynamicSecurityAnalysisParametersUuid)
                 .stateEstimationParametersUuid(stateEstimationParametersUuid)
+                .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
                 .build();
 
         var study = studyRepository.save(studyEntity);
-        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().id(UUID.randomUUID()).name(caseInfos.getCaseName()).networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).build());
+        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().id(UUID.randomUUID()).name(caseInfos.getCaseName()).networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).tag("1").build());
         networkModificationTreeService.createBasicTree(study);
 
         return study;
@@ -2117,6 +2132,12 @@ public class StudyService {
         );
     }
 
+    @Transactional
+    public String getSpreadsheetConfigCollection(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return studyConfigService.getSpreadsheetConfigCollection(studyConfigService.getSpreadsheetConfigCollectionUuidOrElseCreateDefaults(studyEntity));
+    }
+
     public boolean shouldApplyModifications(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return Optional.ofNullable(studyEntity.getVoltageInitParameters())
@@ -2690,6 +2711,7 @@ public class StudyService {
         } else {
             stateEstimationService.updateStateEstimationParameters(existingStateEstimationParametersUuid, parameters);
         }
+        invalidateStateEstimationStatusOnAllNodes(studyEntity.getId());
     }
 
     @Transactional

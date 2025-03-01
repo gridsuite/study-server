@@ -32,6 +32,8 @@ public class RootNetworkCreationRequestEntity {
 
     private String userId;
 
+    private String tag;
+
     public RootNetworkCreationRequestInfos toDto() {
         return RootNetworkCreationRequestInfos.builder()
             .id(this.getId())
@@ -41,6 +43,6 @@ public class RootNetworkCreationRequestEntity {
     }
 
     public BasicRootNetworkInfos toBasicDto() {
-        return new BasicRootNetworkInfos(getId(), getName(), true);
+        return new BasicRootNetworkInfos(getId(), getName(), getTag(), true);
     }
 }
