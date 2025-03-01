@@ -15,7 +15,10 @@ import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
@@ -104,7 +107,11 @@ public class RootNetworkNodeInfoEntity {
     private NodeBuildStatusEmbeddable nodeBuildStatus;
 
     @ElementCollection
-    private Set<UUID> modificationsToExclude = new HashSet<>();
+    @CollectionTable(name = "RootNetworkNodeInfoModificationsToExclude",
+        joinColumns = @JoinColumn(name = "root_network_node_info_id"),
+        indexes = {@Index(name = "root_network_node_info_entity_modificationsUuidsToExclude_idx1", columnList = "root_network_node_info_id")},
+        foreignKey = @ForeignKey(name = "root_network_node_info_entity_modificationsUuidsToExclude_fk1"))
+    private Set<UUID> modificationsUuidsToExclude = new HashSet<>();
 
     public RootNetworkNodeInfo toDto() {
         return RootNetworkNodeInfo.builder()
@@ -127,10 +134,10 @@ public class RootNetworkNodeInfoEntity {
     }
 
     public void addModificationsToExclude(Set<UUID> uuids) {
-        modificationsToExclude.addAll(uuids);
+        modificationsUuidsToExclude.addAll(uuids);
     }
 
     public void removeModificationsFromExclude(Set<UUID> uuids) {
-        modificationsToExclude.removeAll(uuids);
+        modificationsUuidsToExclude.removeAll(uuids);
     }
 }
