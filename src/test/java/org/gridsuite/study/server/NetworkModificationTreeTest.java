@@ -505,7 +505,7 @@ class NetworkModificationTreeTest {
         assertFalse(responseContent.contains(n3.getId().toString()));
         assertTrue(responseContent.contains(n4.getId().toString()));
 
-        //The node's order should be consistent
+        //The nodes order should be consistent
         int indexN4 = responseContent.indexOf("\"name\":\"n4\"");
         int indexN1 = responseContent.indexOf("\"name\":\"n1\"");
         int indexNotBuilt = responseContent.indexOf("\"name\":\"not_built\"");

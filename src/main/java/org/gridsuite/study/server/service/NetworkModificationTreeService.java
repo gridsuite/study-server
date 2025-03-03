@@ -608,7 +608,7 @@ public class NetworkModificationTreeService {
     public List<Pair<AbstractNode, Integer>> getStashedNodes(UUID studyUuid) {
         // get ordered list of stashed NodeEntity
         List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndStashedAndParentNodeIdNodeOrderByStashDateDesc(studyUuid, true, null);
-        // get all their NetworkModificationInfos - order is not guarantied when using findAllById, we save them in a map to use them in the next operation
+        // get all their NetworkModificationInfos - order is not guaranteed when using findAllById, we save them in a map to use them in the next operation
         Map<UUID, NetworkModificationNode> networkModificationNodeInfos = networkModificationNodeInfoRepository.findAllById(nodes.stream().map(NodeEntity::getIdNode).toList())
             .stream().map(NetworkModificationNodeInfoEntity::toDto)
             .collect(Collectors.toMap(NetworkModificationNode::getId, Function.identity()));
