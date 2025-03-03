@@ -305,12 +305,12 @@ public class NetworkModificationService {
     }
 
     public NetworkModificationsResult duplicateOrInsertModifications(UUID groupUuid, ModificationsActionType action,
-                                                                                    Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
+                                                                     Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
         return handleModifications(groupUuid, null, action, modificationContextInfos);
     }
 
     private NetworkModificationsResult handleModifications(UUID groupUuid, UUID originGroupUuid, ModificationsActionType action,
-                                                                         Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
+                                                           Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam(QUERY_PARAM_ACTION, action.name());
 

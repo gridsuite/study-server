@@ -1673,7 +1673,7 @@ public class StudyService {
             networkModificationService.deleteModifications(groupId, modificationsUuids);
             // for each root network, remove modifications from excluded ones
             studyEntity.getRootNetworks().forEach(rootNetworkEntity -> {
-                rootNetworkNodeInfoService.updateModificationToExclude(nodeUuid, rootNetworkEntity.getId(), new HashSet<>(modificationsUuids), true);
+                rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkEntity.getId(), new HashSet<>(modificationsUuids), true);
             });
             updateStatuses(studyUuid, nodeUuid, false, false, false);
         } finally {
@@ -1725,7 +1725,7 @@ public class StudyService {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
-            rootNetworkNodeInfoService.updateModificationToExclude(nodeUuid, rootNetworkUuid, modificationsUuids, activated);
+            rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkUuid, modificationsUuids, activated);
             updateStatuses(studyUuid, nodeUuid, rootNetworkUuid, false, true, true);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, Optional.of(rootNetworkUuid), childrenUuids);
@@ -1895,7 +1895,7 @@ public class StudyService {
                 .toList();
 
             NetworkModificationsResult networkModificationsResult = networkModificationService.moveModifications(originGroupUuid, targetGroupUuid, beforeUuid, Pair.of(modificationUuidList, modificationApplicationContexts), buildTargetNode);
-            rootNetworkNodeInfoService.moveExcludedModificationBetweenNodes(originNodeUuid, targetNodeUuid, networkModificationsResult.modificationUuids());
+            rootNetworkNodeInfoService.moveModificationsToExclude(originNodeUuid, targetNodeUuid, networkModificationsResult.modificationUuids());
 
             if (!targetNodeBelongsToSourceNodeSubTree) {
                 // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
@@ -1942,12 +1942,12 @@ public class StudyService {
                 .toList();
             NetworkModificationsResult networkModificationResults = networkModificationService.duplicateOrInsertModifications(groupUuid, action, Pair.of(modificationUuidList, modificationApplicationContexts));
 
-            Map<UUID, UUID> originToDuplicateModificationUuidMap = new HashMap<>();
+            Map<UUID, UUID> originToDuplicateModificationsUuids = new HashMap<>();
             for (int i = 0; i < modificationUuidList.size(); i++) {
-                originToDuplicateModificationUuidMap.put(modificationUuidList.get(i), networkModificationResults.modificationUuids().get(i));
+                originToDuplicateModificationsUuids.put(modificationUuidList.get(i), networkModificationResults.modificationUuids().get(i));
             }
 
-            rootNetworkNodeInfoService.updateExcludedModifications(study.getRootNetworks(), nodeUuid, originToDuplicateModificationUuidMap);
+            rootNetworkNodeInfoService.updateModificationsToExclude(study.getRootNetworks(), nodeUuid, originToDuplicateModificationsUuids);
 
             if (networkModificationResults != null) {
                 int index = 0;

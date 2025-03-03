@@ -358,12 +358,10 @@ public class RootNetworkNodeInfoService {
     // will update RootNetworkNodeInfoEntity field "modificationToExclude" according to modificationUuids and activated
     // if activated is false, it will add modificationUuids to modificationToExclude
     // otherwise, it will remove them from modificationToExcludes
-    public void updateModificationToExclude(UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationUuids, boolean activated) {
-        Optional<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntityOpt = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid);
-        if (rootNetworkNodeInfoEntityOpt.isEmpty()) {
-            throw new StudyException(ROOT_NETWORK_NOT_FOUND);
-        }
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoEntityOpt.get();
+    public void updateModificationsToExclude(UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationUuids, boolean activated) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository
+            .findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
+            .orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         if (activated) {
             rootNetworkNodeInfoEntity.removeModificationsFromExclude(modificationUuids);
         } else {
@@ -371,12 +369,12 @@ public class RootNetworkNodeInfoService {
         }
     }
 
-    public void moveExcludedModificationBetweenNodes(UUID originNodeUuid, UUID targetNodeUuid, List<UUID> modifications) {
+    public void moveModificationsToExclude(UUID originNodeUuid, UUID targetNodeUuid, List<UUID> modificationsUuids) {
         List<RootNetworkNodeInfoEntity> originRootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByNodeInfoId(originNodeUuid);
         originRootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfoEntity -> {
             Optional<RootNetworkNodeInfoEntity> targetRootNetworkNodeInfoEntityOpt = getRootNetworkNodeInfo(targetNodeUuid, rootNetworkNodeInfoEntity.getRootNetwork().getId());
             if (targetRootNetworkNodeInfoEntityOpt.isPresent()) {
-                Set<UUID> modificationsToMove = modifications.stream().filter(m -> rootNetworkNodeInfoEntity.getModificationsUuidsToExclude().contains(m)).collect(Collectors.toSet());
+                Set<UUID> modificationsToMove = modificationsUuids.stream().filter(m -> rootNetworkNodeInfoEntity.getModificationsUuidsToExclude().contains(m)).collect(Collectors.toSet());
                 rootNetworkNodeInfoEntity.removeModificationsFromExclude(modificationsToMove);
                 targetRootNetworkNodeInfoEntityOpt.get().addModificationsToExclude(modificationsToMove);
             }
@@ -469,9 +467,7 @@ public class RootNetworkNodeInfoService {
             .toList();
     }
 
-    public void updateExcludedModifications(List<RootNetworkEntity> rootNetworkEntities, UUID nodeUuid, Map<UUID, UUID> originToDuplicateModificationUuidMap) {
-        // get all root network node info entities linked to "rootNetworkEntities" and "nodeUuid"
-        // TODO : what to do if isAbsent ?
+    public void updateModificationsToExclude(List<RootNetworkEntity> rootNetworkEntities, UUID nodeUuid, Map<UUID, UUID> originToDuplicateModificationsUuids) {
         Stream<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkEntities.stream().map(rootNetworkEntity ->
             rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkEntity.getId())
         ).filter(Optional::isPresent).map(Optional::get);
@@ -484,7 +480,7 @@ public class RootNetworkNodeInfoService {
             Set<UUID> initialModificationsToExclude = rootNetworkNodeInfoEntity.getModificationsUuidsToExclude();
             Set<UUID> newModificationsToExclude = new HashSet<>();
             initialModificationsToExclude.forEach(modificationToExclude -> {
-                UUID duplicateModificationUuid = originToDuplicateModificationUuidMap.get(modificationToExclude);
+                UUID duplicateModificationUuid = originToDuplicateModificationsUuids.get(modificationToExclude);
                 if (duplicateModificationUuid != null) {
                     newModificationsToExclude.add(duplicateModificationUuid);
                 }

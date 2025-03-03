@@ -1286,7 +1286,7 @@ public class StudyController {
                                                                      @Parameter(description = "Root network UUID") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                      @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                      @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") Set<UUID> networkModificationUuids,
-                                                                     @Parameter(description = "New activated value") @RequestParam(name = "activated", required = true) Boolean activated,
+                                                                     @Parameter(description = "New activated value") @RequestParam(name = "activated") Boolean activated,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.assertNoBuildNoComputationForRootNetworkNode(nodeUuid, rootNetworkUuid);
