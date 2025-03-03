@@ -112,6 +112,7 @@ class NetworkModificationUnitTest {
         RootNetworkEntity firstRootNetworkEntity = RootNetworkEntity.builder()
             .id(UUID.randomUUID())
             .name("rootNetworkName")
+            .tag("rn1")
             .networkUuid(NETWORK_UUID)
             .networkId("netId")
             .caseUuid(CASE_LOADFLOW_UUID)

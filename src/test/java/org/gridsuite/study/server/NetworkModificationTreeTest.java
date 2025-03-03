@@ -318,6 +318,7 @@ class NetworkModificationTreeTest {
         studyEntity.addRootNetwork(RootNetworkEntity.builder()
             .id(UUID.randomUUID())
             .name("rootNetworkName")
+            .tag("dum")
             .caseFormat("").caseUuid(UUID.randomUUID())
             .reportUuid(UUID.randomUUID())
             .caseName("caseName1")
