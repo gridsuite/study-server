@@ -1947,7 +1947,7 @@ public class StudyService {
                 originToDuplicateModificationsUuids.put(modificationUuidList.get(i), networkModificationResults.modificationUuids().get(i));
             }
 
-            rootNetworkNodeInfoService.updateModificationsToExclude(study.getRootNetworks(), nodeUuid, originToDuplicateModificationsUuids);
+            rootNetworkNodeInfoService.copyModificationsToExclude(study.getRootNetworks(), nodeUuid, originToDuplicateModificationsUuids);
 
             if (networkModificationResults != null) {
                 int index = 0;

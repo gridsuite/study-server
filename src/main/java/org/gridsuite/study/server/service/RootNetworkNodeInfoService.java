@@ -381,6 +381,29 @@ public class RootNetworkNodeInfoService {
         });
     }
 
+    public void copyModificationsToExclude(List<RootNetworkEntity> rootNetworkEntities, UUID nodeUuid, Map<UUID, UUID> originToDuplicateModificationsUuids) {
+        Stream<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkEntities.stream().map(rootNetworkEntity ->
+            rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkEntity.getId())
+        ).filter(Optional::isPresent).map(Optional::get);
+
+        // for each root network node info entity, iterate through each modificationsToExclude
+        // for each modification to exclude, check if it is contained in "modificationUuidsMapping"
+        // - if it is found, we add its corresponding uuid to the list "modificationsToExclude"
+        // - otherwise, nothing happens
+        rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfoEntity -> {
+            Set<UUID> initialModificationsToExclude = rootNetworkNodeInfoEntity.getModificationsUuidsToExclude();
+            Set<UUID> newModificationsToExclude = new HashSet<>();
+            initialModificationsToExclude.forEach(modificationToExclude -> {
+                UUID duplicateModificationUuid = originToDuplicateModificationsUuids.get(modificationToExclude);
+                if (duplicateModificationUuid != null) {
+                    newModificationsToExclude.add(duplicateModificationUuid);
+                }
+            });
+            // since it's a set, no need to check if newModificationsToExclude are already in "modificationToExclude"
+            rootNetworkNodeInfoEntity.addModificationsToExclude(newModificationsToExclude);
+        });
+    }
+
     @Transactional
     public void updateRootNetworkNode(UUID nodeUuid, UUID rootNetworkUuid, RootNetworkNodeInfo rootNetworkNodeInfo) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
@@ -465,29 +488,6 @@ public class RootNetworkNodeInfoService {
             rootNetworkNodeInfo.getComputationReports().values().stream())
             .flatMap(Function.identity())
             .toList();
-    }
-
-    public void updateModificationsToExclude(List<RootNetworkEntity> rootNetworkEntities, UUID nodeUuid, Map<UUID, UUID> originToDuplicateModificationsUuids) {
-        Stream<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkEntities.stream().map(rootNetworkEntity ->
-            rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkEntity.getId())
-        ).filter(Optional::isPresent).map(Optional::get);
-
-        // for each root network node info entity, iterate through each modificationsToExclude
-        // for each modification to exclude, check if it is contained in "modificationUuidsMapping"
-        // - if it is found, we add its corresponding uuid to the list "modificationsToExclude"
-        // - otherwise, nothing happens
-        rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfoEntity -> {
-            Set<UUID> initialModificationsToExclude = rootNetworkNodeInfoEntity.getModificationsUuidsToExclude();
-            Set<UUID> newModificationsToExclude = new HashSet<>();
-            initialModificationsToExclude.forEach(modificationToExclude -> {
-                UUID duplicateModificationUuid = originToDuplicateModificationsUuids.get(modificationToExclude);
-                if (duplicateModificationUuid != null) {
-                    newModificationsToExclude.add(duplicateModificationUuid);
-                }
-            });
-            // since it's a set, no need to check if newModificationsToExclude are already in "modificationToExclude"
-            rootNetworkNodeInfoEntity.addModificationsToExclude(newModificationsToExclude);
-        });
     }
 
     public void assertComputationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
