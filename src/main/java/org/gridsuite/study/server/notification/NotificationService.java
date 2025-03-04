@@ -22,10 +22,7 @@ import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com
@@ -383,24 +380,35 @@ public class NotificationService {
     }
 
     public void emitStartModificationEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids, String modificationType) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
-                .setHeader(HEADER_NODES, childrenUuids)
-                .setHeader(HEADER_UPDATE_TYPE, modificationType)
-                .build()
-        );
+        emitStartModificationEquipmentNotification(studyUuid, parentNodeUuid, Optional.empty(), childrenUuids, modificationType);
+    }
+
+    public void emitStartModificationEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Optional<UUID> rootNetworkUuid, Collection<UUID> childrenUuids, String modificationType) {
+        MessageBuilder<String> builder = MessageBuilder.withPayload("")
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
+            .setHeader(HEADER_NODES, childrenUuids)
+            .setHeader(HEADER_UPDATE_TYPE, modificationType);
+        rootNetworkUuid.ifPresent(uuid -> builder.setHeader(HEADER_ROOT_NETWORK, uuid));
+
+        sendUpdateMessage(builder.build());
     }
 
     @PostCompletion
     public void emitEndModificationEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
-                .setHeader(HEADER_NODES, childrenUuids)
-                .setHeader(HEADER_UPDATE_TYPE, MODIFICATIONS_UPDATING_FINISHED)
-                .build()
-        );
+        emitEndModificationEquipmentNotification(studyUuid, parentNodeUuid, Optional.empty(), childrenUuids);
+    }
+
+    @PostCompletion
+    public void emitEndModificationEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Optional<UUID> rootNetworkUuid, Collection<UUID> childrenUuids) {
+        MessageBuilder<String> builder = MessageBuilder.withPayload("")
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
+            .setHeader(HEADER_NODES, childrenUuids)
+            .setHeader(HEADER_UPDATE_TYPE, MODIFICATIONS_UPDATING_FINISHED);
+        rootNetworkUuid.ifPresent(uuid -> builder.setHeader(HEADER_ROOT_NETWORK, uuid));
+
+        sendUpdateMessage(builder.build());
     }
 
     @PostCompletion

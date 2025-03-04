@@ -11,9 +11,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -29,9 +27,15 @@ public class BuildInfos {
 
     private List<UUID> modificationGroupUuids = new ArrayList<>();
 
+    // map with modification groups as key, modification to excludes as value
+    private Map<UUID, Set<UUID>> modificationUuidsToExclude = new HashMap<>();
+
     private List<ReportInfos> reportsInfos = new ArrayList<>();
 
-    public void insertModificationInfos(UUID modificationGroupUuid, ReportInfos reportInfos) {
+    public void insertModificationInfos(UUID modificationGroupUuid, Set<UUID> modificationUuidsToExclude, ReportInfos reportInfos) {
+        if (modificationUuidsToExclude != null && !modificationUuidsToExclude.isEmpty()) {
+            this.modificationUuidsToExclude.put(modificationGroupUuid, modificationUuidsToExclude);
+        }
         modificationGroupUuids.add(0, modificationGroupUuid);
         reportsInfos.add(0, reportInfos);
     }
