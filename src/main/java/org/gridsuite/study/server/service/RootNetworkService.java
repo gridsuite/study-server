@@ -143,8 +143,8 @@ public class RootNetworkService {
     }
 
     @Transactional
-    public void duplicateStudyRootNetworks(StudyEntity newStudyEntity, UUID sourceStudyUuid) {
-        List<RootNetworkEntity> rootNetworkEntities = rootNetworkRepository.findAllWithInfosByStudyId(sourceStudyUuid);
+    public void duplicateStudyRootNetworks(StudyEntity newStudyEntity, StudyEntity sourceStudyEntity) {
+        List<RootNetworkEntity> rootNetworkEntities = sourceStudyEntity.getRootNetworks();
         rootNetworkEntities.forEach(rootNetworkEntityToDuplicate -> {
                 List<VariantInfos> networkVariants = networkService.getNetworkVariants(rootNetworkEntityToDuplicate.getNetworkUuid());
                 // Clone only the initial variant

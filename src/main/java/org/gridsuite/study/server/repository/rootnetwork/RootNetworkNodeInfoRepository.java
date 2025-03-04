@@ -47,6 +47,9 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
 
     Optional<RootNetworkNodeInfoEntity> findByNodeInfoIdAndRootNetworkId(UUID nodeInfoId, UUID rootNetworkUuid);
 
+    @EntityGraph(attributePaths = {"modificationsUuidsToExclude"}, type = EntityGraph.EntityGraphType.LOAD)
+    Optional<RootNetworkNodeInfoEntity> findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(UUID nodeInfoId, UUID rootNetworkUuid);
+
     List<RootNetworkNodeInfoEntity> findAllByRootNetworkStudyId(UUID studyUuid);
 
     @Query("select count(rnni) > 0 from RootNetworkNodeInfoEntity rnni LEFT JOIN rnni.rootNetwork rn LEFT JOIN rn.study s " +

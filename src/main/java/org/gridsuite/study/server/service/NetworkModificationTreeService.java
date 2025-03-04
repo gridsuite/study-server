@@ -127,6 +127,29 @@ public class NetworkModificationTreeService {
         return newNode;
     }
 
+    private NetworkModificationNode duplicateNode(@NonNull StudyEntity study, @NonNull StudyEntity sourceStudy, @NonNull UUID referenceNodeId, @NonNull NetworkModificationNode newNodeInfo, @NonNull UUID originNodeUuid, @NonNull InsertMode insertMode, Map<UUID, UUID> originToDuplicateModificationUuidMap, boolean isDuplicatingStudy) {
+        // create new node
+        NetworkModificationNode newNode = createAndInsertNode(study, referenceNodeId, newNodeInfo, insertMode, null);
+
+        NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
+        NetworkModificationNodeInfoEntity originNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(originNodeUuid);
+        if (!isDuplicatingStudy && study.getId() != sourceStudy.getId()) {
+            rootNetworkNodeInfoService.createNodeLinks(study, newNodeInfoEntity);
+        } else {
+            // when duplicating node within the same study, we need to retrieve excluded modifications from source node
+            // when duplicating study, we need to retrieve excluded modifications from source node as well, but we also need to have a correspondence between source root networks and duplicated ones
+            //     since they are fetched in order, we ensure the duplicate is made accurately
+            Map<RootNetworkEntity, RootNetworkEntity> originToDuplicateRootNetworkMap = new HashMap<>();
+            for (int i = 0; i < sourceStudy.getRootNetworks().size(); i++) {
+                // when study.getId() == sourceStudy.getId(), this mapping makes root networks target themselves, but it makes the code more concise with study duplication
+                originToDuplicateRootNetworkMap.put(sourceStudy.getRootNetworks().get(i), study.getRootNetworks().get(i));
+            }
+            rootNetworkNodeInfoService.duplicateNodeLinks(originNodeInfoEntity.getRootNetworkNodeInfos(), newNodeInfoEntity, originToDuplicateModificationUuidMap, originToDuplicateRootNetworkMap);
+        }
+
+        return newNode;
+    }
+
     @Transactional
     public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
         NodeEntity anchorNode = nodesRepository.findById(anchorNodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
@@ -146,22 +169,25 @@ public class NetworkModificationTreeService {
         UUID newGroupUuid = UUID.randomUUID();
         UUID modificationGroupUuid = self.getModificationGroupUuid(nodeToCopyUuid);
         //First we create the modification group
-        networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid);
+        Map<UUID, UUID> originToDuplicateModificationUuidMap = networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid);
 
         //Then we create the node
         NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationNodeInfoRepository.findById(nodeToCopyUuid).orElseThrow(() -> new StudyException(GET_MODIFICATIONS_FAILED));
         UUID studyUuid = anchorNodeEntity.getStudy().getId();
 
-        NetworkModificationNode node = self.createNode(
+        NetworkModificationNode node = duplicateNode(
             anchorNodeEntity.getStudy(),
+            networkModificationNodeInfoEntity.getNode().getStudy(),
             anchorNodeUuid,
             NetworkModificationNode.builder()
                 .modificationGroupUuid(newGroupUuid)
                 .name(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()))
                 .description(networkModificationNodeInfoEntity.getDescription())
                 .build(),
+                nodeToCopyUuid,
                 insertMode,
-                null
+            originToDuplicateModificationUuidMap,
+            false
         );
 
         return node.getId();
@@ -385,17 +411,17 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void duplicateStudyNodes(StudyEntity studyEntity, UUID sourceStudyUuid, UUID rootNetworkUuid) {
+    public void duplicateStudyNodes(StudyEntity studyEntity, StudyEntity sourceStudyEntity) {
         createRoot(studyEntity);
-        AbstractNode rootNode = getStudyTree(sourceStudyUuid, rootNetworkUuid);
-        cloneStudyTree(rootNode, null, studyEntity);
+        AbstractNode rootNode = getStudyTree(sourceStudyEntity.getId(), null);
+        cloneStudyTree(rootNode, null, studyEntity, sourceStudyEntity, true);
     }
 
     @Transactional
-    public UUID cloneStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity study) {
+    public UUID cloneStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity studyEntity, StudyEntity sourceStudyEntity, boolean isDuplicatingStudy) {
         UUID rootId = null;
         if (NodeType.ROOT.equals(nodeToDuplicate.getType())) {
-            rootId = getStudyRootNodeUuid(study.getId());
+            rootId = getStudyRootNodeUuid(studyEntity.getId());
         }
         UUID nextParentId;
         UUID newModificationGroupId = UUID.randomUUID();
@@ -403,16 +429,16 @@ public class NetworkModificationTreeService {
         if (nodeToDuplicate instanceof NetworkModificationNode model) {
             UUID modificationGroupToDuplicateId = model.getModificationGroupUuid();
             model.setModificationGroupUuid(newModificationGroupId);
-            model.setName(getSuffixedNodeName(study.getId(), model.getName()));
+            model.setName(getSuffixedNodeName(studyEntity.getId(), model.getName()));
 
-            nextParentId = self.createNode(study, nodeParentId, model, InsertMode.CHILD, null).getId();
-            networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId);
+            Map<UUID, UUID> originToDuplicateModificationUuidMap = networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId);
+            nextParentId = duplicateNode(studyEntity, sourceStudyEntity, nodeParentId, model, nodeToDuplicate.getId(), InsertMode.CHILD, originToDuplicateModificationUuidMap, isDuplicatingStudy).getId();
         } else {
             // when cloning studyTree, we don't clone root node
             // if cloning the whole study, the root node is previously created
             nextParentId = rootId;
         }
-        nodeToDuplicate.getChildren().forEach(childToDuplicate -> self.cloneStudyTree(childToDuplicate, nextParentId, study));
+        nodeToDuplicate.getChildren().forEach(childToDuplicate -> self.cloneStudyTree(childToDuplicate, nextParentId, studyEntity, sourceStudyEntity, isDuplicatingStudy));
 
         return nextParentId;
     }
@@ -702,7 +728,7 @@ public class NetworkModificationTreeService {
             RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeEntity.getIdNode(), rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
             if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
                 UUID reportUuid = getModificationReportUuid(nodeEntity.getIdNode(), rootNetworkUuid, nodeToBuildUuid);
-                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), new ReportInfos(reportUuid, modificationNode.getId()));
+                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), rootNetworkNodeInfoEntity.getModificationsUuidsToExclude(), new ReportInfos(reportUuid, modificationNode.getId()));
                 getBuildInfos(nodeEntity.getParentNode(), rootNetworkUuid, buildInfos, nodeToBuildUuid);
             } else {
                 buildInfos.setOriginVariantId(self.getVariantId(nodeEntity.getIdNode(), rootNetworkUuid));

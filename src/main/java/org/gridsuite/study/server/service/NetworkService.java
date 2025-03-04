@@ -97,7 +97,7 @@ public class NetworkService {
         return networkStoreService.cloneNetwork(sourceNetworkId, targetVariantIds);
     }
 
-    UUID getNetworkUuid(Network network) {
+    public UUID getNetworkUuid(Network network) {
         return networkStoreService.getNetworkUuid(network);
     }
 
