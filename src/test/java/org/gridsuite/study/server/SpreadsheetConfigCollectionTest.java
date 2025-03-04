@@ -34,6 +34,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -69,6 +70,10 @@ class SpreadsheetConfigCollectionTest {
     private static final String NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING = "6329cd37-2287-5bd6-b971-e8453fa9cdb8";
     private static final String NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON = "\"" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "\"";
     private static final UUID NEW_SPREADSHEET_CONFIG_COLLECTION_UUID = UUID.fromString(NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING);
+
+    // UUID for testing delete failure
+    private static final String ERROR_DELETE_COLLECTION_UUID_STRING = "7715da48-3390-47cb-8d9a-f936c8ca6a71";
+    private static final UUID ERROR_DELETE_COLLECTION_UUID = UUID.fromString(ERROR_DELETE_COLLECTION_UUID_STRING);
 
     private static final String SPREADSHEET_CONFIG_COLLECTION_JSON;
     private static final String NEW_SPREADSHEET_CONFIG_COLLECTION_JSON;
@@ -122,6 +127,10 @@ class SpreadsheetConfigCollectionTest {
                     }
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
                 } else if (path.matches("/v1/spreadsheet-config-collections/.*") && "DELETE".equals(method)) {
+                    // Return an error for the specific UUID that should trigger a delete error
+                    if (path.contains(ERROR_DELETE_COLLECTION_UUID_STRING)) {
+                        return new MockResponse(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                    }
                     return new MockResponse(200);
                 } else if (path.equals("/v1/spreadsheet-config-collections/default")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
@@ -159,6 +168,35 @@ class SpreadsheetConfigCollectionTest {
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING)));
     }
+
+    @Test
+    void testUpdateSpreadsheetConfigCollectionWithDeleteError(final MockWebServer server) throws Exception {
+        // Create a study with an existing spreadsheet config collection
+        // Use the special UUID that will trigger a delete error
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, ERROR_DELETE_COLLECTION_UUID);
+        UUID studyUuid = studyEntity.getId();
+
+        // Test update - despite the delete error, this should succeed
+        MvcResult mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
+                        .param("collectionUuid", SPREADSHEET_CONFIG_COLLECTION_UUID.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        // Verify the response contains the new collection
+        JSONAssert.assertEquals(NEW_SPREADSHEET_CONFIG_COLLECTION_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+
+        // Test that the study has been updated despite the delete error
+        StudyEntity updatedStudy = studyRepository.findById(studyUuid).orElseThrow();
+        assertEquals(NEW_SPREADSHEET_CONFIG_COLLECTION_UUID, updatedStudy.getSpreadsheetConfigCollectionUuid());
+
+        // Verify the HTTP requests made to the server
+        var requests = TestUtils.getRequestsDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=" + SPREADSHEET_CONFIG_COLLECTION_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + ERROR_DELETE_COLLECTION_UUID_STRING)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING)));
+    }
+
 
     @Test
     void testGetSpreadsheetCollection(final MockWebServer server) throws Exception {
