@@ -9,9 +9,7 @@ package org.gridsuite.study.server.dto.modification;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact;
