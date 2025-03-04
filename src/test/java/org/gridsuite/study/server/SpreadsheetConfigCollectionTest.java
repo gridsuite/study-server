@@ -43,8 +43,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -64,12 +66,18 @@ class SpreadsheetConfigCollectionTest {
 
     private static final String SPREADSHEET_CONFIG_COLLECTION_UUID_STRING = "5218bc26-1196-4ac5-a860-d7342359bca7";
     private static final UUID SPREADSHEET_CONFIG_COLLECTION_UUID = UUID.fromString(SPREADSHEET_CONFIG_COLLECTION_UUID_STRING);
+    private static final String NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING = "6329cd37-2287-5bd6-b971-e8453fa9cdb8";
+    private static final String NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON = "\"" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "\"";
+    private static final UUID NEW_SPREADSHEET_CONFIG_COLLECTION_UUID = UUID.fromString(NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING);
+
     private static final String SPREADSHEET_CONFIG_COLLECTION_JSON;
+    private static final String NEW_SPREADSHEET_CONFIG_COLLECTION_JSON;
     private static final String SPREADSHEET_CONFIG_COLLECTION_UUID_JSON = "\"" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "\"";
 
     static {
         try {
             SPREADSHEET_CONFIG_COLLECTION_JSON = TestUtils.resourceToString("/spreadsheet-config-collection.json");
+            NEW_SPREADSHEET_CONFIG_COLLECTION_JSON = TestUtils.resourceToString("/spreadsheet-config-updated-collection.json");
         } catch (IOException e) {
             throw new ExceptionInInitializerError(e);
         }
@@ -99,9 +107,22 @@ class SpreadsheetConfigCollectionTest {
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
+                String method = request.getMethod();
                 if (path.equals("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING)) {
 
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SPREADSHEET_CONFIG_COLLECTION_JSON);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SPREADSHEET_CONFIG_COLLECTION_JSON);
+                } else if (path.equals("/v1/spreadsheet-config-collections/" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING)) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NEW_SPREADSHEET_CONFIG_COLLECTION_JSON);
+                } else if (path.equals("/v1/spreadsheet-config-collections/non-existing-collection")) {
+                    return new MockResponse(404);
+                } else if (path.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=.*") && "POST".equals(method)) {
+                    String collectionId = path.substring(path.lastIndexOf("=") + 1);
+                    if (collectionId.equals("non-existing-collection")) {
+                        return new MockResponse(404);
+                    }
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
+                } else if (path.matches("/v1/spreadsheet-config-collections/.*") && "DELETE".equals(method)) {
+                    return new MockResponse(200);
                 } else if (path.equals("/v1/spreadsheet-config-collections/default")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
                 } else {
@@ -111,6 +132,32 @@ class SpreadsheetConfigCollectionTest {
             }
         };
         server.setDispatcher(dispatcher);
+    }
+
+    @Test
+    void testUpdateSpreadsheetConfigCollection(final MockWebServer server) throws Exception {
+        // Create a study with an existing spreadsheet config collection
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, SPREADSHEET_CONFIG_COLLECTION_UUID);
+        UUID studyUuid = studyEntity.getId();
+
+        // Test successful update
+        MvcResult mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
+                        .param("collectionUuid", SPREADSHEET_CONFIG_COLLECTION_UUID.toString())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JSONAssert.assertEquals(NEW_SPREADSHEET_CONFIG_COLLECTION_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+
+        // Test that the study has been updated
+        StudyEntity updatedStudy = studyRepository.findById(studyUuid).orElseThrow();
+        assertEquals(NEW_SPREADSHEET_CONFIG_COLLECTION_UUID, updatedStudy.getSpreadsheetConfigCollectionUuid());
+
+        // Verify the HTTP requests made to the server
+        var requests = TestUtils.getRequestsDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=" + SPREADSHEET_CONFIG_COLLECTION_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING)));
     }
 
     @Test
