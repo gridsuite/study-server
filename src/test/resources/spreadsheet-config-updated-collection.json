@@ -1,0 +1,298 @@
+{
+  "id": "9dddf3d2-7fb7-47f4-8008-d0f499e34d0c",
+  "spreadsheetConfigs": [
+    {
+      "id": "35b000fe-b0c5-4d8e-a04d-3c33a3f6c549",
+      "name": "Batteries",
+      "sheetType": "BATTERY",
+      "columns": [
+        {
+          "uuid": "9fe9b23f-91e5-4160-b415-07532f3d856b",
+          "name": "ID",
+          "type": "TEXT",
+          "precision": null,
+          "formula": "id",
+          "dependencies": null,
+          "id": "id"
+        },
+        {
+          "uuid": "9fc2d94f-e0d1-4764-a1e6-8f088aeca0bb",
+          "name": "Name",
+          "type": "TEXT",
+          "precision": null,
+          "formula": "name",
+          "dependencies": null,
+          "id": "name"
+        },
+        {
+          "uuid": "ab841cf2-d764-46aa-8352-9754bc7c2f59",
+          "name": "Country",
+          "type": "ENUM",
+          "precision": null,
+          "formula": "country",
+          "dependencies": null,
+          "id": "country"
+        },
+        {
+          "uuid": "aab747c1-40a6-4e73-95cd-38c19d583091",
+          "name": "Voltage level ID",
+          "type": "TEXT",
+          "precision": null,
+          "formula": "voltageLevelId",
+          "dependencies": null,
+          "id": "voltageLevelId"
+        },
+        {
+          "uuid": "70308f25-4be1-4562-96d3-f15fc0e2daf7",
+          "name": "Nominal V",
+          "type": "NUMBER",
+          "precision": 0,
+          "formula": "nominalVoltage",
+          "dependencies": null,
+          "id": "nominalVoltage"
+        },
+        {
+          "uuid": "e775a8bb-8e21-4080-960a-2f3995e80c8a",
+          "name": "Connected",
+          "type": "BOOLEAN",
+          "precision": null,
+          "formula": "terminalConnected",
+          "dependencies": null,
+          "id": "terminalConnected"
+        },
+        {
+          "uuid": "c40cfdeb-c7ec-455b-8627-2a0a1910a126",
+          "name": "p (MW)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "p",
+          "dependencies": null,
+          "id": "p"
+        },
+        {
+          "uuid": "abffff0f-4037-4aef-8929-191927037e64",
+          "name": "q (MVar)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "q",
+          "dependencies": null,
+          "id": "q"
+        },
+        {
+          "uuid": "c43b9d06-7829-467e-b653-f048f6cc71a7",
+          "name": "Min P (MW)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "minP",
+          "dependencies": null,
+          "id": "minP"
+        },
+        {
+          "uuid": "f83a94a7-df4f-4874-9bc5-0f0180702653",
+          "name": "Max P (MW)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "maxP",
+          "dependencies": null,
+          "id": "maxP"
+        },
+        {
+          "uuid": "51685cf4-7b7c-47fa-b476-57f5077545fd",
+          "name": "Target P (MW)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "targetP",
+          "dependencies": null,
+          "id": "targetP"
+        },
+        {
+          "uuid": "c8f35705-6e37-47e1-af95-ff25556c643c",
+          "name": "Target Q (MVar)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "targetQ",
+          "dependencies": null,
+          "id": "targetQ"
+        },
+        {
+          "uuid": "0eb5663e-1095-4ec3-b444-aeac07a401c1",
+          "name": "Active power control",
+          "type": "BOOLEAN",
+          "precision": null,
+          "formula": "activePowerControl.participate",
+          "dependencies": null,
+          "id": "activePowerControl.participate"
+        },
+        {
+          "uuid": "3992894e-198c-4fed-8da5-4a0d788af410",
+          "name": "Droop (%)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "activePowerControl.droop",
+          "dependencies": null,
+          "id": "activePowerControl.droop"
+        }
+      ]
+    },
+    {
+      "id": "ecf5d428-f583-436e-8971-e7bd6fcd6169",
+      "name": "HVDC Lines",
+      "sheetType": "HVDC_LINE",
+      "columns": [
+        {
+          "uuid": "1da28045-f064-4ed2-a0be-252f89993b3f",
+          "name": "ID",
+          "type": "TEXT",
+          "precision": null,
+          "formula": "id",
+          "dependencies": null,
+          "id": "id"
+        },
+        {
+          "uuid": "e703ebf6-77f8-4967-a8a7-906d32fa53e2",
+          "name": "Name",
+          "type": "TEXT",
+          "precision": null,
+          "formula": "name",
+          "dependencies": null,
+          "id": "name"
+        },
+        {
+          "uuid": "0f86e816-455f-410a-893d-57e10c75a6d7",
+          "name": "Country 1",
+          "type": "ENUM",
+          "precision": null,
+          "formula": "country1",
+          "dependencies": null,
+          "id": "country1"
+        },
+        {
+          "uuid": "a19f2396-6811-4f12-bc62-270cde9b1f4a",
+          "name": "Country 2",
+          "type": "ENUM",
+          "precision": null,
+          "formula": "country2",
+          "dependencies": null,
+          "id": "country2"
+        },
+        {
+          "uuid": "d26b37c4-6601-466a-b867-81047961679f",
+          "name": "Voltage level ID 1",
+          "type": "TEXT",
+          "precision": null,
+          "formula": "voltageLevelId1",
+          "dependencies": null,
+          "id": "voltageLevelId1"
+        },
+        {
+          "uuid": "cbe1d93d-db00-4564-baeb-7313794fa665",
+          "name": "Voltage level ID 2",
+          "type": "TEXT",
+          "precision": null,
+          "formula": "voltageLevelId2",
+          "dependencies": null,
+          "id": "voltageLevelId2"
+        },
+        {
+          "uuid": "0e31a940-d040-47c5-b971-54131bed5b82",
+          "name": "Converters mode",
+          "type": "ENUM",
+          "precision": null,
+          "formula": "convertersMode",
+          "dependencies": null,
+          "id": "convertersMode"
+        },
+        {
+          "uuid": "857800e6-2d1a-408d-bd8b-9c592128af09",
+          "name": "Converter station ID 1",
+          "type": "TEXT",
+          "precision": null,
+          "formula": "converterStationId1",
+          "dependencies": null,
+          "id": "converterStationId1"
+        },
+        {
+          "uuid": "e6790fc3-02b1-478b-bc15-239524456c91",
+          "name": "Converter station ID 2",
+          "type": "TEXT",
+          "precision": null,
+          "formula": "converterStationId2",
+          "dependencies": null,
+          "id": "converterStationId2"
+        },
+        {
+          "uuid": "9352cb66-2e7c-40b2-88c5-ca1aa3599d85",
+          "name": "Resistance",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "r",
+          "dependencies": null,
+          "id": "r"
+        },
+        {
+          "uuid": "fad7a167-9ae4-4a17-b6ad-2485d04d1729",
+          "name": "Active power set point (MW)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "activePowerSetpoint",
+          "dependencies": null,
+          "id": "activePowerSetpoint"
+        },
+        {
+          "uuid": "53b0853a-5e16-4946-a859-4f85be84ea79",
+          "name": "Max P (MW)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "maxP",
+          "dependencies": null,
+          "id": "maxP"
+        },
+        {
+          "uuid": "2bf84de0-b1a3-4610-9148-16dc8767c45b",
+          "name": "Operational limit (side_1 to side_2) (MW)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "hvdcOperatorActivePowerRange.oprFromCS1toCS2",
+          "dependencies": null,
+          "id": "hvdcOperatorActivePowerRange.oprFromCS1toCS2"
+        },
+        {
+          "uuid": "b339cd4a-df5f-4b9d-abfc-b8fe741ebb82",
+          "name": "Operational limit (side_2 to side_1) (MW)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "hvdcOperatorActivePowerRange.oprFromCS2toCS1",
+          "dependencies": null,
+          "id": "hvdcOperatorActivePowerRange.oprFromCS2toCS1"
+        },
+        {
+          "uuid": "1915b075-ad47-45f5-8d17-0622b2009b3c",
+          "name": "AC emulation",
+          "type": "BOOLEAN",
+          "precision": null,
+          "formula": "hvdcAngleDroopActivePowerControl.isEnabled",
+          "dependencies": null,
+          "id": "hvdcAngleDroopActivePowerControl.isEnabled"
+        },
+        {
+          "uuid": "7e5d87e0-52ed-4f69-b578-dcc46f1955c5",
+          "name": "K (MW/Deg)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "hvdcAngleDroopActivePowerControl.droop",
+          "dependencies": null,
+          "id": "hvdcAngleDroopActivePowerControl.droop"
+        },
+        {
+          "uuid": "3df49ba8-a7e3-4dcf-9da9-8625fe5e430c",
+          "name": "P0 (side_1 to side_2) (MW)",
+          "type": "NUMBER",
+          "precision": 1,
+          "formula": "hvdcAngleDroopActivePowerControl.p0",
+          "dependencies": null,
+          "id": "hvdcAngleDroopActivePowerControl.p0"
+        }
+      ]
+    }
+  ]
+}
