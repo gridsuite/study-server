@@ -509,8 +509,12 @@ class ModificationToExcludeTest {
 
         ArgumentCaptor<BuildInfos> buildInfosCaptor = ArgumentCaptor.forClass(BuildInfos.class);
         Mockito.verify(networkModificationService, Mockito.times(1)).buildNode(eq(secondNode.getId()), eq(rootNetworkBasicInfos.getFirst().rootNetworkUuid()), buildInfosCaptor.capture());
-        assertThat(buildInfosCaptor.getValue().getModificationUuidsToExclude().get(firstNode.getModificationGroupUuid())).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(MODIFICATIONS_TO_EXCLUDE_RN_1);
-        assertThat(buildInfosCaptor.getValue().getModificationUuidsToExclude().get(secondNode.getModificationGroupUuid())).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(MODIFICATIONS_TO_EXCLUDE_RN_2);
+        assertThat(getModificationUuidsToExclude(firstNode.getModificationGroupUuid(), buildInfosCaptor.getValue())).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(MODIFICATIONS_TO_EXCLUDE_RN_1);
+        assertThat(getModificationUuidsToExclude(secondNode.getModificationGroupUuid(), buildInfosCaptor.getValue())).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(MODIFICATIONS_TO_EXCLUDE_RN_2);
+    }
+
+    private Set<UUID> getModificationUuidsToExclude(UUID groupUuid, BuildInfos buildInfos) {
+        return buildInfos.getBuildContextsInfos().stream().filter(buildContext -> groupUuid.equals(buildContext.groupUuid())).findFirst().orElseThrow().excludedModifications();
     }
 
     private Set<UUID> getSetIntersection(Set<UUID> set1, Set<UUID> set2) {
