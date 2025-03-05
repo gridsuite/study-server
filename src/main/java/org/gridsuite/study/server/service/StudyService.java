@@ -71,6 +71,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyException.Type.ROOT_NETWORK_MODIFICATION_FAILED;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
@@ -305,7 +306,7 @@ public class StudyService {
 
         UUID importReportUuid = UUID.randomUUID();
         UUID rootNetworkUuid = UUID.randomUUID();
-        RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, rootNetworkName, rootNetworkTag, userId);
+        RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, rootNetworkName, rootNetworkTag, userId, RootNetworkAction.ROOT_NETWORK_CREATION);
         UUID clonedCaseUuid = caseService.duplicateCase(caseUuid, true);
         try {
             networkConversionService.persistNetwork(clonedCaseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
@@ -333,20 +334,59 @@ public class StudyService {
         notificationService.emitRootNetworksUpdated(studyUuid);
     }
 
-    @Transactional(readOnly = true)
-    public void updateNetworkRequest(UUID studyUuid, UUID rootNetworkUuid, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, String userId) {
-        UUID importReportUuid = UUID.randomUUID();
-        persistNetwork(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+    private void updateRootNetworkInfos(UUID studyUuid, UUID rootNetworkUuid, String name, String tag) {
+        modifyRootNetwork(studyUuid, rootNetworkUuid, RootNetworkInfos.builder()
+                .id(rootNetworkUuid)
+                .name(name)
+                .tag(tag)
+                .build(), false);
     }
 
     @Transactional
-    public void updateNetwork(UUID studyUuid, UUID rootNetworkUuid, RootNetworkInfos rootNetworkInfos) {
-        // Update case for a given root network
-        rootNetworkService.updateNetwork(rootNetworkInfos);
+    public void updateRootNetworkRequest(UUID studyUuid, UUID rootNetworkUuid, UUID caseUuid, String name, String tag, String caseFormat, Map<String, Object> importParameters, String userId) {
+        rootNetworkService.assertCanModifyRootNetwork(studyUuid, name);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
-        // Invalidate nodes of the updated root network
-        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        invalidateBuild(studyUuid, rootNodeUuid, rootNetworkUuid, false, false, true);
+        RootNetworkCreationRequestEntity requestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, name, tag, userId, RootNetworkAction.ROOT_NETWORK_MODIFICATION);
+
+        if (caseUuid != null) {
+            updateRootNetworkCase(caseUuid, studyUuid, rootNetworkUuid, userId, caseFormat, importParameters, requestEntity);
+        } else {
+            updateRootNetworkInfos(studyUuid, rootNetworkUuid, name, tag);
+        }
+    }
+
+    private void updateRootNetworkCase(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String userId, String caseFormat, Map<String, Object> importParameters, RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity) {
+        UUID importReportUuid = UUID.randomUUID();
+        UUID clonedCaseUuid = caseService.duplicateCase(caseUuid, true);
+        try {
+            persistNetwork(clonedCaseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+        } catch (Exception e) {
+            rootNetworkService.deleteCreationRequest(rootNetworkCreationRequestEntity);
+            throw new StudyException(ROOT_NETWORK_MODIFICATION_FAILED);
+        }
+    }
+
+    @Transactional
+    public void modifyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, RootNetworkInfos rootNetworkInfos, boolean updateCase) {
+        rootNetworkService.getCreationRequest(rootNetworkInfos.getId()).ifPresent(request -> {
+            rootNetworkInfos.setName(request.getName());
+            rootNetworkInfos.setTag(request.getTag());
+            rootNetworkService.deleteCreationRequest(request);
+        });
+
+        rootNetworkService.updateNetwork(rootNetworkInfos, updateCase);
+        emitNetworkUpdate(studyUuid, rootNetworkUuid, updateCase);
+    }
+
+    private void emitNetworkUpdate(UUID studyUuid, UUID rootNetworkUuid, boolean updateCase) {
+        if (updateCase) {
+            UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+            invalidateBuild(studyUuid, rootNodeUuid, rootNetworkUuid, false, false, true);
+            notificationService.emitRootNetworkCaseModified(studyUuid, rootNetworkUuid);
+        } else {
+            notificationService.emitRootNetworksUpdated(studyUuid);
+        }
     }
 
     /**
@@ -2814,7 +2854,7 @@ public class StudyService {
         return Stream
             .concat(
                 getExistingRootNetworkInfos(studyUuid).stream(),
-                rootNetworkService.getCreationRequests(studyUuid).stream().map(RootNetworkCreationRequestEntity::toBasicDto))
+                rootNetworkService.getCreationRequests(studyUuid).stream().filter(s -> s.getActionRequest() == RootNetworkAction.ROOT_NETWORK_CREATION).map(RootNetworkCreationRequestEntity::toBasicDto))
             .toList();
     }
 

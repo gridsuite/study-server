@@ -202,14 +202,16 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
     @Operation(summary = "update root network case")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The case is updated for a root network")})
-    public ResponseEntity<Void> updateRootNetworkCase(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> updateRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                       @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                      @RequestParam(value = CASE_UUID) UUID caseUuid,
-                                                      @RequestParam(value = CASE_FORMAT) String caseFormat,
+                                                      @RequestParam(value = CASE_UUID, required = false) UUID caseUuid,
+                                                      @RequestParam(value = "name", required = false) String name,
+                                                      @RequestParam(value = "tag", required = false) String tag,
+                                                      @RequestParam(value = CASE_FORMAT, required = false) String caseFormat,
                                                       @RequestBody(required = false) Map<String, Object> importParameters,
                                                       @RequestHeader(HEADER_USER_ID) String userId) {
         caseService.assertCaseExists(caseUuid);
-        studyService.updateNetworkRequest(studyUuid, rootNetworkUuid, caseUuid, caseFormat, importParameters, userId);
+        studyService.updateRootNetworkRequest(studyUuid, rootNetworkUuid, caseUuid, name, tag, caseFormat, importParameters, userId);
         return ResponseEntity.ok().build();
     }
 
