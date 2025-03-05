@@ -355,9 +355,6 @@ public class RootNetworkNodeInfoService {
         changedNodes.add(nodeUuid);
     }
 
-    // will update RootNetworkNodeInfoEntity field "modificationToExclude" according to modificationUuids and activated
-    // if activated is false, it will add modificationUuids to modificationToExclude
-    // otherwise, it will remove them from modificationToExcludes
     public void updateModificationsToExclude(UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationUuids, boolean activated) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository
             .findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
@@ -370,15 +367,20 @@ public class RootNetworkNodeInfoService {
     }
 
     public void moveModificationsToExclude(UUID originNodeUuid, UUID targetNodeUuid, List<UUID> modificationsUuids) {
-        List<RootNetworkNodeInfoEntity> originRootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByNodeInfoId(originNodeUuid);
-        originRootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfoEntity -> {
-            Optional<RootNetworkNodeInfoEntity> targetRootNetworkNodeInfoEntityOpt = getRootNetworkNodeInfo(targetNodeUuid, rootNetworkNodeInfoEntity.getRootNetwork().getId());
-            if (targetRootNetworkNodeInfoEntityOpt.isPresent()) {
+        rootNetworkNodeInfoRepository.findAllByNodeInfoId(originNodeUuid)
+            .forEach(rootNetworkNodeInfoEntity -> getRootNetworkNodeInfo(targetNodeUuid, rootNetworkNodeInfoEntity.getRootNetwork().getId()).ifPresent(targetRootNetworkNodeInfoEntity -> {
                 Set<UUID> modificationsToMove = modificationsUuids.stream().filter(m -> rootNetworkNodeInfoEntity.getModificationsUuidsToExclude().contains(m)).collect(Collectors.toSet());
                 rootNetworkNodeInfoEntity.removeModificationsFromExclude(modificationsToMove);
-                targetRootNetworkNodeInfoEntityOpt.get().addModificationsToExclude(modificationsToMove);
-            }
-        });
+                targetRootNetworkNodeInfoEntity.addModificationsToExclude(modificationsToMove);
+            }));
+    }
+
+    public void copyModificationsToExclude(UUID originNodeUuid, UUID targetNodeUuid, Map<UUID, UUID> originToDuplicateModificationsUuids) {
+        rootNetworkNodeInfoRepository.findAllByNodeInfoId(originNodeUuid)
+            .forEach(originRootNetworkNodeInfoEntity -> getRootNetworkNodeInfo(targetNodeUuid, originRootNetworkNodeInfoEntity.getRootNetwork().getId()).ifPresent(targetRootNetworkNodeInfoEntity -> {
+                Set<UUID> modificationsToCopy = originRootNetworkNodeInfoEntity.getModificationsUuidsToExclude().stream().map(originToDuplicateModificationsUuids::get).filter(Objects::nonNull).collect(Collectors.toSet());
+                targetRootNetworkNodeInfoEntity.addModificationsToExclude(modificationsToCopy);
+            }));
     }
 
     @Transactional
@@ -465,29 +467,6 @@ public class RootNetworkNodeInfoService {
             rootNetworkNodeInfo.getComputationReports().values().stream())
             .flatMap(Function.identity())
             .toList();
-    }
-
-    public void updateModificationsToExclude(List<RootNetworkEntity> rootNetworkEntities, UUID nodeUuid, Map<UUID, UUID> originToDuplicateModificationsUuids) {
-        Stream<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkEntities.stream().map(rootNetworkEntity ->
-            rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkEntity.getId())
-        ).filter(Optional::isPresent).map(Optional::get);
-
-        // for each root network node info entity, iterate through each modificationsToExclude
-        // for each modification to exclude, check if it is contained in "modificationUuidsMapping"
-        // - if it is found, we add its corresponding uuid to the list "modificationsToExclude"
-        // - otherwise, nothing happens
-        rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfoEntity -> {
-            Set<UUID> initialModificationsToExclude = rootNetworkNodeInfoEntity.getModificationsUuidsToExclude();
-            Set<UUID> newModificationsToExclude = new HashSet<>();
-            initialModificationsToExclude.forEach(modificationToExclude -> {
-                UUID duplicateModificationUuid = originToDuplicateModificationsUuids.get(modificationToExclude);
-                if (duplicateModificationUuid != null) {
-                    newModificationsToExclude.add(duplicateModificationUuid);
-                }
-            });
-            // since it's a set, no need to check if newModificationsToExclude are already in "modificationToExclude"
-            rootNetworkNodeInfoEntity.addModificationsToExclude(newModificationsToExclude);
-        });
     }
 
     public void assertComputationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
