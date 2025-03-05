@@ -187,6 +187,7 @@ class StudyTest {
     private static final String PROFILE_SHORTCIRCUIT_INVALID_PARAMETERS_UUID_STRING = "d09f5112-8e34-41b5-b45e-7ef9f3f36c4f";
     private static final String PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING = "409f5782-8114-48b5-b66e-7ff9f3f36c4f";
     private static final String PROFILE_SPREADSHEET_CONFIG_COLLECTION_INVALID_UUID_STRING = "473ff5ce-4378-8dd2-9d07-ce73c5ef11d9";
+    private static final String PROFILE_NETWORK_VISUALIZATION_INVALID_PARAMETERS_UUID_STRING = "407a4bec-6f1a-400f-98f0-e5bcf37d4fcf";
 
     private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"name\":\"Profile with broken params\",\"loadFlowParameterId\":\"" +
         PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING +
@@ -195,6 +196,7 @@ class StudyTest {
         "\",\"shortcircuitParameterId\":\"" + PROFILE_SHORTCIRCUIT_INVALID_PARAMETERS_UUID_STRING +
         "\",\"voltageInitParameterId\":\"" + PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING +
         "\",\"spreadsheetConfigCollectionId\":\"" + PROFILE_SPREADSHEET_CONFIG_COLLECTION_INVALID_UUID_STRING +
+        "\",\"networkVisualizationParameterId\":\"" + PROFILE_NETWORK_VISUALIZATION_INVALID_PARAMETERS_UUID_STRING +
         "\",\"allLinksValid\":false}";
 
     private static final String PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING = "1cec4a7b-ab7e-4d78-9dd7-ce73c5ef11d9";
@@ -203,6 +205,7 @@ class StudyTest {
     private static final String PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING = "5cec4a2b-affe-4d78-91d7-ce73c5ef11d9";
     private static final String PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING = "9cec4a7b-ab74-5d78-9d07-ce73c5ef11d9";
     private static final String PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING = "2c865123-4378-8dd2-9d07-ce73c5ef11d9";
+    private static final String PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING = "407a4bec-6f1a-400f-98f0-e5bcf37d4fcf";
 
     private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" +
         PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING +
@@ -211,6 +214,7 @@ class StudyTest {
         "\",\"shortcircuitParameterId\":\"" + PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING +
         "\",\"voltageInitParameterId\":\"" + PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING +
         "\",\"spreadsheetConfigCollectionId\":\"" + PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING +
+        "\",\"networkVisualizationParameterId\":\"" + PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING +
         "\",\"allLinksValid\":true}";
 
     private static final String PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
