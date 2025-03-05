@@ -7,6 +7,8 @@
 
 package org.gridsuite.study.server.dto;
 
+import java.io.InputStream;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,6 +24,6 @@ public class ExportNetworkInfos {
 
     private String fileName;
 
-    private byte[] networkData;
+    private InputStream networkData;
 
 }
