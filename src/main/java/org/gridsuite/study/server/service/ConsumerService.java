@@ -230,13 +230,13 @@ public class ConsumerService {
                         case NETWORK_RECREATION ->
                             studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
                         case ROOT_NETWORK_MODIFICATION ->
-                            studyService.updateNetwork(studyUuid, rootNetworkUuid, RootNetworkInfos.builder()
+                            studyService.modifyRootNetwork(studyUuid, rootNetworkUuid, RootNetworkInfos.builder()
                                 .id(rootNetworkUuid)
                                 .networkInfos(networkInfos)
                                 .caseInfos(caseInfos)
                                 .importParameters(importParameters)
                                 .reportUuid(importReportUuid)
-                                .build());
+                                .build(), true);
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {

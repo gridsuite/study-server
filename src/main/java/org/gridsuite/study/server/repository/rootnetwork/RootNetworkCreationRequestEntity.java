@@ -12,6 +12,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
+import org.gridsuite.study.server.dto.RootNetworkAction;
 import org.gridsuite.study.server.dto.RootNetworkCreationRequestInfos;
 
 import java.util.UUID;
@@ -33,6 +34,9 @@ public class RootNetworkCreationRequestEntity {
     private String userId;
 
     private String tag;
+
+    @Enumerated(EnumType.STRING)
+    private RootNetworkAction actionRequest;
 
     public RootNetworkCreationRequestInfos toDto() {
         return RootNetworkCreationRequestInfos.builder()
