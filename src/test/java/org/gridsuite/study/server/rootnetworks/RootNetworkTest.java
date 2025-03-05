@@ -298,7 +298,7 @@ class RootNetworkTest {
     }
 
     @Test
-    void testCreateRootNeworkWithExistingName() throws Exception {
+    void testCreateRootNetworkWithExistingName() throws Exception {
         // create study with first root network - first root network will have the name "rootNetworkName"
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
@@ -323,7 +323,7 @@ class RootNetworkTest {
     }
 
     @Test
-    void testCreateRootNeworkWithForbiddenTag() throws Exception {
+    void testCreateRootNetworkWithForbiddenTag() throws Exception {
         // create study with first root network - first root network will have the tag "dum"
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
@@ -490,7 +490,7 @@ class RootNetworkTest {
         // after deletion, check we have only 1 root network for study
         List<BasicRootNetworkInfos> rootNetworkListAfterDeletion = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
         assertEquals(1, rootNetworkListAfterDeletion.size());
-        assertEquals(firstRootNetworkUuid, rootNetworkListAfterDeletion.get(0).rootNetworkUuid());
+        assertEquals(firstRootNetworkUuid, rootNetworkListAfterDeletion.getFirst().rootNetworkUuid());
 
         // check deletion of 1st link remote infos
         Mockito.verify(reportService, Mockito.times(1)).deleteReports(List.of(REPORT_UUID2));
@@ -530,7 +530,7 @@ class RootNetworkTest {
         studyRepository.save(studyEntity);
 
         networkModificationTreeService.createRoot(studyEntity);
-        UUID firstRootNetworkUuid = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).get(0).rootNetworkUuid();
+        UUID firstRootNetworkUuid = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
 
         // try to delete all root networks
         mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
@@ -575,6 +575,7 @@ class RootNetworkTest {
         assertEquals(newRootNetworkTag, updatedRootNetwork.getTag());
 
     }
+
     @Test
     void testUpdateRootNetworkCase() throws Exception {
         // create study with first root network
