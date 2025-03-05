@@ -262,7 +262,7 @@ public class ConsumerService {
         UUID shortCircuitParametersUuid = createDefaultShortCircuitAnalysisParameters(userId, userProfileInfos);
         UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters(userId, userProfileInfos);
         UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters(userId, userProfileInfos);
-        UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters();
+        UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
         UUID voltageInitParametersUuid = createDefaultVoltageInitParameters(userId, userProfileInfos);
         UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
         UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
@@ -384,7 +384,18 @@ public class ConsumerService {
         }
     }
 
-    private UUID createDefaultNetworkVisualizationParameters() {
+    private UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getNetworkVisualizationParameterId() != null) {
+            // try to access/duplicate the user profile network visualization parameters
+            try {
+                return studyConfigService.duplicateNetworkVisualizationParameters(userProfileInfos.getNetworkVisualizationParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate network visualization parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getNetworkVisualizationParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad network visualization parameters in profile => use default values
         try {
             return studyConfigService.createDefaultNetworkVisualizationParameters();
         } catch (final Exception e) {
