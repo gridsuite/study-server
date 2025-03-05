@@ -10,6 +10,7 @@ package org.gridsuite.study.server.dto;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -22,6 +23,6 @@ public class ExportNetworkInfos {
 
     private String fileName;
 
-    private byte[] networkData;
+    private StreamingResponseBody networkData;
 
 }

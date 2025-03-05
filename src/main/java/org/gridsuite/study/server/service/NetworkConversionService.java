@@ -22,10 +22,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -99,7 +103,7 @@ public class NetworkConversionService {
         return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public ExportNetworkInfos exportNetwork(UUID networkUuid, String variantId, String format, String paramatersJson, String fileName) {
+    public ExportNetworkInfos exportNetwork(UUID networkUuid, String variantId, String format, String parametersJson, String fileName) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
                 + "/networks/{networkUuid}/export/{format}");
         if (!variantId.isEmpty()) {
@@ -113,16 +117,25 @@ public class NetworkConversionService {
         String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
             .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(paramatersJson, headers);
-
-        ResponseEntity<byte[]> responseEntity = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST,
-            httpEntity, byte[].class);
-
-        byte[] bytes = responseEntity.getBody();
-        String filename = responseEntity.getHeaders().getContentDisposition().getFilename();
-        return new ExportNetworkInfos(filename, bytes);
+        StreamingResponseBody streamingResponseBody =outputStream -> restTemplate.execute(
+                networkConversionServerBaseUri + path,
+                HttpMethod.POST,
+                request -> {
+                    request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                    if (parametersJson != null && !parametersJson.isEmpty()) {
+                        StreamUtils.copy(parametersJson, StandardCharsets.UTF_8, request.getBody());
+                    }
+                },
+                clientResponse -> {
+                    try (InputStream inputStream = clientResponse.getBody()) {
+                        inputStream.transferTo(outputStream);
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                    return null;
+                }
+        );
+        return new ExportNetworkInfos(fileName, streamingResponseBody);
     }
 
     public void reindexStudyNetworkEquipments(UUID networkUuid) {
