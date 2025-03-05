@@ -99,8 +99,14 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "sensitivityAnalysisParametersUuid")
     private UUID sensitivityAnalysisParametersUuid;
 
+    @Column(name = "stateEstimationParametersUuid")
+    private UUID stateEstimationParametersUuid;
+
     @Column(name = "networkVisualizationParametersUuid")
     private UUID networkVisualizationParametersUuid;
+
+    @Column(name = "spreadsheetConfigCollectionUuid")
+    private UUID spreadsheetConfigCollectionUuid;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "nonEvacuatedEnergyParametersEntity_id",
@@ -121,8 +127,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
         ))
     private StudyVoltageInitParametersEntity voltageInitParameters;
 
-    //TODO temporary, for now we are only working with one rootNetwork
-    @Transient
     public RootNetworkEntity getFirstRootNetwork() {
         return rootNetworks.get(0);
     }

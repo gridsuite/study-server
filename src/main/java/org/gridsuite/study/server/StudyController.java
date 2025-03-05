@@ -191,11 +191,12 @@ public class StudyController {
     @ApiResponse(responseCode = "200", description = "Root network created")
     public ResponseEntity<RootNetworkCreationRequestInfos> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                                               @RequestParam(value = "name") String name,
+                                                                              @RequestParam(value = "tag") String tag,
                                                                               @RequestParam(value = CASE_UUID) UUID caseUuid,
                                                                               @RequestParam(value = CASE_FORMAT) String caseFormat,
                                                                               @RequestBody(required = false) Map<String, Object> importParameters,
                                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, name, caseUuid, caseFormat, importParameters, userId));
+        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, name, tag, caseUuid, caseFormat, importParameters, userId));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
@@ -212,13 +213,23 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @RequestMapping(method = RequestMethod.HEAD, value = "/studies/{studyUuid}/root-networks")
+    @RequestMapping(method = RequestMethod.HEAD, value = "/studies/{studyUuid}/root-networks", params = {"name"})
     @Operation(summary = "Check if an element with this name and this type already exists in the given directory")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
         @ApiResponse(responseCode = "204", description = "The element doesn't exist")})
     public ResponseEntity<Void> elementExists(@PathVariable("studyUuid") UUID studyUuid,
                                               @RequestParam("name") String rootNetworkName) {
         HttpStatus status = rootNetworkService.isRootNetworkNameExistsInStudy(studyUuid, rootNetworkName) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
+    }
+
+    @RequestMapping(method = RequestMethod.HEAD, value = "/studies/{studyUuid}/root-networks", params = "tag")
+    @Operation(summary = "Check if a root network with this tag already exists in the given study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The tag exists"),
+        @ApiResponse(responseCode = "204", description = "The tag doesn't exist")})
+    public ResponseEntity<Void> rootNetworkTagExists(@PathVariable("studyUuid") UUID studyUuid,
+                                                @RequestParam("tag") String rootNetworkTag) {
+        HttpStatus status = rootNetworkService.isRootNetworkTagExistsInStudy(studyUuid, rootNetworkTag) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
     }
 
@@ -821,6 +832,26 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getVoltageInitParameters(studyUuid));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/spreadsheet-config-collection")
+    @Operation(summary = "Get study spreadsheet config collection")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The spreadsheet config collection")})
+    public ResponseEntity<String> getSpreadsheetConfigCollection(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getSpreadsheetConfigCollection(studyUuid));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/spreadsheet-config-collection")
+    @Operation(summary = "Update study's spreadsheet config collection")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The updated spreadsheet config collection"),
+        @ApiResponse(responseCode = "404", description = "The study or the collection doesn't exist")
+    })
+    public ResponseEntity<String> updateStudySpreadsheetConfigCollection(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestParam("collectionUuid") UUID collectionUuid) {
+        return ResponseEntity.ok().body(studyService.updateStudySpreadsheetConfigCollection(studyUuid, collectionUuid));
+    }
+
     @GetMapping(value = "/export-network-formats")
     @Operation(summary = "get the available export format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The available export format")})
@@ -1257,6 +1288,21 @@ public class StudyController {
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.updateNetworkModificationsActivation(studyUuid, nodeUuid, networkModificationUuids, userId, activated);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", params = "activated")
+    @Operation(summary = "Update 'activated' value for a network modifications for a node in a specific root network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Update the activation status for network modifications on a node in a specific root network"), @ApiResponse(responseCode = "404", description = "The study/root network/node is not found")})
+    public ResponseEntity<Void> updateNetworkModificationsActivation(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                     @Parameter(description = "Root network UUID") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                                     @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                     @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") Set<UUID> networkModificationUuids,
+                                                                     @Parameter(description = "New activated value") @RequestParam(name = "activated") Boolean activated,
+                                                                     @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.assertNoBuildNoComputationForRootNetworkNode(nodeUuid, rootNetworkUuid);
+        studyService.updateNetworkModificationsActivationInRootNetwork(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId, activated);
         return ResponseEntity.ok().build();
     }
 
@@ -2140,7 +2186,7 @@ public class StudyController {
     public ResponseEntity<String> exportFilterFromFirstRootNetwork(
         @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "Filter uuid to be applied") @PathVariable("filterUuid") UUID filterUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(studyService.getStudyFirstRootNetworkUuid(studyUuid), filterUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilterFromFirstRootNetwork(studyUuid, filterUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/filters/elements")
@@ -2197,6 +2243,26 @@ public class StudyController {
                                                      @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         rootNetworkNodeInfoService.stopStateEstimation(studyUuid, nodeUuid, rootNetworkUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/state-estimation/parameters")
+    @Operation(summary = "Get state estimation parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation parameters")})
+    public ResponseEntity<String> getStateEstimationParametersValues(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getStateEstimationParameters(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/state-estimation/parameters")
+    @Operation(summary = "set state estimation parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation parameters are set"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> setStateEstimationParametersValues(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody(required = false) String stateEstimationParametersValues,
+        @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setStateEstimationParametersValues(studyUuid, stateEstimationParametersValues, userId);
         return ResponseEntity.ok().build();
     }
 }

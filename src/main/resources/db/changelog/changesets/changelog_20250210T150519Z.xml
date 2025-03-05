@@ -1,0 +1,15 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="amarsli (generated)" id="1740822001928-12">
+        <createTable tableName="root_network_node_info_modifications_to_exclude">
+            <column name="root_network_node_info_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modifications_uuids_to_exclude" type="UUID"/>
+        </createTable>
+        <createIndex indexName="root_network_node_info_entity_modificationsUuidsToExclude_idx1" tableName="root_network_node_info_modifications_to_exclude">
+            <column name="root_network_node_info_id"/>
+        </createIndex>
+        <addForeignKeyConstraint baseColumnNames="root_network_node_info_id" baseTableName="root_network_node_info_modifications_to_exclude" constraintName="root_network_node_info_entity_modificationsUuidsToExclude_fk1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="root_network_node_info" validate="true"/>
+    </changeSet>
+</databaseChangeLog>

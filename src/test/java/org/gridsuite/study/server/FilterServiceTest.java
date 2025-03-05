@@ -18,6 +18,7 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -105,7 +106,7 @@ class FilterServiceTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null, null, null, null, null, null);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null, null, null, null, null, null, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;
@@ -264,6 +265,30 @@ class FilterServiceTest {
         assertEquals(responseBody, resultAsString);
 
         wireMockUtils.verifyFilterExport(stubUuid, FILTER_UUID_STRING, NETWORK_UUID_STRING);
+    }
+
+    @Test
+    void exportFilterFromFirstRootNetwork() throws Exception {
+
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID studyFirstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        String responseBody = """
+                [
+                    {"id":"MANDA7COND.41","type":"SHUNT_COMPENSATOR","distributionKey":null},
+                    {"id":"MANDA7COND.31","type":"SHUNT_COMPENSATOR","distributionKey":null}
+                ]
+            """;
+        UUID stubUuid = wireMockUtils.stubFilterExport(studyFirstRootNetworkUuid.toString(), FILTER_UUID_STRING, responseBody);
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/filters/{filterId}/elements",
+                        studyUuid, FILTER_UUID_STRING))
+                .andExpect(status().isOk())
+                .andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        Assert.assertEquals(responseBody, resultAsString);
+
+        wireMockUtils.verifyFilterExport(stubUuid, FILTER_UUID_STRING, studyFirstRootNetworkUuid.toString());
     }
 
     @Test

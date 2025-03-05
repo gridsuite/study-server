@@ -46,6 +46,7 @@ public class RestResponseEntityExceptionHandler {
                     LOADFLOW_PARAMETERS_NOT_FOUND,
                     SENSITIVITY_ANALYSIS_PARAMETERS_NOT_FOUND,
                     STATE_ESTIMATION_NOT_FOUND,
+                    STATE_ESTIMATION_PARAMETERS_NOT_FOUND,
                     DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PROVIDER_NOT_FOUND,
                     DYNAMIC_SECURITY_ANALYSIS_PROVIDER_NOT_FOUND,
                     DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND,
@@ -67,7 +68,8 @@ public class RestResponseEntityExceptionHandler {
                     BAD_NODE_TYPE,
                     NODE_NAME_ALREADY_EXIST,
                     ROOT_NETWORK_DELETE_FORBIDDEN,
-                    MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED
+                    MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED,
+                    MAXIMUM_TAG_LENGTH_EXCEEDED
                     -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(exception.getMessage());
             case CANT_DELETE_ROOT_NODE -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
             case CREATE_NETWORK_MODIFICATION_FAILED,
@@ -107,6 +109,10 @@ public class RestResponseEntityExceptionHandler {
                     UPDATE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED,
                     DELETE_SENSITIVITY_ANALYSIS_PARAMETERS_FAILED,
                     ROOT_NETWORK_CREATION_FAILED,
+                    CREATE_STATE_ESTIMATION_PARAMETERS_FAILED,
+                    UPDATE_STATE_ESTIMATION_PARAMETERS_FAILED,
+                    DELETE_STATE_ESTIMATION_PARAMETERS_FAILED,
+                    GET_STATE_ESTIMATION_PARAMETERS_FAILED,
                     GET_DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PROVIDER_FAILED,
                     GET_DYNAMIC_SECURITY_ANALYSIS_PROVIDER_FAILED,
                     UPDATE_DYNAMIC_SECURITY_ANALYSIS_PROVIDER_FAILED,
