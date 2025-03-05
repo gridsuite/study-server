@@ -205,7 +205,7 @@ class StudyTest {
     private static final String PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING = "5cec4a2b-affe-4d78-91d7-ce73c5ef11d9";
     private static final String PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING = "9cec4a7b-ab74-5d78-9d07-ce73c5ef11d9";
     private static final String PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING = "2c865123-4378-8dd2-9d07-ce73c5ef11d9";
-    private static final String PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING = "407a4bec-6f1a-400f-98f0-e5bcf37d4fcf";
+    private static final String PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING = "207a4bec-6f1a-400f-98f0-e5bcf37d4fcf";
 
     private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" +
         PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING +
@@ -545,10 +545,14 @@ class StudyTest {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/network-visualizations-params/.*") && DELETE.equals(request.getMethod())) {
                     return new MockResponse(200);
-                } else if (path.matches("/v1/network-visualizations-params/default")) {
-                    return new MockResponse(200);
-                } else if (path.matches("/v1/network-visualizations-params\\?duplicateFrom=.*")) {
+                } else if (path.matches("/v1/network-visualizations-params/default") && !POST.equals(request.getMethod())) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
+                } else if (path.matches("/v1/network-visualizations-params\\?duplicateFrom=" + PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING)) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
+                } else if (path.matches("/v1/network-visualizations-params\\?duplicateFrom=" + PROFILE_NETWORK_VISUALIZATION_INVALID_PARAMETERS_UUID_STRING)) {
+                    return new MockResponse(404); // params duplication request KO
+                } else if (path.matches("/v1/network-visualizations-params\\?duplicateFrom=.*")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.matches("/v1/parameters/.*/provider")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/default-provider")) {
@@ -1157,7 +1161,7 @@ class StudyTest {
         // assert that all http requests have been sent to remote services
         int nbRequest = 13;
         if (parameterDuplicatedUuid != null && !parameterDuplicationSuccess) {
-            nbRequest += 6;
+            nbRequest += 7;
         }
         var requests = TestUtils.getRequestsDone(nbRequest, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
@@ -1168,12 +1172,14 @@ class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
         if (!parameterDuplicationSuccess) {
             assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/default")));
+            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/network-visualizations-params/default")));
         }
         assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", caseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + userId + "/profile")));
         if (parameterDuplicatedUuid != null) {
             assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + parameterDuplicatedUuid) ||
-                                                             r.equals("/v1/spreadsheet-config-collections?duplicateFrom=" + parameterDuplicatedUuid))); // post duplicate
+                                                       r.equals("/v1/spreadsheet-config-collections?duplicateFrom=" + parameterDuplicatedUuid) ||
+                                                       r.equals("/v1/network-visualizations-params?duplicateFrom=" + parameterDuplicatedUuid)));
         }
 
         return studyUuid;
@@ -1575,6 +1581,16 @@ class StudyTest {
     @Test
     void testCreateStudyWithDefaultSpreadsheetConfigCollectionUserHasValidParamsInProfile(final MockWebServer mockWebServer) throws Exception {
         createStudy(mockWebServer, VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING, true);
+    }
+
+    @Test
+    void testCreateStudyWithDefaultNetworkVisualizationsParametersUserHasInvalidParamsInProfile(final MockWebServer mockWebServer) throws Exception {
+        createStudy(mockWebServer, INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, PROFILE_NETWORK_VISUALIZATION_INVALID_PARAMETERS_UUID_STRING, false);
+    }
+
+    @Test
+    void testCreateStudyWithDefaultNetworkVisualizationsParametersUserHasValidParamsInProfile(final MockWebServer mockWebServer) throws Exception {
+        createStudy(mockWebServer, VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING, true);
     }
 
     @Test
