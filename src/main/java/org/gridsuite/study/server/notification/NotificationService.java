@@ -471,7 +471,7 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitRootNetworkModified(UUID studyUuid, UUID rootNetworkUuid) {
+    public void emitRootNetworkCaseModified(UUID studyUuid, UUID rootNetworkUuid) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_ROOT_NETWORK, rootNetworkUuid)

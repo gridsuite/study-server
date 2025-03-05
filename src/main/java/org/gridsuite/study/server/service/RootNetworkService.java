@@ -13,6 +13,7 @@ import lombok.NonNull;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
+import org.gridsuite.study.server.dto.RootNetworkAction;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -85,20 +86,29 @@ public class RootNetworkService {
         updateNetworkInfos(rootNetworkEntity, networkInfos);
     }
 
-    public void updateNetwork(@NonNull RootNetworkInfos rootNetworkInfos) {
-        RootNetworkEntity rootNetworkEntity = getRootNetwork(rootNetworkInfos.getId()).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
-        UUID oldCaseUuid = rootNetworkEntity.getCaseUuid();
-        updateNetwork(rootNetworkEntity, rootNetworkInfos);
+    public void updateNetwork(@NonNull RootNetworkInfos rootNetworkInfos, boolean updateCase) {
+        RootNetworkEntity rootNetworkEntity = getRootNetwork(rootNetworkInfos.getId())
+                .orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
 
-        //delete old case
-        caseService.deleteCase(oldCaseUuid);
+        UUID oldCaseUuid = rootNetworkEntity.getCaseUuid();
+        applyNetworkUpdates(rootNetworkEntity, rootNetworkInfos, updateCase);
+
+        if (updateCase && oldCaseUuid != null) {
+            //delete old case
+            caseService.deleteCase(oldCaseUuid);
+        }
     }
 
-    private void updateNetwork(RootNetworkEntity rootNetworkEntity, RootNetworkInfos rootNetworkInfos) {
-        updateCaseInfos(rootNetworkEntity, rootNetworkInfos.getCaseInfos());
-        updateNetworkInfos(rootNetworkEntity, rootNetworkInfos.getNetworkInfos());
-        rootNetworkEntity.setImportParameters(rootNetworkInfos.getImportParameters());
-        rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
+    private void applyNetworkUpdates(RootNetworkEntity rootNetworkEntity, RootNetworkInfos rootNetworkInfos, boolean updateCase) {
+        if (updateCase) {
+            updateCaseInfos(rootNetworkEntity, rootNetworkInfos.getCaseInfos());
+            updateNetworkInfos(rootNetworkEntity, rootNetworkInfos.getNetworkInfos());
+            rootNetworkEntity.setImportParameters(rootNetworkInfos.getImportParameters());
+            rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
+        }
+
+        Optional.ofNullable(rootNetworkInfos.getName()).ifPresent(rootNetworkEntity::setName);
+        Optional.ofNullable(rootNetworkInfos.getTag()).ifPresent(rootNetworkEntity::setTag);
     }
 
     private void updateCaseInfos(@NonNull RootNetworkEntity rootNetworkEntity, @NonNull CaseInfos caseInfos) {
@@ -171,8 +181,8 @@ public class RootNetworkService {
         );
     }
 
-    public RootNetworkCreationRequestEntity insertCreationRequest(UUID rootNetworkInCreationUuid, StudyEntity studyEntity, String rootNetworkName, String rootNetworkTag, String userId) {
-        return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).name(rootNetworkName).tag(rootNetworkTag).studyUuid(studyEntity.getId()).userId(userId).build());
+    public RootNetworkCreationRequestEntity insertCreationRequest(UUID rootNetworkInCreationUuid, StudyEntity studyEntity, String rootNetworkName, String rootNetworkTag, String userId, RootNetworkAction action) {
+        return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).name(rootNetworkName).tag(rootNetworkTag).studyUuid(studyEntity.getId()).userId(userId).actionRequest(action).build());
     }
 
     public void assertIsRootNetworkInStudy(UUID studyUuid, UUID rootNetworkUuid) {

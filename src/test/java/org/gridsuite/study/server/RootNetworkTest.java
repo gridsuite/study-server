@@ -551,11 +551,15 @@ class RootNetworkTest {
 
     @Test
     void testUpdateRootNetworkCase() throws Exception {
-        final UUID studyUuid = UUID.randomUUID();
+        // create study with first root network
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+
         final UUID rootNetworkUuid = UUID.randomUUID();
         final UUID caseUuid = UUID.randomUUID();
         final String caseFormat = "newCaseFormat";
         final String newRootNetworkName = "newRootNetworkName";
+        final String newRootNetworkTag = "newT";
         Map<String, Object> importParameters = new HashMap<>();
         importParameters.put("param1", "newValue1");
         importParameters.put("param2", "newValue2");
@@ -565,12 +569,13 @@ class RootNetworkTest {
         Mockito.doReturn(DUPLICATE_CASE_UUID).when(caseService).duplicateCase(caseUuid, true);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}",
-                studyUuid, rootNetworkUuid)
+                studyEntity.getId(), rootNetworkUuid)
                 .contentType(APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(importParameters))
                 .param("caseUuid", caseUuid.toString())
                 .param("caseFormat", caseFormat)
                 .param("name", newRootNetworkName)
+                .param("tag", newRootNetworkTag)
                 .header("userId", USER_ID)
         ).andExpect(status().isOk());
 
@@ -666,7 +671,7 @@ class RootNetworkTest {
 
         // create a request of root network creation
         UUID requestUuid = UUID.randomUUID();
-        rootNetworkCreationRequestRepository.save(new RootNetworkCreationRequestEntity(requestUuid, "rootNetworkName2", studyEntity.getId(), USER_ID, "R_01"));
+        rootNetworkCreationRequestRepository.save(new RootNetworkCreationRequestEntity(requestUuid, "rootNetworkName2", studyEntity.getId(), USER_ID, "R_01", RootNetworkAction.ROOT_NETWORK_CREATION));
 
         String response = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks", studyEntity.getId()))
             .andExpect(status().isOk())
@@ -726,7 +731,7 @@ class RootNetworkTest {
 
         // create new root network
         UUID rootNetworkUuid = UUID.randomUUID();
-        rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, "dummyRootNetwork3", "RN_3", USER_ID);
+        rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, "dummyRootNetwork3", "RN_3", USER_ID, RootNetworkAction.ROOT_NETWORK_CREATION);
         studyService.createRootNetwork(studyEntity.getId(), RootNetworkInfos.builder()
             .name(CASE_NAME2)
             .caseInfos(new CaseInfos(CASE_UUID2, CASE_NAME2, CASE_FORMAT2))
