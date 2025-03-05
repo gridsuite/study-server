@@ -552,6 +552,30 @@ class RootNetworkTest {
     }
 
     @Test
+    void testUpdateRootNetworkNameAndTag() throws Exception {
+        // create study with
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+
+        final UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
+        final String newRootNetworkName = "newRootNetworkName";
+        final String newRootNetworkTag = "newT";
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}",
+                studyEntity.getId(), rootNetworkUuid)
+                .contentType(APPLICATION_JSON)
+                .param("name", newRootNetworkName)
+                .param("tag", newRootNetworkTag)
+                .header("userId", USER_ID)
+        ).andExpect(status().isOk());
+
+        RootNetworkEntity updatedRootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElse(null);
+        assertNotNull(updatedRootNetwork);
+        assertEquals(newRootNetworkName, updatedRootNetwork.getName());
+        assertEquals(newRootNetworkTag, updatedRootNetwork.getTag());
+
+    }
+    @Test
     void testUpdateRootNetworkCase() throws Exception {
         // create study with first root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
