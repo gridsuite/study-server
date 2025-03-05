@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.repository.AbstractManuallyAssignedIdentifierEntity;
 
 import java.util.UUID;
@@ -49,4 +50,6 @@ public abstract class AbstractNodeInfoEntity extends AbstractManuallyAssignedIde
 
     @Column
     Boolean readOnly;
+
+    public abstract AbstractNode toDto();
 }

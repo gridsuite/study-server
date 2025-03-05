@@ -78,6 +78,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.junit.jupiter.api.Assertions.*;
@@ -498,10 +499,18 @@ class NetworkModificationTreeTest {
                 .andReturn();
 
         //Only the first level nodes should appear
-        assertTrue(result.getResponse().getContentAsString().contains(n1.getId().toString()));
-        assertFalse(result.getResponse().getContentAsString().contains(n2.getId().toString()));
-        assertFalse(result.getResponse().getContentAsString().contains(n3.getId().toString()));
-        assertTrue(result.getResponse().getContentAsString().contains(n4.getId().toString()));
+        String responseContent = result.getResponse().getContentAsString();
+        assertTrue(responseContent.contains(n1.getId().toString()));
+        assertFalse(responseContent.contains(n2.getId().toString()));
+        assertFalse(responseContent.contains(n3.getId().toString()));
+        assertTrue(responseContent.contains(n4.getId().toString()));
+
+        //The nodes order should be consistent
+        int indexN4 = responseContent.indexOf("\"name\":\"n4\"");
+        int indexN1 = responseContent.indexOf("\"name\":\"n1\"");
+        int indexNotBuilt = responseContent.indexOf("\"name\":\"not_built\"");
+        assertThat(indexN4).isLessThan(indexN1);
+        assertThat(indexN1).isLessThan(indexNotBuilt);
 
         //And now we restore the tree we just stashed
         restoreNode(studyId, List.of(stashedNode1.getIdNode(), stashedNode4.getIdNode()), root.getId(), userId);
@@ -531,10 +540,11 @@ class NetworkModificationTreeTest {
                 .andExpect(status().isOk())
                 .andReturn();
         //Only the first level nodes should appear
-        assertFalse(result.getResponse().getContentAsString().contains(n1.getId().toString()));
-        assertFalse(result.getResponse().getContentAsString().contains(n2.getId().toString()));
-        assertFalse(result.getResponse().getContentAsString().contains(n3.getId().toString()));
-        assertFalse(result.getResponse().getContentAsString().contains(n4.getId().toString()));
+        responseContent = result.getResponse().getContentAsString();
+        assertFalse(responseContent.contains(n1.getId().toString()));
+        assertFalse(responseContent.contains(n2.getId().toString()));
+        assertFalse(responseContent.contains(n3.getId().toString()));
+        assertFalse(responseContent.contains(n4.getId().toString()));
     }
 
     private UUID createNodeTree() throws Exception {
