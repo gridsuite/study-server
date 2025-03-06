@@ -13,16 +13,19 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
-import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.StudyException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -101,9 +104,9 @@ public class NetworkConversionService {
         return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public ExportNetworkInfos exportNetwork(UUID networkUuid, String variantId, String format, String paramatersJson, String fileName) {
+    public void exportNetwork(UUID networkUuid, String variantId, String format, String parametersJson, String fileName, HttpServletResponse exportNetworkResponse) {
 
-        try {
+        try (ServletOutputStream outputStream = exportNetworkResponse.getOutputStream()) {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
                 + "/networks/{networkUuid}/export/{format}");
             if (!variantId.isEmpty()) {
@@ -117,21 +120,28 @@ public class NetworkConversionService {
             String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
                 .toUriString();
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<String> httpEntity = new HttpEntity<>(paramatersJson, headers);
-
-            ResponseEntity<Resource> responseEntity = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity, Resource.class);
-            Resource body = responseEntity.getBody();
-            if (body == null) {
-                throw new StudyException(EXPORT_FAILED, "Response body is null for " + path);
-            }
-            String filename = responseEntity.getHeaders().getContentDisposition().getFilename();
-            return new ExportNetworkInfos(filename, body.getInputStream());
+            restTemplate.execute(
+                networkConversionServerBaseUri + path,
+                HttpMethod.POST,
+                request -> {
+                    request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                    if (parametersJson != null && !parametersJson.isEmpty()) {
+                        StreamUtils.copy(parametersJson, StandardCharsets.UTF_8, request.getBody());
+                    }
+                },
+                networkConversionServerResponse -> {
+                    String fileNameFromResponse = networkConversionServerResponse.getHeaders().getContentDisposition().getFilename();
+                    exportNetworkResponse.setHeader(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.builder("attachment").filename(fileNameFromResponse, StandardCharsets.UTF_8).build().toString());
+                    exportNetworkResponse.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM.toString());
+                    exportNetworkResponse.setStatus(HttpStatus.OK.value());
+                    StreamUtils.copy(networkConversionServerResponse.getBody(), exportNetworkResponse.getOutputStream());
+                    return null;
+                }
+            );
         } catch (HttpStatusCodeException e) {
-            throw new StudyException(EXPORT_FAILED, "Exception when requesting the inputStream: " + e.getResponseBodyAsString());
+            throw handleHttpError(e, NETWORK_EXPORT_FAILED);
         } catch (IOException e) {
-            throw new StudyException(EXPORT_FAILED, "Exception when reading the inputStream: " + e.getMessage());
+            throw new StudyException(NETWORK_EXPORT_FAILED, e.getMessage());
         }
     }
 

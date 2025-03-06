@@ -149,7 +149,7 @@ public class StudyException extends RuntimeException {
         SPREADSHEET_CONFIG_COLLECTION_NOT_FOUND,
         GET_SPREADSHEET_CONFIG_COLLECTION_FAILED,
         CREATE_SPREADSHEET_CONFIG_COLLECTION_FAILED,
-        EXPORT_FAILED
+        NETWORK_EXPORT_FAILED
     }
 
     private final Type type;
