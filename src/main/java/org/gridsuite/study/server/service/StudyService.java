@@ -320,11 +320,9 @@ public class StudyService {
 
     @Transactional
     public void deleteRootNetworkRequest(UUID rootNetworkInCreationUuid) {
-        try {
-            RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.getCreationRequest(rootNetworkInCreationUuid).orElse(null);
-            rootNetworkService.deleteCreationRequest(rootNetworkCreationRequestEntity);
-        } catch (Exception e) {
-            throw e;
+        Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntityOpt = rootNetworkService.getCreationRequest(rootNetworkInCreationUuid);
+        if (rootNetworkCreationRequestEntityOpt.isPresent()) {
+            rootNetworkService.deleteCreationRequest(rootNetworkCreationRequestEntityOpt.get());
         }
     }
 
