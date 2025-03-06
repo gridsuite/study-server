@@ -127,11 +127,7 @@ public class NetworkConversionService {
                     }
                 },
                 clientResponse -> {
-                    try (InputStream inputStream = clientResponse.getBody()) {
-                        inputStream.transferTo(outputStream);
-                    } catch (IOException e) {
-                        throw new UncheckedIOException(e);
-                    }
+                    StreamUtils.copy(clientResponse.getBody(), outputStream);
                     return null;
                 }
         );
