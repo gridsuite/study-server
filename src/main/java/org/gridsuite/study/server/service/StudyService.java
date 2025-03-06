@@ -780,7 +780,7 @@ public class StudyService {
     }
 
     public void assertIsNodeNotReadOnly(UUID nodeUuid) {
-        Boolean isReadOnly = networkModificationTreeService.isReadOnly(nodeUuid).orElse(Boolean.FALSE);
+        Boolean isReadOnly = networkModificationTreeService.isReadOnly(nodeUuid);
         if (Boolean.TRUE.equals(isReadOnly)) {
             throw new StudyException(NOT_ALLOWED);
         }
