@@ -13,11 +13,11 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
-import org.gridsuite.study.server.dto.ExportNetworkInfos;
-import org.gridsuite.study.server.StudyException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -25,11 +25,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -103,7 +100,7 @@ public class NetworkConversionService {
         return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public ExportNetworkInfos exportNetwork(UUID networkUuid, String variantId, String format, String parametersJson, String fileName) {
+    public void exportNetwork(UUID networkUuid, String variantId, String format, String parametersJson, String fileName, HttpServletResponse response) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
                 + "/networks/{networkUuid}/export/{format}");
         if (!variantId.isEmpty()) {
@@ -117,7 +114,7 @@ public class NetworkConversionService {
         String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
             .toUriString();
 
-        StreamingResponseBody streamingResponseBody =outputStream -> restTemplate.execute(
+        restTemplate.execute(
                 networkConversionServerBaseUri + path,
                 HttpMethod.POST,
                 request -> {
@@ -127,11 +124,14 @@ public class NetworkConversionService {
                     }
                 },
                 clientResponse -> {
-                    StreamUtils.copy(clientResponse.getBody(), outputStream);
+                    String fileNameFromResponse = clientResponse.getHeaders().getContentDisposition().getFilename();
+                    HttpHeaders header = new HttpHeaders();
+                    header.setContentDisposition(ContentDisposition.builder("attachment").filename(fileNameFromResponse, StandardCharsets.UTF_8).build());
+                    response.setHeader(HttpHeaders.CONTENT_DISPOSITION, header.getFirst(HttpHeaders.CONTENT_DISPOSITION));
+                    StreamUtils.copy(clientResponse.getBody(), response.getOutputStream());
                     return null;
                 }
         );
-        return new ExportNetworkInfos(fileName, streamingResponseBody);
     }
 
     public void reindexStudyNetworkEquipments(UUID networkUuid) {
