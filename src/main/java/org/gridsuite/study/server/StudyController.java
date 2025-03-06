@@ -842,6 +842,18 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getSpreadsheetConfigCollection(studyUuid));
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/spreadsheet-config-collection")
+    @Operation(summary = "Update study's spreadsheet config collection")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The updated spreadsheet config collection"),
+        @ApiResponse(responseCode = "404", description = "The study or the collection doesn't exist")
+    })
+    public ResponseEntity<String> updateStudySpreadsheetConfigCollection(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestParam("collectionUuid") UUID collectionUuid) {
+        return ResponseEntity.ok().body(studyService.updateStudySpreadsheetConfigCollection(studyUuid, collectionUuid));
+    }
+
     @GetMapping(value = "/export-network-formats")
     @Operation(summary = "get the available export format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The available export format")})

@@ -780,7 +780,7 @@ public class StudyService {
     }
 
     public void assertIsNodeNotReadOnly(UUID nodeUuid) {
-        Boolean isReadOnly = networkModificationTreeService.isReadOnly(nodeUuid).orElse(Boolean.FALSE);
+        Boolean isReadOnly = networkModificationTreeService.isReadOnly(nodeUuid);
         if (Boolean.TRUE.equals(isReadOnly)) {
             throw new StudyException(NOT_ALLOWED);
         }
@@ -2184,6 +2184,26 @@ public class StudyService {
     public String getSpreadsheetConfigCollection(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return studyConfigService.getSpreadsheetConfigCollection(studyConfigService.getSpreadsheetConfigCollectionUuidOrElseCreateDefaults(studyEntity));
+    }
+
+    @Transactional
+    public String updateStudySpreadsheetConfigCollection(UUID studyUuid, UUID sourceCollectionUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+
+        // Duplicate the source collection
+        UUID newCollectionUuid = studyConfigService.duplicateSpreadsheetConfigCollection(sourceCollectionUuid);
+
+        // Delete the old collection if it exists
+        if (studyEntity.getSpreadsheetConfigCollectionUuid() != null) {
+            try {
+                studyConfigService.deleteSpreadsheetConfigCollection(studyEntity.getSpreadsheetConfigCollectionUuid());
+            } catch (Exception e) {
+                LOGGER.error("Could not remove spreadsheet config collection with uuid:" + studyEntity.getSpreadsheetConfigCollectionUuid(), e);
+                // Continue with the new collection even if deletion failed
+            }
+        }
+        studyEntity.setSpreadsheetConfigCollectionUuid(newCollectionUuid);
+        return studyConfigService.getSpreadsheetConfigCollection(newCollectionUuid);
     }
 
     public boolean shouldApplyModifications(UUID studyUuid) {
