@@ -932,4 +932,24 @@ public class NetworkModificationTreeService {
         // perform N queries, but it's fast: 25 ms for 400 nodes
         return nodes.stream().filter(n -> self.getNodeBuildStatus(n.getIdNode(), rootNetworkUuid).isBuilt()).count();
     }
+
+    @Transactional
+    public List<NodeAlias> getNodeAliases(UUID nodeId) {
+        NetworkModificationNodeInfoEntity node = getNetworkModificationNodeInfoEntity(nodeId);
+        return node.getNodeAliases().stream().map(nodeAlias -> {
+            AbstractNodeInfoEntity nodeInfo = getNodeInfoEntity(nodeAlias.getReferencedNode().getIdNode());
+            return nodeAlias.toNodeAlias(nodeInfo.getName());
+        }).toList();
+    }
+
+    @Transactional
+    public void updateNodeAliases(UUID nodeId, List<NodeAlias> nodeAliases) {
+        NetworkModificationNodeInfoEntity node = getNetworkModificationNodeInfoEntity(nodeId);
+        List<NodeAliasEmbeddable> nodeAliasesEmbeddable;
+        nodeAliasesEmbeddable = nodeAliases.stream().map(nodeAlias -> {
+            NodeEntity referencedNode = nodesRepository.getReferenceById(nodeAlias.id());
+            return NodeAliasEmbeddable.builder().alias(nodeAlias.alias()).referencedNode(referencedNode).build();
+        }).toList();
+        node.setNodeAliases(nodeAliasesEmbeddable);
+    }
 }

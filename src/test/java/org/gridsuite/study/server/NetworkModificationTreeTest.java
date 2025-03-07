@@ -30,7 +30,13 @@ import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
-import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeAlias;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
@@ -44,7 +50,22 @@ import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInf
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.ActionsService;
+import org.gridsuite.study.server.service.CaseService;
+import org.gridsuite.study.server.service.GeoDataService;
+import org.gridsuite.study.server.service.LoadFlowService;
+import org.gridsuite.study.server.service.NetworkConversionService;
+import org.gridsuite.study.server.service.NetworkMapService;
+import org.gridsuite.study.server.service.NetworkModificationService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NonEvacuatedEnergyService;
+import org.gridsuite.study.server.service.ReportService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.SecurityAnalysisService;
+import org.gridsuite.study.server.service.SensitivityAnalysisService;
+import org.gridsuite.study.server.service.SingleLineDiagramService;
+import org.gridsuite.study.server.service.StateEstimationService;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -74,19 +95,38 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.gridsuite.study.server.notification.NotificationService.*;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_NEW_NODE;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
+import static org.gridsuite.study.server.notification.NotificationService.NODE_BUILD_STATUS_UPDATED;
+import static org.gridsuite.study.server.notification.NotificationService.NODE_RENAMED;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockWebServerExtension.class)
@@ -1485,6 +1525,49 @@ class NetworkModificationTreeTest {
         networkModificationTreeService.updateNodeBuildStatus(leafNodeId, rootNetworkUuid, NodeBuildStatus.from(NetworkModificationResult.ApplicationStatus.ALL_OK, NetworkModificationResult.ApplicationStatus.WITH_ERRORS));
         assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(leafNodeId, rootNetworkUuid).getGlobalBuildStatus());
         assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(leafNodeId, rootNetworkUuid).getLocalBuildStatus());
+    }
+
+    @Test
+    void testNodeAliases() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        NetworkModificationNode node1 = buildNetworkModificationNode("modification node 1", "", UUID.randomUUID(), VARIANT_ID,
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), root, node1, userId);
+        NetworkModificationNode node2 = buildNetworkModificationNode("modification node 2", "", UUID.randomUUID(), VARIANT_ID,
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), node1, node2, userId);
+
+        List<NodeAlias> node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases", root.getStudyId(), node1.getId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+            });
+        assertEquals(0, node1Aliases.size());
+
+        //Name field is not relevant when posting aliases, it is filled when retrieving them
+        NodeAlias alias = new NodeAlias(node2.getId(), "test", "");
+        List<NodeAlias> aliases = List.of(alias);
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases", root.getStudyId(), node1.getId())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectWriter.writeValueAsString(aliases))
+        ).andExpect(status().isOk());
+        node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases", root.getStudyId(), node1.getId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+            });
+        assertEquals(1, node1Aliases.size());
+        assertEquals("modification node 2", node1Aliases.getFirst().name());
+
+        //Removing the referenced node should result in the deletion of the node alias
+        List<AbstractNode> children = List.of(node2);
+        deleteNode(root.getStudyId(), children, true, null, userId);
+        node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases", root.getStudyId(), node1.getId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+            });
+        assertEquals(0, node1Aliases.size());
     }
 
     /**
