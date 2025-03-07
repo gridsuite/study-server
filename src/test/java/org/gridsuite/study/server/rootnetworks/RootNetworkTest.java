@@ -23,8 +23,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
@@ -132,7 +131,7 @@ class RootNetworkTest {
     @Autowired
     private RootNetworkService rootNetworkService;
     @Autowired
-    private RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository;
+    private RootNetworkRequestRepository rootNetworkRequestRepository;
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
@@ -199,14 +198,14 @@ class RootNetworkTest {
             .willReturn(WireMock.ok())).getId();
         Mockito.doReturn(DUPLICATE_CASE_UUID).when(caseService).duplicateCase(caseUuid, true);
 
-        // request execution - returns RootNetworkCreationRequestInfos
+        // request execution - returns RootNetworkRequestInfos
         String response = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkName2", "rn2")
                 .header("userId", USER_ID)
                 .header("content-type", "application/json")
                 .content(objectMapper.writeValueAsString(importParameters)))
             .andExpect(status().isOk())
             .andReturn().getResponse().getContentAsString();
-        RootNetworkCreationRequestInfos result = objectMapper.readValue(response, RootNetworkCreationRequestInfos.class);
+        RootNetworkRequestInfos result = objectMapper.readValue(response, RootNetworkRequestInfos.class);
 
         wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
             false,
@@ -219,7 +218,7 @@ class RootNetworkTest {
         // check result values and check it has been saved in database
         assertEquals(USER_ID, result.getUserId());
         assertEquals(studyEntity.getId(), result.getStudyUuid());
-        assertNotNull(rootNetworkCreationRequestRepository.findById(result.getId()));
+        assertNotNull(rootNetworkRequestRepository.findById(result.getId()));
     }
 
     @Test
@@ -231,8 +230,8 @@ class RootNetworkTest {
                 .header("userId", "userId"))
             .andExpect(status().isNotFound());
 
-        // check no rootNetworkCreationRequest has been saved
-        assertEquals(0, rootNetworkCreationRequestRepository.count());
+        // check no rootNetworkRequest has been saved
+        assertEquals(0, rootNetworkRequestRepository.count());
     }
 
     @Test
@@ -248,7 +247,7 @@ class RootNetworkTest {
             .willReturn(WireMock.serverError().withBody("Error when creating root network"))).getId();
         Mockito.doReturn(DUPLICATE_CASE_UUID).when(caseService).duplicateCase(caseUuid, true);
 
-        // request execution - returns RootNetworkCreationRequestInfos
+        // request execution - returns RootNetworkRequestInfos
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkName2", "rn2")
                 .header("userId", USER_ID)
                 .header("content-type", "application/json"))
@@ -263,8 +262,8 @@ class RootNetworkTest {
         );
 
         Mockito.verify(caseService, Mockito.times(1)).duplicateCase(caseUuid, true);
-        // check no rootNetworkCreationRequest has been saved
-        assertEquals(0, rootNetworkCreationRequestRepository.count());
+        // check no rootNetworkRequest has been saved
+        assertEquals(0, rootNetworkRequestRepository.count());
     }
 
     @Test
@@ -277,13 +276,7 @@ class RootNetworkTest {
         studyRepository.save(studyEntity);
 
         // insert a creation request for the same study entity
-        rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder()
-                .id(UUID.randomUUID())
-                .name("rootNetworkName")
-                .tag("rn1")
-                .studyUuid(studyEntity.getId())
-                .userId(USER_ID)
-            .build());
+        rootNetworkService.insertCreationRequest(UUID.randomUUID(), studyEntity, "rootNetworkName", "rn1", USER_ID);
 
         // request execution - fails since there is already too many root networks + root network creation requests for this study
         UUID caseUuid = UUID.randomUUID();
@@ -293,7 +286,7 @@ class RootNetworkTest {
                 .header("content-type", "application/json"))
             .andExpect(status().isForbidden());
 
-        assertEquals(1, rootNetworkCreationRequestRepository.countAllByStudyUuid(studyEntity.getId()));
+        assertEquals(1, rootNetworkRequestRepository.countAllByStudyUuid(studyEntity.getId()));
         assertEquals(2, rootNetworkRepository.countAllByStudyId(studyEntity.getId()));
     }
 
@@ -362,7 +355,7 @@ class RootNetworkTest {
         UUID newRootNetworkUuid = UUID.randomUUID();
 
         // insert creation request as it should be when receiving a caseImportSucceeded with a rootNetworkUuid set
-        rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(newRootNetworkUuid).name(CASE_NAME2).tag("rn2").studyUuid(studyEntity.getId()).userId(USER_ID).build());
+        rootNetworkService.insertCreationRequest(newRootNetworkUuid, studyEntity, "CASE_NAME2", "rn2", USER_ID);
 
         // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
@@ -391,8 +384,8 @@ class RootNetworkTest {
         assertEquals("rn2", rootNetworkEntity.getTag());
         assertEquals(importParameters, rootNetworkService.getImportParameters(newRootNetworkUuid));
 
-        // corresponding rootNetworkCreationRequestRepository should be emptied when root network creation is done
-        assertFalse(rootNetworkCreationRequestRepository.existsById(newRootNetworkUuid));
+        // corresponding rootNetworkRequestRepository should be emptied when root network creation is done
+        assertFalse(rootNetworkRequestRepository.existsById(newRootNetworkUuid));
 
         // check case expiration has been disabled
         Mockito.verify(caseService, Mockito.times(1)).disableCaseExpiration(CASE_UUID2);
@@ -424,8 +417,8 @@ class RootNetworkTest {
         StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
         assertEquals(1, updatedStudyEntity.getRootNetworks().size());
 
-        // corresponding rootNetworkCreationRequestRepository should be emptied when root network creation is done
-        assertFalse(rootNetworkCreationRequestRepository.existsById(newRootNetworkUuid));
+        // corresponding rootNetworkRequestRepository should be emptied when root network creation is done
+        assertFalse(rootNetworkRequestRepository.existsById(newRootNetworkUuid));
 
         // assert distant resources deletions have been called
         Mockito.verify(caseService, Mockito.times(1)).disableCaseExpiration(CASE_UUID2);
@@ -698,7 +691,7 @@ class RootNetworkTest {
 
         // create a request of root network creation
         UUID requestUuid = UUID.randomUUID();
-        rootNetworkCreationRequestRepository.save(new RootNetworkCreationRequestEntity(requestUuid, "rootNetworkName2", studyEntity.getId(), USER_ID, "R_01", RootNetworkAction.ROOT_NETWORK_CREATION));
+        rootNetworkService.insertCreationRequest(requestUuid, studyEntity, "rootNetworkName2", "R_01", USER_ID);
 
         String response = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks", studyEntity.getId()))
             .andExpect(status().isOk())
@@ -758,7 +751,7 @@ class RootNetworkTest {
 
         // create new root network
         UUID rootNetworkUuid = UUID.randomUUID();
-        rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, "dummyRootNetwork3", "RN_3", USER_ID, RootNetworkAction.ROOT_NETWORK_CREATION);
+        rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, "dummyRootNetwork3", "RN_3", USER_ID);
         studyService.createRootNetwork(studyEntity.getId(), RootNetworkInfos.builder()
             .name(CASE_NAME2)
             .caseInfos(new CaseInfos(CASE_UUID2, CASE_NAME2, CASE_FORMAT2))
@@ -806,7 +799,7 @@ class RootNetworkTest {
     @AfterEach
     void tearDown() {
         TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
-        rootNetworkCreationRequestRepository.deleteAll();
+        rootNetworkRequestRepository.deleteAll();
         rootNetworkRepository.deleteAll();
     }
 }

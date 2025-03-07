@@ -6,6 +6,6 @@
         </addColumn>
     </changeSet>
     <changeSet author="souissimai (generated)" id="1741152139182-15">
-        <dropNotNullConstraint tableName="root_network_creation_request" columnName="name"/>
+        <renameTable oldTableName="root_network_creation_request" newTableName="root_network_request"/>
     </changeSet>
 </databaseChangeLog>
