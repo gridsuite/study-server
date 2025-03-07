@@ -41,4 +41,6 @@ public class UserProfileInfos {
     Integer maxAllowedBuilds;
 
     private UUID spreadsheetConfigCollectionId;
+
+    private UUID networkVisualizationParameterId;
 }

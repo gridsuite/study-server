@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import lombok.experimental.SuperBuilder;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -23,4 +24,14 @@ import lombok.experimental.SuperBuilder;
 @Entity
 @SuperBuilder
 @Table(name = "RootNodeInfo")
-public class RootNodeInfoEntity extends AbstractNodeInfoEntity { }
+public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
+    public RootNode toDto() {
+        return RootNode.builder()
+            .id(this.getId())
+            .name(this.getName())
+            .description(this.getDescription())
+            .columnPosition(this.getColumnPosition())
+            .readOnly(this.getReadOnly())
+            .build();
+    }
+}
