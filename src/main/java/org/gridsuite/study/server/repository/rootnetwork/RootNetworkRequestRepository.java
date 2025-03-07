@@ -12,12 +12,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface RootNetworkCreationRequestRepository extends JpaRepository<RootNetworkCreationRequestEntity, UUID> {
-    List<RootNetworkCreationRequestEntity> findAllByStudyUuid(UUID studyUuid);
+public interface RootNetworkRequestRepository extends JpaRepository<RootNetworkRequestEntity, UUID> {
+    List<RootNetworkRequestEntity> findAllByStudyUuid(UUID studyUuid);
 
     int countAllByStudyUuid(UUID studyUuid);
 
-    Optional<RootNetworkCreationRequestRepository> findByNameAndStudyUuid(String name, UUID studyUuid);
+    Optional<RootNetworkRequestRepository> findByNameAndStudyUuid(String name, UUID studyUuid);
 
-    Optional<RootNetworkCreationRequestRepository> findByTagAndStudyUuid(String tag, UUID studyUuid);
+    Optional<RootNetworkRequestRepository> findByTagAndStudyUuid(String tag, UUID studyUuid);
 }
