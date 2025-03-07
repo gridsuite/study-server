@@ -11,5 +11,4 @@ import java.util.UUID;
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
  */
-public record NodeAlias(UUID id, String alias, String name) {
-}
+public record NodeAlias(UUID id, String alias, String name) { }

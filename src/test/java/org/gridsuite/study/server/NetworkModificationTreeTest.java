@@ -1538,12 +1538,12 @@ class NetworkModificationTreeTest {
         NetworkModificationNode node2 = buildNetworkModificationNode("modification node 2", "", UUID.randomUUID(), VARIANT_ID,
             UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
             UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
-        createNode(root.getStudyId(), root, node2, userId);
+        createNode(root.getStudyId(), node1, node2, userId);
 
         List<NodeAlias> node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases", root.getStudyId(), node1.getId())).andExpect(status().isOk()).andReturn()
             .getResponse()
             .getContentAsString(), new TypeReference<>() {
-            });
+        });
         assertEquals(0, node1Aliases.size());
 
         //Name field is not relevant when posting aliases, it is filled when retrieving them
@@ -1556,8 +1556,18 @@ class NetworkModificationTreeTest {
         node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases", root.getStudyId(), node1.getId())).andExpect(status().isOk()).andReturn()
             .getResponse()
             .getContentAsString(), new TypeReference<>() {
-            });
+        });
         assertEquals(1, node1Aliases.size());
+        assertEquals("modification node 2", node1Aliases.getFirst().name());
+
+        //Removing the referenced node should result in the deletion of the node alias
+        List<AbstractNode> children = List.of(node2);
+        deleteNode(root.getStudyId(), children, true, null, userId);
+        node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases", root.getStudyId(), node1.getId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+        });
+        assertEquals(0, node1Aliases.size());
     }
 
     /**
