@@ -36,6 +36,7 @@ import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeAlias;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
@@ -2263,6 +2264,28 @@ public class StudyController {
         @RequestBody(required = false) String stateEstimationParametersValues,
         @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setStateEstimationParametersValues(studyUuid, stateEstimationParametersValues, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases")
+    @Operation(summary = "get node aliases attached to a given node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node's attached aliases")})
+    public ResponseEntity<List<NodeAlias>> getStateEstimationParametersValues(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @PathVariable("nodeUuid") UUID nodeUuid) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        return ResponseEntity.ok().body(networkModificationTreeService.getNodeAliases(nodeUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases")
+    @Operation(summary = "Update node aliases attached to a given node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Node aliases have been updated"), @ApiResponse(responseCode = "404", description = "Study or node doesn't exists")})
+    public ResponseEntity<Void> setStateEstimationParametersValues(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @PathVariable("nodeUuid") UUID nodeUuid,
+        @RequestBody List<NodeAlias> nodeAliases) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        networkModificationTreeService.updateNodeAliases(nodeUuid, nodeAliases);
         return ResponseEntity.ok().build();
     }
 }

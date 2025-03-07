@@ -73,6 +73,7 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1485,6 +1486,39 @@ class NetworkModificationTreeTest {
         networkModificationTreeService.updateNodeBuildStatus(leafNodeId, rootNetworkUuid, NodeBuildStatus.from(NetworkModificationResult.ApplicationStatus.ALL_OK, NetworkModificationResult.ApplicationStatus.WITH_ERRORS));
         assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(leafNodeId, rootNetworkUuid).getGlobalBuildStatus());
         assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(leafNodeId, rootNetworkUuid).getLocalBuildStatus());
+    }
+
+    @Test
+    void testNodeAliases() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        NetworkModificationNode node1 = buildNetworkModificationNode("modification node 1", "", UUID.randomUUID(), VARIANT_ID,
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), root, node1, userId);
+        NetworkModificationNode node2 = buildNetworkModificationNode("modification node 2", "", UUID.randomUUID(), VARIANT_ID,
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), root, node2, userId);
+
+        List<NodeAlias> node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases", root.getStudyId(), node1.getId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+        });
+        assertEquals(0, node1Aliases.size());
+
+        //Name field is not relevant when posting aliases, it is filled when retrieving them
+        NodeAlias alias = new NodeAlias(node2.getId(), "test", "");
+        List<NodeAlias> aliases = List.of(alias);
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases", root.getStudyId(), node1.getId())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectWriter.writeValueAsString(aliases))
+        ).andExpect(status().isOk());
+        node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases", root.getStudyId(), node1.getId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+        });
+        assertEquals(1, node1Aliases.size());
     }
 
     /**
