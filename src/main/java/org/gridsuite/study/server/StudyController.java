@@ -627,7 +627,7 @@ public class StudyController {
         }
         switch (action) {
             case COPY, INSERT:
-                studyService.duplicateOrInsertNetworkModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId, action);
+                studyService.duplicateOrInsertNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId, action);
                 break;
             case MOVE:
                 studyService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId);
