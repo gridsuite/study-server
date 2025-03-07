@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
+
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
@@ -772,11 +774,11 @@ public class StudyService {
         return result;
     }
 
-    public ExportNetworkInfos exportNetwork(UUID nodeUuid, UUID rootNetworkUuid, String format, String paramatersJson, String fileName) {
+    public void exportNetwork(UUID nodeUuid, UUID rootNetworkUuid, String format, String parametersJson, String fileName, HttpServletResponse exportNetworkResponse) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
 
-        return networkConversionService.exportNetwork(networkUuid, variantId, format, paramatersJson, fileName);
+        networkConversionService.exportNetwork(networkUuid, variantId, format, parametersJson, fileName, exportNetworkResponse);
     }
 
     public void assertIsNodeNotReadOnly(UUID nodeUuid) {
