@@ -1543,7 +1543,7 @@ class NetworkModificationTreeTest {
         List<NodeAlias> node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases", root.getStudyId(), node1.getId())).andExpect(status().isOk()).andReturn()
             .getResponse()
             .getContentAsString(), new TypeReference<>() {
-        });
+            });
         assertEquals(0, node1Aliases.size());
 
         //Name field is not relevant when posting aliases, it is filled when retrieving them
@@ -1556,7 +1556,7 @@ class NetworkModificationTreeTest {
         node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases", root.getStudyId(), node1.getId())).andExpect(status().isOk()).andReturn()
             .getResponse()
             .getContentAsString(), new TypeReference<>() {
-        });
+            });
         assertEquals(1, node1Aliases.size());
         assertEquals("modification node 2", node1Aliases.getFirst().name());
 
@@ -1566,7 +1566,7 @@ class NetworkModificationTreeTest {
         node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/node-aliases", root.getStudyId(), node1.getId())).andExpect(status().isOk()).andReturn()
             .getResponse()
             .getContentAsString(), new TypeReference<>() {
-        });
+            });
         assertEquals(0, node1Aliases.size());
     }
 
