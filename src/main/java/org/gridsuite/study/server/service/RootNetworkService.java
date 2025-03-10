@@ -86,12 +86,12 @@ public class RootNetworkService {
         updateNetworkInfos(rootNetworkEntity, networkInfos);
     }
 
-    public void updateNetwork(@NonNull RootNetworkInfos rootNetworkInfos, boolean updateCase) {
+    public void updateRootNetwork(@NonNull RootNetworkInfos rootNetworkInfos, boolean updateCase) {
         RootNetworkEntity rootNetworkEntity = getRootNetwork(rootNetworkInfos.getId())
                 .orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
 
         UUID oldCaseUuid = rootNetworkEntity.getCaseUuid();
-        applyNetworkUpdates(rootNetworkEntity, rootNetworkInfos, updateCase);
+        updateRootNetworkInfos(rootNetworkEntity, rootNetworkInfos, updateCase);
 
         if (updateCase && oldCaseUuid != null) {
             //delete old case
@@ -99,16 +99,25 @@ public class RootNetworkService {
         }
     }
 
-    private void applyNetworkUpdates(RootNetworkEntity rootNetworkEntity, RootNetworkInfos rootNetworkInfos, boolean updateCase) {
+    private void updateRootNetworkInfos(RootNetworkEntity rootNetworkEntity, RootNetworkInfos rootNetworkInfos, boolean updateCase) {
         if (updateCase) {
+            getRootNetworkRequest(rootNetworkInfos.getId()).ifPresent(request -> {
+                rootNetworkInfos.setName(request.getName());
+                rootNetworkInfos.setTag(request.getTag());
+            });
+
             updateCaseInfos(rootNetworkEntity, rootNetworkInfos.getCaseInfos());
             updateNetworkInfos(rootNetworkEntity, rootNetworkInfos.getNetworkInfos());
             rootNetworkEntity.setImportParameters(rootNetworkInfos.getImportParameters());
             rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
         }
 
-        Optional.ofNullable(rootNetworkInfos.getName()).ifPresent(rootNetworkEntity::setName);
-        Optional.ofNullable(rootNetworkInfos.getTag()).ifPresent(rootNetworkEntity::setTag);
+        if (rootNetworkInfos.getName() != null) {
+            rootNetworkEntity.setName(rootNetworkInfos.getName());
+        }
+        if (rootNetworkInfos.getTag() != null) {
+            rootNetworkEntity.setTag(rootNetworkInfos.getTag());
+        }
     }
 
     private void updateCaseInfos(@NonNull RootNetworkEntity rootNetworkEntity, @NonNull CaseInfos caseInfos) {
@@ -264,10 +273,30 @@ public class RootNetworkService {
         assertTagNotExistInStudy(studyUuid, rootNetworkTag);
     }
 
-    public void assertCanModifyRootNetwork(UUID studyUuid, String rootNetworkName, String rootNetworkTag) {
-        assertNameNotExistInStudy(studyUuid, rootNetworkName);
+    public void assertCanModifyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String rootNetworkName, String rootNetworkTag) {
+        assertNameNotExistInStudyExceptCurrent(studyUuid, rootNetworkUuid, rootNetworkName);
         assertTagSize(rootNetworkTag);
-        assertTagNotExistInStudy(studyUuid, rootNetworkTag);
+        assertTagNotExistInStudyExceptCurrent(studyUuid, rootNetworkUuid, rootNetworkTag);
+    }
+
+    private void assertTagNotExistInStudyExceptCurrent(UUID studyUuid, UUID rootNetworkUuid, String tag) {
+        if (isRootNetworkTagExistsInStudy(studyUuid, tag) && !isTagForCurrentRootNetwork(rootNetworkUuid, tag)) {
+            throw new StudyException(NOT_ALLOWED, "Tag already exists in study and is not for current root network");
+        }
+    }
+
+    private void assertNameNotExistInStudyExceptCurrent(UUID studyUuid, UUID rootNetworkUuid, String rootNetworkName) {
+        if (isRootNetworkNameExistsInStudy(studyUuid, rootNetworkName) && !isNameForCurrentRootNetwork(rootNetworkUuid, rootNetworkName)) {
+            throw new StudyException(NOT_ALLOWED, "Name already exists in study and is not for current root network");
+        }
+    }
+
+    private boolean isTagForCurrentRootNetwork(UUID rootNetworkUuid, String tag) {
+        return rootNetworkRepository.findByIdAndTag(rootNetworkUuid, tag).isPresent();
+    }
+
+    private boolean isNameForCurrentRootNetwork(UUID rootNetworkUuid, String name) {
+        return rootNetworkRepository.findByIdAndName(rootNetworkUuid, name).isPresent();
     }
 
     private void assertMaximumByStudyIsNotReached(UUID studyUuid) {
