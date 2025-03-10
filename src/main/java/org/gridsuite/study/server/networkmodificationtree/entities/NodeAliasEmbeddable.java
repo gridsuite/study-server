@@ -31,7 +31,8 @@ import org.hibernate.annotations.OnDeleteAction;
 @Embeddable
 @Builder
 public class NodeAliasEmbeddable {
-    @Column
+
+    @Column(name = "alias")
     String alias;
 
     @ManyToOne(fetch = FetchType.LAZY)
