@@ -134,7 +134,7 @@ public class NetworkConversionService {
                     exportNetworkResponse.setHeader(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.builder("attachment").filename(fileNameFromResponse, StandardCharsets.UTF_8).build().toString());
                     exportNetworkResponse.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM.toString());
                     exportNetworkResponse.setStatus(HttpStatus.OK.value());
-                    StreamUtils.copy(networkConversionServerResponse.getBody(), exportNetworkResponse.getOutputStream());
+                    StreamUtils.copy(networkConversionServerResponse.getBody(), outputStream);
                     return null;
                 }
             );
