@@ -941,7 +941,6 @@ public class NetworkModificationTreeService {
 
         Map<UUID, String> nodeNames = networkModificationNodeInfoRepository.findAllById(referencedNetworkNodesIds)
             .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName));
-
         nodeNames.putAll(rootNodeInfoRepository.findAllById(referencedRootNodeId)
             .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName)));
 
