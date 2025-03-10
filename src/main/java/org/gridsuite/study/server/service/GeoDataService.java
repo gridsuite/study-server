@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.service.NetworkMapService.QUERY_PARAM_LINE_ID;
 
 @Service
 public class GeoDataService {
@@ -38,41 +37,33 @@ public class GeoDataService {
     }
 
     public String getLinesGraphics(UUID networkUuid, String variantId, List<String> linesIds) {
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/lines")
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/lines/infos")
                 .queryParam(NETWORK_UUID, networkUuid);
 
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
 
-        if (linesIds != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_LINE_ID, linesIds);
-        }
-
         var path = uriComponentsBuilder
                 .buildAndExpand()
                 .toUriString();
 
-        return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
+        return restTemplate.postForObject(geoDataServerBaseUri + path, linesIds, String.class);
     }
 
     public String getSubstationsGraphics(UUID networkUuid, String variantId, List<String> substationsIds) {
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/substations")
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/substations/infos")
                 .queryParam(NETWORK_UUID, networkUuid);
 
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
 
-        if (substationsIds != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
-        }
-
         var path = uriComponentsBuilder
                 .buildAndExpand()
                 .toUriString();
 
-        return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
+        return restTemplate.postForObject(geoDataServerBaseUri + path, substationsIds, String.class);
     }
 
     public void setGeoDataServerBaseUri(String geoDataServerBaseUri) {
