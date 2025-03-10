@@ -672,7 +672,8 @@ class StudyTest {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=fileName", HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE), "byteData");
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=" + VARIANT_ID:
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=fileName", HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE), "byteData");
-
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/ERROR" + "?variantId=" + VARIANT_ID:
+                        return new MockResponse(500);
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID:
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID_2:
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID_3:
@@ -874,6 +875,19 @@ class StudyTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server)
                 .contains(String.format("/v1/networks/%s/export/XIIDM?variantId=%s&fileName=%s", NETWORK_UUID_STRING, VARIANT_ID, "myFileName")));
+    }
+
+    @Test
+    void testExportNetworkErrors(final MockWebServer server) throws Exception {
+        //insert a study
+        UUID studyUuid = createStudy(server, "userId", CASE_UUID);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyUuid, firstRootNetworkUuid, rootNodeUuid, "ERROR"))
+            .andExpect(status().isInternalServerError());
+
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/ERROR?fileName=%s", NETWORK_UUID_STRING, "myFileName")));
     }
 
     @Test
