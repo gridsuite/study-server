@@ -936,20 +936,28 @@ public class NetworkModificationTreeService {
     @Transactional
     public List<NodeAlias> getNodeAliases(UUID nodeId) {
         NetworkModificationNodeInfoEntity node = getNetworkModificationNodeInfoEntity(nodeId);
-        return node.getNodeAliases().stream().map(nodeAlias -> {
-            AbstractNodeInfoEntity nodeInfo = getNodeInfoEntity(nodeAlias.getReferencedNode().getIdNode());
-            return nodeAlias.toNodeAlias(nodeInfo.getName());
-        }).toList();
+        List<UUID> referencedNetworkNodesIds = node.getNodeAliases().stream().filter(nodeAlias -> nodeAlias.getReferencedNode().getType().equals(NodeType.NETWORK_MODIFICATION)).map(nodeAlias -> nodeAlias.getReferencedNode().getIdNode()).toList();
+        List<UUID> referencedRootNodeId = node.getNodeAliases().stream().filter(nodeAlias -> nodeAlias.getReferencedNode().getType().equals(NodeType.ROOT)).map(nodeAlias -> nodeAlias.getReferencedNode().getIdNode()).toList();
+
+        Map<UUID, String> nodeNames = networkModificationNodeInfoRepository.findAllById(referencedNetworkNodesIds)
+            .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName));
+
+        nodeNames.putAll(rootNodeInfoRepository.findAllById(referencedRootNodeId)
+            .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName)));
+
+        return node.getNodeAliases().stream().map(nodeAlias -> nodeAlias.toNodeAlias(nodeNames.get(nodeAlias.getReferencedNode().getIdNode()))).toList();
     }
 
     @Transactional
     public void updateNodeAliases(UUID nodeId, List<NodeAlias> nodeAliases) {
         NetworkModificationNodeInfoEntity node = getNetworkModificationNodeInfoEntity(nodeId);
-        List<NodeAliasEmbeddable> nodeAliasesEmbeddable;
-        nodeAliasesEmbeddable = nodeAliases.stream().map(nodeAlias -> {
-            NodeEntity referencedNode = nodesRepository.getReferenceById(nodeAlias.id());
-            return NodeAliasEmbeddable.builder().alias(nodeAlias.alias()).referencedNode(referencedNode).build();
-        }).toList();
-        node.setNodeAliases(nodeAliasesEmbeddable);
+        Map<UUID, NodeEntity> nodeIdsMap = nodesRepository.findAllById(nodeAliases.stream().map(NodeAlias::id).toList())
+            .stream().collect(Collectors.toMap(NodeEntity::getIdNode, nodeEntity -> nodeEntity));
+
+        node.setNodeAliases(nodeAliases.stream().map(nodeAlias ->
+                NodeAliasEmbeddable.builder()
+                    .alias(nodeAlias.alias())
+                    .referencedNode(nodeIdsMap.get(nodeAlias.id())).build())
+            .toList());
     }
 }
