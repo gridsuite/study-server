@@ -217,18 +217,16 @@ class SingleLineDiagramTest {
                     case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
                     case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
                         return new MockResponse(500, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"tmp\",\"path\":\"/v1/networks\"}");
-                    case "/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&withGeoData=true&voltageLevelsIds=vlFr1A":
+                    case "/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&withGeoData=true":
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "nad-svg");
 
                     case "/v1/svg-component-libraries":
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "[\"GridSuiteAndConvergence\",\"Convergence\"]");
                     case "/v1/networks/" + NETWORK_UUID_STRING:
-                    case "/v1/lines?networkUuid=" + NETWORK_UUID_STRING:
-                    case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING:
-                    case "/v1/lines?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID:
-                    case "/v1/lines?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID + "&lineId=LINEID1&lineId=LINEID2":
-                    case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID:
-                    case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID + "&substationId=BBE1AA&substationId=BBE2AA":
+                    case "/v1/lines/infos?networkUuid=" + NETWORK_UUID_STRING:
+                    case "/v1/substations/infos?networkUuid=" + NETWORK_UUID_STRING:
+                    case "/v1/lines/infos?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID:
+                    case "/v1/substations/infos?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID:
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/all":
                         return new MockResponse(200);
                     default:
@@ -348,18 +346,22 @@ class SingleLineDiagramTest {
                         randomUuid, randomUuid, rootNodeUuid, "substationId")).andExpect(status().isNotFound());
 
         // get the network area diagram
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true&voltageLevelsIds=vlFr1A", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid))
-            .andExpectAll(
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
+                        .content("[\"vlFr1A\"]")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpectAll(
                 content().contentType(MediaType.APPLICATION_JSON),
                 status().isOk(),
                 content().string("nad-svg")
             );
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&withGeoData=true&voltageLevelsIds=vlFr1A")));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&withGeoData=true")));
 
         // get the network area diagram from a study that doesn't exist
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true&voltageLevelsIds=vlFr1A", randomUuid, randomUuid, rootNodeUuid))
-            .andExpect(status().isNotFound());
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true", randomUuid, randomUuid, rootNodeUuid)
+                .content("[\"vlFr1A\"]")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
 
         //get voltage levels
         mvcResult = getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "VOLTAGE_LEVEL", null, objectMapper.writeValueAsString(List.of()), TestUtils.resourceToString("/network-voltage-levels-infos.json"));
@@ -377,30 +379,34 @@ class SingleLineDiagramTest {
                 VoltageLevelInfos.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").build())));
 
         //get the lines-graphics of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/lines", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)).andExpectAll(
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/lines", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/lines?networkUuid=%s", NETWORK_UUID_STRING)));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/lines/infos?networkUuid=%s", NETWORK_UUID_STRING)));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/lines?lineId=LINEID1&lineId=LINEID2", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)).andExpectAll(
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/lines", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)
+                .content("[\"LINEID1\", \"LINEID2\"]")
+                .contentType(MediaType.APPLICATION_JSON)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/lines?networkUuid=%s&variantId=%s&lineId=LINEID1&lineId=LINEID2", NETWORK_UUID_STRING, VARIANT_ID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/lines/infos?networkUuid=%s&variantId=%s", NETWORK_UUID_STRING, VARIANT_ID)));
 
         //get the substation-graphics of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/substations", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)).andExpectAll(
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/substations", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substations?networkUuid=%s", NETWORK_UUID_STRING)));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substations/infos?networkUuid=%s", NETWORK_UUID_STRING)));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/substations?substationId=BBE1AA&substationId=BBE2AA", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)).andExpectAll(
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/substations", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)
+                .content("[\"BBE1AA\", \"BBE2AA\"]")
+                .contentType(MediaType.APPLICATION_JSON)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substations?networkUuid=%s&variantId=%s&substationId=BBE1AA&substationId=BBE2AA", NETWORK_UUID_STRING, VARIANT_ID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substations/infos?networkUuid=%s&variantId=%s", NETWORK_UUID_STRING, VARIANT_ID)));
 
         //get the lines map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "LINE", null, objectMapper.writeValueAsString(List.of()), "[]");
@@ -514,8 +520,10 @@ class SingleLineDiagramTest {
             status().isNoContent());
 
         //get the network area diagram on a non existing variant
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?depth=0&voltageLevelsIds=vlFr1A",
-            studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)).andExpectAll(
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?depth=0",
+            studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)
+                .content("[\"vlFr1A\"]")
+                .contentType(MediaType.APPLICATION_JSON)).andExpectAll(
             status().isNoContent());
     }
 
