@@ -936,15 +936,16 @@ public class NetworkModificationTreeService {
     @Transactional
     public List<NodeAlias> getNodeAliases(UUID nodeId) {
         NetworkModificationNodeInfoEntity node = getNetworkModificationNodeInfoEntity(nodeId);
-        List<UUID> referencedNetworkNodesIds = node.getNodeAliases().stream().filter(nodeAlias -> nodeAlias.getReferencedNode().getType().equals(NodeType.NETWORK_MODIFICATION)).map(nodeAlias -> nodeAlias.getReferencedNode().getIdNode()).toList();
-        List<UUID> referencedRootNodeId = node.getNodeAliases().stream().filter(nodeAlias -> nodeAlias.getReferencedNode().getType().equals(NodeType.ROOT)).map(nodeAlias -> nodeAlias.getReferencedNode().getIdNode()).toList();
+        Map<NodeType, List<UUID>> nodeUuidsByType = node.getNodeAliases().stream().map(NodeAliasEmbeddable::getReferencedNode)
+            .collect(Collectors.groupingBy(NodeEntity::getType, Collectors.mapping(NodeEntity::getIdNode, Collectors.toList())));
 
-        Map<UUID, String> nodeNames = networkModificationNodeInfoRepository.findAllById(referencedNetworkNodesIds)
+        Map<UUID, String> nodeNames = networkModificationNodeInfoRepository.findAllById(nodeUuidsByType.get(NodeType.NETWORK_MODIFICATION))
             .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName));
-        nodeNames.putAll(rootNodeInfoRepository.findAllById(referencedRootNodeId)
+        nodeNames.putAll(rootNodeInfoRepository.findAllById(nodeUuidsByType.get(NodeType.ROOT))
             .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName)));
 
-        return node.getNodeAliases().stream().map(nodeAlias -> nodeAlias.toNodeAlias(nodeNames.get(nodeAlias.getReferencedNode().getIdNode()))).toList();
+        return node.getNodeAliases().stream().map(nodeAlias ->
+            nodeAlias.toNodeAlias(nodeNames.get(nodeAlias.getReferencedNode().getIdNode()))).toList();
     }
 
     @Transactional
