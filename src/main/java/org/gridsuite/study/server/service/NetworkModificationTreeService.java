@@ -950,13 +950,13 @@ public class NetworkModificationTreeService {
     @Transactional
     public void updateNodeAliases(UUID nodeId, List<NodeAlias> nodeAliases) {
         NetworkModificationNodeInfoEntity node = getNetworkModificationNodeInfoEntity(nodeId);
-        Map<UUID, NodeEntity> nodeIdsMap = nodesRepository.findAllById(nodeAliases.stream().map(NodeAlias::id).toList())
+        Map<UUID, NodeEntity> nodeIds = nodesRepository.findAllById(nodeAliases.stream().map(NodeAlias::id).toList())
             .stream().collect(Collectors.toMap(NodeEntity::getIdNode, Function.identity()));
 
         node.setNodeAliases(nodeAliases.stream().map(nodeAlias ->
                 NodeAliasEmbeddable.builder()
                     .alias(nodeAlias.alias())
-                    .referencedNode(nodeIdsMap.get(nodeAlias.id())).build())
+                    .referencedNode(nodeIds.get(nodeAlias.id())).build())
             .toList());
     }
 }
