@@ -12,6 +12,7 @@ import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.elasticsearch.BasicModificationInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -54,6 +55,7 @@ public class NetworkModificationTreeService {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final RootNetworkService rootNetworkService;
     private final ReportService reportService;
+    private final BasicModificationInfosService basicModificationInfosService;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
@@ -63,7 +65,8 @@ public class NetworkModificationTreeService {
                                           @Lazy NetworkModificationTreeService networkModificationTreeService,
                                           RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                           RootNetworkService rootNetworkService,
-                                          ReportService reportService) {
+                                          ReportService reportService,
+                                          BasicModificationInfosService basicModificationInfosService) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
@@ -73,6 +76,7 @@ public class NetworkModificationTreeService {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.rootNetworkService = rootNetworkService;
         this.reportService = reportService;
+        this.basicModificationInfosService = basicModificationInfosService;
     }
 
     private NodeEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
@@ -770,6 +774,11 @@ public class NetworkModificationTreeService {
             }
         });
 
+        // when invalidating node
+        // we need to invalidate indexed modifications up to it's last built parent, not included
+        UUID lastBuiltNodeUuid = doGetLastParentNodeBuiltUuid(nodeUuid, rootNetworkUuid);
+        invalidateAllChildrenIndexedModifications(lastBuiltNodeUuid, rootNetworkService.getNetworkUuid(rootNetworkUuid));
+
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()), rootNetworkUuid);
     }
 
@@ -786,6 +795,15 @@ public class NetworkModificationTreeService {
                 }
             }
         );
+
+        // when manually invalidating a single node, if this node does not have any built children
+        // we need to invalidate indexed modifications up to it's last built parent, not included
+        if (rootNetworkNodeInfoService.getRootNetworkNodeInfos(getChildren(nodeUuid), rootNetworkUuid).stream()
+            .noneMatch(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt())) {
+            // when invalidating nodes, we need to get last built parent to invalidate all its children modifications in elasticsearch
+            UUID lastBuiltNodeUuid = doGetLastParentNodeBuiltUuid(nodeUuid, rootNetworkUuid);
+            invalidateAllChildrenIndexedModifications(lastBuiltNodeUuid, rootNetworkService.getNetworkUuid(rootNetworkUuid));
+        }
 
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()), rootNetworkUuid);
     }
@@ -887,7 +905,6 @@ public class NetworkModificationTreeService {
         return getNodeInfoEntity(nodeUuid).getReadOnly();
     }
 
-    @Transactional(readOnly = true)
     public List<UUID> getChildren(UUID id) {
         List<UUID> children = new ArrayList<>();
         doGetChildren(id, children);
@@ -931,5 +948,12 @@ public class NetworkModificationTreeService {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
         // perform N queries, but it's fast: 25 ms for 400 nodes
         return nodes.stream().filter(n -> self.getNodeBuildStatus(n.getIdNode(), rootNetworkUuid).isBuilt()).count();
+    }
+
+    public void invalidateAllChildrenIndexedModifications(UUID parentNodeUuid, UUID networkUuid) {
+        basicModificationInfosService.deleteByGroupUuidsAndNetworkUuid(
+            networkModificationNodeInfoRepository.findAllById(getChildren(parentNodeUuid)).stream()
+                .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid).toList(),
+            networkUuid);
     }
 }
