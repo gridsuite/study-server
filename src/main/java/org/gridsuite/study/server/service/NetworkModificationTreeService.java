@@ -951,7 +951,7 @@ public class NetworkModificationTreeService {
     public void updateNodeAliases(UUID nodeId, List<NodeAlias> nodeAliases) {
         NetworkModificationNodeInfoEntity node = getNetworkModificationNodeInfoEntity(nodeId);
         Map<UUID, NodeEntity> nodeIdsMap = nodesRepository.findAllById(nodeAliases.stream().map(NodeAlias::id).toList())
-            .stream().collect(Collectors.toMap(NodeEntity::getIdNode, nodeEntity -> nodeEntity));
+            .stream().collect(Collectors.toMap(NodeEntity::getIdNode, Function.identity()));
 
         node.setNodeAliases(nodeAliases.stream().map(nodeAlias ->
                 NodeAliasEmbeddable.builder()
