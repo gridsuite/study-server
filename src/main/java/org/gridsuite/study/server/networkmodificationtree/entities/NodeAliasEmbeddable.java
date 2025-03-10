@@ -35,8 +35,7 @@ public class NodeAliasEmbeddable {
     @Column(name = "alias")
     String alias;
 
-    //FetchType set to EAGER because we always retrieve all referencedNode, it avoids N+1 query issue when retrieving nodes name
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "referenced_node", foreignKey = @ForeignKey(name = "node_aliases_node_id_node_fk_2"))
     @OnDelete(action = OnDeleteAction.CASCADE)
     NodeEntity referencedNode;
