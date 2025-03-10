@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @Builder
 @Getter
-public class RootNetworkCreationRequestInfos {
+public class RootNetworkRequestInfos {
     @Id
     private UUID id;
 

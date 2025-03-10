@@ -35,4 +35,8 @@ public interface RootNetworkRepository extends JpaRepository<RootNetworkEntity, 
     Optional<RootNetworkEntity> findByNameAndStudyId(String name, UUID studyUuid);
 
     Optional<RootNetworkEntity> findByTagAndStudyId(String tag, UUID studyUuid);
+
+    Optional<RootNetworkEntity> findByIdAndName(UUID rootNetworkUuid, String rootNetworkName);
+
+    Optional<RootNetworkEntity> findByIdAndTag(UUID rootNetworkUuid, String rootNetworkName);
 }
