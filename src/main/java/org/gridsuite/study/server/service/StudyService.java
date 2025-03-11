@@ -308,7 +308,7 @@ public class StudyService {
 
         UUID importReportUuid = UUID.randomUUID();
         UUID rootNetworkUuid = UUID.randomUUID();
-        RootNetworkRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, rootNetworkName, rootNetworkTag, userId);
+        RootNetworkRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity.getId(), rootNetworkName, rootNetworkTag, userId);
         UUID clonedCaseUuid = caseService.duplicateCase(caseUuid, true);
         try {
             networkConversionService.persistNetwork(clonedCaseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
@@ -350,7 +350,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
         if (caseUuid != null) {
-            RootNetworkRequestEntity requestEntity = rootNetworkService.insertModificationRequest(rootNetworkUuid, studyEntity, name, tag, userId);
+            RootNetworkRequestEntity requestEntity = rootNetworkService.insertModificationRequest(rootNetworkUuid, studyEntity.getId(), name, tag, userId);
             updateRootNetworkCaseInfos(caseUuid, studyUuid, rootNetworkUuid, userId, caseFormat, importParameters, requestEntity);
         } else {
             updateRootNetworkBasicInfos(studyUuid, rootNetworkUuid, name, tag);
@@ -2853,7 +2853,7 @@ public class StudyService {
         return Stream
             .concat(
                 getExistingRootNetworkInfos(studyUuid).stream(),
-                rootNetworkService.getCreationRequests(studyUuid).stream().filter(s -> s.getActionRequest() == RootNetworkAction.ROOT_NETWORK_CREATION).map(RootNetworkRequestEntity::toBasicDto))
+                rootNetworkService.geRootNetworkRequests(studyUuid).stream().filter(s -> s.getActionRequest() == RootNetworkAction.ROOT_NETWORK_CREATION).map(RootNetworkRequestEntity::toBasicDto))
             .toList();
     }
 
