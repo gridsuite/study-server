@@ -2270,6 +2270,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study's attached aliases")})
     public ResponseEntity<List<NodeAlias>> getNodeAliases(
         @PathVariable("studyUuid") UUID studyUuid) {
+        studyService.assertIsStudyExist(studyUuid);
         return ResponseEntity.ok().body(studyService.getNodeAliases(studyUuid));
     }
 
@@ -2279,6 +2280,7 @@ public class StudyController {
     public ResponseEntity<Void> setNodeAliases(
         @PathVariable("studyUuid") UUID studyUuid,
         @RequestBody List<NodeAlias> nodeAliases) {
+        studyService.assertIsStudyExist(studyUuid);
         studyService.updateNodeAliases(studyUuid, nodeAliases);
         return ResponseEntity.ok().build();
     }

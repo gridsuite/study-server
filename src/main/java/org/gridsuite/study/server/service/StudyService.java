@@ -2829,8 +2829,8 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public List<NodeAlias> getNodeAliases(UUID studyUuid) {
-        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        Map<NodeType, List<UUID>> nodeUuidsByType = study.getNodeAliases().stream().map(NodeAliasEmbeddable::getReferencedNode)
+        List<NodeEntity> aliasedNodes = networkModificationTreeService.getStudyNodeAliasEntities(studyUuid);
+        Map<NodeType, List<UUID>> nodeUuidsByType = aliasedNodes.stream()
             .collect(Collectors.groupingBy(NodeEntity::getType, Collectors.mapping(NodeEntity::getIdNode, Collectors.toList())));
 
         Map<UUID, String> nodeNames = new HashMap<>();
@@ -2843,20 +2843,16 @@ public class StudyService {
                 .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName)));
         }
 
-        return study.getNodeAliases().stream().map(nodeAlias ->
-            nodeAlias.toNodeAlias(nodeNames.get(nodeAlias.getReferencedNode().getIdNode()))).toList();
+        return aliasedNodes.stream().map(node ->
+            new NodeAlias(node.getIdNode(), node.getAlias(), nodeNames.get(node.getIdNode()))).toList();
     }
 
     @Transactional
     public void updateNodeAliases(UUID studyUuid, List<NodeAlias> nodeAliases) {
-        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        //Reset alias values for given study to keep data in sync
+        networkModificationTreeService.resetNodeAliases(studyUuid);
         Map<UUID, NodeEntity> nodeIds = networkModificationTreeService.getNodeEntities(nodeAliases.stream().map(NodeAlias::id).toList())
             .stream().collect(Collectors.toMap(NodeEntity::getIdNode, Function.identity()));
-
-        study.setNodeAliases(nodeAliases.stream().map(nodeAlias ->
-                NodeAliasEmbeddable.builder()
-                    .alias(nodeAlias.alias())
-                    .referencedNode(nodeIds.get(nodeAlias.id())).build())
-            .toList());
+        nodeAliases.forEach(alias -> nodeIds.get(alias.id()).setAlias(alias.alias()));
     }
 }

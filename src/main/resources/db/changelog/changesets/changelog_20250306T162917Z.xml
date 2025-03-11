@@ -1,28 +1,8 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
-    <changeSet author="marcelinhug (generated)" id="1741278573262-1">
-        <createTable tableName="node_aliases">
-            <column name="id_study" type="UUID">
-                <constraints nullable="false"/>
-            </column>
+    <changeSet author="marcelinhug (generated)" id="1741278573263-1">
+        <addColumn tableName="node">
             <column name="alias" type="text"/>
-            <column name="referenced_node" type="UUID"/>
-        </createTable>
-    </changeSet>
-    <changeSet author="marcelinhug (generated)" id="1741278573262-2">
-        <addForeignKeyConstraint baseColumnNames="id_study" baseTableName="node_aliases" constraintName="node_aliases_study_id_fk_1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="study" validate="true" onDelete="CASCADE"/>
-    </changeSet>
-    <changeSet author="marcelinhug (generated)" id="1741278573262-3">
-        <addForeignKeyConstraint baseColumnNames="referenced_node" baseTableName="node_aliases" constraintName="node_aliases_node_id_node_fk_2" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="node" validate="true" onDelete="CASCADE"/>
-    </changeSet>
-    <changeSet author="marcelinhug (generated)" id="1741278573262-4">
-        <createIndex indexName="nodeAliases_idStudy_idx" tableName="node_aliases">
-            <column name="id_study"/>
-        </createIndex>
-    </changeSet>
-    <changeSet author="marcelinhug (generated)" id="1741278573262-5">
-        <createIndex indexName="nodeAliases_referencedNode_idx" tableName="node_aliases">
-            <column name="referenced_node"/>
-        </createIndex>
+        </addColumn>
     </changeSet>
 </databaseChangeLog>

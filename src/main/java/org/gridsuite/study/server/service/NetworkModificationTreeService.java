@@ -76,7 +76,7 @@ public class NetworkModificationTreeService {
     }
 
     private NodeEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
-        NodeEntity newNode = nodesRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
+        NodeEntity newNode = nodesRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null, null));
         if (networkModificationNode.getModificationGroupUuid() == null) {
             networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
         }
@@ -351,7 +351,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public NodeEntity createRoot(StudyEntity study) {
-        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null));
+        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null, null));
         rootNodeInfoRepository.save(
             RootNodeInfoEntity.builder()
                 .idNode(node.getIdNode())
@@ -531,6 +531,14 @@ public class NetworkModificationTreeService {
 
     public List<NodeEntity> getNodeEntities(List<UUID> nodeUuids) {
         return nodesRepository.findAllById(nodeUuids);
+    }
+
+    public List<NodeEntity> getStudyNodeAliasEntities(UUID studyUuid) {
+        return nodesRepository.findAllByStudyIdAndAliasNotNull(studyUuid);
+    }
+
+    public void resetNodeAliases(UUID studyUuid) {
+        nodesRepository.findAllByStudyIdAndAliasNotNull(studyUuid).forEach(nodeEntity -> nodeEntity.setAlias(null));
     }
 
     private AbstractNodeInfoEntity getNodeInfoEntity(UUID nodeUuid) {
