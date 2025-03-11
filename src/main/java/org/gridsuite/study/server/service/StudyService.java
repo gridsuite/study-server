@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
-
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import org.gridsuite.study.server.StudyConstants;
@@ -34,7 +33,10 @@ import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParamete
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -67,7 +69,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -2851,8 +2852,13 @@ public class StudyService {
     public void updateNodeAliases(UUID studyUuid, List<NodeAlias> nodeAliases) {
         //Reset alias values for given study to keep data in sync
         networkModificationTreeService.resetNodeAliases(studyUuid);
-        Map<UUID, NodeEntity> nodeIds = networkModificationTreeService.getNodeEntities(nodeAliases.stream().map(NodeAlias::id).toList())
-            .stream().collect(Collectors.toMap(NodeEntity::getIdNode, Function.identity()));
-        nodeAliases.forEach(alias -> nodeIds.get(alias.id()).setAlias(alias.alias()));
+        networkModificationTreeService.getNodeEntities(nodeAliases.stream().map(NodeAlias::id).toList())
+            .forEach(nodeEntity -> nodeAliases.stream()
+                .filter(alias -> alias.id().equals(nodeEntity.getIdNode()))
+                .findFirst()
+                .ifPresentOrElse(alias -> nodeEntity.setAlias(alias.alias()),
+                    () -> {
+                        throw new StudyException(NODE_NOT_FOUND);
+                    }));
     }
 }
