@@ -521,6 +521,18 @@ public class NetworkModificationTreeService {
         return networkModificationNodeInfoRepository.findById(nodeId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
     }
 
+    public List<NetworkModificationNodeInfoEntity> getNetworkModificationNodeInfoEntities(List<UUID> nodeUuids) {
+        return networkModificationNodeInfoRepository.findAllById(nodeUuids);
+    }
+
+    public List<RootNodeInfoEntity> getRootNodeInfoEntities(List<UUID> nodeUuids) {
+        return rootNodeInfoRepository.findAllById(nodeUuids);
+    }
+
+    public List<NodeEntity> getNodeEntities(List<UUID> nodeUuids) {
+        return nodesRepository.findAllById(nodeUuids);
+    }
+
     private AbstractNodeInfoEntity getNodeInfoEntity(UUID nodeUuid) {
         return getNodeEntity(nodeUuid).getType() == NodeType.ROOT ? getRootNodeInfoEntity(nodeUuid) : getNetworkModificationNodeInfoEntity(nodeUuid);
     }
@@ -931,38 +943,5 @@ public class NetworkModificationTreeService {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
         // perform N queries, but it's fast: 25 ms for 400 nodes
         return nodes.stream().filter(n -> self.getNodeBuildStatus(n.getIdNode(), rootNetworkUuid).isBuilt()).count();
-    }
-
-    @Transactional
-    public List<NodeAlias> getNodeAliases(UUID nodeId) {
-        NetworkModificationNodeInfoEntity node = getNetworkModificationNodeInfoEntity(nodeId);
-        Map<NodeType, List<UUID>> nodeUuidsByType = node.getNodeAliases().stream().map(NodeAliasEmbeddable::getReferencedNode)
-            .collect(Collectors.groupingBy(NodeEntity::getType, Collectors.mapping(NodeEntity::getIdNode, Collectors.toList())));
-
-        Map<UUID, String> nodeNames = new HashMap<>();
-        if (nodeUuidsByType.get(NodeType.NETWORK_MODIFICATION) != null) {
-            nodeNames.putAll(networkModificationNodeInfoRepository.findAllById(nodeUuidsByType.get(NodeType.NETWORK_MODIFICATION))
-                .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName)));
-        }
-        if (nodeUuidsByType.get(NodeType.ROOT) != null) {
-            nodeNames.putAll(rootNodeInfoRepository.findAllById(nodeUuidsByType.get(NodeType.ROOT))
-                .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName)));
-        }
-
-        return node.getNodeAliases().stream().map(nodeAlias ->
-            nodeAlias.toNodeAlias(nodeNames.get(nodeAlias.getReferencedNode().getIdNode()))).toList();
-    }
-
-    @Transactional
-    public void updateNodeAliases(UUID nodeId, List<NodeAlias> nodeAliases) {
-        NetworkModificationNodeInfoEntity node = getNetworkModificationNodeInfoEntity(nodeId);
-        Map<UUID, NodeEntity> nodeIds = nodesRepository.findAllById(nodeAliases.stream().map(NodeAlias::id).toList())
-            .stream().collect(Collectors.toMap(NodeEntity::getIdNode, Function.identity()));
-
-        node.setNodeAliases(nodeAliases.stream().map(nodeAlias ->
-                NodeAliasEmbeddable.builder()
-                    .alias(nodeAlias.alias())
-                    .referencedNode(nodeIds.get(nodeAlias.id())).build())
-            .toList());
     }
 }

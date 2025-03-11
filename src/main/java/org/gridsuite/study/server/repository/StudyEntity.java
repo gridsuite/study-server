@@ -9,6 +9,7 @@ package org.gridsuite.study.server.repository;
 import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeAliasEmbeddable;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
@@ -126,6 +127,13 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             name = "study_voltage_init_parameters_id_fk"
         ))
     private StudyVoltageInitParametersEntity voltageInitParameters;
+
+    @ElementCollection
+    @CollectionTable(
+        name = "node_aliases",
+        joinColumns = @JoinColumn(name = "id_study", foreignKey = @ForeignKey(name = "node_aliases_node_id_node_fk_1"))
+    )
+    List<NodeAliasEmbeddable> nodeAliases = new ArrayList<>();
 
     public RootNetworkEntity getFirstRootNetwork() {
         return rootNetworks.get(0);

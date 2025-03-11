@@ -34,9 +34,7 @@ import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParamete
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -69,6 +67,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -2826,5 +2825,38 @@ public class StudyService {
 
     private List<BasicRootNetworkInfos> getExistingRootNetworkInfos(UUID studyUuid) {
         return getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::toBasicDto).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<NodeAlias> getNodeAliases(UUID studyUuid) {
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        Map<NodeType, List<UUID>> nodeUuidsByType = study.getNodeAliases().stream().map(NodeAliasEmbeddable::getReferencedNode)
+            .collect(Collectors.groupingBy(NodeEntity::getType, Collectors.mapping(NodeEntity::getIdNode, Collectors.toList())));
+
+        Map<UUID, String> nodeNames = new HashMap<>();
+        if (nodeUuidsByType.get(NodeType.NETWORK_MODIFICATION) != null) {
+            nodeNames.putAll(networkModificationTreeService.getNetworkModificationNodeInfoEntities(nodeUuidsByType.get(NodeType.NETWORK_MODIFICATION))
+                .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName)));
+        }
+        if (nodeUuidsByType.get(NodeType.ROOT) != null) {
+            nodeNames.putAll(networkModificationTreeService.getRootNodeInfoEntities(nodeUuidsByType.get(NodeType.ROOT))
+                .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName)));
+        }
+
+        return study.getNodeAliases().stream().map(nodeAlias ->
+            nodeAlias.toNodeAlias(nodeNames.get(nodeAlias.getReferencedNode().getIdNode()))).toList();
+    }
+
+    @Transactional
+    public void updateNodeAliases(UUID studyUuid, List<NodeAlias> nodeAliases) {
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        Map<UUID, NodeEntity> nodeIds = networkModificationTreeService.getNodeEntities(nodeAliases.stream().map(NodeAlias::id).toList())
+            .stream().collect(Collectors.toMap(NodeEntity::getIdNode, Function.identity()));
+
+        study.setNodeAliases(nodeAliases.stream().map(nodeAlias ->
+                NodeAliasEmbeddable.builder()
+                    .alias(nodeAlias.alias())
+                    .referencedNode(nodeIds.get(nodeAlias.id())).build())
+            .toList());
     }
 }

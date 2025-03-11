@@ -35,13 +35,6 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @Builder.Default
     protected List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos = new ArrayList<>();
 
-    @ElementCollection
-    @CollectionTable(
-        name = "node_aliases",
-        joinColumns = @JoinColumn(name = "id_node", foreignKey = @ForeignKey(name = "node_aliases_node_id_node_fk_1"))
-    )
-    protected List<NodeAliasEmbeddable> nodeAliases = new ArrayList<>();
-
     public void addRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         rootNetworkNodeInfoEntity.setNodeInfo(this);
         rootNetworkNodeInfos.add(rootNetworkNodeInfoEntity);
