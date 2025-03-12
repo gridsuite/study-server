@@ -2266,7 +2266,7 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/node-aliases")
-    @Operation(summary = "get node aliases attached to a given study")
+    @Operation(summary = "Get node aliases attached to a given study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study's attached aliases")})
     public ResponseEntity<List<NodeAlias>> getNodeAliases(
         @PathVariable("studyUuid") UUID studyUuid) {
