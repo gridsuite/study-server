@@ -308,9 +308,9 @@ public class StudyService {
         UUID importReportUuid = UUID.randomUUID();
         UUID rootNetworkUuid = UUID.randomUUID();
         RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, rootNetworkName, rootNetworkTag, userId);
-        UUID clonedCaseUuid = caseService.duplicateCase(caseUuid, true);
         try {
-            networkConversionService.persistNetwork(clonedCaseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
+            UUID clonedCaseUuid = caseService.duplicateCase(caseUuid, true);
+            persistNetwork(clonedCaseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
         } catch (Exception e) {
             rootNetworkService.deleteCreationRequest(rootNetworkCreationRequestEntity);
             throw new StudyException(ROOT_NETWORK_CREATION_FAILED);
@@ -318,6 +318,14 @@ public class StudyService {
 
         notificationService.emitRootNetworksUpdated(studyUuid);
         return rootNetworkCreationRequestEntity.toDto();
+    }
+
+    @Transactional
+    public void deleteRootNetworkRequest(UUID rootNetworkInCreationUuid) {
+        Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntityOpt = rootNetworkService.getCreationRequest(rootNetworkInCreationUuid);
+        if (rootNetworkCreationRequestEntityOpt.isPresent()) {
+            rootNetworkService.deleteCreationRequest(rootNetworkCreationRequestEntityOpt.get());
+        }
     }
 
     @Transactional
