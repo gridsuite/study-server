@@ -54,8 +54,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.StudyConstants.HEADER_IMPORT_PARAMETERS;
-import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -396,6 +395,33 @@ class RootNetworkTest {
 
         // check case expiration has been disabled
         Mockito.verify(caseService, Mockito.times(1)).disableCaseExpiration(CASE_UUID2);
+    }
+
+    @Test
+    void testCreateRootNetworkCaseImportFailure() throws Exception {
+        // create study with first root network
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+
+        UUID newRootNetworkUuid = UUID.randomUUID();
+
+        // insert creation request as it should be when receiving a caseImportFailed with a rootNetworkUuid set
+        rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(newRootNetworkUuid).name(CASE_NAME2).tag("rn2").studyUuid(studyEntity.getId()).userId(USER_ID).build());
+
+        // prepare all headers that will be sent to consumer supposed to receive "caseImportFailed" message
+        Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportFailed();
+        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, REPORT_UUID2, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_CREATION);
+        Map<String, Object> headers = createConsumeCaseImportFailedHeaders(caseImportReceiver);
+
+        // send message to consumer
+        messageConsumer.accept(new GenericMessage<>("", headers));
+
+        // get study from database and check that root network creation request has been created and deleted after case import failure
+        StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElse(null);
+        assertEquals(1, updatedStudyEntity.getRootNetworks().size());
+
+        // corresponding rootNetworkCreationRequestRepository should be emptied when root network creation is failed
+        assertFalse(rootNetworkCreationRequestRepository.existsById(newRootNetworkUuid));
     }
 
     @Test
@@ -751,6 +777,13 @@ class RootNetworkTest {
         headers.put("caseName", caseName);
         headers.put(HEADER_RECEIVER, objectMapper.writeValueAsString(caseImportReceiver));
         headers.put(HEADER_IMPORT_PARAMETERS, importParameters);
+        return headers;
+    }
+
+    private Map<String, Object> createConsumeCaseImportFailedHeaders(CaseImportReceiver caseImportReceiver) throws JsonProcessingException {
+        Map<String, Object> headers = new HashMap<>();
+        headers.put(HEADER_ERROR, "FAILED TO IMPORT CASE");
+        headers.put(HEADER_RECEIVER, objectMapper.writeValueAsString(caseImportReceiver));
         return headers;
     }
 
