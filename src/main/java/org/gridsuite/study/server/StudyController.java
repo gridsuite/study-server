@@ -212,7 +212,15 @@ public class StudyController {
                                                       @RequestBody(required = false) Map<String, Object> importParameters,
                                                       @RequestHeader(HEADER_USER_ID) String userId) {
         caseService.assertCaseExists(caseUuid);
-        studyService.updateRootNetworkRequest(studyUuid, rootNetworkUuid, caseUuid, name, tag, caseFormat, importParameters, userId);
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder()
+            .id(rootNetworkUuid)
+            .name(name)
+            // .importParameters(importParameters) CANNOT BE PLACED IN DTO (not same type)
+            .caseInfos(new CaseInfos(caseUuid, null, caseFormat))
+            .tag(tag)
+            .build();
+        // then pass importParameters separately
+        studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, importParameters, userId);
         return ResponseEntity.ok().build();
     }
 

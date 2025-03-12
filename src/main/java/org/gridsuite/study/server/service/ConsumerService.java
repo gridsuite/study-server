@@ -230,7 +230,7 @@ public class ConsumerService {
                         case NETWORK_RECREATION ->
                             studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
                         case ROOT_NETWORK_MODIFICATION ->
-                            studyService.modifyRootNetwork(studyUuid, rootNetworkUuid, RootNetworkInfos.builder()
+                            studyService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
                                 .id(rootNetworkUuid)
                                 .networkInfos(networkInfos)
                                 .caseInfos(caseInfos)

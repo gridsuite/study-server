@@ -344,32 +344,29 @@ public class StudyService {
         notificationService.emitRootNetworksUpdated(studyUuid);
     }
 
-    private void updateRootNetworkBasicInfos(UUID studyUuid, UUID rootNetworkUuid, String name, String tag) {
-        modifyRootNetwork(studyUuid, rootNetworkUuid, RootNetworkInfos.builder()
-                .id(rootNetworkUuid)
-                .name(name)
-                .tag(tag)
-                .build(), false);
+    private void updateRootNetworkBasicInfos(UUID studyUuid, RootNetworkInfos rootNetworkInfos, boolean updateCase) {
+        rootNetworkService.updateRootNetwork(rootNetworkInfos, updateCase);
+        postRootNetworkUpdate(studyUuid, rootNetworkInfos.getId(), updateCase);
     }
 
     @Transactional
-    public void updateRootNetworkRequest(UUID studyUuid, UUID rootNetworkUuid, UUID caseUuid, String name, String tag, String caseFormat, Map<String, Object> importParameters, String userId) {
-        rootNetworkService.assertCanModifyRootNetwork(studyUuid, rootNetworkUuid, name, tag);
+    public void updateRootNetworkRequest(UUID studyUuid, RootNetworkInfos rootNetworkInfos, Map<String, Object> importParameters, String userId) {
+        rootNetworkService.assertCanModifyRootNetwork(studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getName(), rootNetworkInfos.getTag());
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
-        if (caseUuid != null) {
-            RootNetworkRequestEntity requestEntity = rootNetworkService.insertModificationRequest(rootNetworkUuid, studyEntity.getId(), name, tag, userId);
-            updateRootNetworkCaseInfos(caseUuid, studyUuid, rootNetworkUuid, userId, caseFormat, importParameters, requestEntity);
+        if (rootNetworkInfos.getCaseInfos().getCaseUuid() != null) {
+            RootNetworkRequestEntity requestEntity = rootNetworkService.insertModificationRequest(rootNetworkInfos.getId(), studyEntity.getId(), rootNetworkInfos.getName(), rootNetworkInfos.getTag(), userId);
+            updateRootNetworkCaseInfos(studyEntity.getId(), rootNetworkInfos, userId, importParameters, requestEntity);
         } else {
-            updateRootNetworkBasicInfos(studyUuid, rootNetworkUuid, name, tag);
+            updateRootNetworkBasicInfos(studyEntity.getId(), rootNetworkInfos, false);
         }
     }
 
-    private void updateRootNetworkCaseInfos(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String userId, String caseFormat, Map<String, Object> importParameters, RootNetworkRequestEntity rootNetworkModificationRequestEntity) {
+    private void updateRootNetworkCaseInfos(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId, Map<String, Object> importParameters, RootNetworkRequestEntity rootNetworkModificationRequestEntity) {
         UUID importReportUuid = UUID.randomUUID();
-        UUID clonedCaseUuid = caseService.duplicateCase(caseUuid, true);
+        UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkInfos.getCaseInfos().getCaseUuid(), true);
         try {
-            persistNetwork(clonedCaseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+            persistNetwork(clonedCaseUuid, studyUuid, rootNetworkInfos.getId(), null, userId, importReportUuid, rootNetworkInfos.getCaseInfos().getCaseFormat(), importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
         } catch (Exception e) {
             rootNetworkService.deleteRootNetworkRequest(rootNetworkModificationRequestEntity);
             throw new StudyException(ROOT_NETWORK_MODIFICATION_FAILED);
@@ -377,10 +374,8 @@ public class StudyService {
     }
 
     @Transactional
-    public void modifyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, RootNetworkInfos rootNetworkInfos, boolean updateCase) {
-
-        rootNetworkService.updateRootNetwork(rootNetworkInfos, updateCase);
-        postRootNetworkUpdate(studyUuid, rootNetworkUuid, updateCase);
+    public void modifyRootNetwork(UUID studyUuid, RootNetworkInfos rootNetworkInfos, boolean updateCase) {
+        updateRootNetworkBasicInfos(studyUuid, rootNetworkInfos, true);
     }
 
     private void postRootNetworkUpdate(UUID studyUuid, UUID rootNetworkUuid, boolean updateCase) {
