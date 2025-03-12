@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
-
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import org.gridsuite.study.server.StudyConstants;
@@ -36,6 +35,7 @@ import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParamete
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
@@ -310,9 +310,9 @@ public class StudyService {
         UUID importReportUuid = UUID.randomUUID();
         UUID rootNetworkUuid = UUID.randomUUID();
         RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity, rootNetworkName, rootNetworkTag, userId);
-        UUID clonedCaseUuid = caseService.duplicateCase(caseUuid, true);
         try {
-            networkConversionService.persistNetwork(clonedCaseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
+            UUID clonedCaseUuid = caseService.duplicateCase(caseUuid, true);
+            persistNetwork(clonedCaseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
         } catch (Exception e) {
             rootNetworkService.deleteCreationRequest(rootNetworkCreationRequestEntity);
             throw new StudyException(ROOT_NETWORK_CREATION_FAILED);
@@ -320,6 +320,14 @@ public class StudyService {
 
         notificationService.emitRootNetworksUpdated(studyUuid);
         return rootNetworkCreationRequestEntity.toDto();
+    }
+
+    @Transactional
+    public void deleteRootNetworkRequest(UUID rootNetworkInCreationUuid) {
+        Optional<RootNetworkCreationRequestEntity> rootNetworkCreationRequestEntityOpt = rootNetworkService.getCreationRequest(rootNetworkInCreationUuid);
+        if (rootNetworkCreationRequestEntityOpt.isPresent()) {
+            rootNetworkService.deleteCreationRequest(rootNetworkCreationRequestEntityOpt.get());
+        }
     }
 
     @Transactional
@@ -2841,5 +2849,39 @@ public class StudyService {
 
     private List<BasicRootNetworkInfos> getExistingRootNetworkInfos(UUID studyUuid) {
         return getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::toBasicDto).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<NodeAlias> getNodeAliases(UUID studyUuid) {
+        List<NodeEntity> aliasedNodes = networkModificationTreeService.getStudyNodeAliasEntities(studyUuid);
+        Map<NodeType, List<UUID>> nodeUuidsByType = aliasedNodes.stream()
+            .collect(Collectors.groupingBy(NodeEntity::getType, Collectors.mapping(NodeEntity::getIdNode, Collectors.toList())));
+
+        Map<UUID, String> nodeNames = new HashMap<>();
+        if (nodeUuidsByType.get(NodeType.NETWORK_MODIFICATION) != null) {
+            nodeNames.putAll(networkModificationTreeService.getNetworkModificationNodeInfoEntities(nodeUuidsByType.get(NodeType.NETWORK_MODIFICATION))
+                .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName)));
+        }
+        if (nodeUuidsByType.get(NodeType.ROOT) != null) {
+            nodeNames.putAll(networkModificationTreeService.getRootNodeInfoEntities(nodeUuidsByType.get(NodeType.ROOT))
+                .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName)));
+        }
+
+        return aliasedNodes.stream().map(node ->
+            new NodeAlias(node.getIdNode(), node.getAlias(), nodeNames.get(node.getIdNode()))).toList();
+    }
+
+    @Transactional
+    public void updateNodeAliases(UUID studyUuid, List<NodeAlias> nodeAliases) {
+        //Reset alias values for given study to keep data in sync
+        networkModificationTreeService.resetNodeAliases(studyUuid);
+        networkModificationTreeService.getNodeEntities(nodeAliases.stream().map(NodeAlias::id).toList())
+            .forEach(nodeEntity -> nodeAliases.stream()
+                .filter(alias -> alias.id().equals(nodeEntity.getIdNode()))
+                .findFirst()
+                .ifPresentOrElse(alias -> nodeEntity.setAlias(alias.alias()),
+                    () -> {
+                        throw new StudyException(NODE_NOT_FOUND);
+                    }));
     }
 }

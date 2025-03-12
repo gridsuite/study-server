@@ -463,14 +463,18 @@ public class ConsumerService {
                 CaseImportReceiver receiver;
                 try {
                     receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8),
-                        CaseImportReceiver.class);
+                            CaseImportReceiver.class);
                     UUID studyUuid = receiver.getStudyUuid();
                     String userId = receiver.getUserId();
+                    UUID rootNetworkUuid = receiver.getRootNetworkUuid();
 
                     if (receiver.getCaseImportAction() == CaseImportAction.STUDY_CREATION) {
                         studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
                         notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
                     } else {
+                        if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_CREATION) {
+                            studyService.deleteRootNetworkRequest(rootNetworkUuid);
+                        }
                         notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
                     }
                 } catch (Exception e) {

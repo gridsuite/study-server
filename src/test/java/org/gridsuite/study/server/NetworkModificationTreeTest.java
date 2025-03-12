@@ -1487,6 +1487,50 @@ class NetworkModificationTreeTest {
         assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(leafNodeId, rootNetworkUuid).getLocalBuildStatus());
     }
 
+    @Test
+    void testNodeAliases() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        NetworkModificationNode node1 = buildNetworkModificationNode("modification node 1", "", UUID.randomUUID(), VARIANT_ID,
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), root, node1, userId);
+        NetworkModificationNode node2 = buildNetworkModificationNode("modification node 2", "", UUID.randomUUID(), VARIANT_ID,
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), node1, node2, userId);
+
+        List<NodeAlias> node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+            });
+        assertEquals(0, node1Aliases.size());
+
+        //Name field is not relevant when posting aliases, it is filled when retrieving them
+        NodeAlias alias = new NodeAlias(node2.getId(), "test", "");
+        List<NodeAlias> aliases = List.of(alias);
+        mockMvc.perform(post("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectWriter.writeValueAsString(aliases))
+        ).andExpect(status().isOk());
+        node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+            });
+        assertEquals(1, node1Aliases.size());
+        assertEquals("modification node 2", node1Aliases.getFirst().name());
+        assertEquals("test", node1Aliases.getFirst().alias());
+
+        //Removing the referenced node should result in the deletion of the node alias
+        List<AbstractNode> children = List.of(node2);
+        deleteNode(root.getStudyId(), children, true, null, userId);
+        node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+            });
+        assertEquals(0, node1Aliases.size());
+    }
+
     /**
      * Create a network modification tree to test the build status.
      * @return a pair with the ID of the study and the ID of the leaf node of the tree

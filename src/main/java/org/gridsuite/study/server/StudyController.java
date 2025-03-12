@@ -40,6 +40,7 @@ import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeAlias;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
@@ -2276,6 +2277,26 @@ public class StudyController {
         @RequestBody(required = false) String stateEstimationParametersValues,
         @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setStateEstimationParametersValues(studyUuid, stateEstimationParametersValues, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/node-aliases")
+    @Operation(summary = "Get node aliases attached to a given study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study's attached aliases")})
+    public ResponseEntity<List<NodeAlias>> getNodeAliases(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        studyService.assertIsStudyExist(studyUuid);
+        return ResponseEntity.ok().body(studyService.getNodeAliases(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/node-aliases")
+    @Operation(summary = "Update node aliases attached to a given study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Node aliases have been updated"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
+    public ResponseEntity<Void> setNodeAliases(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody List<NodeAlias> nodeAliases) {
+        studyService.assertIsStudyExist(studyUuid);
+        studyService.updateNodeAliases(studyUuid, nodeAliases);
         return ResponseEntity.ok().build();
     }
 }
