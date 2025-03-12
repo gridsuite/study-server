@@ -14,6 +14,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
@@ -53,7 +55,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -865,19 +866,16 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}")
     @Operation(summary = "export the study's network in the given format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network in the given format")})
-    public ResponseEntity<byte[]> exportNetwork(
+    public void exportNetwork(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("format") String format,
             @RequestParam(value = "formatParameters", required = false) String parametersJson,
-            @RequestParam(value = "fileName") String fileName) {
+            @RequestParam(value = "fileName") String fileName,
+            HttpServletResponse response) {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
-        ExportNetworkInfos exportNetworkInfos = studyService.exportNetwork(nodeUuid, rootNetworkUuid, format, parametersJson, fileName);
-
-        HttpHeaders header = new HttpHeaders();
-        header.setContentDisposition(ContentDisposition.builder("attachment").filename(exportNetworkInfos.getFileName(), StandardCharsets.UTF_8).build());
-        return ResponseEntity.ok().headers(header).contentType(MediaType.APPLICATION_OCTET_STREAM).body(exportNetworkInfos.getNetworkData());
+        studyService.exportNetwork(nodeUuid, rootNetworkUuid, format, parametersJson, fileName, response);
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run")
