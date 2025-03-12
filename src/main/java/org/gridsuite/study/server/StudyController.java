@@ -17,6 +17,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.diagram.DiagramParameters;
+import org.gridsuite.study.server.dto.diagram.NadConfigInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -1115,6 +1117,19 @@ public class StudyController {
         String result = studyService.getNetworkAreaDiagram(nodeUuid, rootNetworkUuid, voltageLevelsIds, depth, withGeoData);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram/config", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Create a network area diagram config using the given network and voltage levels")
+    @ApiResponse(responseCode = "200", description = "The network area diagram config has been created")
+    public ResponseEntity<String> createNeworkAreaDiagramConfig(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestBody NadConfigInfos nadConfigInfos) {
+        String result = studyService.createNetworkAreaDiagramConfig(nodeUuid, rootNetworkUuid, nadConfigInfos);
+        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
+            ResponseEntity.internalServerError().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/status")

@@ -21,7 +21,8 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.DiagramParameters;
+import org.gridsuite.study.server.dto.diagram.DiagramParameters;
+import org.gridsuite.study.server.dto.diagram.NadConfigInfos;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -42,7 +43,6 @@ public class SingleLineDiagramService {
     static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
     static final String QUERY_PARAM_DEPTH = "depth";
     static final String QUERY_PARAM_INIT_WITH_GEO_DATA = "withGeoData";
-    static final String QUERY_PARAM_VOLTAGE_LEVELS_IDS = "voltageLevelsIds";
     static final String NOT_FOUND = " not found";
     static final String QUERY_PARAM_DISPLAY_MODE = "sldDisplayMode";
     static final String LANGUAGE = "language";
@@ -184,6 +184,28 @@ public class SingleLineDiagramService {
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelsIds + NOT_FOUND);
+            } else {
+                throw e;
+            }
+        }
+        return result;
+    }
+
+    public String createNetworkAreaDiagramConfig(UUID networkUuid, String variantId, NadConfigInfos nadConfigInfos) {
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
+                "/network-area-diagram/config/{networkUuid}");
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        var path = uriComponentsBuilder
+                .buildAndExpand(networkUuid)
+                .toUriString();
+        String result;
+        try {
+            result = restTemplate.postForObject(singleLineDiagramServerBaseUri + path, nadConfigInfos, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + nadConfigInfos.getVoltageLevelIds() + NOT_FOUND);
             } else {
                 throw e;
             }

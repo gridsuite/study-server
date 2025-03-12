@@ -16,6 +16,8 @@ import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
+import org.gridsuite.study.server.dto.diagram.DiagramParameters;
+import org.gridsuite.study.server.dto.diagram.NadConfigInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -1173,6 +1175,19 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
             return singleLineDiagramService.getNetworkAreaDiagram(networkUuid, variantId, voltageLevelsIds, depth, withGeoData);
+        } else {
+            return null;
+        }
+    }
+
+    public String createNetworkAreaDiagramConfig(UUID nodeUuid, UUID rootNetworkUuid, NadConfigInfos nadConfigInfos) {
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        if (networkUuid == null) {
+            throw new StudyException(ROOT_NETWORK_NOT_FOUND);
+        }
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        if (networkStoreService.existVariant(networkUuid, variantId)) {
+            return singleLineDiagramService.createNetworkAreaDiagramConfig(networkUuid, variantId, nadConfigInfos);
         } else {
             return null;
         }
