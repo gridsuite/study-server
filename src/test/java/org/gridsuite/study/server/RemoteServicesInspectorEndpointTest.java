@@ -13,7 +13,7 @@ import org.gridsuite.study.server.dto.AboutInfo;
 import org.gridsuite.study.server.dto.ServiceStatusInfos;
 import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
 import org.gridsuite.study.server.exception.PartialResultException;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.FrontService;
@@ -55,7 +55,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @MockBean(RootNetworkService.class)
 @MockBean(RootNetworkRepository.class)
 @MockBean(RootNetworkNodeInfoRepository.class)
-@MockBean(RootNetworkCreationRequestRepository.class)
+@MockBean(RootNetworkRequestRepository.class)
 @SpringBootTest(classes = StudyApplication.class)
 @ExtendWith({MockitoExtension.class})
 @TestMethodOrder(MethodOrderer.MethodName.class)

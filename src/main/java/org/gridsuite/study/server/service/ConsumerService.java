@@ -230,13 +230,13 @@ public class ConsumerService {
                         case NETWORK_RECREATION ->
                             studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
                         case ROOT_NETWORK_MODIFICATION ->
-                            studyService.updateNetwork(studyUuid, rootNetworkUuid, RootNetworkInfos.builder()
+                            studyService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
                                 .id(rootNetworkUuid)
                                 .networkInfos(networkInfos)
                                 .caseInfos(caseInfos)
                                 .importParameters(importParameters)
                                 .reportUuid(importReportUuid)
-                                .build());
+                                .build(), true);
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
@@ -463,7 +463,7 @@ public class ConsumerService {
                 CaseImportReceiver receiver;
                 try {
                     receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8),
-                            CaseImportReceiver.class);
+                        CaseImportReceiver.class);
                     UUID studyUuid = receiver.getStudyUuid();
                     String userId = receiver.getUserId();
                     UUID rootNetworkUuid = receiver.getRootNetworkUuid();

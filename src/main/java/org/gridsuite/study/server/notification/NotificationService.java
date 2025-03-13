@@ -122,6 +122,7 @@ public class NotificationService {
     public static final String DEFAULT_ERROR_MESSAGE = "Unknown error";
 
     public static final String ROOT_NETWORKS_UPDATED = "rootNetworksUpdated";
+    public static final String ROOT_NETWORK_MODIFIED = "rootNetworkModified";
     public static final String ROOT_NETWORKS_DELETION_STARTED = "rootNetworkDeletionStarted";
     public static final String ROOT_NETWORKS_UPDATE_FAILED = "rootNetworksUpdateFailed";
 
@@ -475,6 +476,15 @@ public class NotificationService {
             .setHeader(HEADER_STUDY_UUID, studyUuid)
             .setHeader(HEADER_UPDATE_TYPE, ROOT_NETWORKS_UPDATED)
             .build());
+    }
+
+    @PostCompletion
+    public void emitRootNetworkCaseModified(UUID studyUuid, UUID rootNetworkUuid) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_ROOT_NETWORK, rootNetworkUuid)
+                .setHeader(HEADER_UPDATE_TYPE, ROOT_NETWORK_MODIFIED)
+                .build());
     }
 
     public void emitRootNetworksDeletionStarted(UUID studyUuid, List<UUID> rootNetworkUuids) {

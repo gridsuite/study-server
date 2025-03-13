@@ -191,27 +191,37 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/root-networks")
     @Operation(summary = "Create root network for study")
     @ApiResponse(responseCode = "200", description = "Root network created")
-    public ResponseEntity<RootNetworkCreationRequestInfos> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
-                                                                              @RequestParam(value = "name") String name,
-                                                                              @RequestParam(value = "tag") String tag,
-                                                                              @RequestParam(value = CASE_UUID) UUID caseUuid,
-                                                                              @RequestParam(value = CASE_FORMAT) String caseFormat,
-                                                                              @RequestBody(required = false) Map<String, Object> importParameters,
-                                                                              @RequestHeader(HEADER_USER_ID) String userId) {
+    public ResponseEntity<RootNetworkRequestInfos> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
+                                                                     @RequestParam(value = "name") String name,
+                                                                     @RequestParam(value = "tag") String tag,
+                                                                     @RequestParam(value = CASE_UUID) UUID caseUuid,
+                                                                     @RequestParam(value = CASE_FORMAT) String caseFormat,
+                                                                     @RequestBody(required = false) Map<String, Object> importParameters,
+                                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, name, tag, caseUuid, caseFormat, importParameters, userId));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
     @Operation(summary = "update root network case")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The case is updated for a root network")})
-    public ResponseEntity<Void> updateRootNetworkCase(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> updateRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                       @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                      @RequestParam(value = CASE_UUID) UUID caseUuid,
-                                                      @RequestParam(value = CASE_FORMAT) String caseFormat,
+                                                      @RequestParam(value = CASE_UUID, required = false) UUID caseUuid,
+                                                      @RequestParam(value = "name", required = false) String name,
+                                                      @RequestParam(value = "tag", required = false) String tag,
+                                                      @RequestParam(value = CASE_FORMAT, required = false) String caseFormat,
                                                       @RequestBody(required = false) Map<String, Object> importParameters,
                                                       @RequestHeader(HEADER_USER_ID) String userId) {
         caseService.assertCaseExists(caseUuid);
-        studyService.updateNetworkRequest(studyUuid, rootNetworkUuid, caseUuid, caseFormat, importParameters, userId);
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder()
+            .id(rootNetworkUuid)
+            .name(name)
+            // .importParameters(importParameters) CANNOT BE PLACED IN DTO (not same type)
+            .caseInfos(new CaseInfos(caseUuid, null, caseFormat))
+            .tag(tag)
+            .build();
+        // then pass importParameters separately
+        studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, importParameters, userId);
         return ResponseEntity.ok().build();
     }
 
